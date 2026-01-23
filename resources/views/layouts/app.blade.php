@@ -24,7 +24,7 @@
     {{-- Fonts --}}
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    {{-- Vite --}}
+    <!-- Vite Assets -->
     @vite([
         'resources/css/app.css',
         'resources/js/app.js',
@@ -32,13 +32,17 @@
         'resources/js/index.js'
     ])
 
-    {{-- Auto-load Component Scripts --}}
+    <!-- Auto-load all JS components -->
     @php
-        $components = array_diff(scandir(resource_path('js/components')), array('..', '.'));
+        // Get all JS component files
+        $components = collect(File::allFiles(resource_path('js/components')))
+            ->filter(fn($file) => $file->getExtension() === 'js')
+            ->map(fn($file) => 'resources/js/components/'.$file->getRelativePathname())
+            ->values()
+            ->all();
     @endphp
-    @foreach ($components as $component)
-        @vite(['resources/js/components/' . $component])
-    @endforeach
+
+    @vite($components)
 </head>
 
 <body class="font-outfit antialiased bg-gray-100"
@@ -52,7 +56,7 @@
           selected: $persist('{{ ucfirst(request()->segment(1) ?? 'Dashboard') }}')
       }"
       x-init="$watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
-      :class=\"{'dark bg-gray-900': darkMode}\">
+      :class="{'dark bg-gray-900': darkMode}">
 
 @include('partials.preloader')
 

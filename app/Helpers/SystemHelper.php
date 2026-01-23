@@ -5,6 +5,7 @@ namespace App\Helpers;
 use App\Models\System;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use PragmaRX\Countries\Package\Countries;
 
 class SystemHelper
 {
@@ -18,10 +19,10 @@ class SystemHelper
                 'name' => config('app.name', 'Laravel'),
                 'slogan' => 'Your trusted application',
                 'timezone' => config('app.timezone', 'UTC'),
-                'date_format' => 'Y-m-d',
+                'date_format' => 'd-m-Y',
                 'time_format' => 'H:i:s',
-                'currency' => 'USD',
-                'currency_symbol' => '$',
+                'currency' => 'KES',
+                'currency_symbol' => 'KSh',
                 'primary_color' => '#3A57E8',
                 'secondary_color' => '#08B1BA',
                 'pagination_limit' => 15,
@@ -54,6 +55,29 @@ class SystemHelper
                         'backup_retention' => 30,
                         'backup_to_cloud' => false,
                     ],
+                    'company' => [
+                        'website' => '',
+                        'phone' => '',
+                        'email' => '',
+                        'address' => '',
+                        'about' => '',
+                        'mission' => '',
+                        'vision' => '',
+                        'values' => '',
+                    ],
+                    'currency_position' => 'before', // for formatting currency
+                ],
+                'website_pages' => [
+                    'home' => ['enabled' => true,'title' => 'Home','slug' => '', 'show_in_menu' => true,'order' => 1],
+                    'about' => ['enabled' => true,'title' => 'About Us','slug' => 'about', 'show_in_menu' => true,'order' => 2],
+                    'services' => ['enabled' => true,'title' => 'Services','slug' => 'services', 'show_in_menu' => true,'order' => 3],
+                    'contact' => ['enabled' => true,'title' => 'Contact Us','slug' => 'contact', 'show_in_menu' => true,'order' => 4],
+                ],
+                'social_media' => [
+                    'facebook' => ['enabled' => false,'url' => '', 'icon' => 'ri-facebook-fill','name' => 'Facebook','color' => '#1877F2','order' => 1],
+                    'twitter' => ['enabled' => false,'url' => '', 'icon' => 'ri-twitter-fill','name' => 'Twitter','color' => '#1DA1F2','order' => 2],
+                    'instagram' => ['enabled' => false,'url' => '', 'icon' => 'ri-instagram-fill','name' => 'Instagram','color' => '#E4405F','order' => 3],
+                    'linkedin' => ['enabled' => false,'url' => '', 'icon' => 'ri-linkedin-fill','name' => 'LinkedIn','color' => '#0A66C2','order' => 4],
                 ],
             ]);
         });
@@ -73,261 +97,304 @@ class SystemHelper
     public static function get($key, $default = null)
     {
         $settings = self::settings();
-        
+
         if (str_contains($key, '.')) {
             $keys = explode('.', $key);
-            $value = $settings->settings ?? [];
-            
+            $value = $settings;
+
             foreach ($keys as $k) {
-                if (is_array($value) && array_key_exists($k, $value)) {
+                if (is_object($value) && isset($value->$k)) {
+                    $value = $value->$k;
+                } elseif (is_array($value) && array_key_exists($k, $value)) {
                     $value = $value[$k];
                 } else {
                     return $default;
                 }
             }
-            
+
             return $value;
         }
-        
+
         return $settings->$key ?? $default;
     }
 
-    /**
-     * Get application name
-     */
-    public static function appName()
-    {
-        return self::get('name', config('app.name'));
+    // =========================
+    // App info
+    // =========================
+
+    public static function appName() { return self::get('name', config('app.name')); }
+    public static function slogan() { return self::get('slogan', 'Your trusted application'); }
+
+    // =========================
+    // Logos & Favicon
+    // =========================
+
+
+public static function logoUrl($type = 'light')
+{
+    $logo = match($type){
+        'dark' => self::get('logo_dark'),
+        'icon' => self::get('logo_icon'),
+        'auth' => null,
+        default => self::get('logo')
+    };
+
+    if ($type === 'auth') return self::authLogoUrl();
+
+    // Try: exact path from DB
+    if ($logo && file_exists(public_path($logo))) {
+        return asset($logo);
     }
 
-    public static function slogan()
-    {
-        return self::get('slogan', 'Your trusted application');
-    }
-
-    /**
-     * Get logo URL (with icon support)
-     */
-    public static function logoUrl($icon = false)
-    {
-        $logo = self::get('logo');
-        
-        if ($logo) {
-            try {
-                $url = asset('storage/' . $logo);
-                // You could add logic here to return different URLs for icon vs full logo
-                // For now, same URL for both
-                return $url;
-            } catch (\Exception $e) {
-                // Fallback to default if there's an error
-            }
-        }
-        
-        // Default fallback logos
-        return $icon 
-            ? asset('images/logo/logo-icon.svg')
-            : asset('images/logo/logo.svg');
-    }
+    // Default fallback images
+    return match($type){
+        'dark' => asset('images/logo/logo-dark.svg'),
+        'icon' => asset('images/logo/logo-icon.svg'),
+        'auth' => asset('images/logo/auth-logo.svg'),
+        default => asset('images/logo/logo.svg'),
+    };
+}
 
     public static function authLogoUrl()
     {
         $logo = self::get('logo');
-        
         if ($logo) {
-            try {
+            // First try images/logo directory
+            if (file_exists(public_path('images/logo/' . $logo))) {
+                return asset('images/logo/' . $logo);
+            }
+            
+            // Then try storage directory
+            if (file_exists(storage_path('app/public/' . $logo))) {
                 return asset('storage/' . $logo);
-            } catch (\Exception $e) {
-                // Fallback to default
+            }
+            
+            // Then try just the logo as is
+            if (file_exists(public_path($logo))) {
+                return asset($logo);
             }
         }
-        
         return asset('images/logo/auth-logo.svg');
     }
 
     public static function faviconUrl()
     {
         $favicon = self::get('favicon');
-        
         if ($favicon) {
-            try {
+          
+            // First try images directory
+            if (file_exists(public_path('images/' . $favicon))) {
+                return asset('images/' . $favicon);
+            }
+            
+            // Then try images/logo directory
+            if (file_exists(public_path('images/logo/' . $favicon))) {
+                return asset('images/logo/' . $favicon);
+            }
+            
+            // Then try storage directory
+            if (file_exists(storage_path('app/public/' . $favicon))) {
                 return asset('storage/' . $favicon);
-            } catch (\Exception $e) {
-                // Fallback to default
+            }
+            
+            // Then try just the favicon as is
+            if (file_exists(public_path($favicon))) {
+                return asset($favicon);
             }
         }
-        
-        return asset('images/favicon.ico');
+        return asset('favicon.ico');
     }
+    
 
-    /**
-     * Check if maintenance mode is enabled
-     */
-    public static function isMaintenanceMode()
-    {
-        return (bool) self::get('maintenance_mode', false);
-    }
+    // =========================
+    // Social media
+    // =========================
 
-    /**
-     * Get pagination limit
-     */
-    public static function paginationLimit()
-    {
-        return self::get('pagination_limit', 15);
-    }
-
-    /**
-     * Get currency with symbol
-     */
-    public static function currency($amount)
-    {
-        $symbol = self::get('currency_symbol', '$');
-        $position = self::get('settings.currency_position', 'before');
-        
-        if ($position === 'after') {
-            return number_format($amount, 2) . $symbol;
-        }
-        
-        return $symbol . number_format($amount, 2);
-    }
-
-    /**
-     * Get primary color
-     */
-    public static function primaryColor()
-    {
-        return self::get('primary_color', '#3A57E8');
-    }
-
-    /**
-     * Get secondary color
-     */
-    public static function secondaryColor()
-    {
-        return self::get('secondary_color', '#08B1BA');
-    }
-
-    /**
-     * Get contact email
-     */
-    public static function contactEmail()
-    {
-        return self::get('contact_email');
-    }
-
-    /**
-     * Get contact phone
-     */
-    public static function contactPhone()
-    {
-        return self::get('contact_phone');
-    }
-
-    /**
-     * Get address
-     */
-    public static function address()
-    {
-        return self::get('address');
-    }
-
-    /**
-     * Get social media URLs
-     */
     public static function socialMedia($platform = null)
     {
-        $social = [
-            'facebook' => self::get('facebook_url'),
-            'twitter' => self::get('twitter_url'),
-            'instagram' => self::get('instagram_url'),
-            'linkedin' => self::get('linkedin_url'),
+        $socialMedia = self::get('social_media', []);
+        if (!is_array($socialMedia)) $socialMedia = [];
+
+        $enabled = array_filter($socialMedia, fn($i) => ($i['enabled'] ?? false) && !empty($i['url']));
+        usort($enabled, fn($a, $b) => ($a['order'] ?? 999) <=> ($b['order'] ?? 999));
+
+        return $platform ? ($enabled[$platform] ?? null) : $enabled;
+    }
+
+    // =========================
+    // Pages
+    // =========================
+
+    public static function navigationPages()
+    {
+        $pages = self::get('website_pages', []);
+        $enabled = array_filter($pages, fn($p) => ($p['enabled'] ?? false) && ($p['show_in_menu'] ?? false));
+        usort($enabled, fn($a, $b) => ($a['order'] ?? 999) <=> ($b['order'] ?? 999));
+        return $enabled;
+    }
+
+    public static function getPage($slug)
+    {
+        $pages = self::get('website_pages', []);
+        foreach ($pages as $page) {
+            if (($page['slug'] ?? '') === $slug && ($page['enabled'] ?? false)) return $page;
+        }
+        return null;
+    }
+
+    public static function company($key = null)
+    {
+        $company = self::get('settings.company', []);
+        return $key ? ($company[$key] ?? null) : $company;
+    }
+
+    // =========================
+    // Currency & formatting
+    // =========================
+
+    public static function currency($amount)
+    {
+        $currencyCode = self::get('currency', 'KES');
+        $symbol = self::get('currency_symbol', 'KSh');
+        $position = self::get('settings.currency_position', 'before');
+
+        $currencies = self::currencies();
+        if (isset($currencies[$currencyCode])) $symbol = $currencies[$currencyCode]['symbol'] ?? $symbol;
+
+        return match($position){
+            'after' => number_format($amount, 2) . ' ' . $symbol,
+            'after_space' => number_format($amount, 2) . ' ' . $symbol,
+            'before_space' => $symbol . ' ' . number_format($amount, 2),
+            default => $symbol . number_format($amount, 2),
+        };
+    }
+
+    public static function currencies(): array
+    {
+        return Cache::remember('currencies.all', now()->addMonth(), function () {
+            $countries = self::countries()->all();
+            $currencies = [];
+
+            foreach ($countries as $country) {
+                if (!isset($country->currencies) || $country->currencies->isEmpty()) continue;
+                $code = $country->currencies->keys()[0] ?? null;
+                if (!$code || isset($currencies[$code])) continue;
+                $data = $country->currencies->first();
+                $currencies[$code] = [
+                    'code' => $code,
+                    'name' => $data['name'] ?? $code,
+                    'symbol' => $data['symbol'] ?? $code,
+                    'countries' => [['code' => $country->cca2 ?? '', 'name' => $country->name->common ?? '']]
+                ];
+            }
+
+            ksort($currencies);
+            return $currencies;
+        });
+    }
+
+    public static function currencyOptions($includeEmpty = true): array
+    {
+        $currencies = self::currencies();
+        $options = $includeEmpty ? ['' => 'Select Currency'] : [];
+        foreach ($currencies as $c) $options[$c['code']] = "{$c['name']} ({$c['code']}) - {$c['symbol']}";
+        return $options;
+    }
+
+    // =========================
+    // Countries
+    // =========================
+
+    public static function countries(): Countries
+    {
+        return new Countries();
+    }
+
+    public static function allCountries($locale = 'en'): array
+    {
+        return Cache::remember("countries.all.{$locale}", now()->addMonth(), function () use ($locale) {
+            return self::countries()->all()
+                ->sortBy(fn($c) => $c->name->common ?? '')
+                ->map(fn($c) => self::formatCountry($c, $locale))
+                ->values()
+                ->toArray();
+        });
+    }
+
+    public static function getCountry(string $code, string $locale = 'en'): ?array
+    {
+        return Cache::remember("country.{$code}.{$locale}", now()->addMonth(), function () use ($code, $locale) {
+            $country = self::countries()->where('cca2', strtoupper($code))->first()
+                ?? self::countries()->where('cca3', strtoupper($code))->first();
+            return $country ? self::formatCountry($country, $locale) : null;
+        });
+    }
+
+    protected static function formatCountry($country, $locale = 'en'): array
+    {
+        $currencyCode = $currencyName = $currencySymbol = null;
+        if (isset($country->currencies) && !$country->currencies->isEmpty()) {
+            $currencyCode = $country->currencies->keys()[0] ?? null;
+            $c = $country->currencies->first();
+            $currencyName = $c['name'] ?? null;
+            $currencySymbol = $c['symbol'] ?? $currencyCode;
+        }
+
+        return [
+            'code' => $country->cca2 ?? '',
+            'iso3' => $country->cca3 ?? '',
+            'name' => $country->name->common ?? '',
+            'official_name' => $country->name->official ?? '',
+            'capital' => $country->capital[0] ?? '',
+            'calling_code' => !empty($country->calling_codes) ? '+' . $country->calling_codes[0] : '',
+            'currency_code' => $currencyCode,
+            'currency_name' => $currencyName,
+            'currency_symbol' => $currencySymbol,
+            'region' => $country->region ?? '',
+            'subregion' => $country->subregion ?? '',
+            'latitude' => $country->latlng[0] ?? null,
+            'longitude' => $country->latlng[1] ?? null,
+            'states' => isset($country->states) ? array_map(fn($s) => $s['name'] ?? null, $country->states) : [],
+            'timezones' => $country->timezones?->toArray() ?? [],
         ];
-        
-        return $platform ? ($social[$platform] ?? null) : $social;
     }
 
-    /**
-     * Get meta description
-     */
-    public static function metaDescription()
+    public static function countryOptions($includeEmpty = true, $locale = 'en'): array
     {
-        return self::get('meta_description');
+        $countries = self::allCountries($locale);
+        $options = $includeEmpty ? ['' => 'Select Country'] : [];
+        foreach ($countries as $c) $options[$c['code']] = $c['name'];
+        return $options;
     }
 
-    /**
-     * Get meta keywords
-     */
-    public static function metaKeywords()
+    // =========================
+    // Utilities
+    // =========================
+
+    public static function timezoneOptions()
     {
-        return self::get('meta_keywords');
+        $timezones = \DateTimeZone::listIdentifiers();
+        $options = [];
+        foreach ($timezones as $tz) $options[$tz] = $tz;
+        return $options;
     }
 
-    /**
-     * Get timezone
-     */
-    public static function timezone()
-    {
-        return self::get('timezone', config('app.timezone', 'UTC'));
-    }
-
-    /**
-     * Get date format
-     */
-    public static function dateFormat()
-    {
-        return self::get('date_format', 'Y-m-d');
-    }
-
-    /**
-     * Get time format
-     */
-    public static function timeFormat()
-    {
-        return self::get('time_format', 'H:i:s');
-    }
-
-    /**
-     * Get currency code
-     */
-    public static function currencyCode()
-    {
-        return self::get('currency', 'USD');
-    }
-
-    /**
-     * Get currency symbol
-     */
-    public static function currencySymbol()
-    {
-        return self::get('currency_symbol', '$');
-    }
-
-    /**
-     * Get custom CSS
-     */
-    public static function customCss()
-    {
-        return self::get('custom_css');
-    }
-
-    /**
-     * Get custom JavaScript
-     */
-    public static function customJs()
-    {
-        return self::get('custom_js');
-    }
-
-    public static function googleAnalyticsId()
-    {
-        // return your GA ID or leave null
-        return config('services.google.analytics_id');
-    }
-
-    public static function twoFactorAuthEnabled()
-    {
-        $settings = System::settings()->settings ?? [];
-
-        return $settings['security']['two_factor_auth'] ?? false;
-    }
-
+    public static function isMaintenanceMode() { return (bool) self::get('maintenance_mode', false); }
+    public static function paginationLimit() { return self::get('pagination_limit', 15); }
+    public static function primaryColor() { return self::get('primary_color', '#3A57E8'); }
+    public static function secondaryColor() { return self::get('secondary_color', '#08B1BA'); }
+    public static function contactEmail() { return self::get('contact_email') ?? self::company('email'); }
+    public static function contactPhone() { return self::get('contact_phone') ?? self::company('phone'); }
+    public static function address() { return self::get('address') ?? self::company('address'); }
+    public static function metaDescription() { return self::get('meta_description'); }
+    public static function metaKeywords() { return self::get('meta_keywords'); }
+    public static function timezone() { return self::get('timezone', config('app.timezone', 'UTC')); }
+    public static function dateFormat() { return self::get('date_format', 'Y-m-d'); }
+    public static function timeFormat() { return self::get('time_format', 'H:i:s'); }
+    public static function currencyCode() { return self::get('currency', 'KES'); }
+    public static function currencySymbol() { return self::get('currency_symbol', 'KSh'); }
+    public static function customCss() { return self::get('custom_css'); }
+    public static function customJs() { return self::get('custom_js'); }
+    public static function googleAnalyticsId() { return config('services.google.analytics_id') ?? self::get('settings.integrations.google_analytics'); }
+    public static function twoFactorAuthEnabled() { return (bool) self::get('settings.security.two_factor_auth', false); }
 }

@@ -90,6 +90,27 @@
                     </svg>
                     Security
                 </button>
+                <button type="button" onclick="switchTab('social')" data-tab="social" 
+                        class="tab-button inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    Social Media
+                </button>
+                <button type="button" onclick="switchTab('pages')" data-tab="pages" 
+                        class="tab-button inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    Website Pages
+                </button>
+                <button type="button" onclick="switchTab('company')" data-tab="company" 
+                        class="tab-button inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    Company Info
+                </button>
                 <button type="button" onclick="switchTab('other')" data-tab="other" 
                         class="tab-button inline-flex items-center px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,20 +145,49 @@
                         <input type="text" name="slogan" value="{{ old('slogan', $system->slogan) }}"
                                class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
                     </div>
+                </div>
 
-                    <!-- Logo -->
+                <!-- Logo Uploads -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Main Logo -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Logo
+                            Main Logo (Light)
                         </label>
-                        <div class="flex items-center gap-4">
+                        <div class="flex flex-col gap-2">
                             @if($system->logo)
-                                <img src="{{ Storage::url($system->logo) }}" alt="Logo" class="h-12 w-auto rounded-lg">
+                                <img src="{{ SystemHelper::logoUrl('light') }}" alt="Logo" class="h-12 w-auto rounded-lg bg-white p-2">
                             @endif
-                            <div class="flex-1">
-                                <input type="file" name="logo" accept="image/*"
-                                       class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
-                            </div>
+                            <input type="file" name="logo" accept="image/*"
+                                   class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
+                        </div>
+                    </div>
+
+                    <!-- Dark Logo -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Dark Logo
+                        </label>
+                        <div class="flex flex-col gap-2">
+                            @if($system->logo_dark)
+                                <img src="{{ SystemHelper::logoUrl('dark') }}" alt="Dark Logo" class="h-12 w-auto rounded-lg bg-gray-800 p-2">
+                            @endif
+                            <input type="file" name="logo_dark" accept="image/*"
+                                   class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
+                        </div>
+                    </div>
+
+                    <!-- Logo Icon -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Logo Icon
+                        </label>
+                        <div class="flex flex-col gap-2">
+                            @if($system->logo_icon)
+                                <img src="{{ SystemHelper::logoUrl('icon') }}" alt="Logo Icon" class="h-10 w-10 rounded-lg">
+                            @endif
+                            <input type="file" name="logo_icon" accept="image/*"
+                                   class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
                         </div>
                     </div>
 
@@ -146,14 +196,12 @@
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Favicon
                         </label>
-                        <div class="flex items-center gap-4">
+                        <div class="flex flex-col gap-2">
                             @if($system->favicon)
-                                <img src="{{ Storage::url($system->favicon) }}" alt="Favicon" class="h-8 w-8 rounded">
+                                <img src="{{ SystemHelper::faviconUrl() }}" alt="Favicon" class="h-8 w-8 rounded">
                             @endif
-                            <div class="flex-1">
-                                <input type="file" name="favicon" accept="image/*"
-                                       class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
-                            </div>
+                            <input type="file" name="favicon" accept="image/*"
+                                   class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
                         </div>
                     </div>
                 </div>
@@ -187,6 +235,27 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Meta Information -->
+                <div class="mt-6">
+                    <h4 class="text-md font-medium text-gray-800 dark:text-white mb-4">SEO Information</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Meta Description
+                            </label>
+                            <textarea name="meta_description" rows="2"
+                                      class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">{{ old('meta_description', $system->meta_description) }}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Meta Keywords
+                            </label>
+                            <textarea name="meta_keywords" rows="2"
+                                      class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">{{ old('meta_keywords', $system->meta_keywords) }}</textarea>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- System Configuration Tab -->
@@ -213,6 +282,7 @@
                             <option value="Y-m-d" {{ old('date_format', $system->date_format) == 'Y-m-d' ? 'selected' : '' }}>YYYY-MM-DD</option>
                             <option value="d/m/Y" {{ old('date_format', $system->date_format) == 'd/m/Y' ? 'selected' : '' }}>DD/MM/YYYY</option>
                             <option value="m/d/Y" {{ old('date_format', $system->date_format) == 'm/d/Y' ? 'selected' : '' }}>MM/DD/YYYY</option>
+                            <option value="d-m-Y" {{ old('date_format', $system->date_format) == 'd-m-Y' ? 'selected' : '' }}>DD-MM-YYYY</option>
                         </select>
                     </div>
 
@@ -239,7 +309,7 @@
                 <!-- Currency Settings -->
                 <div>
                     <h4 class="text-md font-medium text-gray-800 dark:text-white mb-4">Currency Settings</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Currency *
@@ -258,6 +328,71 @@
                             </label>
                             <input type="text" name="currency_symbol" value="{{ old('currency_symbol', $system->currency_symbol) }}" required
                                    class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Symbol Position
+                            </label>
+                            <select name="currency_position"
+                                    class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                                <option value="before" {{ old('currency_position', $system->settings['currency_position'] ?? 'before') == 'before' ? 'selected' : '' }}>Before amount ($100)</option>
+                                <option value="after" {{ old('currency_position', $system->settings['currency_position'] ?? 'before') == 'after' ? 'selected' : '' }}>After amount (100$)</option>
+                                <option value="before_space" {{ old('currency_position', $system->settings['currency_position'] ?? 'before') == 'before_space' ? 'selected' : '' }}>Before with space ($ 100)</option>
+                                <option value="after_space" {{ old('currency_position', $system->settings['currency_position'] ?? 'before') == 'after_space' ? 'selected' : '' }}>After with space (100 $)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Location Settings -->
+                <div>
+                    <h4 class="text-md font-medium text-gray-800 dark:text-white mb-4">Location Settings</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Country
+                            </label>
+                            <select name="location_country"
+                                    class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                                <option value="">Select Country</option>
+                                @foreach($countries as $code => $name)
+                                    <option value="{{ $code }}" {{ old('location_country', $system->location['country'] ?? '') == $code ? 'selected' : '' }}>{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                City
+                            </label>
+                            <input type="text" name="location_city" value="{{ old('location_city', $system->location['city'] ?? '') }}"
+                                   class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Location Name
+                            </label>
+                            <input type="text" name="location_name" value="{{ old('location_name', $system->location['name'] ?? '') }}"
+                                   class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Latitude
+                                </label>
+                                <input type="text" name="location_latitude" value="{{ old('location_latitude', $system->location['latitude'] ?? '') }}"
+                                       class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Longitude
+                                </label>
+                                <input type="text" name="location_longitude" value="{{ old('location_longitude', $system->location['longitude'] ?? '') }}"
+                                       class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -343,6 +478,20 @@
 
                     <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div>
+                            <h4 class="text-sm font-medium text-gray-800 dark:text-white">SMS Notifications</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Receive SMS notifications</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="hidden" name="sms_notifications" value="0">
+                            <input type="checkbox" name="sms_notifications" value="1" 
+                                   class="sr-only peer" 
+                                   {{ old('sms_notifications', $system->settings['notifications']['sms_notifications'] ?? false) ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div>
                             <h4 class="text-sm font-medium text-gray-800 dark:text-white">Notification Sound</h4>
                             <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Play sound for new notifications</p>
                         </div>
@@ -374,7 +523,7 @@
                         </label>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Max Login Attempts
@@ -392,6 +541,253 @@
                                    value="{{ old('session_timeout', $system->settings['security']['session_timeout'] ?? 30) }}" min="5" max="480"
                                    class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
                         </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Password Expiry (days)
+                            </label>
+                            <input type="number" name="password_expiry" 
+                                   value="{{ old('password_expiry', $system->settings['security']['password_expiry'] ?? 90) }}" min="30" max="365"
+                                   class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social Media Tab -->
+            <div id="social-tab" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    @php
+                        $socialPlatforms = [
+                            'facebook' => ['color' => '#1877F2', 'icon' => 'ri-facebook-fill'],
+                            'twitter' => ['color' => '#1DA1F2', 'icon' => 'ri-twitter-fill'],
+                            'instagram' => ['color' => '#E4405F', 'icon' => 'ri-instagram-fill'],
+                            'linkedin' => ['color' => '#0A66C2', 'icon' => 'ri-linkedin-fill'],
+                            'youtube' => ['color' => '#FF0000', 'icon' => 'ri-youtube-fill'],
+                            'whatsapp' => ['color' => '#25D366', 'icon' => 'ri-whatsapp-fill'],
+                        ];
+                    @endphp
+                    
+                    @foreach($socialPlatforms as $platform => $defaults)
+                        @php
+                            $socialData = $system->social_media[$platform] ?? [
+                                'enabled' => false,
+                                'url' => '',
+                                'icon' => $defaults['icon'],
+                                'name' => ucfirst($platform),
+                                'color' => $defaults['color'],
+                                'order' => 99
+                            ];
+                        @endphp
+                        <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="hidden" name="social_{{ $platform }}_enabled" value="0">
+                                        <input type="checkbox" name="social_{{ $platform }}_enabled" value="1" 
+                                               class="sr-only peer" 
+                                               {{ old("social_{$platform}_enabled", $socialData['enabled']) ? 'checked' : '' }}>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded flex items-center justify-center" style="background-color: {{ $socialData['color'] }}">
+                                            <i class="{{ $socialData['icon'] }} text-white text-sm"></i>
+                                        </div>
+                                        <span class="text-sm font-medium text-gray-800 dark:text-white">
+                                            {{ $socialData['name'] }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                        URL
+                                    </label>
+                                    <input type="url" name="social_{{ $platform }}_url" 
+                                           value="{{ old("social_{$platform}_url", $socialData['url']) }}"
+                                           placeholder="https://{{ $platform }}.com/username"
+                                           class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm">
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                            Color
+                                        </label>
+                                        <input type="color" name="social_{{ $platform }}_color" 
+                                               value="{{ old("social_{$platform}_color", $socialData['color']) }}"
+                                               class="w-full h-8 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                            Order
+                                        </label>
+                                        <input type="number" name="social_{{ $platform }}_order" 
+                                               value="{{ old("social_{$platform}_order", $socialData['order']) }}" min="1" max="99"
+                                               class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                        Icon Class
+                                    </label>
+                                    <input type="text" name="social_{{ $platform }}_icon" 
+                                           value="{{ old("social_{$platform}_icon", $socialData['icon']) }}"
+                                           class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Website Pages Tab -->
+            <div id="pages-tab" class="tab-content hidden space-y-6">
+                <div class="space-y-4">
+                    @php
+                        $pages = ['home', 'about', 'services', 'contact', 'faq', 'privacy', 'terms'];
+                    @endphp
+                    
+                    @foreach($pages as $page)
+                        @php
+                            $pageData = $system->website_pages[$page] ?? [
+                                'enabled' => in_array($page, ['home', 'about', 'services', 'contact']),
+                                'title' => ucfirst(str_replace('_', ' ', $page)),
+                                'slug' => $page === 'home' ? '' : str_replace('_', '-', $page),
+                                'content' => '',
+                                'meta_title' => '',
+                                'meta_description' => '',
+                                'meta_keywords' => '',
+                                'show_in_menu' => in_array($page, ['home', 'about', 'services', 'contact', 'faq']),
+                                'order' => array_search($page, $pages) + 1
+                            ];
+                        @endphp
+                        <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="hidden" name="page_{{ $page }}_enabled" value="0">
+                                        <input type="checkbox" name="page_{{ $page }}_enabled" value="1" 
+                                               class="sr-only peer" 
+                                               {{ old("page_{$page}_enabled", $pageData['enabled']) ? 'checked' : '' }}>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                    </label>
+                                    <span class="text-sm font-medium text-gray-800 dark:text-white">
+                                        {{ $pageData['title'] }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="hidden" name="page_{{ $page }}_show_in_menu" value="0">
+                                        <input type="checkbox" name="page_{{ $page }}_show_in_menu" value="1" 
+                                               class="sr-only peer" 
+                                               {{ old("page_{$page}_show_in_menu", $pageData['show_in_menu']) ? 'checked' : '' }}>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                    </label>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">Show in Menu</span>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                            Title
+                                        </label>
+                                        <input type="text" name="page_{{ $page }}_title" 
+                                               value="{{ old("page_{$page}_title", $pageData['title']) }}"
+                                               class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                            Slug
+                                        </label>
+                                        <input type="text" name="page_{{ $page }}_slug" 
+                                               value="{{ old("page_{$page}_slug", $pageData['slug']) }}"
+                                               class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                            Order
+                                        </label>
+                                        <input type="number" name="page_{{ $page }}_order" 
+                                               value="{{ old("page_{$page}_order", $pageData['order']) }}" min="1" max="99"
+                                               class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                        Content
+                                    </label>
+                                    <textarea name="page_{{ $page }}_content" rows="3"
+                                              class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm">{{ old("page_{$page}_content", $pageData['content']) }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Company Info Tab -->
+            <div id="company-tab" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Company Website
+                        </label>
+                        <input type="url" name="company_website" 
+                               value="{{ old('company_website', $system->settings['company']['website'] ?? '') }}"
+                               class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Company Phone
+                        </label>
+                        <input type="tel" name="company_phone" 
+                               value="{{ old('company_phone', $system->settings['company']['phone'] ?? '') }}"
+                               class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Company Email
+                        </label>
+                        <input type="email" name="company_email" 
+                               value="{{ old('company_email', $system->settings['company']['email'] ?? '') }}"
+                               class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Company Address
+                        </label>
+                        <textarea name="company_address" rows="2"
+                                  class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">{{ old('company_address', $system->settings['company']['address'] ?? '') }}</textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            About Company
+                        </label>
+                        <textarea name="company_about" rows="4"
+                                  class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">{{ old('company_about', $system->settings['company']['about'] ?? '') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Mission Statement
+                        </label>
+                        <textarea name="company_mission" rows="3"
+                                  class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">{{ old('company_mission', $system->settings['company']['mission'] ?? '') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Vision Statement
+                        </label>
+                        <textarea name="company_vision" rows="3"
+                                  class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">{{ old('company_vision', $system->settings['company']['vision'] ?? '') }}</textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Core Values
+                        </label>
+                        <textarea name="company_values" rows="3"
+                                  class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">{{ old('company_values', $system->settings['company']['values'] ?? '') }}</textarea>
                     </div>
                 </div>
             </div>
@@ -413,6 +809,63 @@
                     </label>
                 </div>
 
+                <!-- Backup Settings -->
+                <div class="space-y-4">
+                    <h4 class="text-md font-medium text-gray-800 dark:text-white mb-2">Backup Settings</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-800 dark:text-white">Auto Backup</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Automatically backup database</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="hidden" name="auto_backup" value="0">
+                                <input type="checkbox" name="auto_backup" value="1" 
+                                       class="sr-only peer" 
+                                       {{ old('auto_backup', $system->settings['backup']['auto_backup'] ?? true) ? 'checked' : '' }}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-800 dark:text-white">Backup to Cloud</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Store backups in cloud storage</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="hidden" name="backup_to_cloud" value="0">
+                                <input type="checkbox" name="backup_to_cloud" value="1" 
+                                       class="sr-only peer" 
+                                       {{ old('backup_to_cloud', $system->settings['backup']['backup_to_cloud'] ?? false) ? 'checked' : '' }}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Backup Frequency
+                            </label>
+                            <select name="backup_frequency"
+                                    class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                                <option value="daily" {{ old('backup_frequency', $system->settings['backup']['backup_frequency'] ?? 'daily') == 'daily' ? 'selected' : '' }}>Daily</option>
+                                <option value="weekly" {{ old('backup_frequency', $system->settings['backup']['backup_frequency'] ?? 'daily') == 'weekly' ? 'selected' : '' }}>Weekly</option>
+                                <option value="monthly" {{ old('backup_frequency', $system->settings['backup']['backup_frequency'] ?? 'daily') == 'monthly' ? 'selected' : '' }}>Monthly</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Backup Retention (days)
+                            </label>
+                            <input type="number" name="backup_retention" 
+                                   value="{{ old('backup_retention', $system->settings['backup']['backup_retention'] ?? 30) }}" min="1" max="365"
+                                   class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Google Analytics -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -420,6 +873,16 @@
                     </label>
                     <input type="text" name="google_analytics" 
                            value="{{ old('google_analytics', $system->settings['integrations']['google_analytics'] ?? '') }}"
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                </div>
+
+                <!-- Google Maps -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Google Maps API Key
+                    </label>
+                    <input type="text" name="google_maps_key" 
+                           value="{{ old('google_maps_key', $system->settings['integrations']['google_maps_key'] ?? '') }}"
                            class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200">
                 </div>
 
@@ -455,8 +918,8 @@
                     </button>
                     
                     <button type="submit" 
-                            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-3.5 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">
-                        <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="inline-flex items-center gap-2 rounded-lg border border-primary bg-primary px-5 py-3.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-primary/90 dark:bg-primary dark:border-primary dark:text-white dark:hover:bg-primary/90">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
                         Save Settings
@@ -544,7 +1007,8 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize first tab based on URL hash or default to 'basic'
         const hash = window.location.hash.substring(1);
-        if (hash && ['basic', 'system', 'colors', 'notifications', 'security', 'other'].includes(hash)) {
+        const validTabs = ['basic', 'system', 'colors', 'notifications', 'security', 'social', 'pages', 'company', 'other'];
+        if (hash && validTabs.includes(hash)) {
             switchTab(hash);
         } else {
             switchTab('basic');
