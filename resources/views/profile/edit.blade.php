@@ -468,112 +468,163 @@
                 </div>
 
                 <!-- Section 5: Employment Information (for borrowers) -->
-                @if($user->role === 'borrower')
-                <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="employment">
-                    <div class="flex items-center justify-between mb-4">
-                        <h5 class="text-lg font-medium">Employment & Income Information</h5>
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm text-gray-500">{{ $sectionCounts['employment']['filled'] }}/{{ $sectionCounts['employment']['total'] }}</span>
-                            @if($sectionCounts['employment']['filled'] === $sectionCounts['employment']['total'])
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                Complete
-                            </span>
-                            @else
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
-                                Incomplete
-                            </span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Income Type *</label>
-                            <select name="income_type" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                                <option value="">Select Income Type</option>
-                                @foreach($incomeTypes as $incomeType)
-                                <option value="{{ $incomeType->name }}" {{ old('income_type', $user->borrower->income_type ?? '') == $incomeType->name ? 'selected' : '' }}>
-                                    {{ $incomeType->name }}
-                                </option>
-                                @endforeach
-                            </select>
-                            @error('income_type')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Gross Salary ({{ config('app.currency', '$') }})</label>
-                            <input type="number" step="0.01" name="gross_salary" value="{{ old('gross_salary', $user->borrower->gross_salary ?? '') }}" 
-                                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Optional">
-                            @error('gross_salary')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Net Salary ({{ config('app.currency', '$') }}) *</label>
-                            <input type="number" step="0.01" name="net_salary" value="{{ old('net_salary', $user->borrower->net_salary ?? '') }}" 
-                                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                required>
-                            @error('net_salary')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Job Title *</label>
-                            <input type="text" name="job_title" value="{{ old('job_title', $user->borrower->job_title ?? '') }}" 
-                                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                required>
-                            @error('job_title')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Workplace</label>
-                            <input type="text" name="workplace" value="{{ old('workplace', $user->borrower->workplace ?? '') }}" 
-                                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Optional">
-                            @error('workplace')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Employer Name *</label>
-                            <input type="text" name="employer_name" value="{{ old('employer_name', $user->borrower->employer_name ?? '') }}" 
-                                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                required>
-                            @error('employer_name')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Employer Email</label>
-                            <input type="email" name="employer_email" value="{{ old('employer_email', $user->borrower->employer_email ?? '') }}" 
-                                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Optional">
-                            @error('employer_email')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Employer Title</label>
-                            <input type="text" name="employer_title" value="{{ old('employer_title', $user->borrower->employer_title ?? '') }}" 
-                                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Optional">
-                            @error('employer_title')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block mb-2 text-sm font-medium">Department</label>
-                            <input type="text" name="department" value="{{ old('department', $user->borrower->department ?? '') }}" 
-                                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Optional">
-                            @error('department')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
+<!-- Section 5: Employment Information (for borrowers) -->
+@if($user->role === 'borrower')
+<div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="employment">
+    <div class="flex items-center justify-between mb-4">
+        <h5 class="text-lg font-medium">Employment & Income Information</h5>
+        <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">{{ $sectionCounts['employment']['filled'] ?? 0 }}/{{ $sectionCounts['employment']['total'] ?? 9 }}</span>
+            @if(($sectionCounts['employment']['filled'] ?? 0) === ($sectionCounts['employment']['total'] ?? 9))
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                Complete
+            </span>
+            @else
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                Incomplete
+            </span>
+            @endif
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block mb-2 text-sm font-medium">Income Type *</label>
+            <select name="income_type" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                <option value="">Select Income Type</option>
+                @foreach($incomeTypes as $incomeType)
+                <option value="{{ $incomeType->name }}" {{ old('income_type', $user->borrower->income_type ?? '') == $incomeType->name ? 'selected' : '' }}>
+                    {{ $incomeType->name }}
+                </option>
+                @endforeach
+            </select>
+            @error('income_type')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Gross Salary ({{ config('app.currency', '$') }})</label>
+            <input type="number" step="0.01" name="gross_salary" value="{{ old('gross_salary', $user->borrower->gross_salary ?? '') }}" 
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Optional">
+            @error('gross_salary')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Net Salary ({{ config('app.currency', '$') }}) *</label>
+            <input type="number" step="0.01" name="net_salary" value="{{ old('net_salary', $user->borrower->net_salary ?? '') }}" 
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required>
+            @error('net_salary')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Job Title *</label>
+            <input type="text" name="job_title" value="{{ old('job_title', $user->borrower->job_title ?? '') }}" 
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required>
+            @error('job_title')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Workplace</label>
+            <input type="text" name="workplace" value="{{ old('workplace', $user->borrower->workplace ?? '') }}" 
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Optional">
+            @error('workplace')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Employer Name *</label>
+            <input type="text" name="employer_name" value="{{ old('employer_name', $user->borrower->employer_name ?? '') }}" 
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required>
+            @error('employer_name')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Employer Email</label>
+            <input type="email" name="employer_email" value="{{ old('employer_email', $user->borrower->employer_email ?? '') }}" 
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Optional">
+            @error('employer_email')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Employer Title</label>
+            <input type="text" name="employer_title" value="{{ old('employer_title', $user->borrower->employer_title ?? '') }}" 
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Optional">
+            @error('employer_title')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div class="md:col-span-2">
+            <label class="block mb-2 text-sm font-medium">Department</label>
+            <input type="text" name="department" value="{{ old('department', $user->borrower->department ?? '') }}" 
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Optional">
+            @error('department')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+</div>
+
+<!-- Section 6: Borrower Information -->
+<div class="mb-8" id="borrower-info">
+    <div class="flex items-center justify-between mb-4">
+        <h5 class="text-lg font-medium">Borrower Account Information</h5>
+        <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">{{ $sectionCounts['borrower-info']['filled'] ?? 0 }}/{{ $sectionCounts['borrower-info']['total'] ?? 2 }}</span>
+            @if(($sectionCounts['borrower-info']['filled'] ?? 0) === ($sectionCounts['borrower-info']['total'] ?? 2))
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                Complete
+            </span>
+            @else
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                Incomplete
+            </span>
+            @endif
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block mb-2 text-sm font-medium">Borrower National ID *</label>
+            <input type="text" name="national_id" value="{{ old('national_id', $user->borrower->national_id ?? '') }}" 
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required>
+            @error('national_id')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Client Type *</label>
+            <select name="client_type" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                <option value="0" {{ old('client_type', $user->borrower->client_type ?? '') == '0' ? 'selected' : '' }}>Individual</option>
+                <option value="1" {{ old('client_type', $user->borrower->client_type ?? '') == '1' ? 'selected' : '' }}>Business</option>
+            </select>
+            @error('client_type')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Account Status *</label>
+            <select name="status" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                <option value="1" {{ old('status', $user->borrower->status ?? '') == '1' ? 'selected' : '' }}>Active</option>
+                <option value="0" {{ old('status', $user->borrower->status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
+            </select>
+            @error('status')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+</div>
 
                 <!-- Section 6: Borrower Information -->
                 <div class="mb-8" id="borrower-info">

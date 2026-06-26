@@ -496,4 +496,6 @@ class ProfileController extends Controller
         return $sections;
     }
 
+    
+
 }

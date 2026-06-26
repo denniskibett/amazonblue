@@ -31,16 +31,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('profile')->name('profile.')->group(function () {
         Route::get('/', [ProfileController::class, 'show'])->name('show');
         Route::get('/edit', [ProfileController::class, 'edit'])->name('edit');
-        Route::patch('/', [ProfileController::class, 'update'])->name('update');
-        Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
+        Route::match(['PUT', 'PATCH'], '/update', [ProfileController::class, 'update'])->name('update');
+        Route::delete('/destroy', [ProfileController::class, 'destroy'])->name('destroy');
         Route::delete('/avatar', [ProfileController::class, 'deleteAvatar'])->name('delete-avatar');
-        Route::put('/address', [ProfileController::class, 'updateAddress'])->name('address.update');
+        Route::match(['PUT', 'PATCH'], '/address', [ProfileController::class, 'updateAddress'])->name('address.update');
         Route::get('/data', [ProfileController::class, 'getUserData'])->name('data');
         Route::post('/signature', [ProfileController::class, 'saveSignature'])->name('signature.save');
         Route::delete('/signature', [ProfileController::class, 'deleteSignature'])->name('signature.delete');
         
-        // Password routes - Add these
-        Route::post('/password', [ProfileController::class, 'updatePassword'])->name('password');
+        // Password routes
+        Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password');
         Route::post('/password/confirm', [ProfileController::class, 'confirmPassword'])->name('password.confirm');
     });
 

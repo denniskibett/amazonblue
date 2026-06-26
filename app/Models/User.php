@@ -22,6 +22,7 @@ class User extends Authenticatable
         'avatar', 
         'gender',
         'dob',
+        'pob',
         'nationality',
         'marital_status',
         'religion',
@@ -52,12 +53,13 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'dob' => 'date:Y-m-d',
+            'dob' => 'date',
             'disability' => 'boolean',
         ];
     }
-
-
+    /**
+     * Get social links with proper URLs
+     */
     public function getSocialLinksAttribute()
     {
         $social = $this->social ?: [];
