@@ -38,6 +38,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/data', [ProfileController::class, 'getUserData'])->name('data');
         Route::post('/signature', [ProfileController::class, 'saveSignature'])->name('signature.save');
         Route::delete('/signature', [ProfileController::class, 'deleteSignature'])->name('signature.delete');
+        
+        // Password routes - Add these
+        Route::post('/password', [ProfileController::class, 'updatePassword'])->name('password');
+        Route::post('/password/confirm', [ProfileController::class, 'confirmPassword'])->name('password.confirm');
     });
 
     // Users Resource

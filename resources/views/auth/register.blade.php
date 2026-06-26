@@ -7,7 +7,7 @@
       content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
     />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Sign Up | {{ SystemHelper::appName() }}</title>
+    <title>Sign Up | TailAdmin - Tailwind CSS Admin Dashboard Template</title>
     
     <!-- Vite Assets -->
     @vite([
@@ -18,7 +18,7 @@
     ])
 
     @php
-        // Get all JS component filess
+        // Get all JS component files
         $components = collect(File::allFiles(resource_path('js/components')))
             ->filter(fn($file) => $file->getExtension() === 'js')
             ->map(fn($file) => 'resources/js/components/'.$file->getRelativePathname())
@@ -46,7 +46,9 @@
       <div
         class="flex flex-1 flex-col rounded-2xl p-6 sm:rounded-none sm:border-0 sm:p-8"
       >
-        <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
+        <div
+          class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center"
+        >
           <div class="mb-5 sm:mb-8">
             <h1
               class="mb-2 text-title-sm font-semibold text-gray-800 dark:text-white/90 sm:text-title-md"
@@ -170,6 +172,112 @@
                       <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                   </div>
+                </div>
+                <!-- Phone -->
+                <div class="sm:col-span-2">
+                    <label
+                        for="phone"
+                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
+                    >
+                        Phone<span class="text-error-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="phone"
+                        name="phone"
+                        value="{{ old('phone') }}"
+                        placeholder="Enter your phone number"
+                        required
+                        class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                    />
+                    @error('phone')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Role -->
+                <div class="sm:col-span-2">
+                    <label
+                        for="role"
+                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
+                    >
+                        Role<span class="text-error-500">*</span>
+                    </label>
+                    <select
+                        id="role"
+                        name="role"
+                        required
+                        class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                    >
+                        <option value="borrower">Borrower</option>
+                        <option value="teller">Teller</option>
+                        <option value="broker">Broker</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    @error('role')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Role-specific fields (shown/hidden based on role selection) -->
+                <div id="borrower-fields" class="hidden sm:col-span-2 space-y-5">
+                    <!-- National ID -->
+                    <div>
+                        <label
+                            for="national_id"
+                            class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
+                        >
+                            National ID<span class="text-error-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="national_id"
+                            name="national_id"
+                            placeholder="Enter national ID number"
+                            class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                        />
+                        @error('national_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                
+                    <!-- Client Type -->
+                    <!-- Hidden Client Type with default value 0 -->
+                    <input type="hidden" name="client_type" value="0">
+                </div>
+
+                <div id="broker-fields" class="hidden sm:col-span-2">
+                    <!-- Broker specific fields -->
+                    <label
+                        for="cert_no"
+                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
+                    >
+                        Certificate Number
+                    </label>
+                    <input
+                        type="text"
+                        id="cert_no"
+                        name="cert_no"
+                        placeholder="Enter certificate number"
+                        class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                    />
+                </div>
+
+                <div id="teller-fields" class="hidden sm:col-span-2">
+                    <!-- Teller specific fields -->
+                    <label
+                        for="branch"
+                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
+                    >
+                        Branch
+                    </label>
+                    <input
+                        type="text"
+                        id="branch"
+                        name="branch"
+                        placeholder="Enter branch name"
+                        class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                    />
                 </div>
                 <!-- Password -->
                 <div>
@@ -379,10 +487,10 @@
         <!-- ===== Common Grid Shape End ===== -->
         <div class="flex max-w-xs flex-col items-center">
           <a href="{{ route('dashboard') }}" class="mb-4 block">
-            <img src="{{ SystemHelper::authLogoUrl() }}" alt="{{ SystemHelper::appName() }}" />
+            <img src="{{ asset('images/logo/auth-logo.svg') }}" alt="Logo" />
           </a>
           <p class="text-center text-gray-400 dark:text-white/60">
-            {{ SystemHelper::slogan() }}
+            Free and Open-Source Tailwind CSS Admin Dashboard Template
           </p>
         </div>
       </div>
@@ -426,4 +534,32 @@
       </button>
     </div>
   </body>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('role');
+    
+    function toggleRoleFields() {
+        // Hide all role-specific fields first
+        document.getElementById('borrower-fields').classList.add('hidden');
+        document.getElementById('broker-fields').classList.add('hidden');
+        document.getElementById('teller-fields').classList.add('hidden');
+        
+        // Show fields for selected role
+        if (roleSelect.value === 'borrower') {
+            document.getElementById('borrower-fields').classList.remove('hidden');
+        } else if (roleSelect.value === 'broker') {
+            document.getElementById('broker-fields').classList.remove('hidden');
+        } else if (roleSelect.value === 'teller') {
+            document.getElementById('teller-fields').classList.remove('hidden');
+        }
+    }
+    
+    // Initial toggle
+    toggleRoleFields();
+    
+    // Add event listener
+    roleSelect.addEventListener('change', toggleRoleFields);
+});
+</script>
 </html>
+

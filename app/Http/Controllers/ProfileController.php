@@ -5,311 +5,495 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Hash;
+use App\Services\SignatureService;
+use Illuminate\Http\JsonResponse;
+use Carbon\Carbon;
+use App\Models\Category;
+use PragmaRX\Countries\Package\Countries;
 
 class ProfileController extends Controller
 {
     /**
-     * Display the user's profile form.
+     * Display the user's profile.
      */
-    public function edit(Request $request): View
-    {
-        $user = $request->user();
-        $social = json_decode($user->social, true) ?? [];
-        
-        // Extract usernames from URLs for display
-        $socialUsernames = [
-            'facebook' => $this->extractUsernameFromUrl($social['facebook'] ?? ''),
-            'twitter' => $this->extractUsernameFromUrl($social['twitter'] ?? ''),
-            'linkedin' => $this->extractUsernameFromUrl($social['linkedin'] ?? '', 'linkedin.com/in/'),
-            'instagram' => $this->extractUsernameFromUrl($social['instagram'] ?? ''),
-        ];
-        
-        return view('profile.edit', [
-            'user' => $user,
-            'socialUsernames' => $socialUsernames,
-        ]);
-    }
-
     public function show(Request $request): View
     {
-        $user = $request->user();
-        $social = json_decode($user->social, true) ?? [];
+        $user = $request->user()->load(['broker', 'borrower', 'teller']);
         
-        // Extract usernames from URLs for display
-        $socialUsernames = [
-            'facebook' => $this->extractUsernameFromUrl($social['facebook'] ?? ''),
-            'twitter' => $this->extractUsernameFromUrl($social['twitter'] ?? ''),
-            'linkedin' => $this->extractUsernameFromUrl($social['linkedin'] ?? '', 'linkedin.com/in/'),
-            'instagram' => $this->extractUsernameFromUrl($social['instagram'] ?? ''),
-        ];
+        // Calculate completion percentage for the view
+        $completionPercentage = $user->getBiodataCompletionPercentage();
+        $missingFields = $user->getMissingBiodataFields();
         
-        return view('profile.show', [
-            'user' => $user,
-            'socialUsernames' => $socialUsernames,
-        ]);
+        return view('profile.show', compact('user', 'completionPercentage', 'missingFields'));
     }
 
-    public function update(ProfileUpdateRequest $request): RedirectResponse|JsonResponse
+    public function edit(Request $request): View
     {
-        // Check if it's an AJAX request
-        if ($request->expectsJson() || $request->ajax()) {
-            try {
-                $user = $request->user();
-                
-                // Validate the request with ALL fields
-                $validated = $request->validate([
-                    'name' => 'required|string|max:255',
-                    'email' => [
-                        'required',
-                        'string',
-                        'email',
-                        'max:255',
-                        Rule::unique('users')->ignore($user->id),
-                    ],
-                    'phone' => 'nullable|string|max:20',
-                    'bio' => 'nullable|string|max:500',
-                    'country' => 'nullable|string|max:100',
-                    'city' => 'nullable|string|max:100',
-                    'postal_code' => 'nullable|string|max:20',
-                    'tax_id' => 'nullable|string|max:50',
-                    'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-                ]);
-                
-                // Handle avatar upload
-                if ($request->hasFile('avatar')) {
-                    // Delete old avatar if exists
-                    if ($user->avatar) {
-                        Storage::disk('public')->delete($user->avatar);
-                    }
-                    
-                    // Store new avatar
-                    $path = $request->file('avatar')->store('avatars', 'public');
-                    $validated['avatar'] = $path;
-                }
-                
-                // Handle social links
-                $socialData = [];
-                $socialPlatforms = ['facebook', 'twitter', 'linkedin', 'instagram'];
-                
-                foreach ($socialPlatforms as $platform) {
-                    $value = $request->input("social.{$platform}");
-                    if (!empty($value)) {
-                        // If it starts with @, it's a username
-                        if (str_starts_with($value, '@')) {
-                            $username = substr($value, 1);
-                            $socialData[$platform] = $this->formatSocialLink($platform, $username);
+        $user = $request->user()->load(['broker', 'borrower', 'teller']);
+        
+        // Get categories for dropdowns
+        $religions = Category::where('category_type', 'religion')->orderBy('name')->get();
+        $relationships = Category::where('category_type', 'relationship')->orderBy('name')->get();
+        $educationLevels = Category::where('category_type', 'education')->orderBy('name')->get();
+        $incomeTypes = Category::where('category_type', 'income_type')->orderBy('name')->get();
+        
+        // Get countries for nationality dropdown
+        $countries = Countries::all()
+            ->map(function ($country) {
+
+                $flag = '🏳️'; // Default flag if none found
+
+                if (isset($country->flag)) {
+                    try {
+                        // Pragmarx Countries exposes it as an object
+                        if (is_object($country->flag) && property_exists($country->flag, 'emoji')) {
+                            $flag = $country->flag->emoji;
                         } 
-                        // If it doesn't start with http, assume it's a username without @
-                        elseif (!str_starts_with($value, 'http')) {
-                            $socialData[$platform] = $this->formatSocialLink($platform, $value);
+                        // Some data structures may have array form (rare)
+                        elseif (is_array($country->flag) && isset($country->flag['emoji'])) {
+                            $flag = $country->flag['emoji'];
                         }
-                        // Otherwise, it's already a URL
-                        else {
-                            $socialData[$platform] = $value;
-                        }
+                    } catch (\Throwable $e) {
+                        $flag = '🏳️'; // fallback
                     }
                 }
-                
-                // Only encode if we have social data
-                if (!empty($socialData)) {
-                    $validated['social'] = json_encode($socialData);
-                } else {
-                    $validated['social'] = null;
-                }
-                
-                $user->fill($validated);
-                
-                if ($user->isDirty('email')) {
-                    $user->email_verified_at = null;
-                }
-                
-                $user->save();
-                
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Profile updated successfully',
-                    'user' => $user->fresh(),
-                    'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-                    'social' => json_decode($user->social, true) ?? []
+
+
+                return [
+                    'code' => $country->cca2, // ISO Alpha-2 code e.g. KE
+                    'iso3' => $country->cca3, // ISO Alpha-3 code e.g. KEN
+                    'name' => $country->name->common, // Full country name
+                    'official_name' => $country->name->official, // Official name
+                    'flag' => $flag ?? '🏳️', // Emoji flag
+                    'nationality' => $country->demonyms['eng']['m'] ?? null, // e.g. Kenyan
+                    'capital' => optional($country->capital)->first() ?? null, // Capital city
+                    'region' => $country->region ?? null, // Region (e.g. Africa)
+                    'subregion' => $country->subregion ?? null, // Subregion
+
+                    // Currency data
+                    'currency' => collect($country->currencies ?? [])->keys()->first(),
+                    'currency_name' => collect($country->currencies ?? [])->first()['name'] ?? null,
+                    'currency_symbol' => collect($country->currencies ?? [])->first()['symbol'] ?? null,
+
+                    // International dialing info
+                    'calling_code' => isset($country->idd['root'])
+                        ? $country->idd['root'] . (optional($country->idd['suffixes'])->first() ?? '')
+                        : null,
+
+                    // Internet domain
+                    'tld' => optional($country->tld)->first() ?? null,
+                ];
+
+            })
+            ->sortBy('name')
+            ->values();
+            
+
+        // Simply check if user has signature
+        $hasSignature = !empty($user->signature);
+        
+        // Calculate completion data for the view
+        $completionPercentage = $user->getBiodataCompletionPercentage();
+        $missingFields = $user->getMissingBiodataFields();
+        
+        // Calculate section completion counts including borrower fields
+        $sectionCounts = $this->getSectionCompletionCounts($user);
+        
+        return view('profile.edit', compact(
+            'user', 
+            'hasSignature', 
+            'completionPercentage', 
+            'missingFields',
+            'religions',
+            'relationships',
+            'educationLevels',
+            'incomeTypes',
+            'sectionCounts',
+            'countries'
+        ));
+    }
+
+    public function update(Request $request)
+    {
+        $user = $request->user();
+        
+        // Basic validation rules
+        $rules = [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,'.$user->id,
+            'phone' => 'required|string|max:20|unique:users,phone,'.$user->id,
+            'gender' => 'required|in:male,female,other',
+            'dob' => 'required|date|before:today|after:1900-01-01',
+            'nationality' => 'required|string|size:2', // Now storing country code (2 letters)
+            'marital_status' => 'required|in:single,married,divorced,widowed',
+            'religion' => 'nullable|string|max:100',
+            'education' => 'nullable|string|max:100',
+            'disability' => 'boolean',
+            
+            // Identification fields
+            'id_type' => 'required|in:national_id,passport,drivers_license',
+            'id_number' => 'required|string|max:50',
+            'id_front_path' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'id_back_path' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            
+            // Next of kin fields
+            'kin_name' => 'required|string|max:255',
+            'kin_email' => 'required|email',
+            'kin_phone' => 'required|string|max:20',
+            'kin_occupation' => 'required|string|max:255',
+            'kin_relation' => 'required|string|max:100',
+            'kin_id_type' => 'required|in:national_id,passport',
+            'kin_id_number' => 'required|string|max:50',
+        ];
+        
+        // Add borrower-specific validation rules
+        if ($user->role === 'borrower') {
+            $rules = array_merge($rules, [
+                'income_type' => 'required|string|max:50',
+                'gross_salary' => 'nullable|numeric|min:0',
+                'net_salary' => 'nullable|numeric|min:0',
+                'job_title' => 'nullable|string|max:255',
+                'workplace' => 'nullable|string|max:255',
+                'employer_name' => 'nullable|string|max:255',
+                'employer_email' => 'nullable|email',
+                'employer_title' => 'nullable|string|max:255',
+                'department' => 'nullable|string|max:255',
+                'client_type' => 'required|in:0,1',
+                'status' => 'required|in:0,1',
+            ]);
+        }
+        
+        // Add other role-specific validation rules
+        if ($user->role === 'broker') {
+            $rules = array_merge($rules, [
+                'cert_no' => 'required|string|max:255|unique:brokers,cert_no,'.($user->broker ? $user->broker->id : 'NULL'),
+                'interest_client' => 'required|numeric|min:0',
+                'interest_broker' => 'required|numeric|min:0',
+                'penalty_client' => 'required|numeric|min:0',
+                'penalty_broker' => 'required|numeric|min:0',
+            ]);
+        } elseif ($user->role === 'teller') {
+            $rules = array_merge($rules, [
+                'branch' => 'required|string|max:255',
+            ]);
+        }
+        
+        $validatedData = $request->validate($rules);
+        
+        // Handle file uploads
+        if ($request->hasFile('profile_photo')) {
+            $profilePhotoPath = $request->file('profile_photo')->store('profile-photos', 'public');
+            $validatedData['profile_photo_path'] = $profilePhotoPath;
+        }
+        
+        if ($request->hasFile('id_front_path')) {
+            $idFrontPath = $request->file('id_front_path')->store('id-documents', 'public');
+            $validatedData['id_front_path'] = $idFrontPath;
+        }
+        
+        if ($request->hasFile('id_back_path')) {
+            $idBackPath = $request->file('id_back_path')->store('id-documents', 'public');
+            $validatedData['id_back_path'] = $idBackPath;
+        }
+        
+        // Convert disability to boolean
+        $validatedData['disability'] = $request->has('disability');
+        
+        // Format date of birth
+        if (!empty($validatedData['dob'])) {
+            $validatedData['dob'] = Carbon::parse($validatedData['dob']);
+        }
+        
+        // Update basic user info
+        $user->fill($validatedData);
+        
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+        
+        $user->save();
+        
+        // Update role-specific info
+        if ($user->role === 'broker') {
+            if ($user->broker) {
+                $user->broker->update([
+                    'cert_no' => $validatedData['cert_no'],
+                    'interest_client' => $validatedData['interest_client'],
+                    'interest_broker' => $validatedData['interest_broker'],
+                    'penalty_client' => $validatedData['penalty_client'],
+                    'penalty_broker' => $validatedData['penalty_broker'],
                 ]);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error updating profile',
-                    'error' => $e->getMessage()
-                ], 422);
+            } else {
+                $user->broker()->create([
+                    'cert_no' => $validatedData['cert_no'],
+                    'interest_client' => $validatedData['interest_client'],
+                    'interest_broker' => $validatedData['interest_broker'],
+                    'penalty_client' => $validatedData['penalty_client'],
+                    'penalty_broker' => $validatedData['penalty_broker'],
+                ]);
+            }
+        } elseif ($user->role === 'borrower') {
+            $borrowerData = [
+                'client_type' => $validatedData['client_type'],
+                'status' => $validatedData['status'],
+                'income_type' => $validatedData['income_type'] ?? null,
+                'gross_salary' => $validatedData['gross_salary'] ?? null,
+                'net_salary' => $validatedData['net_salary'] ?? null,
+                'job_title' => $validatedData['job_title'] ?? null,
+                'workplace' => $validatedData['workplace'] ?? null,
+                'employer_name' => $validatedData['employer_name'] ?? null,
+                'employer_email' => $validatedData['employer_email'] ?? null,
+                'employer_title' => $validatedData['employer_title'] ?? null,
+                'department' => $validatedData['department'] ?? null,
+            ];
+            
+            if ($user->borrower) {
+                $user->borrower->update($borrowerData);
+            } else {
+                $user->borrower()->create($borrowerData);
+            }
+        } elseif ($user->role === 'teller') {
+            if ($user->teller) {
+                $user->teller->update([
+                    'branch' => $validatedData['branch'],
+                ]);
+            } else {
+                $user->teller()->create([
+                    'branch' => $validatedData['branch'],
+                ]);
             }
         }
         
-        // Original form submission handling
-        $request->user()->fill($request->validated());
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
-
-        $request->user()->save();
-
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
-    }
-
-    /**
-     * Delete user's avatar
-     */
-    public function deleteAvatar(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user();
-            
-            if ($user->avatar) {
-                Storage::disk('public')->delete($user->avatar);
-                $user->avatar = null;
-                $user->save();
-            }
-            
+        if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Avatar deleted successfully',
-                'user' => $user->fresh()
+                'message' => 'Profile updated successfully',
+                'completion_percentage' => $user->getBiodataCompletionPercentage()
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error deleting avatar',
-                'error' => $e->getMessage()
-            ], 422);
         }
+        
+        return Redirect::route('profile.show')
+            ->with('status', 'profile-updated')
+            ->with('success', 'Profile updated successfully!');
     }
 
-    /**
-     * Extract username from social media URL
-     */
-    private function extractUsernameFromUrl(?string $url, string $prefix = ''): string
+    public function updatePassword(Request $request)
     {
-        if (empty($url)) {
-            return '';
-        }
-        
-        // If it's already a username (no http), return it
-        if (!str_starts_with($url, 'http')) {
-            return $url;
-        }
-        
-        // Remove the base URL to get username
-        $prefixes = [
-            'https://facebook.com/',
-            'https://www.facebook.com/',
-            'https://twitter.com/',
-            'https://www.twitter.com/',
-            'https://linkedin.com/in/',
-            'https://www.linkedin.com/in/',
-            'https://instagram.com/',
-            'https://www.instagram.com/',
-            'http://facebook.com/',
-            'http://www.facebook.com/',
-            'http://twitter.com/',
-            'http://www.twitter.com/',
-            'http://linkedin.com/in/',
-            'http://www.linkedin.com/in/',
-            'http://instagram.com/',
-            'http://www.instagram.com/',
-        ];
-        
-        foreach ($prefixes as $p) {
-            if (str_starts_with($url, $p)) {
-                return substr($url, strlen($p));
-            }
-        }
-        
-        return $url; // Return as-is if no match
+        $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $user = $request->user();
+        $user->update([
+            'password' => Hash::make($request->password),
+            'password_changed_at' => now(),
+        ]);
+
+        return redirect()->route('profile.edit')->with('status', 'password-updated');
     }
 
-    /**
-     * Format social media link based on platform and username
-     */
-    private function formatSocialLink(string $platform, string $username): string
+    
+    public function password(Request $request)
     {
-        $platformUrls = [
-            'facebook' => 'https://facebook.com/',
-            'twitter' => 'https://twitter.com/',
-            'linkedin' => 'https://linkedin.com/in/',
-            'instagram' => 'https://instagram.com/',
-        ];
+        $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'confirmed', 'min:6'],
+        ]);
         
-        if (isset($platformUrls[$platform])) {
-            // Clean the username (remove any @ symbols and trim)
-            $cleanUsername = trim($username, '@');
-            return $platformUrls[$platform] . $cleanUsername;
+        $request->user()->update([
+            'password' => bcrypt($request->password)
+        ]);
+        
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
         }
         
-        return $username;
+        return back()->with('status', 'password-updated');
     }
 
-    public function updateAddress(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user();
-            
-            $validated = $request->validate([
-                'country' => 'nullable|string|max:100',
-                'city' => 'nullable|string|max:100',
-                'postal_code' => 'nullable|string|max:20',
-                'tax_id' => 'nullable|string|max:50',
-            ]);
-            
-            $user->update($validated);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Address updated successfully',
-                'user' => $user->fresh()
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error updating address',
-                'error' => $e->getMessage()
-            ], 422);
-        }
-    }
-
-
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request)
     {
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password'],
         ]);
-
+        
         $user = $request->user();
-
-        // Delete avatar if exists
-        if ($user->avatar) {
-            Storage::disk('public')->delete($user->avatar);
-        }
-
+        
         Auth::logout();
-
+        
         $user->delete();
-
+        
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
+        
+        if ($request->wantsJson()) {
+            return response()->json(['redirect' => '/']);
+        }
+        
         return Redirect::to('/');
     }
 
-    public function getData()
+    public function saveSignature(Request $request, SignatureService $signatureService): JsonResponse
     {
-        $user = auth()->user();
+        $request->validate([
+            'signature_data' => 'required|string',
+        ]);
+
+        $user = $request->user();
+        $result = $signatureService->saveSignature($request->signature_data, $user);
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Signature saved successfully',
+                'signature_url' => $result['url'],
+                'filename' => $result['filename']
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to save signature: ' . $result['error']
+        ], 500);
+    }
+
+    public function deleteSignature(Request $request, SignatureService $signatureService): JsonResponse
+    {
+        $user = $request->user();
+        $result = $signatureService->deleteSignature($user);
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Signature deleted successfully'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to delete signature: ' . $result['error']
+        ], 500);
+    }
+
+    public function autoSave(Request $request)
+    {
+        $user = $request->user();
+        
+        $rules = [
+            'name' => 'sometimes|required|string|max:255',
+            'email' => 'sometimes|required|email|unique:users,email,'.$user->id,
+            'phone' => 'sometimes|required|string|max:20',
+            'gender' => 'sometimes|required|in:male,female,other',
+            'dob' => 'sometimes|required|date',
+            'nationality' => 'sometimes|required|string|max:100',
+            'marital_status' => 'sometimes|required|in:single,married,divorced,widowed',
+            'religion' => 'sometimes|nullable|string|max:100',
+            'education' => 'sometimes|nullable|string|max:100',
+            'disability' => 'sometimes|boolean',
+        ];
+        
+        $validatedData = $request->validate($rules);
+        
+        $user->fill($validatedData);
+        $user->save();
         
         return response()->json([
-            'user' => $user->only(['name', 'email', 'phone', 'bio', 'country', 'city', 'state', 'postal_code', 'tax_id'])
+            'success' => true,
+            'message' => 'Auto-saved successfully',
+            'completion_percentage' => $user->getBiodataCompletionPercentage()
         ]);
     }
-    
+
+    private function getSectionCompletionCounts($user)
+    {
+        $sections = [
+            'basic' => [
+                'name' => 'Basic Information',
+                'fields' => [
+                    'user' => ['name', 'email', 'phone', 'gender', 'dob', 'nationality', 'marital_status'],
+                    'borrower' => []
+                ],
+                'filled' => 0,
+                'total' => 7
+            ],
+            'identification' => [
+                'name' => 'Identification',
+                'fields' => [
+                    'user' => ['id_type', 'id_number', 'id_front_path', 'id_back_path'],
+                    'borrower' => []
+                ],
+                'filled' => 0,
+                'total' => 5
+            ],
+            'next-of-kin' => [
+                'name' => 'Next of Kin',
+                'fields' => [
+                    'user' => ['kin_name', 'kin_email', 'kin_phone', 'kin_occupation', 'kin_relation', 'kin_id_type', 'kin_id_number'],
+                    'borrower' => []
+                ],
+                'filled' => 0,
+                'total' => 7
+            ],
+            'additional' => [
+                'name' => 'Additional Information',
+                'fields' => [
+                    'user' => ['religion', 'education'],
+                    'borrower' => []
+                ],
+                'filled' => 0,
+                'total' => 2
+            ],
+            'employment' => [
+                'name' => 'Employment Information',
+                'fields' => [
+                    'user' => [],
+                    'borrower' => ['income_type', 'gross_salary', 'net_salary', 'job_title', 'workplace', 'employer_name', 'employer_email', 'employer_title', 'department']
+                ],
+                'filled' => 0,
+                'total' => 9
+            ],
+            'borrower-info' => [
+                'name' => 'Borrower Details',
+                'fields' => [
+                    'user' => [],
+                    'borrower' => ['client_type', 'status']
+                ],
+                'filled' => 0,
+                'total' => 2
+            ]
+        ];
+
+        foreach ($sections as $key => &$section) {
+            $filled = 0;
+            $total = 0;
+            
+            // Count user fields
+            foreach ($section['fields']['user'] as $field) {
+                $total++;
+                if (!empty($user->$field)) {
+                    $filled++;
+                }
+            }
+            
+            // Count borrower fields
+            foreach ($section['fields']['borrower'] as $field) {
+                $total++;
+                if ($user->borrower && !empty($user->borrower->$field)) {
+                    $filled++;
+                }
+            }
+            
+            $section['filled'] = $filled;
+            $section['total'] = $total;
+        }
+
+        return $sections;
+    }
+
 }
