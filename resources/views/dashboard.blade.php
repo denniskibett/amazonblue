@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
+
     <div class="grid grid-cols-12 gap-4 md:gap-6">
         <!-- Profile Completion Alert for Borrowers -->
         @if(auth()->user()->role === 'borrower' && !$biodataComplete)
@@ -145,25 +146,9 @@
         </div>
 
         <div class="col-span-12 xl:col-span-12">
-            @include('partials.table.table-01', ['dueLoans' => $dueLoans ?? collect()])
+            @include('partials.table.table-due-loans', ['dueLoans' => $dueLoans ?? collect()])
         </div>
 
-        <!-- Add Table  -->
-        
-        {{-- 
-        <div class="col-span-12">
-            @include('partials.chart.chart-03', [
-                'disbursementTrends' => $disbursementTrends ?? []
-            ])
-        </div> --}}
-
-        {{-- <div class="col-span-12 xl:col-span-5">
-            @include('partials.map-01')
-        </div>
-
-        <div class="col-span-12 xl:col-span-7">
-            @include('partials.table.table-01', ['dueLoans' => $dueLoans])
-        </div> --}}
 
         @if(auth()->user()->role === 'broker')
             <div class="col-span-12">

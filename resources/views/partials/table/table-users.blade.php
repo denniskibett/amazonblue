@@ -20,7 +20,8 @@
   <!-- CREATE USER MODAL -->
   <div x-show="isCreateModalOpen" 
        x-cloak
-       class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto modal z-[99999]"
+       class="fixed inset-0 z-[99999]"
+       style="z-index: 99999 !important;"
        x-transition:enter="transition ease-out duration-300"
        x-transition:enter-start="opacity-0"
        x-transition:enter-end="opacity-100"
@@ -28,237 +29,243 @@
        x-transition:leave-start="opacity-100"
        x-transition:leave-end="opacity-0">
     
-    <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" 
+    <!-- Full screen backdrop -->
+    <div class="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" 
+         style="backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);"
          @click="closeCreateModal()"></div>
     
-    <div class="relative w-full max-w-2xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10"
-         @click.outside="closeCreateModal()">
-      
-      <!-- Close button -->
-      <button @click="closeCreateModal()"
-              class="group absolute right-3 top-3 z-99999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
-        <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200"
-             width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fill-rule="evenodd" clip-rule="evenodd" 
-                d="M6.04289 16.5413C5.65237 16.9318 5.65237 17.565 6.04289 17.9555C6.43342 18.346 7.06658 18.346 7.45711 17.9555L11.9987 13.4139L16.5408 17.956C16.9313 18.3466 17.5645 18.3466 17.955 17.956C18.3455 17.5655 18.3455 16.9323 17.955 16.5418L13.4129 11.9997L17.955 7.4576C18.3455 7.06707 18.3455 6.43391 17.955 6.04338C17.5645 5.65286 16.9313 5.65286 16.5408 6.04338L11.9987 10.5855L7.45711 6.0439C7.06658 5.65338 6.43342 5.65338 6.04289 6.0439C5.65237 6.43442 5.65237 7.06759 6.04289 7.45811L10.5845 11.9997L6.04289 16.5413Z" />
-        </svg>
-      </button>
+    <!-- Modal Content -->
+    <div class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto">
+      <div class="relative w-full max-w-2xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10"
+           @click.outside="closeCreateModal()">
+        
+        <!-- Close button -->
+        <button @click="closeCreateModal()"
+                class="group absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
+          <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200"
+               width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd" 
+                  d="M6.04289 16.5413C5.65237 16.9318 5.65237 17.565 6.04289 17.9555C6.43342 18.346 7.06658 18.346 7.45711 17.9555L11.9987 13.4139L16.5408 17.956C16.9313 18.3466 17.5645 18.3466 17.955 17.956C18.3455 17.5655 18.3455 16.9323 17.955 16.5418L13.4129 11.9997L17.955 7.4576C18.3455 7.06707 18.3455 6.43391 17.955 6.04338C17.5645 5.65286 16.9313 5.65286 16.5408 6.04338L11.9987 10.5855L7.45711 6.0439C7.06658 5.65338 6.43342 5.65338 6.04289 6.0439C5.65237 6.43442 5.65237 7.06759 6.04289 7.45811L10.5845 11.9997L6.04289 16.5413Z" />
+          </svg>
+        </button>
 
-      <!-- Modal Form -->
-      <h4 class="mb-6 text-lg font-medium text-gray-800 dark:text-white/90">
-        Create New User
-      </h4>
-      
-      <!-- Success/Error Messages -->
-      <div x-show="message" 
-           x-text="message"
-           :class="messageType === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
-           class="p-3 mb-4 rounded-lg"
-           x-transition></div>
+        <!-- Modal Form -->
+        <h4 class="mb-6 text-lg font-medium text-gray-800 dark:text-white/90">
+          Create New User
+        </h4>
+        
+        <!-- Success/Error Messages -->
+        <div x-show="message" 
+             x-text="message"
+             :class="messageType === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
+             class="p-3 mb-4 rounded-lg"
+             x-transition></div>
 
-      <form @submit.prevent="submitForm" x-ref="createUserForm">
-        @csrf
-        <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-          
-          <!-- Basic Information -->
-          <div class="col-span-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Full Name *
-            </label>
-            <input type="text"
-                   x-model="formData.name"
-                   placeholder="John Doe"
-                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                   required />
-          </div>
-
-          <div class="col-span-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Email Address *
-            </label>
-            <input type="email"
-                   x-model="formData.email"
-                   placeholder="user@example.com"
-                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                   required />
-          </div>
-
-          <div class="col-span-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Phone Number *
-            </label>
-            <input type="tel"
-                   x-model="formData.phone"
-                   placeholder="+254 712 345 678"
-                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                   required />
-          </div>
-
-          <div class="col-span-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Role *
-            </label>
-            <select x-model="formData.role"
-                    @change="toggleRoleFields()"
-                    class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                    required>
-              <option value="">Select Role</option>
-              <option value="admin">Admin</option>
-              <option value="broker">Broker</option>
-              <option value="borrower">Borrower</option>
-              <option value="teller">Teller</option>
-            </select>
-          </div>
-
-          <div class="col-span-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Password *
-            </label>
-            <input type="password"
-                   x-model="formData.password"
-                   placeholder="Minimum 6 characters"
-                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                   minlength="6"
-                   required />
-          </div>
-
-          <!-- Broker Fields -->
-          <template x-if="formData.role === 'broker'">
-            <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Certificate Number *
-                </label>
-                <input type="text"
-                       x-model="formData.cert_no"
-                       placeholder="e.g., CERT12345"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
-
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Client Interest Rate (%) *
-                </label>
-                <input type="number"
-                       x-model="formData.interest_client"
-                       placeholder="e.g., 5.5"
-                       step="0.01"
-                       min="0"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
-
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Broker Interest Rate (%) *
-                </label>
-                <input type="number"
-                       x-model="formData.interest_broker"
-                       placeholder="e.g., 2.5"
-                       step="0.01"
-                       min="0"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
-
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Client Penalty Rate (%) *
-                </label>
-                <input type="number"
-                       x-model="formData.penalty_client"
-                       placeholder="e.g., 1.5"
-                       step="0.01"
-                       min="0"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
-
-              <div class="col-span-1 sm:col-span-2">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Broker Penalty Rate (%) *
-                </label>
-                <input type="number"
-                       x-model="formData.penalty_broker"
-                       placeholder="e.g., 0.5"
-                       step="0.01"
-                       min="0"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
+        <form @submit.prevent="submitForm" x-ref="createUserForm">
+          @csrf
+          <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+            
+            <!-- Basic Information -->
+            <div class="col-span-1">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                Full Name *
+              </label>
+              <input type="text"
+                     x-model="formData.name"
+                     placeholder="John Doe"
+                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                     required />
             </div>
-          </template>
 
-          <!-- Borrower Fields -->
-          <template x-if="formData.role === 'borrower'">
-            <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  National ID *
-                </label>
-                <input type="text"
-                       x-model="formData.national_id"
-                       placeholder="e.g., 12345678"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
-
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Client Type *
-                </label>
-                <select x-model="formData.client_type"
-                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                  <option value="0">Our Client</option>
-                  <option value="1">Broker Client</option>
-                </select>
-              </div>
-
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Status *
-                </label>
-                <select x-model="formData.status"
-                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                  <option value="1">Active</option>
-                  <option value="0">Inactive</option>
-                </select>
-              </div>
+            <div class="col-span-1">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                Email Address *
+              </label>
+              <input type="email"
+                     x-model="formData.email"
+                     placeholder="user@example.com"
+                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                     required />
             </div>
-          </template>
-        </div>
 
-        <!-- Form Actions -->
-        <div class="flex items-center justify-end w-full gap-3 mt-8">
-          <button type="button"
-                  @click="closeCreateModal()"
-                  class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 sm:w-auto"
-                  :disabled="isSubmitting">
-            Cancel
-          </button>
-          <button type="submit"
-                  class="flex justify-center w-full px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 sm:w-auto"
-                  :disabled="isSubmitting"
-                  :class="{'opacity-50 cursor-not-allowed': isSubmitting}">
-            <span x-show="!isSubmitting">Create User</span>
-            <span x-show="isSubmitting" class="flex items-center gap-2">
-              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Creating...
-            </span>
-          </button>
-        </div>
-      </form>
+            <div class="col-span-1">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                Phone Number *
+              </label>
+              <input type="tel"
+                     x-model="formData.phone"
+                     placeholder="+254 712 345 678"
+                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                     required />
+            </div>
+
+            <div class="col-span-1">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                Role *
+              </label>
+              <select x-model="formData.role"
+                      @change="toggleRoleFields()"
+                      class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                      required>
+                <option value="">Select Role</option>
+                <option value="admin">Admin</option>
+                <option value="broker">Broker</option>
+                <option value="borrower">Borrower</option>
+                <option value="teller">Teller</option>
+              </select>
+            </div>
+
+            <div class="col-span-1">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                Password *
+              </label>
+              <input type="password"
+                     x-model="formData.password"
+                     placeholder="Minimum 6 characters"
+                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                     minlength="6"
+                     required />
+            </div>
+
+            <!-- Broker Fields -->
+            <template x-if="formData.role === 'broker'">
+              <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Certificate Number *
+                  </label>
+                  <input type="text"
+                         x-model="formData.cert_no"
+                         placeholder="e.g., CERT12345"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Client Interest Rate (%) *
+                  </label>
+                  <input type="number"
+                         x-model="formData.interest_client"
+                         placeholder="e.g., 5.5"
+                         step="0.01"
+                         min="0"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Broker Interest Rate (%) *
+                  </label>
+                  <input type="number"
+                         x-model="formData.interest_broker"
+                         placeholder="e.g., 2.5"
+                         step="0.01"
+                         min="0"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Client Penalty Rate (%) *
+                  </label>
+                  <input type="number"
+                         x-model="formData.penalty_client"
+                         placeholder="e.g., 1.5"
+                         step="0.01"
+                         min="0"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+
+                <div class="col-span-1 sm:col-span-2">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Broker Penalty Rate (%) *
+                  </label>
+                  <input type="number"
+                         x-model="formData.penalty_broker"
+                         placeholder="e.g., 0.5"
+                         step="0.01"
+                         min="0"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+              </div>
+            </template>
+
+            <!-- Borrower Fields -->
+            <template x-if="formData.role === 'borrower'">
+              <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    National ID *
+                  </label>
+                  <input type="text"
+                         x-model="formData.national_id"
+                         placeholder="e.g., 12345678"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Client Type *
+                  </label>
+                  <select x-model="formData.client_type"
+                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    <option value="0">Our Client</option>
+                    <option value="1">Broker Client</option>
+                  </select>
+                </div>
+
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Status *
+                  </label>
+                  <select x-model="formData.status"
+                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    <option value="1">Active</option>
+                    <option value="0">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex items-center justify-end w-full gap-3 mt-8">
+            <button type="button"
+                    @click="closeCreateModal()"
+                    class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 sm:w-auto"
+                    :disabled="isSubmitting">
+              Cancel
+            </button>
+            <button type="submit"
+                    class="flex justify-center w-full px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 sm:w-auto"
+                    :disabled="isSubmitting"
+                    :class="{'opacity-50 cursor-not-allowed': isSubmitting}">
+              <span x-show="!isSubmitting">Create User</span>
+              <span x-show="isSubmitting" class="flex items-center gap-2">
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating...
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- EDIT USER MODAL -->
   <div x-show="isEditModalOpen" 
        x-cloak
-       class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto modal z-[99999]"
+       class="fixed inset-0 z-[99999]"
+       style="z-index: 99999 !important;"
        x-transition:enter="transition ease-out duration-300"
        x-transition:enter-start="opacity-0"
        x-transition:enter-end="opacity-100"
@@ -266,239 +273,245 @@
        x-transition:leave-start="opacity-100"
        x-transition:leave-end="opacity-0">
     
-    <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" 
+    <!-- Full screen backdrop -->
+    <div class="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" 
+         style="backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);"
          @click="closeEditModal()"></div>
     
-    <div class="relative w-full max-w-2xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10"
-         @click.outside="closeEditModal()">
-      
-      <!-- Close button -->
-      <button @click="closeEditModal()"
-              class="group absolute right-3 top-3 z-999999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
-        <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200"
-             width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fill-rule="evenodd" clip-rule="evenodd" 
-                d="M6.04289 16.5413C5.65237 16.9318 5.65237 17.565 6.04289 17.9555C6.43342 18.346 7.06658 18.346 7.45711 17.9555L11.9987 13.4139L16.5408 17.956C16.9313 18.3466 17.5645 18.3466 17.955 17.956C18.3455 17.5655 18.3455 16.9323 17.955 16.5418L13.4129 11.9997L17.955 7.4576C18.3455 7.06707 18.3455 6.43391 17.955 6.04338C17.5645 5.65286 16.9313 5.65286 16.5408 6.04338L11.9987 10.5855L7.45711 6.0439C7.06658 5.65338 6.43342 5.65338 6.04289 6.0439C5.65237 6.43442 5.65237 7.06759 6.04289 7.45811L10.5845 11.9997L6.04289 16.5413Z" />
-        </svg>
-      </button>
-
-      <!-- Modal Form -->
-      <h4 class="mb-6 text-lg font-medium text-gray-800 dark:text-white/90">
-        Edit User
-      </h4>
-      
-      <!-- Success/Error Messages -->
-      <div x-show="editMessage" 
-           x-text="editMessage"
-           :class="editMessageType === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
-           class="p-3 mb-4 rounded-lg"
-           x-transition></div>
-
-      <form @submit.prevent="submitEditForm" x-ref="editUserForm">
-        @csrf
-        @method('PUT')
-        <input type="hidden" x-model="editFormData.id">
+    <!-- Modal Content -->
+    <div class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto">
+      <div class="relative w-full max-w-2xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10"
+           @click.outside="closeEditModal()">
         
-        <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+        <!-- Close button -->
+        <button @click="closeEditModal()"
+                class="group absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
+          <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200"
+               width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd" 
+                  d="M6.04289 16.5413C5.65237 16.9318 5.65237 17.565 6.04289 17.9555C6.43342 18.346 7.06658 18.346 7.45711 17.9555L11.9987 13.4139L16.5408 17.956C16.9313 18.3466 17.5645 18.3466 17.955 17.956C18.3455 17.5655 18.3455 16.9323 17.955 16.5418L13.4129 11.9997L17.955 7.4576C18.3455 7.06707 18.3455 6.43391 17.955 6.04338C17.5645 5.65286 16.9313 5.65286 16.5408 6.04338L11.9987 10.5855L7.45711 6.0439C7.06658 5.65338 6.43342 5.65338 6.04289 6.0439C5.65237 6.43442 5.65237 7.06759 6.04289 7.45811L10.5845 11.9997L6.04289 16.5413Z" />
+          </svg>
+        </button>
+
+        <!-- Modal Form -->
+        <h4 class="mb-6 text-lg font-medium text-gray-800 dark:text-white/90">
+          Edit User
+        </h4>
+        
+        <!-- Success/Error Messages -->
+        <div x-show="editMessage" 
+             x-text="editMessage"
+             :class="editMessageType === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
+             class="p-3 mb-4 rounded-lg"
+             x-transition></div>
+
+        <form @submit.prevent="submitEditForm" x-ref="editUserForm">
+          @csrf
+          @method('PUT')
+          <input type="hidden" x-model="editFormData.id">
           
-          <!-- Basic Information -->
-          <div class="col-span-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Full Name *
-            </label>
-            <input type="text"
-                   x-model="editFormData.name"
-                   placeholder="John Doe"
-                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                   required />
-          </div>
-
-          <div class="col-span-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Email Address *
-            </label>
-            <input type="email"
-                   x-model="editFormData.email"
-                   placeholder="user@example.com"
-                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                   required />
-          </div>
-
-          <div class="col-span-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Phone Number *
-            </label>
-            <input type="tel"
-                   x-model="editFormData.phone"
-                   placeholder="+254 712 345 678"
-                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                   required />
-          </div>
-
-          <div class="col-span-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Role *
-            </label>
-            <select x-model="editFormData.role"
-                    @change="toggleEditRoleFields()"
-                    class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                    required>
-              <option value="">Select Role</option>
-              <option value="admin">Admin</option>
-              <option value="broker">Broker</option>
-              <option value="borrower">Borrower</option>
-              <option value="teller">Teller</option>
-            </select>
-          </div>
-
-          <div class="col-span-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Password (leave blank to keep current)
-            </label>
-            <input type="password"
-                   x-model="editFormData.password"
-                   placeholder="Minimum 6 characters"
-                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                   minlength="6" />
-          </div>
-
-          <!-- Broker Fields -->
-          <template x-if="editFormData.role === 'broker'">
-            <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Certificate Number *
-                </label>
-                <input type="text"
-                       x-model="editFormData.cert_no"
-                       placeholder="e.g., CERT12345"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
-
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Client Interest Rate (%) *
-                </label>
-                <input type="number"
-                       x-model="editFormData.interest_client"
-                       placeholder="e.g., 5.5"
-                       step="0.01"
-                       min="0"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
-
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Broker Interest Rate (%) *
-                </label>
-                <input type="number"
-                       x-model="editFormData.interest_broker"
-                       placeholder="e.g., 2.5"
-                       step="0.01"
-                       min="0"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
-
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Client Penalty Rate (%) *
-                </label>
-                <input type="number"
-                       x-model="editFormData.penalty_client"
-                       placeholder="e.g., 1.5"
-                       step="0.01"
-                       min="0"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
-
-              <div class="col-span-1 sm:col-span-2">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Broker Penalty Rate (%) *
-                </label>
-                <input type="number"
-                       x-model="editFormData.penalty_broker"
-                       placeholder="e.g., 0.5"
-                       step="0.01"
-                       min="0"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
+          <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+            
+            <!-- Basic Information -->
+            <div class="col-span-1">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                Full Name *
+              </label>
+              <input type="text"
+                     x-model="editFormData.name"
+                     placeholder="John Doe"
+                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                     required />
             </div>
-          </template>
 
-          <!-- Borrower Fields -->
-          <template x-if="editFormData.role === 'borrower'">
-            <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  National ID *
-                </label>
-                <input type="text"
-                       x-model="editFormData.national_id"
-                       placeholder="e.g., 12345678"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                       required />
-              </div>
-
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Client Type *
-                </label>
-                <select x-model="editFormData.client_type"
-                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                  <option value="0">Our Client</option>
-                  <option value="1">Broker Client</option>
-                </select>
-              </div>
-
-              <div class="col-span-1">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Status *
-                </label>
-                <select x-model="editFormData.status"
-                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                  <option value="1">Active</option>
-                  <option value="0">Inactive</option>
-                </select>
-              </div>
+            <div class="col-span-1">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                Email Address *
+              </label>
+              <input type="email"
+                     x-model="editFormData.email"
+                     placeholder="user@example.com"
+                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                     required />
             </div>
-          </template>
-        </div>
 
-        <!-- Form Actions -->
-        <div class="flex items-center justify-end w-full gap-3 mt-8">
-          <button type="button"
-                  @click="closeEditModal()"
-                  class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 sm:w-auto"
-                  :disabled="isEditSubmitting">
-            Cancel
-          </button>
-          <button type="submit"
-                  class="flex justify-center w-full px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 sm:w-auto"
-                  :disabled="isEditSubmitting"
-                  :class="{'opacity-50 cursor-not-allowed': isEditSubmitting}">
-            <span x-show="!isEditSubmitting">Update User</span>
-            <span x-show="isEditSubmitting" class="flex items-center gap-2">
-              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Updating...
-            </span>
-          </button>
-        </div>
-      </form>
+            <div class="col-span-1">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                Phone Number *
+              </label>
+              <input type="tel"
+                     x-model="editFormData.phone"
+                     placeholder="+254 712 345 678"
+                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                     required />
+            </div>
+
+            <div class="col-span-1">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                Role *
+              </label>
+              <select x-model="editFormData.role"
+                      @change="toggleEditRoleFields()"
+                      class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                      required>
+                <option value="">Select Role</option>
+                <option value="admin">Admin</option>
+                <option value="broker">Broker</option>
+                <option value="borrower">Borrower</option>
+                <option value="teller">Teller</option>
+              </select>
+            </div>
+
+            <div class="col-span-1">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                Password (leave blank to keep current)
+              </label>
+              <input type="password"
+                     x-model="editFormData.password"
+                     placeholder="Minimum 6 characters"
+                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                     minlength="6" />
+            </div>
+
+            <!-- Broker Fields -->
+            <template x-if="editFormData.role === 'broker'">
+              <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Certificate Number *
+                  </label>
+                  <input type="text"
+                         x-model="editFormData.cert_no"
+                         placeholder="e.g., CERT12345"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Client Interest Rate (%) *
+                  </label>
+                  <input type="number"
+                         x-model="editFormData.interest_client"
+                         placeholder="e.g., 5.5"
+                         step="0.01"
+                         min="0"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Broker Interest Rate (%) *
+                  </label>
+                  <input type="number"
+                         x-model="editFormData.interest_broker"
+                         placeholder="e.g., 2.5"
+                         step="0.01"
+                         min="0"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Client Penalty Rate (%) *
+                  </label>
+                  <input type="number"
+                         x-model="editFormData.penalty_client"
+                         placeholder="e.g., 1.5"
+                         step="0.01"
+                         min="0"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+
+                <div class="col-span-1 sm:col-span-2">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Broker Penalty Rate (%) *
+                  </label>
+                  <input type="number"
+                         x-model="editFormData.penalty_broker"
+                         placeholder="e.g., 0.5"
+                         step="0.01"
+                         min="0"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+              </div>
+            </template>
+
+            <!-- Borrower Fields -->
+            <template x-if="editFormData.role === 'borrower'">
+              <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    National ID *
+                  </label>
+                  <input type="text"
+                         x-model="editFormData.national_id"
+                         placeholder="e.g., 12345678"
+                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                         required />
+                </div>
+
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Client Type *
+                  </label>
+                  <select x-model="editFormData.client_type"
+                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    <option value="0">Our Client</option>
+                    <option value="1">Broker Client</option>
+                  </select>
+                </div>
+
+                <div class="col-span-1">
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Status *
+                  </label>
+                  <select x-model="editFormData.status"
+                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    <option value="1">Active</option>
+                    <option value="0">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex items-center justify-end w-full gap-3 mt-8">
+            <button type="button"
+                    @click="closeEditModal()"
+                    class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 sm:w-auto"
+                    :disabled="isEditSubmitting">
+              Cancel
+            </button>
+            <button type="submit"
+                    class="flex justify-center w-full px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 sm:w-auto"
+                    :disabled="isEditSubmitting"
+                    :class="{'opacity-50 cursor-not-allowed': isEditSubmitting}">
+              <span x-show="!isEditSubmitting">Update User</span>
+              <span x-show="isEditSubmitting" class="flex items-center gap-2">
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Updating...
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- DELETE CONFIRMATION MODAL -->
   <div x-show="isDeleteModalOpen" 
        x-cloak
-       class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto modal z-[99999]"
+       class="fixed inset-0 z-[99999]"
+       style="z-index: 99999 !important;"
        x-transition:enter="transition ease-out duration-300"
        x-transition:enter-start="opacity-0"
        x-transition:enter-end="opacity-100"
@@ -506,60 +519,65 @@
        x-transition:leave-start="opacity-100"
        x-transition:leave-end="opacity-0">
     
-    <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" 
+    <!-- Full screen backdrop -->
+    <div class="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" 
+         style="backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);"
          @click="closeDeleteModal()"></div>
     
-    <div class="relative w-full max-w-md rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10"
-         @click.outside="closeDeleteModal()">
-      
-      <!-- Close button -->
-      <button @click="closeDeleteModal()"
-              class="group absolute right-3 top-3 z-99999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
-        <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200"
-             width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fill-rule="evenodd" clip-rule="evenodd" 
-                d="M6.04289 16.5413C5.65237 16.9318 5.65237 17.565 6.04289 17.9555C6.43342 18.346 7.06658 18.346 7.45711 17.9555L11.9987 13.4139L16.5408 17.956C16.9313 18.3466 17.5645 18.3466 17.955 17.956C18.3455 17.5655 18.3455 16.9323 17.955 16.5418L13.4129 11.9997L17.955 7.4576C18.3455 7.06707 18.3455 6.43391 17.955 6.04338C17.5645 5.65286 16.9313 5.65286 16.5408 6.04338L11.9987 10.5855L7.45711 6.0439C7.06658 5.65338 6.43342 5.65338 6.04289 6.0439C5.65237 6.43442 5.65237 7.06759 6.04289 7.45811L10.5845 11.9997L6.04289 16.5413Z" />
-        </svg>
-      </button>
-
-      <!-- Delete Confirmation -->
-      <div class="text-center">
-        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
-          <svg class="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.346 16.5c-.77.833.192 2.5 1.732 2.5z" />
+    <!-- Modal Content -->
+    <div class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto">
+      <div class="relative w-full max-w-md rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10"
+           @click.outside="closeDeleteModal()">
+        
+        <!-- Close button -->
+        <button @click="closeDeleteModal()"
+                class="group absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
+          <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200"
+               width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd" 
+                  d="M6.04289 16.5413C5.65237 16.9318 5.65237 17.565 6.04289 17.9555C6.43342 18.346 7.06658 18.346 7.45711 17.9555L11.9987 13.4139L16.5408 17.956C16.9313 18.3466 17.5645 18.3466 17.955 17.956C18.3455 17.5655 18.3455 16.9323 17.955 16.5418L13.4129 11.9997L17.955 7.4576C18.3455 7.06707 18.3455 6.43391 17.955 6.04338C17.5645 5.65286 16.9313 5.65286 16.5408 6.04338L11.9987 10.5855L7.45711 6.0439C7.06658 5.65338 6.43342 5.65338 6.04289 6.0439C5.65237 6.43442 5.65237 7.06759 6.04289 7.45811L10.5845 11.9997L6.04289 16.5413Z" />
           </svg>
-        </div>
-        
-        <h4 class="mb-2 text-lg font-medium text-gray-800 dark:text-white/90">
-          Confirm Delete
-        </h4>
-        
-        <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
-          Are you sure you want to delete <span x-text="deleteUserName" class="font-semibold"></span>? 
-          This action cannot be undone.
-        </p>
-        
-        <div class="flex items-center justify-center gap-3">
-          <button type="button"
-                  @click="closeDeleteModal()"
-                  class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 sm:w-auto"
-                  :disabled="isDeleteSubmitting">
-            Cancel
-          </button>
-          <button type="button"
-                  @click="confirmDelete()"
-                  class="flex justify-center w-full px-4 py-3 text-sm font-medium text-white rounded-lg bg-red-500 shadow-theme-xs hover:bg-red-600 sm:w-auto"
-                  :disabled="isDeleteSubmitting"
-                  :class="{'opacity-50 cursor-not-allowed': isDeleteSubmitting}">
-            <span x-show="!isDeleteSubmitting">Delete User</span>
-            <span x-show="isDeleteSubmitting" class="flex items-center gap-2">
-              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Deleting...
-            </span>
-          </button>
+        </button>
+
+        <!-- Delete Confirmation -->
+        <div class="text-center">
+          <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
+            <svg class="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.346 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          
+          <h4 class="mb-2 text-lg font-medium text-gray-800 dark:text-white/90">
+            Confirm Delete
+          </h4>
+          
+          <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
+            Are you sure you want to delete <span x-text="deleteUserName" class="font-semibold"></span>? 
+            This action cannot be undone.
+          </p>
+          
+          <div class="flex items-center justify-center gap-3">
+            <button type="button"
+                    @click="closeDeleteModal()"
+                    class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 sm:w-auto"
+                    :disabled="isDeleteSubmitting">
+              Cancel
+            </button>
+            <button type="button"
+                    @click="confirmDelete()"
+                    class="flex justify-center w-full px-4 py-3 text-sm font-medium text-white rounded-lg bg-red-500 shadow-theme-xs hover:bg-red-600 sm:w-auto"
+                    :disabled="isDeleteSubmitting"
+                    :class="{'opacity-50 cursor-not-allowed': isDeleteSubmitting}">
+              <span x-show="!isDeleteSubmitting">Delete User</span>
+              <span x-show="isDeleteSubmitting" class="flex items-center gap-2">
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Deleting...
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -714,6 +732,15 @@
             if ($phoneNumber !== 'N/A') {
                 $phoneNumber = \App\Helpers\PhoneHelper::cleanPhoneNumber($phoneNumber);
             }
+            
+            // Get avatar URL - using the correct avatar storage path
+            $avatarUrl = null;
+            if ($user->avatar) {
+                $avatarUrl = Storage::url($user->avatar);
+            } elseif ($user->profile_photo_path) {
+                // Fallback to profile_photo_path if avatar doesn't exist
+                $avatarUrl = asset('storage/' . $user->profile_photo_path);
+            }
         @endphp
         <tr class="user-row hover:bg-gray-50 transition duration-150" data-user-id="{{ $user->id }}" data-user-data="{{ json_encode([
             'id' => $user->id,
@@ -733,14 +760,14 @@
           <!-- Desktop cells -->
           <td class="py-3 hidden sm:table-cell">
             <div class="flex items-center gap-3">
-              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden">
                 <a href="{{ route('users.show', $user->id) }}">
-                  @if($user->profile_photo_path)
-                    <img src="{{ asset('storage/' . $user->profile_photo_path) }}" 
+                  @if($avatarUrl)
+                    <img src="{{ $avatarUrl }}" 
                          alt="{{ $user->name }}" 
-                         class="h-10 w-10 rounded-full object-cover">
+                         class="h-10 w-10 object-cover">
                   @else
-                    <span class="text-indigo-600 font-medium">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
+                    <span class="text-indigo-600 font-medium text-lg">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
                   @endif
                 </a>    
               </div>
@@ -782,23 +809,46 @@
             </span>
           </td>
 
-          <!-- Profile Completion -->
-          <td class="py-3 hidden sm:table-cell">
-            <div class="w-32">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ $completionPercentage }}%</span>
-                @if($user->role === 'borrower')
-                  <span class="text-xs {{ $completionPercentage >= 80 ? 'text-green-600' : 'text-yellow-600' }}">
-                    {{ $completionPercentage >= 80 ? 'Eligible' : 'Incomplete' }}
-                  </span>
-                @endif
-              </div>
-              <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                <div class="h-2 rounded-full {{ $completionPercentage >= 80 ? 'bg-green-500' : ($completionPercentage >= 50 ? 'bg-yellow-500' : 'bg-red-500') }}" 
-                     style="width: {{ $completionPercentage }}%"></div>
-              </div>
-            </div>
-          </td>
+<!-- Profile Completion -->
+<td class="py-3 hidden sm:table-cell">
+  <div class="w-32">
+    <div class="flex items-center justify-between mb-1">
+      <span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+        {{ $completionPercentage }}%
+      </span>
+
+      @if($user->role === 'borrower')
+        <span
+          class="text-xs
+            {{ $completionPercentage >= 80
+                ? 'text-green-600'
+                : ($completionPercentage >= 50 ? 'text-yellow-600' : 'text-red-600') }}"
+          @if($completionPercentage >= 50 && $completionPercentage < 80)
+            style="color:#eab308" {{-- force yellow-500 --}}
+          @endif
+        >
+          {{ $completionPercentage >= 80 ? 'Eligible' : ($completionPercentage >= 50 ? 'Partial' : 'Incomplete') }}
+        </span>
+      @endif
+    </div>
+
+    <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+      <div
+        class="h-2 rounded-full
+          {{ $completionPercentage >= 80
+              ? 'bg-green-500'
+              : ($completionPercentage >= 50 ? 'bg-yellow-500' : 'bg-red-500') }}"
+        style="
+          width: {{ $completionPercentage }}%;
+          @if($completionPercentage >= 50 && $completionPercentage < 80)
+            background-color:#eab308; {{-- force yellow --}}
+          @endif
+        ">
+      </div>
+    </div>
+  </div>
+</td>
+
 
           <!-- Loan Stats -->
           <td class="py-3 hidden sm:table-cell">
@@ -860,14 +910,16 @@
           <!-- Mobile cells (simplified view) -->
           <td class="py-3 sm:hidden">
             <div class="flex items-center gap-3">
-              <div class="h-[40px] w-[40px] overflow-hidden rounded-md bg-indigo-100 flex items-center justify-center">
-                @if($user->profile_photo_path)
-                  <img src="{{ asset('storage/' . $user->profile_photo_path) }}" 
-                       alt="{{ $user->name }}" 
-                       class="h-10 w-10 rounded-full object-cover">
-                @else
-                  <span class="text-indigo-600 font-medium">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
-                @endif
+              <div class="h-[40px] w-[40px] overflow-hidden rounded-full bg-indigo-100 flex items-center justify-center">
+                <a href="{{ route('users.show', $user->id) }}">
+                  @if($avatarUrl)
+                    <img src="{{ $avatarUrl }}" 
+                         alt="{{ $user->name }}" 
+                         class="h-10 w-10 object-cover">
+                  @else
+                    <span class="text-indigo-600 font-medium text-lg">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
+                  @endif
+                </a>
               </div>
               <div>
                 <a href="{{ route('users.show', $user->id) }}" class="user-name">
@@ -1054,6 +1106,8 @@ function userTable() {
         openCreateModal() {
             this.resetForm();
             this.isCreateModalOpen = true;
+            // Prevent body scroll when modal is open
+            document.body.style.overflow = 'hidden';
             setTimeout(() => {
                 const modal = document.querySelector('[x-show="isCreateModalOpen"]');
                 if (modal) modal.scrollTop = 0;
@@ -1063,6 +1117,8 @@ function userTable() {
         closeCreateModal() {
             this.isCreateModalOpen = false;
             this.resetForm();
+            // Restore body scroll
+            document.body.style.overflow = '';
         },
         
         resetForm() {
@@ -1186,6 +1242,8 @@ function userTable() {
                 this.isEditModalOpen = true;
                 this.editMessage = '';
                 this.editMessageType = '';
+                // Prevent body scroll when modal is open
+                document.body.style.overflow = 'hidden';
             }
         },
         
@@ -1207,6 +1265,8 @@ function userTable() {
                 client_type: '0',
                 status: '1',
             };
+            // Restore body scroll
+            document.body.style.overflow = '';
         },
         
         toggleEditRoleFields() {
@@ -1283,6 +1343,8 @@ function userTable() {
             this.deleteUserId = userId;
             this.deleteUserName = userName;
             this.isDeleteModalOpen = true;
+            // Prevent body scroll when modal is open
+            document.body.style.overflow = 'hidden';
         },
         
         closeDeleteModal() {
@@ -1290,6 +1352,8 @@ function userTable() {
             this.deleteUserId = null;
             this.deleteUserName = '';
             this.isDeleteSubmitting = false;
+            // Restore body scroll
+            document.body.style.overflow = '';
         },
         
         async confirmDelete() {
@@ -1634,8 +1698,13 @@ document.addEventListener('DOMContentLoaded', function() {
 [x-cloak] { display: none !important; }
 
 /* Modal backdrop blur fix */
-.modal-close-btn {
+.fixed.inset-0.bg-gray-400\/50 {
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
+}
+
+/* Ensure modals cover entire screen */
+.z-\[99999\] {
+    z-index: 99999 !important;
 }
 </style>

@@ -150,7 +150,7 @@
                             <!-- Signature Image -->
                             <div class="flex-shrink-0 p-2 bg-white border border-gray-200 rounded-xl overflow-hidden">
                                 <div class="flex items-center justify-center h-24 w-40 bg-transparent">
-                                    <img src="{{ Storage::url($loan->user->signature) }}" 
+                                    <img src="{{ asset('storage/' . $loan->user->signature) }}" 
                                         alt="Signature of {{ $loan->user->name }}"
                                         class="max-h-20 object-contain object-center">
                                 </div>

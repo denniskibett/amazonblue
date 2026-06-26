@@ -10,6 +10,9 @@ use App\Http\Controllers\LoanController;
 use App\Http\Controllers\DisbursementController;
 use App\Http\Controllers\RepaymentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentsController;
+use App\Http\Controllers\CommissionsController;
+use App\Http\Controllers\ReportsController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -20,9 +23,9 @@ Route::get('/portfolio', [HomeController::class, 'portfolio'])->name('portfolio'
 Route::get('/blog', [HomeController::class, 'blog'])->name('blog');
 Route::get('/contact', [HomeController::class, 'contact'])->name('contact');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -101,9 +104,16 @@ Route::middleware('auth')->group(function () {
     Route::put('/repayments/{repayment}', [RepaymentController::class, 'update'])->name('repayments.update');
     Route::delete('/repayments/{repayment}', [RepaymentController::class, 'destroy'])->name('repayments.destroy');
 
+    // Documents
+    Route::resource('documents', DocumentsController::class);
+    Route::resource('commissions', CommissionsController::class);
+    Route::resource('reports', ReportsController::class);
+    
 
     // Chart
     Route::get('/loans/chart-data', [LoanController::class, 'chartData']);
+
+
 
 
     Route::get('/index', function () {

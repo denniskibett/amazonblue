@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Jan 18, 2026 at 09:29 AM
+-- Generation Time: Apr 26, 2026 at 04:21 PM
 -- Server version: 10.3.39-MariaDB-0ubuntu0.20.04.2
 -- PHP Version: 8.0.30
 
@@ -62,9 +62,8 @@ CREATE TABLE `borrowers` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `broker_id` bigint(20) UNSIGNED DEFAULT NULL,
   `user_id` bigint(20) UNSIGNED NOT NULL,
-  `client_type` int(11) NOT NULL,
+  `client_type` varchar(255) NOT NULL,
   `status` int(11) NOT NULL DEFAULT 1,
-  `national_id` varchar(255) NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `income_type` varchar(100) DEFAULT NULL,
@@ -82,52 +81,61 @@ CREATE TABLE `borrowers` (
 -- Dumping data for table `borrowers`
 --
 
-INSERT INTO `borrowers` (`id`, `broker_id`, `user_id`, `client_type`, `status`, `national_id`, `created_at`, `updated_at`, `income_type`, `gross_salary`, `net_salary`, `job_title`, `workplace`, `employer_name`, `employer_email`, `employer_title`, `department`) VALUES
-(1, 1, 14, 1, 1, '000000', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(2, 1, 2, 0, 1, '09080', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(3, NULL, 9, 0, 1, '099090', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(40, NULL, 3, 0, 1, '989797', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(44, NULL, 6, 0, 1, '980080', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(45, NULL, 7, 0, 1, '674647', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(46, 1, 16, 1, 1, '987987', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(47, 1, 6, 0, 1, '767576', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(48, 1, 18, 0, 1, '7868767', '2025-04-20 10:39:32', '2025-04-20 10:39:32', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(49, 1, 19, 1, 1, '78687677', '2025-04-20 17:14:25', '2025-04-20 17:14:25', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(50, NULL, 20, 0, 1, '68767867', '2025-04-20 17:45:22', '2025-04-20 17:45:22', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(51, 1, 22, 1, 1, '786876779', '2025-05-07 12:10:19', '2025-05-07 12:10:19', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(52, 1, 24, 1, 1, '9789789', '2025-05-13 06:49:55', '2025-05-13 06:49:55', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(53, 1, 25, 1, 1, '8786786', '2025-05-15 08:08:59', '2025-05-15 08:08:59', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(54, NULL, 26, 0, 1, '890009', '2025-05-19 12:45:53', '2025-05-19 12:45:53', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(55, NULL, 27, 0, 1, '285394', '2025-05-20 13:03:03', '2025-05-20 13:03:03', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(56, NULL, 28, 0, 1, '29753954', '2025-05-25 18:36:15', '2025-05-25 18:36:15', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(57, NULL, 29, 0, 1, '24011567', '2025-05-27 13:47:29', '2025-10-29 07:03:27', 'Employment', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(58, NULL, 31, 0, 1, '32313898', '2025-05-29 13:47:29', '2025-05-29 13:47:29', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(59, NULL, 34, 0, 1, '31044360', '2025-06-15 13:55:59', '2025-06-15 13:55:59', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(60, NULL, 37, 0, 1, '785682568', '2025-06-23 07:43:27', '2025-06-23 07:43:27', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(61, NULL, 38, 0, 1, '34463790', '2025-07-07 08:51:03', '2025-07-07 08:51:03', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(62, NULL, 39, 0, 1, '0700701380', '2025-07-13 16:11:22', '2025-07-13 16:11:22', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(63, NULL, 40, 0, 1, '38705774', '2025-07-14 11:35:57', '2025-07-14 11:35:57', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(64, NULL, 41, 0, 1, '31521662', '2025-07-15 10:00:13', '2025-07-15 10:00:13', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(65, NULL, 42, 0, 0, '30007873', '2025-07-17 10:52:30', '2025-07-17 10:52:30', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(66, NULL, 43, 0, 0, '37809862', '2025-07-28 06:05:53', '2025-07-28 06:05:53', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(67, NULL, 44, 0, 0, '29000524', '2025-08-06 05:11:15', '2025-08-06 05:11:15', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(68, NULL, 45, 0, 1, '20021503', '2025-08-06 11:25:20', '2025-08-06 11:25:20', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(69, NULL, 47, 0, 0, '36320634', '2025-08-14 07:30:39', '2025-08-14 07:30:39', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(70, NULL, 48, 0, 0, '32844172', '2025-08-19 14:58:14', '2025-08-19 14:58:14', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(71, NULL, 50, 1, 1, '36827364', '2025-09-10 06:39:51', '2025-10-27 10:13:24', 'Business', 150000.00, 105000.00, 'director', 'Mokka city', 'Mohammed Abdirahim', 'mohamed.a@mokkacity.com', 'Director', 'Management'),
-(72, NULL, 51, 0, 0, '27640540', '2025-09-14 12:24:33', '2025-09-14 12:24:33', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(73, NULL, 52, 0, 1, 'AK1227810', '2025-10-01 09:11:31', '2025-11-21 05:31:32', 'Employment', NULL, 800.00, 'IT consultant', NULL, 'robert Macharia', NULL, NULL, NULL),
-(74, NULL, 53, 1, 1, '38276910', '2025-10-03 06:04:44', '2025-10-25 04:41:13', 'Business', 20000.00, 20000.00, 'Sales', 'Mpesa shop', 'Joyce gwama', 'emmanueltsuma19@gmail.com', 'Owner', 'Sales'),
-(75, NULL, 54, 0, 0, '28468854', '2025-10-08 04:06:13', '2025-10-08 04:06:13', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(76, NULL, 55, 0, 1, '31757677', '2025-10-23 05:37:11', '2025-10-26 07:54:26', 'Business', 50000.00, 38500.00, 'Director', 'Nairobi', 'Trademag Solutions', 'trademagsolutions@gmail.com', 'Director', 'Sourcing'),
-(77, NULL, 13, 0, 1, '340000', '2025-10-23 19:15:21', '2025-10-23 19:15:21', 'Employment', 130000.00, 100000.00, NULL, 'Kisumu', 'iPas', 'info@ipas.org', 'Senior Accountant', 'Accounts and Finance'),
-(78, NULL, 56, 0, 1, '33103892', '2025-10-24 03:31:10', '2025-10-24 04:07:40', 'Government', NULL, NULL, 'Dept Head Communications', 'City Hall', 'County Government Nairobi', 'info@nairobi.go.ke', 'Chief Officer/Director', 'Executive'),
-(79, NULL, 57, 0, 0, '32507485', '2025-10-24 09:49:49', '2025-10-24 13:12:24', 'Business', 1768.00, 1226.00, 'Personal Assistant', 'Kileleshwa, Kangundo rd', 'Relay Services', 'yeggynick@gmail.com', 'Chief Executive Officer', 'office of the ceo'),
-(80, NULL, 58, 0, 0, '39577852', '2025-10-25 13:22:18', '2025-10-25 13:22:18', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(81, NULL, 59, 0, 1, '34760573', '2025-10-27 13:40:41', '2025-10-27 13:59:08', 'Employment', 1200.00, 1200.00, 'Business development manager', '24 markets', 'Julie', 'juliekwa@gmail.com', 'Group of head partnerships', 'Trading'),
-(82, NULL, 21, 0, 1, '31930121', '2025-10-29 09:45:23', '2025-10-29 09:48:42', 'Employment', 68500.00, 50000.00, 'Engineer', 'Nairobi', 'Paralgin', 'sales@paralgin.co.ke', 'Sir', 'Engineering'),
-(83, NULL, 62, 0, 0, '33555254', '2025-12-22 10:11:02', '2025-12-22 10:11:02', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(84, NULL, 63, 0, 0, '29615142', '2025-12-22 10:31:24', '2025-12-22 10:31:24', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `borrowers` (`id`, `broker_id`, `user_id`, `client_type`, `status`, `created_at`, `updated_at`, `income_type`, `gross_salary`, `net_salary`, `job_title`, `workplace`, `employer_name`, `employer_email`, `employer_title`, `department`) VALUES
+(1, 1, 14, '1', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(2, 1, 2, 'individual', 1, NULL, '2026-01-22 20:30:33', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(3, NULL, 9, '0', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(40, NULL, 3, '0', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(44, NULL, 6, '0', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(45, NULL, 7, '0', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(46, 1, 16, '1', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(47, 1, 6, '0', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(48, 1, 18, '0', 1, '2025-04-20 10:39:32', '2025-04-20 10:39:32', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(49, 1, 19, '1', 1, '2025-04-20 17:14:25', '2025-04-20 17:14:25', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(50, NULL, 20, '0', 1, '2025-04-20 17:45:22', '2025-04-20 17:45:22', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(51, 1, 22, '1', 1, '2025-05-07 12:10:19', '2025-05-07 12:10:19', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(52, 1, 24, '1', 1, '2025-05-13 06:49:55', '2025-05-13 06:49:55', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(53, 1, 25, '1', 1, '2025-05-15 08:08:59', '2025-05-15 08:08:59', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(54, NULL, 26, '0', 1, '2025-05-19 12:45:53', '2025-05-19 12:45:53', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(55, NULL, 27, '0', 1, '2025-05-20 13:03:03', '2025-05-20 13:03:03', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(56, NULL, 28, '0', 1, '2025-05-25 18:36:15', '2025-05-25 18:36:15', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(57, NULL, 29, '0', 1, '2025-05-27 13:47:29', '2025-10-29 07:03:27', 'Employment', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(58, NULL, 31, '0', 1, '2025-05-29 13:47:29', '2026-02-09 17:11:09', 'Business', 4000000.00, 1200000.00, 'CEO', NULL, 'Teflon Trading Limited', 'musau.mumo@teflontradingltd.co.ke', 'CEO', 'CEO OFFICE'),
+(59, NULL, 34, '0', 1, '2025-06-15 13:55:59', '2025-06-15 13:55:59', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(60, NULL, 37, '0', 1, '2025-06-23 07:43:27', '2025-06-23 07:43:27', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(61, NULL, 38, '0', 1, '2025-07-07 08:51:03', '2025-07-07 08:51:03', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(62, NULL, 39, '0', 1, '2025-07-13 16:11:22', '2025-07-13 16:11:22', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(63, NULL, 40, '0', 1, '2025-07-14 11:35:57', '2025-07-14 11:35:57', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(64, NULL, 41, '0', 1, '2025-07-15 10:00:13', '2025-07-15 10:00:13', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(65, NULL, 42, '0', 0, '2025-07-17 10:52:30', '2025-07-17 10:52:30', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(66, NULL, 43, '0', 0, '2025-07-28 06:05:53', '2025-07-28 06:05:53', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(67, NULL, 44, '0', 0, '2025-08-06 05:11:15', '2025-08-06 05:11:15', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(68, NULL, 45, '0', 1, '2025-08-06 11:25:20', '2025-08-06 11:25:20', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(69, NULL, 47, '0', 0, '2025-08-14 07:30:39', '2025-08-14 07:30:39', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(70, NULL, 48, '0', 0, '2025-08-19 14:58:14', '2025-08-19 14:58:14', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(71, NULL, 50, '1', 1, '2025-09-10 06:39:51', '2025-10-27 10:13:24', 'Business', 150000.00, 105000.00, 'director', 'Mokka city', 'Mohammed Abdirahim', 'mohamed.a@mokkacity.com', 'Director', 'Management'),
+(72, NULL, 51, '0', 0, '2025-09-14 12:24:33', '2025-09-14 12:24:33', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(73, NULL, 52, '0', 1, '2025-10-01 09:11:31', '2025-11-21 05:31:32', 'Employment', NULL, 800.00, 'IT consultant', NULL, 'robert Macharia', NULL, NULL, NULL),
+(74, NULL, 53, '1', 1, '2025-10-03 06:04:44', '2026-03-06 10:08:02', 'Employment', 20000.00, 20000.00, 'IT Assistant', 'Iebc', 'Government of kenya', 'emmanueltsuma19@gmail.com', 'Iebc', 'IT'),
+(75, NULL, 54, '0', 0, '2025-10-08 04:06:13', '2025-10-08 04:06:13', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(76, NULL, 55, '0', 1, '2025-10-23 05:37:11', '2025-10-26 07:54:26', 'Business', 50000.00, 38500.00, 'Director', 'Nairobi', 'Trademag Solutions', 'trademagsolutions@gmail.com', 'Director', 'Sourcing'),
+(77, NULL, 13, '0', 1, '2025-10-23 19:15:21', '2025-10-23 19:15:21', 'Employment', 130000.00, 100000.00, NULL, 'Kisumu', 'iPas', 'info@ipas.org', 'Senior Accountant', 'Accounts and Finance'),
+(78, NULL, 56, 'individual', 1, '2025-10-24 03:31:10', '2026-02-01 19:45:11', 'Government', NULL, NULL, 'Dept Head Communications', 'City Hall', 'County Government Nairobi', 'info@nairobi.go.ke', 'Chief Officer/Director', 'Executive'),
+(79, NULL, 57, '0', 0, '2025-10-24 09:49:49', '2025-10-24 13:12:24', 'Business', 1768.00, 1226.00, 'Personal Assistant', 'Kileleshwa, Kangundo rd', 'Relay Services', 'yeggynick@gmail.com', 'Chief Executive Officer', 'office of the ceo'),
+(80, NULL, 58, 'individual', 0, '2025-10-25 13:22:18', '2026-04-26 06:57:39', 'employed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(81, NULL, 59, '0', 1, '2025-10-27 13:40:41', '2025-10-27 13:59:08', 'Employment', 1200.00, 1200.00, 'Business development manager', '24 markets', 'Julie', 'juliekwa@gmail.com', 'Group of head partnerships', 'Trading'),
+(82, NULL, 21, '0', 1, '2025-10-29 09:45:23', '2025-10-29 09:48:42', 'Employment', 68500.00, 50000.00, 'Engineer', 'Nairobi', 'Paralgin', 'sales@paralgin.co.ke', 'Sir', 'Engineering'),
+(83, NULL, 62, 'individual', 1, '2025-12-22 10:11:02', '2026-02-03 05:07:58', 'Employment', 90000.00, 65000.00, 'Project Management Consultant', 'Swarm Initiative', 'Swarm Initiative', 'operations@learnersway.co.ke', 'Head of operations', 'Operations'),
+(84, NULL, 63, '0', 0, '2025-12-22 10:31:24', '2025-12-22 10:31:24', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(85, NULL, 64, '0', 1, '2026-01-20 09:03:36', '2026-04-14 11:15:46', 'Government', 80000.00, 60000.00, 'Admin Assistant', 'JK Executive Solutions', 'JK Executive Solutions', 'jkexecutivesolutions@gmail.com', 'Ms', 'Management'),
+(86, NULL, 65, 'individual', 0, '2026-01-21 06:27:38', '2026-01-29 09:48:32', 'employed', 450000.00, 300000.00, 'Communications Officer', 'Public Service', 'Government of Kenya', NULL, NULL, 'Communication'),
+(87, NULL, 66, '0', 0, '2026-01-21 07:15:44', '2026-01-21 07:15:44', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(88, NULL, 67, 'individual', 0, '2026-02-18 08:27:11', '2026-02-18 08:50:25', 'Employment', NULL, 100000.00, 'COO', NULL, 'Sichangi', NULL, NULL, NULL),
+(89, NULL, 68, '0', 0, '2026-02-18 08:56:28', '2026-02-18 08:56:28', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(90, NULL, 69, '0', 1, '2026-02-18 14:51:36', '2026-02-19 10:09:08', 'Employment', NULL, 45000.00, 'ICT officer', 'Nyayo House', 'Directorate of eCitizen', NULL, 'Immigration', NULL),
+(91, NULL, 70, '0', 1, '2026-02-23 13:47:01', '2026-02-23 14:09:18', 'Government', NULL, 51000.00, 'ICT officer', 'Nyayo House', 'Immigration', 'nigel.yegon@ecitizen.go.ke', 'eCitizen', 'eCitizen'),
+(92, NULL, 71, '0', 0, '2026-03-06 04:57:07', '2026-03-07 11:48:57', 'Business', 350000.00, 250000.00, 'GIS Consultant', 'Nairobi', 'ExceedIT Systems Limited', 'info@exceedit.co.ke', 'Private Limited Company', 'Environment and Climate Change'),
+(93, NULL, 72, '0', 0, '2026-03-16 09:02:56', '2026-03-16 09:02:56', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -190,22 +198,8 @@ CREATE TABLE `cache` (
 --
 
 INSERT INTO `cache` (`key`, `value`, `expiration`) VALUES
-('laravel_cache_c.kelvinrotich@gmail.com|102.5.182.83', 'i:1;', 1763899641),
-('laravel_cache_c.kelvinrotich@gmail.com|102.5.182.83:timer', 'i:1763899641;', 1763899641),
-('laravel_cache_davidihaj@gmail.com|41.139.162.249', 'i:2;', 1760536214),
-('laravel_cache_davidihaj@gmail.com|41.139.162.249:timer', 'i:1760536214;', 1760536214),
-('laravel_cache_frankietheuri@gmail.com|196.96.211.139', 'i:1;', 1761255114),
-('laravel_cache_frankietheuri@gmail.com|196.96.211.139:timer', 'i:1761255114;', 1761255114),
-('laravel_cache_kabutu.frank@gmail.com|105.161.235.234', 'i:3;', 1763729168),
-('laravel_cache_kabutu.frank@gmail.com|105.161.235.234:timer', 'i:1763729168;', 1763729168),
-('laravel_cache_kabutu.frank@gmail.comk|105.161.235.234', 'i:1;', 1763729619),
-('laravel_cache_kabutu.frank@gmail.comk|105.161.235.234:timer', 'i:1763729619;', 1763729619),
-('laravel_cache_lawrencebyegon@yahoo.com|102.135.169.64', 'i:1;', 1761207939),
-('laravel_cache_lawrencebyegon@yahoo.com|102.135.169.64:timer', 'i:1761207939;', 1761207939),
-('laravel_cache_samsontanui25@gmail.com|154.159.238.184', 'i:2;', 1766826586),
-('laravel_cache_samsontanui25@gmail.com|154.159.238.184:timer', 'i:1766826586;', 1766826586),
-('laravel_cache_samsontanui51@gmail.com|154.159.238.184', 'i:1;', 1766825724),
-('laravel_cache_samsontanui51@gmail.com|154.159.238.184:timer', 'i:1766825724;', 1766825724);
+('laravel_cache_deborahmurgor7@gmail.com|105.164.45.137', 'i:3;', 1771408103),
+('laravel_cache_deborahmurgor7@gmail.com|105.164.45.137:timer', 'i:1771408103;', 1771408103);
 
 -- --------------------------------------------------------
 
@@ -621,7 +615,111 @@ INSERT INTO `disbursements` (`id`, `loan_id`, `amount`, `transaction`, `mode`, `
 (312, 278, 2000.00, '276508285588', 'bank_transfer', '2025-12-02', '2026-02-12', '2026-01-12 07:18:31', '2026-01-12 07:18:31'),
 (313, 279, 169000.00, 'ROLL OVER', 'cash', '2025-12-29', '2026-01-29', '2026-01-12 13:29:44', '2026-01-12 13:29:44'),
 (315, 280, 50748.00, 'ROLL OVER', 'cash', '2026-01-03', '2026-02-03', '2026-01-15 16:41:41', '2026-01-15 16:41:41'),
-(317, 281, 6000.00, 'UAG9X4074M', 'bank_transfer', '2026-01-16', '2026-01-16', '2026-01-16 13:43:51', '2026-01-16 13:43:51');
+(317, 281, 6000.00, 'UAG9X4074M', 'bank_transfer', '2026-01-16', '2026-01-16', '2026-01-16 13:43:51', '2026-01-16 13:43:51'),
+(318, 282, 250000.00, 'UAL644MPFT', 'bank_transfer', '2026-01-21', '2026-02-01', '2026-01-22 07:29:17', '2026-01-22 07:29:17'),
+(319, 283, 8000.00, 'UAM9X4KZIR', 'bank_transfer', '2026-01-22', '2026-02-02', '2026-01-27 15:14:54', '2026-01-27 15:14:54'),
+(320, 285, 30000.00, 'UAQ9X4X754', 'bank_transfer', '2026-01-26', '2026-01-31', '2026-01-29 08:26:13', '2026-01-29 08:26:13'),
+(321, 286, 8000.00, 'UAT9X57N3S', 'bank_transfer', '2026-01-29', '2026-02-03', '2026-01-29 08:27:16', '2026-01-29 08:27:16'),
+(322, 287, 100000.00, 'ROLL OVER', 'Mpesa', '2026-01-24', '2026-02-24', '2026-01-29 10:09:35', '2026-02-26 17:54:48'),
+(323, 288, 364000.00, 'ROLL OVER', 'Mpesa', '2026-01-22', '2026-02-22', '2026-02-01 19:39:20', '2026-02-24 16:14:14'),
+(324, 289, 300000.00, 'ROLL OVER', 'cash', '2026-01-31', '2026-02-10', '2026-02-03 14:43:15', '2026-02-03 14:43:15'),
+(326, 290, 100000.00, 'PESALINK', 'bank_transfer', '2026-02-05', '2026-02-10', '2026-02-09 13:33:15', '2026-02-09 13:33:15'),
+(327, 291, 65560.00, 'ROLL OVER', 'bank_transfer', '2026-02-09', '2026-03-09', '2026-02-09 13:41:01', '2026-02-09 13:41:01'),
+(328, 292, 100000.00, 'UB88O66J8B', 'bank_transfer', '2026-02-08', '2026-12-08', '2026-02-09 13:43:00', '2026-02-09 13:43:00'),
+(329, 293, 252000.00, '042411941846', 'bank_transfer', '2026-02-05', '2026-02-05', '2026-02-09 13:47:35', '2026-02-09 13:47:35'),
+(331, 307, 150000.00, '176497116960', 'bank_transfer', '2026-02-11', '2026-02-22', '2026-02-11 16:38:00', '2026-02-11 16:38:00'),
+(332, 308, 15000.00, 'UBGGC6VCBR', 'bank_transfer', '2026-02-16', '2026-03-16', '2026-02-17 13:40:43', '2026-02-17 13:40:43'),
+(333, 309, 12000.00, '325695589697', 'bank_transfer', '2026-02-13', '2026-02-23', '2026-02-17 13:46:15', '2026-02-17 13:46:15'),
+(334, 310, 360000.00, 'ROLL OVER', 'cash', '2026-02-10', '2026-02-20', '2026-02-17 13:48:14', '2026-02-17 13:48:14'),
+(335, 311, 219700.00, 'ROLL OVER', 'cash', '2026-01-31', '2026-02-28', '2026-02-18 05:28:12', '2026-02-18 05:28:12'),
+(336, 312, 60898.00, 'ROLL OVER', 'cash', '2026-02-03', '2026-03-03', '2026-02-18 05:36:10', '2026-02-18 05:36:10'),
+(337, 314, 30000.00, 'UBGBM6YYRR', 'bank_transfer', '2026-02-16', '2026-02-26', '2026-02-19 09:20:32', '2026-02-19 09:20:32'),
+(338, 315, 50000.00, 'UB94A6N8EF', 'bank_transfer', '2026-02-09', '2026-02-19', '2026-02-19 09:40:20', '2026-02-19 09:40:20'),
+(339, 316, 60000.00, 'ROLL OVER', 'cash', '2026-02-19', '2026-02-28', '2026-02-19 09:42:18', '2026-02-19 09:42:18'),
+(340, 316, 70000.00, 'UBI4A7GERR', 'cash', '2026-02-18', '2026-02-28', '2026-02-19 09:42:34', '2026-02-19 09:42:34'),
+(341, 313, 5000.00, 'UBIOI77N54', 'bank_transfer', '2026-02-18', '2026-02-28', '2026-02-19 09:47:18', '2026-02-19 09:47:18'),
+(342, 317, 100000.00, '438432145363', 'bank_transfer', '2026-02-19', '2026-02-19', '2026-02-19 10:02:53', '2026-02-19 10:02:53'),
+(343, 318, 2000.00, 'UBJBD76WGN', 'bank_transfer', '2026-02-19', '2026-03-01', '2026-02-19 10:07:44', '2026-02-19 10:07:44'),
+(344, 318, 2000.00, 'UBLBD7EE0Y', 'bank_transfer', '2026-02-19', '2026-02-28', '2026-02-21 21:11:19', '2026-02-21 21:11:19'),
+(345, 319, 40000.00, 'ROLL OVER', 'cash', '2026-02-21', '2026-03-02', '2026-02-21 21:15:00', '2026-02-21 21:15:00'),
+(346, 320, 1000.00, 'UBIIT6X3J4', 'bank_transfer', '2026-02-18', '2026-02-28', '2026-02-23 14:11:45', '2026-02-23 14:11:45'),
+(347, 320, 1000.00, 'UBNIT7F3ZB', 'bank_transfer', '2026-02-23', '2026-02-28', '2026-02-23 14:12:02', '2026-02-23 14:12:02'),
+(348, 321, 168000.00, 'ROLL OVER', 'cash', '2026-02-22', '2026-02-27', '2026-02-24 16:05:48', '2026-02-24 16:05:48'),
+(349, 321, 13248.00, 'ROLL OVER', 'cash', '2026-02-22', '2026-02-27', '2026-02-24 16:06:00', '2026-02-24 16:06:00'),
+(350, 316, 30000.00, 'UBP4A85Z7N', 'bank_transfer', '2026-02-26', '2026-02-28', '2026-02-26 04:14:19', '2026-02-26 04:14:19'),
+(351, 322, 100000.00, 'ROLL OVER', 'cash', '2026-02-26', '2026-03-26', '2026-02-26 18:02:11', '2026-02-26 18:02:11'),
+(352, 323, 192000.00, 'ROLL OVER', 'cash', '2026-02-28', '2026-02-28', '2026-02-27 19:34:52', '2026-02-27 19:34:52'),
+(353, 324, 150000.00, 'ROLL OVER', 'cash', '2026-02-27', '2026-03-13', '2026-03-03 06:43:07', '2026-03-03 06:43:07'),
+(354, 325, 285610.00, 'ROLL OVER', 'cash', '2026-03-03', '2026-03-03', '2026-03-04 06:07:25', '2026-03-04 06:07:25'),
+(355, 326, 3500.00, 'UC46O88G7H', 'bank_transfer', '2026-03-04', '2026-03-14', '2026-03-04 07:47:46', '2026-03-04 07:47:46'),
+(356, 327, 15000.00, 'UC3KB83095', 'bank_transfer', '2026-03-03', '2026-03-03', '2026-03-04 07:49:36', '2026-03-04 07:49:36'),
+(357, 329, 55000.00, 'ROLL OVER', 'cash', '2026-03-07', '2026-03-17', '2026-03-06 12:58:14', '2026-03-06 12:58:14'),
+(358, 330, 432000.00, 'ROLL OVER', 'cash', '2026-03-02', '2026-03-02', '2026-03-06 13:02:54', '2026-03-06 13:02:54'),
+(359, 331, 518400.00, 'ROLL OVER', 'cash', '2026-03-02', '2026-03-12', '2026-03-06 13:04:57', '2026-03-06 13:04:57'),
+(360, 332, 20000.00, '3719CFJF5903', 'bank_transfer', '2026-03-08', '2026-03-18', '2026-03-08 13:58:22', '2026-03-08 13:58:22'),
+(361, 333, 15000.00, '3728HHVL2707', 'bank_transfer', '2026-03-08', '2026-03-18', '2026-03-08 13:59:48', '2026-03-08 13:59:48'),
+(362, 334, 50000.00, '3719XVBL5990', 'bank_transfer', '2026-03-07', '2026-03-17', '2026-03-08 14:01:41', '2026-03-08 14:01:41'),
+(363, 328, 3000.00, 'UC66B8GN86', 'bank_transfer', '2026-03-06', '2026-03-16', '2026-03-08 14:32:38', '2026-03-08 14:32:38'),
+(364, 335, 85228.00, 'ROLL OVER', 'cash', '2026-03-09', '2026-04-09', '2026-03-12 11:22:39', '2026-03-12 11:22:39'),
+(365, 336, 2000.00, 'UCC6B91DXT', 'bank_transfer', '2026-03-12', '2026-03-22', '2026-03-13 08:18:04', '2026-03-13 08:18:04'),
+(366, 337, 50000.00, '620830073841', 'Mpesa', '2026-03-14', '2026-03-24', '2026-03-14 19:46:56', '2026-03-14 19:47:33'),
+(367, 338, 18000.00, 'ROLL OVER', 'cash', '2026-03-13', '2026-03-23', '2026-03-14 19:54:51', '2026-03-14 19:54:51'),
+(368, 339, 5000.00, 'UCDHD9CMWM', 'bank_transfer', '2026-03-13', '2026-03-13', '2026-03-14 20:03:12', '2026-03-14 20:03:12'),
+(369, 339, 32500.00, 'ROLL OVER', 'Mpesa', '2026-03-13', '2026-03-13', '2026-03-14 20:03:42', '2026-03-14 20:04:08'),
+(370, 340, 6000.00, 'MPESA', 'bank_transfer', '2026-02-20', '2026-02-20', '2026-03-15 18:46:40', '2026-03-15 18:46:40'),
+(371, 341, 7200.00, 'ROLL OVER', 'cash', '2026-03-02', '2026-03-12', '2026-03-15 18:48:15', '2026-03-15 18:48:15'),
+(372, 342, 8640.00, 'ROLL OVER', 'cash', '2026-03-12', '2026-03-22', '2026-03-15 18:50:15', '2026-03-15 18:50:15'),
+(373, 343, 10000.00, 'UCGEV9I4AF', 'bank_transfer', '2026-03-16', '2026-03-26', '2026-03-16 15:16:56', '2026-03-16 15:16:56'),
+(374, 344, 5000.00, 'UCI6B9O9OT', 'bank_transfer', '2026-03-18', '2026-03-28', '2026-03-19 05:18:56', '2026-03-19 05:18:56'),
+(375, 345, 30000.00, 'UCH9X9PH8Y', 'bank_transfer', '2026-03-18', '2026-03-28', '2026-03-19 07:15:01', '2026-03-19 07:15:01'),
+(376, 346, 5000.00, 'UCJAL9R6WA', 'bank_transfer', '2026-03-19', '2026-03-29', '2026-03-20 15:16:16', '2026-03-20 15:16:16'),
+(377, 347, 50000.00, 'ROLL OVER', 'cash', '2026-02-28', '2026-03-10', '2026-03-20 15:22:44', '2026-03-20 15:22:44'),
+(378, 349, 114440.00, 'ROLL OVER', 'cash', '2026-02-27', '2026-05-27', '2026-03-20 18:25:16', '2026-03-20 18:25:16'),
+(379, 350, 8000.00, 'UCOGCABJKN', 'bank_transfer', '2026-03-24', '2026-04-03', '2026-03-25 07:28:57', '2026-03-25 07:28:57'),
+(380, 351, 10000.00, 'UCPBMAL8MF', 'bank_transfer', '2026-03-25', '2026-04-03', '2026-03-25 07:31:48', '2026-03-25 07:31:48'),
+(381, 352, 1500.00, 'UCP6OABVYQ', 'bank_transfer', '2026-03-25', '2026-04-03', '2026-03-25 07:55:23', '2026-03-25 07:55:23'),
+(382, 353, 10000.00, 'ROLL OVER', 'cash', '2026-03-26', '2026-04-04', '2026-03-26 20:57:35', '2026-03-26 20:57:35'),
+(383, 354, 20000.00, 'UCQKBAE0DG', 'bank_transfer', '2026-03-26', '2026-04-04', '2026-03-27 08:36:15', '2026-03-27 08:36:15'),
+(384, 355, 1000.00, 'UCR6OAKFLQ', 'bank_transfer', '2026-03-27', '2026-04-03', '2026-03-29 16:49:36', '2026-03-29 16:49:36'),
+(385, 356, 5000.00, 'UCSOIB1OMC', 'bank_transfer', '2026-03-28', '2026-04-06', '2026-03-29 16:51:49', '2026-03-29 16:51:49'),
+(386, 357, 45000.00, 'UCTBMB1ZDN', 'bank_transfer', '2026-03-30', '2026-03-09', '2026-03-29 16:55:42', '2026-03-29 16:55:42'),
+(387, 358, 10000.00, 'UCR4AB9NS5', 'bank_transfer', '2026-03-27', '2026-04-05', '2026-03-29 17:15:01', '2026-03-29 17:15:01'),
+(388, 359, 10000.00, 'UD132BBR99', 'bank_transfer', '2026-04-01', '2026-04-06', '2026-04-02 04:48:03', '2026-04-02 04:48:03'),
+(389, 360, 100000.00, 'ROLL OVER', 'cash', '2026-03-26', '2026-04-26', '2026-04-02 04:57:35', '2026-04-02 04:57:35'),
+(390, 361, 3200.00, 'UCV6BB0M8H', 'bank_transfer', '2026-03-31', '2026-04-10', '2026-04-02 04:59:35', '2026-04-02 04:59:35'),
+(391, 362, 5000.00, 'UD1HDBDUSY', 'bank_transfer', '2026-03-31', '2026-04-10', '2026-04-02 05:02:02', '2026-04-02 05:02:02'),
+(392, 363, 25000.00, 'UCU9XB5HFB', 'bank_transfer', '2026-03-30', '2026-04-09', '2026-04-02 05:08:53', '2026-04-02 05:08:53'),
+(393, 364, 73078.00, 'ROLL OVER', 'cash', '2026-03-18', '2026-04-18', '2026-04-02 05:18:04', '2026-04-02 05:18:04'),
+(394, 365, 30000.00, 'UD4ALBIZKO', 'bank_transfer', '2026-04-04', '2026-04-14', '2026-04-04 11:04:56', '2026-04-04 11:04:56'),
+(395, 366, 4200.00, 'ROLL OVER', 'bank_transfer', '2026-03-14', '2026-03-24', '2026-04-04 11:07:14', '2026-04-04 11:07:14'),
+(396, 367, 5040.00, 'ROLL OVER', 'cash', '2026-03-24', '2026-04-03', '2026-04-04 11:08:35', '2026-04-04 11:08:35'),
+(397, 368, 10368.00, 'ROLL OVER', 'cash', '2026-03-21', '2026-04-01', '2026-04-04 11:11:57', '2026-04-04 11:11:57'),
+(398, 369, 10000.00, 'roll over', 'cash', '2026-04-05', '2026-04-15', '2026-04-05 15:44:24', '2026-04-05 15:44:24'),
+(399, 370, 24000.00, 'ROLL OVER', 'cash', '2026-04-05', '2026-04-15', '2026-04-08 06:07:49', '2026-04-08 06:07:49'),
+(400, 371, 1500.00, 'UD86BBWAX7', 'bank_transfer', '2026-04-08', '2026-04-18', '2026-04-08 06:12:29', '2026-04-08 06:12:29'),
+(401, 372, 5000.00, 'ROLL OVER', 'cash', '2026-04-10', '2026-04-20', '2026-04-13 16:26:02', '2026-04-13 16:26:02'),
+(402, 373, 3040.00, 'ROLL OVER', 'cash', '2026-04-10', '2026-04-20', '2026-04-13 16:30:44', '2026-04-13 16:30:44'),
+(403, 374, 342732.00, 'ROLL OVER', 'cash', '2026-04-03', '2026-05-03', '2026-04-13 16:43:53', '2026-04-13 16:43:53'),
+(404, 375, 12441.00, 'ROLL OVER', 'cash', '2026-03-31', '2026-04-09', '2026-04-13 17:20:15', '2026-04-13 17:20:15'),
+(405, 375, 6048.00, 'ROLL OVER', 'Mpesa', '2026-04-03', '2026-04-09', '2026-04-13 17:20:28', '2026-04-13 17:21:33'),
+(406, 376, 22187.00, 'ROLL OVER', 'cash', '2026-03-10', '2026-03-20', '2026-04-13 17:25:34', '2026-04-13 17:25:34'),
+(407, 377, 10000.00, 'UDFAI12TXH', 'bank_transfer', '2026-04-15', '2026-04-15', '2026-04-15 10:12:00', '2026-04-15 10:12:00'),
+(408, 378, 7500.00, 'UDEOI142NU', 'bank_transfer', '2026-04-14', '2026-04-24', '2026-04-15 10:21:15', '2026-04-15 10:21:15'),
+(409, 379, 10000.00, 'UDFBM13SLE', 'bank_transfer', '2026-04-15', '2026-04-25', '2026-04-15 10:23:08', '2026-04-15 10:23:08'),
+(410, 380, 66000.00, 'ROLL OVER', 'cash', '2026-03-20', '2026-06-20', '2026-04-15 10:56:34', '2026-04-15 10:56:34'),
+(411, 381, 10000.00, 'ROLL OVER', 'cash', '2026-04-15', '2026-04-25', '2026-04-16 15:08:55', '2026-04-16 15:08:55'),
+(412, 382, 30000.00, 'ROLL OVER', 'cash', '2026-04-09', '2026-04-19', '2026-04-17 18:15:28', '2026-04-17 18:15:28'),
+(413, 383, 110797.00, 'ROLL OVER', 'cash', '2026-04-09', '2026-05-09', '2026-04-17 18:18:23', '2026-04-17 18:18:23'),
+(414, 384, 6000.00, 'ROLL OVER', 'cash', '2026-04-20', '2026-04-30', '2026-04-21 04:06:09', '2026-04-21 04:06:09'),
+(415, 385, 15000.00, 'UDKBM1Q6KM', 'bank_transfer', '2026-04-20', '2026-04-30', '2026-04-22 06:46:20', '2026-04-22 06:46:20'),
+(416, 385, 5000.00, 'UDLBM1RM8F', 'Mpesa', '2026-04-22', '2026-04-30', '2026-04-22 06:46:36', '2026-04-22 06:46:54'),
+(417, 386, 1000.00, 'UDMIT1JYA4', 'bank_transfer', '2026-04-22', '2026-05-02', '2026-04-22 07:00:46', '2026-04-22 07:00:46'),
+(418, 387, 10000.00, 'UDM9X1UI8J', 'bank_transfer', '2026-04-22', '2026-05-02', '2026-04-23 05:54:39', '2026-04-23 05:54:39'),
+(419, 388, 10000.00, 'UDN321V2ZZ', 'bank_transfer', '2026-04-23', '2026-04-28', '2026-04-23 06:52:58', '2026-04-23 06:52:58'),
+(420, 388, 10000.00, 'UDN321V2ZZ', 'bank_transfer', '2026-04-23', '2026-04-28', '2026-04-23 06:52:58', '2026-04-23 06:52:58'),
+(421, 389, 3300.00, 'UDN6B1PHVO', 'bank_transfer', '2026-04-23', '2026-05-02', '2026-04-26 06:43:35', '2026-04-26 06:43:35');
+INSERT INTO `disbursements` (`id`, `loan_id`, `amount`, `transaction`, `mode`, `disburse_date`, `payment_date`, `created_at`, `updated_at`) VALUES
+(422, 389, 1700.00, 'UDN6B1RC19', 'bank_transfer', '2026-04-23', '2026-05-02', '2026-04-26 06:43:49', '2026-04-26 06:43:49');
 
 -- --------------------------------------------------------
 
@@ -843,7 +941,7 @@ INSERT INTO `loans` (`id`, `user_id`, `loan_type_id`, `amount`, `borrow_date`, `
 (148, 29, 1, 15000.00, '2025-08-09', 0, 'repaid', '2025-08-08 10:40:52', '2025-08-21 09:20:35', NULL, NULL, NULL, 0, NULL, NULL, NULL),
 (149, 38, 1, 10000.00, '2025-08-09', 0, 'repaid', '2025-08-09 10:25:48', '2025-08-20 10:21:32', NULL, NULL, NULL, 0, NULL, NULL, NULL),
 (150, 28, 2, 126547.20, '2025-07-31', 0, 'pending', '2025-08-11 08:06:15', '2025-09-17 07:25:50', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(151, 11, 3, 66545.00, '2025-08-12', 0, 'disbursed', '2025-08-12 06:52:11', '2025-11-21 04:58:40', 13, 'Colleague', 49, 1, '2025-08-12 08:54:58', NULL, NULL),
+(151, 11, 3, 66545.00, '2025-08-12', 0, 'repaid', '2025-08-12 06:52:11', '2026-03-14 19:58:21', 13, 'Colleague', 49, 0, NULL, NULL, NULL),
 (152, 28, 5, 50700.00, '2025-08-03', 0, 'repaid', '2025-08-12 06:55:08', '2025-09-08 16:38:16', NULL, NULL, NULL, 0, NULL, NULL, NULL),
 (156, 39, 1, 10000.00, '2025-08-22', 0, 'repaid', '2025-08-13 04:11:07', '2025-09-08 15:30:31', NULL, NULL, NULL, 0, NULL, NULL, NULL),
 (158, 40, 1, 1600.00, '2025-08-06', 0, 'repaid', '2025-08-14 10:09:55', '2025-08-20 06:37:25', NULL, NULL, NULL, 0, NULL, NULL, NULL),
@@ -914,7 +1012,7 @@ INSERT INTO `loans` (`id`, `user_id`, `loan_type_id`, `amount`, `borrow_date`, `
 (223, 59, 1, 5000.00, '2025-10-27', 0, 'pending', '2025-10-27 15:24:52', '2025-10-27 15:24:52', NULL, NULL, NULL, 1, '2025-10-27 15:24:52', 'I need to add some cash to support my business', NULL),
 (224, 29, 1, 10000.00, '2025-10-27', 0, 'repaid', '2025-10-29 07:11:51', '2025-11-08 08:09:56', 13, NULL, NULL, 0, NULL, 'Emergency loan', NULL),
 (225, 21, 5, 100000.00, '2025-10-29', 0, 'repaid', '2025-10-29 12:42:31', '2025-12-08 05:28:17', NULL, NULL, NULL, 0, NULL, 'emergency bailout', NULL),
-(226, 17, 10, 18700.00, '2025-11-02', 0, 'disbursed', '2025-11-03 09:25:31', '2026-01-15 17:14:43', 13, 'Son', 49, 0, NULL, 'roll over from previous loan', NULL),
+(226, 17, 10, 18700.00, '2025-11-02', 0, 'repaid', '2025-11-03 09:25:31', '2026-02-19 10:10:11', 13, 'Son', 49, 0, NULL, 'roll over from previous loan', NULL),
 (227, 2, 1, 10000.00, '2025-11-04', 0, 'repaid', '2025-11-05 13:26:50', '2025-11-19 05:17:04', 13, 'Friend', 15, 1, '2025-11-05 13:26:50', 'emergency facility', NULL),
 (228, 55, 1, 10000.00, '2025-11-03', 0, 'repaid', '2025-11-07 09:42:16', '2025-11-17 09:40:58', 13, 'Friend', 49, 1, '2025-11-07 09:42:16', 'Roll over from previous loan', NULL),
 (229, 50, 1, 25000.00, '2025-11-07', 0, 'repaid', '2025-11-07 09:47:34', '2025-11-17 18:48:33', 13, 'Friend', 15, 1, '2025-11-07 09:47:34', 'Roll over for previous?', NULL),
@@ -938,38 +1036,138 @@ INSERT INTO `loans` (`id`, `user_id`, `loan_type_id`, `amount`, `borrow_date`, `
 (247, 54, 1, 95040.00, '2025-11-20', 0, 'repaid', '2025-11-25 10:28:41', '2025-12-03 04:31:52', NULL, NULL, 1, 1, '2025-11-25 10:28:41', 'ROLLED over from previous loan', NULL),
 (248, 55, 1, 14400.00, '2025-11-23', 0, 'repaid', '2025-11-26 19:33:56', '2025-12-09 06:24:58', NULL, NULL, 1, 1, '2025-11-26 19:33:56', 'EMERGENCY ROLL OVER', NULL),
 (249, 50, 1, 25000.00, '2025-11-28', 0, 'repaid', '2025-11-28 18:26:26', '2025-12-09 06:22:13', NULL, NULL, 1, 1, '2025-11-28 18:26:26', 'Emergency roll over', NULL),
-(250, 15, 10, 126830.00, '2025-11-27', 0, 'disbursed', '2025-11-28 18:29:57', '2025-11-28 18:30:21', NULL, NULL, 1, 0, NULL, 'emergency roll over', NULL),
+(250, 15, 15, 126830.00, '2025-11-27', 0, 'repaid', '2025-11-28 18:29:57', '2026-03-20 18:22:22', NULL, NULL, 1, 0, NULL, 'emergency roll over', NULL),
 (251, 56, 1, 43840.00, '2025-11-23', 0, 'repaid', '2025-11-29 14:19:17', '2025-12-09 06:18:14', NULL, NULL, 49, 1, '2025-11-29 14:19:17', 'emergency roll over', NULL),
 (252, 2, 1, 20000.00, '2025-12-01', 0, 'repaid', '2025-12-01 19:12:52', '2025-12-23 07:31:48', NULL, NULL, 1, 1, '2025-12-01 19:12:52', 'Rolled over from previous loan', NULL),
 (253, 54, 1, 114048.00, '2025-11-30', 0, 'disbursed', '2025-12-03 04:32:39', '2025-12-03 04:32:39', 1, 'FRIEND', 49, 1, '2025-12-03 04:32:39', 'Emergency roll over', NULL),
 (254, 26, 2, 100000.00, '2025-11-24', 0, 'repaid', '2025-12-03 04:43:37', '2025-12-26 08:52:13', NULL, NULL, 15, 1, '2025-12-03 04:43:37', 'emergency job use', NULL),
 (255, 53, 1, 2680.00, '2025-11-27', 0, 'repaid', '2025-12-03 04:47:40', '2025-12-15 06:11:10', NULL, NULL, NULL, 1, '2025-12-03 04:47:40', 'emergency rolled over', NULL),
-(256, 50, 13, 50000.00, '2025-12-06', 0, 'disbursed', '2025-12-06 08:45:46', '2025-12-06 08:45:46', NULL, NULL, 1, 1, '2025-12-06 08:45:46', 'repair of greenhouse in isinya', NULL),
+(256, 50, 13, 50000.00, '2025-12-06', 0, 'repaid', '2025-12-06 08:45:46', '2026-03-06 12:56:45', NULL, NULL, 1, 1, '2025-12-06 08:45:46', 'repair of greenhouse in isinya', NULL),
 (257, 9, 2, 42290.00, '2025-12-03', 0, 'repaid', '2025-12-06 08:54:39', '2026-01-15 16:40:05', NULL, NULL, NULL, 1, '2025-12-06 08:54:39', 'roll over from previous loan', NULL),
 (258, 21, 5, 130000.00, '2025-11-29', 0, 'repaid', '2025-12-08 05:29:12', '2026-01-12 13:25:25', NULL, NULL, 1, 1, '2025-12-08 05:29:12', 'emergency roll over loan facility', NULL),
 (259, 56, 1, 37608.00, '2025-12-03', 0, 'repaid', '2025-12-09 06:18:55', '2025-12-26 09:01:17', NULL, NULL, 1, 1, '2025-12-09 06:18:55', 'previous loan roll over', NULL),
 (260, 50, 1, 25000.00, '2025-12-09', 0, 'repaid', '2025-12-09 06:22:55', '2025-12-23 07:29:57', NULL, NULL, 1, 1, '2025-12-09 06:22:55', 'roll over from previous loan', NULL),
 (261, 55, 1, 8780.00, '2025-12-03', 0, 'repaid', '2025-12-09 06:26:57', '2025-12-26 08:57:12', NULL, NULL, 1, 1, '2025-12-09 06:26:57', 'rolled over', NULL),
-(262, 26, 2, 100000.00, '2025-12-24', 0, 'disbursed', '2025-12-26 08:53:48', '2025-12-26 08:53:48', 13, 'Colleague', 1, 1, '2025-12-26 08:53:48', 'emergency loan roll over', NULL),
+(262, 26, 2, 100000.00, '2025-12-28', 0, 'repaid', '2025-12-26 08:53:48', '2026-02-26 17:58:06', 13, 'Colleague', 1, 0, NULL, 'emergency loan roll over', NULL),
 (263, 55, 1, 10536.00, '2025-12-13', 0, 'repaid', '2025-12-26 08:58:13', '2025-12-26 08:59:13', NULL, NULL, 1, 1, '2025-12-26 08:58:13', 'rolled over loan', NULL),
 (264, 55, 1, 12643.20, '2025-12-23', 0, 'repaid', '2025-12-26 09:00:07', '2026-01-08 14:16:05', NULL, NULL, 1, 0, NULL, 'rolled over loan', NULL),
 (265, 56, 1, 45129.60, '2025-12-13', 0, 'repaid', '2025-12-26 09:03:12', '2025-12-26 09:10:15', NULL, NULL, NULL, 0, NULL, 'rolled over facility', NULL),
-(266, 56, 1, 54155.50, '2025-12-23', 0, 'disbursed', '2025-12-26 09:05:38', '2025-12-26 09:05:38', NULL, NULL, 1, 1, '2025-12-26 09:05:38', 'rolled over facility', NULL),
+(266, 56, 1, 54155.50, '2025-12-23', 0, 'pending', '2025-12-26 09:05:38', '2026-04-20 08:15:32', NULL, NULL, 1, 0, NULL, 'rolled over facility', NULL),
 (267, 62, 1, 5000.00, '2025-12-22', 0, 'repaid', '2025-12-26 18:05:43', '2025-12-26 18:09:31', NULL, NULL, 15, 1, '2025-12-26 18:05:43', 'emergency facility for salary', NULL),
 (268, 62, 1, 5000.00, '2025-12-26', 0, 'repaid', '2025-12-26 18:06:44', '2026-01-06 09:23:35', NULL, NULL, 15, 1, '2025-12-26 18:06:44', 'emergency facility for salary', NULL),
-(269, 51, 2, 720000.00, '2025-12-22', 0, 'disbursed', '2025-12-28 09:47:55', '2025-12-28 09:47:55', NULL, NULL, 1, 1, '2025-12-28 09:47:55', 'Yes... let\'s roll over the loan. Atalipwa 20% at end of Jan.', NULL),
+(269, 51, 2, 720000.00, '2025-12-22', 0, 'repaid', '2025-12-28 09:47:55', '2026-02-01 19:37:16', NULL, NULL, 1, 0, NULL, 'Yes... let\'s roll over the loan. Atalipwa 20% at end of Jan.', NULL),
 (270, 41, 3, 80000.00, '2025-12-29', 0, 'repaid', '2025-12-31 04:36:18', '2026-01-04 09:31:39', NULL, NULL, 1, 1, '2025-12-31 04:36:18', 'for business emergency', NULL),
 (271, 53, 3, 5000.00, '2026-01-02', 0, 'pending', '2026-01-02 06:54:02', '2026-01-02 06:54:02', 13, 'Friend', NULL, 1, '2026-01-02 06:54:02', 'Added capital for my business', NULL),
 (272, 2, 1, 20000.00, '2025-12-26', 0, 'repaid', '2026-01-05 01:59:34', '2026-01-05 02:00:37', NULL, NULL, 15, 1, '2026-01-05 01:59:34', 'Emergency facility', NULL),
 (273, 55, 1, 15171.84, '2026-01-02', 0, 'repaid', '2026-01-08 14:13:15', '2026-01-08 14:15:42', NULL, NULL, 1, 1, '2026-01-08 14:13:15', 'rolled over', NULL),
-(274, 52, 1, 40000.00, '2026-01-09', 0, 'disbursed', '2026-01-09 07:01:46', '2026-01-09 07:01:46', NULL, NULL, 1, 1, '2026-01-09 07:01:46', 'emergency loan', NULL),
-(275, 2, 2, 100000.00, '2026-01-09', 0, 'disbursed', '2026-01-12 06:00:36', '2026-01-12 06:00:36', NULL, NULL, 15, 1, '2026-01-12 06:00:36', 'emergency loan for the month', NULL),
+(274, 52, 1, 40000.00, '2026-01-09', 0, 'repaid', '2026-01-09 07:01:46', '2026-01-20 08:03:10', NULL, NULL, 1, 1, '2026-01-09 07:01:46', 'emergency loan', NULL),
+(275, 2, 2, 100000.00, '2026-01-09', 0, 'repaid', '2026-01-12 06:00:36', '2026-02-09 13:39:03', NULL, NULL, 15, 1, '2026-01-12 06:00:36', 'emergency loan for the month', NULL),
 (276, 41, 1, 50000.00, '2026-01-09', 0, 'repaid', '2026-01-12 06:04:19', '2026-01-15 16:39:17', NULL, NULL, 1, 1, '2026-01-12 06:04:19', 'emergency loan 5-10 days', NULL),
-(277, 48, 1, 35000.00, '2026-01-12', 0, 'disbursed', '2026-01-12 07:00:44', '2026-01-12 07:00:44', NULL, NULL, 1, 1, '2026-01-12 07:00:44', 'china orders', NULL),
-(278, 13, 10, 100000.00, '2025-12-22', 0, 'disbursed', '2026-01-12 07:10:34', '2026-01-18 07:33:32', NULL, NULL, NULL, 0, NULL, 'emergency loan', NULL),
-(279, 21, 5, 169000.00, '2025-12-29', 0, 'disbursed', '2026-01-12 13:27:03', '2026-01-12 13:31:10', NULL, NULL, NULL, 0, NULL, 'Emergency roll over', NULL),
-(280, 9, 2, 50748.00, '2026-01-03', 0, 'disbursed', '2026-01-15 16:41:01', '2026-01-15 16:41:01', NULL, NULL, 1, 1, '2026-01-15 16:41:01', 'rolled over', NULL),
-(281, 38, 1, 6000.00, '2026-01-16', 0, 'disbursed', '2026-01-16 13:43:08', '2026-01-16 13:43:08', NULL, NULL, 1, 1, '2026-01-16 13:43:08', 'emergency loan', NULL);
+(277, 48, 1, 35000.00, '2026-01-12', 0, 'repaid', '2026-01-12 07:00:44', '2026-01-20 08:02:39', NULL, NULL, 1, 1, '2026-01-12 07:00:44', 'china orders', NULL),
+(278, 13, 10, 100000.00, '2025-12-22', 0, 'repaid', '2026-01-12 07:10:34', '2026-02-09 13:44:54', NULL, NULL, NULL, 0, NULL, 'emergency loan', NULL),
+(279, 21, 5, 169000.00, '2025-12-31', 0, 'repaid', '2026-01-12 13:27:03', '2026-02-18 05:26:27', NULL, NULL, NULL, 0, NULL, 'Emergency roll over', NULL),
+(280, 9, 2, 50748.00, '2026-01-03', 0, 'repaid', '2026-01-15 16:41:01', '2026-02-18 05:34:39', NULL, NULL, 1, 1, '2026-01-15 16:41:01', 'rolled over', NULL),
+(281, 38, 1, 6000.00, '2026-01-16', 0, 'repaid', '2026-01-16 13:43:08', '2026-01-22 07:32:02', NULL, NULL, 1, 1, '2026-01-16 13:43:08', 'emergency loan', NULL),
+(282, 65, 1, 250000.00, '2026-01-21', 0, 'repaid', '2026-01-21 14:23:34', '2026-02-03 14:41:38', 13, 'Friend', 15, 1, '2026-01-21 10:52:47', 'Emergency contact', NULL),
+(283, 62, 1, 8000.00, '2026-01-22', 0, 'repaid', '2026-01-27 15:13:33', '2026-02-11 10:01:29', NULL, NULL, 15, 1, '2026-01-27 15:13:33', 'emergency facility', NULL),
+(285, 2, 14, 30000.00, '2026-01-26', 0, 'repaid', '2026-01-29 08:25:29', '2026-01-29 08:26:42', NULL, NULL, 15, 1, '2026-01-29 08:25:29', 'emergency loan 1 day', NULL),
+(286, 2, 1, 8000.00, '2026-01-29', 0, 'repaid', '2026-01-29 08:27:58', '2026-02-09 13:38:21', NULL, NULL, 15, 0, NULL, 'Emergency loan', NULL),
+(287, 26, 2, 100000.00, '2026-01-26', 0, 'repaid', '2026-01-29 10:08:54', '2026-02-26 17:58:54', NULL, NULL, 15, 0, NULL, 'roll over emergency', NULL),
+(288, 51, 2, 364000.00, '2026-01-22', 0, 'repaid', '2026-02-01 19:38:18', '2026-03-08 13:55:57', NULL, NULL, NULL, 0, NULL, 'rolled over facility', NULL),
+(289, 65, 1, 300000.00, '2026-01-31', 0, 'repaid', '2026-02-03 14:42:30', '2026-02-17 13:46:53', NULL, NULL, 15, 1, '2026-02-03 14:42:30', 'Roll over loan', NULL),
+(290, 3, 14, 100000.00, '2026-02-05', 0, 'repaid', '2026-02-09 13:30:31', '2026-02-09 13:36:43', 13, 'Friend', 15, 0, NULL, 'emergency brokered loan', NULL),
+(291, 2, 5, 65560.00, '2026-02-09', 0, 'repaid', '2026-02-09 13:40:18', '2026-03-12 11:18:49', NULL, NULL, NULL, 0, NULL, 'ROLLED over 1 more month', NULL),
+(292, 52, 1, 100000.00, '2026-02-08', 0, 'repaid', '2026-02-09 13:42:05', '2026-02-21 21:12:59', NULL, NULL, NULL, 0, NULL, 'Emergency loan', NULL),
+(293, 13, 15, 252000.00, '2026-02-05', 0, 'disbursed', '2026-02-09 13:46:57', '2026-03-05 10:47:54', NULL, NULL, NULL, 0, NULL, 'New house rent 252000 - 75000 stipend', NULL),
+(299, 13, 2, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:39:49', '2026-02-09 17:39:49', NULL, NULL, NULL, 1, '2026-02-09 17:39:49', '65789 fghjkjlk hjklk', NULL),
+(300, 13, 2, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:47:21', '2026-02-09 17:47:21', NULL, NULL, NULL, 1, '2026-02-09 17:47:21', '65789 fghjkjlk hjklk', NULL),
+(301, 13, 2, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:47:52', '2026-02-09 17:47:52', NULL, NULL, NULL, 1, '2026-02-09 17:47:52', '65789 fghjkjlk hjklk', NULL),
+(302, 13, 1, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:49:25', '2026-02-09 17:49:25', NULL, NULL, NULL, 1, '2026-02-09 17:49:25', 'iojhgkjbnn ifhiloj;l', NULL),
+(303, 13, 1, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:54:40', '2026-02-09 17:54:40', NULL, NULL, NULL, 1, '2026-02-09 17:54:39', 'iojhgkjbnn ifhiloj;l', NULL),
+(304, 13, 1, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 18:06:23', '2026-02-09 18:06:23', NULL, NULL, NULL, 1, '2026-02-09 18:06:23', 'iuytgkjvn jk', NULL),
+(307, 3, 1, 150000.00, '2026-02-11', 0, 'repaid', '2026-02-11 16:36:36', '2026-02-24 15:56:27', NULL, NULL, NULL, 1, '2026-02-11 16:36:36', 'brokered loans', NULL),
+(308, 50, 2, 15000.00, '2026-02-16', 0, 'repaid', '2026-02-17 13:40:07', '2026-04-08 05:54:18', NULL, NULL, NULL, 1, '2026-02-17 13:40:07', 'emergency loan', NULL),
+(309, 3, 1, 12000.00, '2026-02-13', 0, 'repaid', '2026-02-17 13:45:43', '2026-02-24 15:57:31', NULL, NULL, NULL, 1, '2026-02-17 13:45:43', 'emergency client lan', NULL),
+(310, 65, 1, 360000.00, '2026-02-10', 0, 'repaid', '2026-02-17 13:47:39', '2026-03-06 12:59:17', NULL, NULL, NULL, 1, '2026-02-17 13:47:39', 'rolled over loan', NULL),
+(311, 21, 5, 219700.00, '2026-01-31', 0, 'repaid', '2026-02-18 05:27:29', '2026-03-04 06:05:40', NULL, NULL, 1, 1, '2026-02-18 05:27:29', 'rolled over loan', NULL),
+(312, 9, 2, 60897.60, '2026-02-18', 0, 'repaid', '2026-02-18 05:35:31', '2026-04-02 05:16:16', NULL, NULL, 1, 1, '2026-02-18 05:35:31', 'rolled over again', NULL),
+(313, 67, 1, 5000.00, '2026-02-18', 0, 'repaid', '2026-02-18 09:00:21', '2026-02-27 17:05:12', NULL, NULL, 15, 1, '2026-02-18 09:00:21', 'emergency loan', NULL),
+(314, 68, 1, 30000.00, '2026-02-16', 0, 'repaid', '2026-02-19 09:20:01', '2026-02-26 17:20:28', 48, 'Friend', 1, 1, '2026-02-19 09:20:01', 'emergency loan', NULL),
+(315, 31, 1, 50000.00, '2026-02-09', 0, 'repaid', '2026-02-19 09:39:32', '2026-02-19 09:40:36', NULL, NULL, 1, 0, NULL, 'emergency loan', NULL),
+(316, 31, 1, 160000.00, '2026-02-18', 0, 'repaid', '2026-02-19 09:41:38', '2026-02-27 19:31:32', NULL, NULL, 1, 0, NULL, 'emergency funds 70k + roll over 30k', NULL),
+(317, 41, 2, 100000.00, '2026-02-19', 0, 'repaid', '2026-02-19 10:01:24', '2026-02-28 10:22:28', NULL, NULL, 1, 0, NULL, 'Hey uko poa? Please Top me up 100k in my back  account to be paid back next week. I need to pay suppliers asap', NULL),
+(318, 69, 1, 4000.00, '2026-02-19', 0, 'repaid', '2026-02-19 10:06:48', '2026-03-25 11:38:15', NULL, NULL, 1, 0, NULL, 'emergency loan', NULL),
+(319, 52, 1, 40000.00, '2026-02-20', 0, 'repaid', '2026-02-21 21:14:12', '2026-02-26 06:41:37', NULL, NULL, 1, 1, '2026-02-21 21:14:12', 'roll over loan', NULL),
+(320, 70, 1, 2000.00, '2026-02-18', 0, 'repaid', '2026-02-23 14:09:11', '2026-03-14 19:48:28', NULL, NULL, 1, 1, '2026-02-23 14:09:11', '1000 + 1000 due on 28th Feb', NULL),
+(321, 3, 14, 181248.00, '2026-02-22', 0, 'repaid', '2026-02-24 16:04:45', '2026-03-03 06:40:19', NULL, NULL, 1, 1, '2026-02-24 16:04:45', 'Rolled over', NULL),
+(322, 26, 2, 100000.00, '2026-02-26', 0, 'repaid', '2026-02-26 18:00:03', '2026-04-02 04:49:56', NULL, NULL, 15, 1, '2026-02-26 18:00:03', 'roll over and to be paid in 4 tranches', NULL),
+(323, 31, 1, 192000.00, '2026-02-28', 0, 'repaid', '2026-02-27 19:33:49', '2026-03-06 12:56:13', NULL, NULL, 15, 1, '2026-02-27 19:33:49', 'rolled over loan', NULL),
+(324, 3, 3, 150000.00, '2026-02-27', 0, 'repaid', '2026-03-03 06:42:10', '2026-03-14 19:49:56', NULL, NULL, 1, 1, '2026-03-03 06:42:10', 'rolled over loan', NULL),
+(325, 21, 2, 285610.00, '2026-03-03', 0, 'repaid', '2026-03-04 06:06:40', '2026-04-13 16:42:26', NULL, NULL, 1, 1, '2026-03-04 06:06:40', 'rolled over', NULL),
+(326, 62, 1, 3500.00, '2026-03-04', 0, 'repaid', '2026-03-04 07:39:24', '2026-04-04 11:05:46', NULL, NULL, 1, 1, '2026-03-04 07:39:24', 'emergency loan', NULL),
+(327, 29, 1, 15000.00, '2026-03-03', 0, 'repaid', '2026-03-04 07:48:59', '2026-03-14 19:53:12', NULL, NULL, 1, 1, '2026-03-04 07:48:59', 'emergency lon', NULL),
+(328, 53, 1, 3000.00, '2026-03-06', 0, 'repaid', '2026-03-06 10:13:12', '2026-03-12 11:24:05', NULL, NULL, 1, 1, '2026-03-06 10:13:12', 'emergency loan', NULL),
+(329, 50, 3, 55000.00, '2026-03-06', 0, 'repaid', '2026-03-06 12:57:32', '2026-04-15 10:24:29', NULL, NULL, 1, 1, '2026-03-06 12:57:32', 'rolled over for ramadhan', NULL),
+(330, 65, 1, 432000.00, '2026-02-20', 0, 'repaid', '2026-03-06 13:02:18', '2026-03-06 13:03:28', NULL, NULL, 15, 1, '2026-03-06 13:02:18', 'rolled over due to non-payment', NULL),
+(331, 65, 1, 518400.00, '2026-03-02', 0, 'disbursed', '2026-03-06 13:04:24', '2026-03-06 13:04:24', NULL, NULL, 1, 1, '2026-03-06 13:04:24', 'rolled over due to lying and non-payment', NULL),
+(332, 68, 1, 20000.00, '2026-03-08', 0, 'repaid', '2026-03-08 13:57:33', '2026-03-19 05:17:03', NULL, NULL, 1, 1, '2026-03-08 13:57:33', 'FOR a phone', NULL),
+(333, 48, 1, 15000.00, '2026-03-08', 0, 'repaid', '2026-03-08 13:59:09', '2026-03-19 05:16:34', NULL, NULL, 1, 1, '2026-03-08 13:59:09', 'emergency float', NULL),
+(334, 71, 14, 50000.00, '2026-03-07', 0, 'repaid', '2026-03-08 14:01:06', '2026-03-12 11:17:58', NULL, NULL, 1, 1, '2026-03-08 14:01:06', 'emergency loan facility for 5 days', NULL),
+(335, 2, 5, 85228.00, '2026-03-09', 0, 'repaid', '2026-03-12 11:21:50', '2026-04-17 18:16:19', NULL, NULL, 15, 1, '2026-03-12 11:21:50', 'rolled over facility', NULL),
+(336, 53, 1, 2000.00, '2026-03-12', 0, 'repaid', '2026-03-13 08:14:46', '2026-03-18 16:36:16', NULL, NULL, 1, 1, '2026-03-13 08:14:46', 'emergency loan', NULL),
+(337, 41, 1, 50000.00, '2026-03-15', 0, 'repaid', '2026-03-14 19:46:05', '2026-03-26 20:58:07', NULL, NULL, 1, 0, NULL, 'emergency loan', NULL),
+(338, 29, 1, 18000.00, '2026-03-13', 0, 'repaid', '2026-03-14 19:54:06', '2026-03-24 14:35:05', NULL, NULL, 1, 1, '2026-03-14 19:54:06', 'rolled over loan', NULL),
+(339, 11, 1, 37500.00, '2026-03-13', 0, 'repaid', '2026-03-14 20:02:29', '2026-03-24 19:28:31', NULL, NULL, 1, 0, NULL, 'emergency loan', NULL),
+(340, 62, 1, 6000.00, '2026-02-20', 0, 'repaid', '2026-03-15 18:43:08', '2026-03-15 18:47:02', NULL, NULL, 1, 1, '2026-03-15 18:43:08', 'emergency loan', NULL),
+(341, 62, 1, 7200.00, '2026-03-02', 0, 'repaid', '2026-03-15 18:47:37', '2026-03-15 18:48:37', NULL, NULL, 1, 1, '2026-03-15 18:47:37', 'rolled over loan', NULL),
+(342, 62, 1, 8640.00, '2026-03-12', 0, 'repaid', '2026-03-15 18:49:24', '2026-04-04 11:10:34', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
+(343, 72, 1, 10000.00, '2026-03-16', 0, 'repaid', '2026-03-16 15:15:01', '2026-03-26 20:56:19', NULL, NULL, 1, 1, '2026-03-16 15:15:01', 'emergency loan', NULL),
+(344, 53, 1, 5000.00, '2026-03-18', 0, 'repaid', '2026-03-19 05:18:26', '2026-03-29 16:42:41', NULL, NULL, 1, 1, '2026-03-19 05:18:26', 'Bank to M-PESA transfer of KES 5,000.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 3816TGLK5577. M-PESA Ref ID: UCI6B9O9OT\r\n\r\nTsuma 10 days 20% due March 28th', NULL),
+(345, 2, 1, 30000.00, '2026-03-18', 0, 'repaid', '2026-03-19 07:14:22', '2026-04-02 05:07:20', NULL, NULL, 15, 1, '2026-03-19 07:14:22', 'UCH9X9PH8Y Confirmed. Ksh30,000.00 sent to Edward  Kipsanai 0710920629 on 17/3/26 at 2:10 PM.', NULL),
+(346, 48, 1, 5000.00, '2026-03-19', 0, 'repaid', '2026-03-20 15:14:52', '2026-03-26 06:04:45', NULL, NULL, 1, 0, NULL, 'emergency loan', NULL),
+(347, 31, 1, 50000.00, '2026-02-28', 0, 'disbursed', '2026-03-20 15:21:35', '2026-03-20 15:21:35', NULL, NULL, 1, 1, '2026-03-20 15:21:35', 'Kengen are paying me today we have nothing however next week it’s done plus the interest I always pay when I’m stuck it’s just a payment issue. So now $34K being paid on Wednesday I will sort you. I have just said Wednesday coz of any issues one thing you see I pay I cannot default on 50K plus interest. I humbly ask you work with me I cannot default share all documentation for the same you see I can put you in my account. Chief I’m humble and asking kindly give me to then funds are being disbursed however I don’t have anything with banks on disbursing your chums is guaranteed next week those funds are paying my rent and my everything $34K is good money', NULL),
+(349, 15, 15, 114439.80, '2026-02-27', 0, 'disbursed', '2026-03-20 18:24:30', '2026-03-20 18:24:30', NULL, NULL, 1, 1, '2026-03-20 18:24:30', 'rolled over loan', NULL),
+(350, 50, 1, 8000.00, '2026-03-24', 0, 'repaid', '2026-03-25 07:28:16', '2026-04-02 05:09:52', NULL, NULL, 1, 1, '2026-03-25 07:28:16', 'Bank to M-PESA transfer of KES 8,000.00 to 254721544928 - Mohamed Abdirahim Abdi successfully processed. Transaction Ref ID: 3864TTHG3204. M-PESA Ref ID: UCOGCABJKN\r\n\r\n10 days at 20% facility to be paid earliest before 10 days as KES 9,600', NULL),
+(351, 68, 1, 10000.00, '2026-03-25', 0, 'repaid', '2026-03-25 07:30:42', '2026-04-05 09:21:56', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 10,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 3872ZVOL8239. M-PESA Ref ID: UCPBMAL8MF\r\n\r\n10 days 20% payable on 3rd April', NULL),
+(352, 7, 2, 1500.00, '2026-03-25', 0, 'disbursed', '2026-03-25 07:54:35', '2026-03-25 07:54:47', NULL, NULL, 1, 0, NULL, 'UCP6OABVYQ Confirmed. KSH. 1,500 sent to Keneth Owino,  via MySafaricom App on 25-03-2026 11:15.', NULL),
+(353, 72, 1, 10000.00, '2026-03-26', 0, 'repaid', '2026-03-26 20:57:06', '2026-04-05 15:42:55', NULL, NULL, 1, 1, '2026-03-26 20:57:06', 'rolled over loan for 5 days', NULL);
+INSERT INTO `loans` (`id`, `user_id`, `loan_type_id`, `amount`, `borrow_date`, `broker_status`, `status`, `created_at`, `updated_at`, `guarantor_id`, `guarantor_relationship`, `loan_officer_id`, `consent`, `consent_date`, `reason`, `due_date`) VALUES
+(354, 29, 1, 20000.00, '2026-03-26', 0, 'repaid', '2026-03-27 08:35:47', '2026-04-08 06:05:43', NULL, NULL, 1, 1, '2026-03-27 08:35:47', 'Bank to M-PESA transfer of KES 20,000.00 to 254721655906 - OTIENO NIGEL successfully processed. Transaction Ref ID: 3883JNTY9707. M-PESA Ref ID: UCQKBAE0DG', NULL),
+(355, 53, 1, 1000.00, '2026-03-27', 0, 'repaid', '2026-03-29 16:48:58', '2026-04-08 06:09:41', NULL, NULL, 1, 1, '2026-03-29 16:48:58', 'UCR6OAKFLQ Confirmed. KSH. 1,000 sent to EMMANUEL TSUMA,  via MySafaricom App on 27-03-2026 14:35.', NULL),
+(356, 67, 1, 5000.00, '2026-03-28', 0, 'repaid', '2026-03-29 16:50:57', '2026-04-13 16:38:31', NULL, NULL, 1, 1, '2026-03-29 16:50:57', 'Bank to M-PESA transfer of KES 5,000.00 to 254700742394 - MICHAEL NZUKA MUSYIMI successfully processed. Transaction Ref ID: 3902DEVE0397. M-PESA Ref ID: UCSOIB1OMC', NULL),
+(357, 68, 1, 45000.00, '2026-03-30', 0, 'repaid', '2026-03-29 16:54:56', '2026-04-14 06:39:52', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 45,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 3907OPGV8266. M-PESA Ref ID: UCTBMB1ZDN', NULL),
+(358, 31, 1, 10000.00, '2026-03-27', 0, 'disbursed', '2026-03-29 17:14:25', '2026-03-29 17:14:37', NULL, NULL, 1, 0, NULL, 'Dear DENNIS, MPESA transfer of KES 10000 to LEON MUSAU-254720747652 at 27-03-2026 10:05 PM was successful.MPESA Ref:UCR4AB9NS5.\r\n\r\nRepayable on Monday as KES 12000', NULL),
+(359, 58, 14, 10000.00, '2026-04-01', 0, 'repaid', '2026-04-02 04:47:36', '2026-04-04 11:13:51', NULL, NULL, 1, 1, '2026-04-02 04:47:36', 'Bank to M-PESA transfer of KES 10,000.00 to 254722778298 - VIVIAN NEKESA SIMIYU successfully processed. Transaction Ref ID: 3936JYNW2747. M-PESA Ref ID: UD132BBR99', NULL),
+(360, 26, 2, 100000.00, '2026-03-26', 0, 'disbursed', '2026-04-02 04:57:05', '2026-04-02 04:57:05', NULL, NULL, 15, 1, '2026-04-02 04:57:05', 'rolled over loan', NULL),
+(361, 53, 1, 3200.00, '2026-03-31', 0, 'repaid', '2026-04-02 04:59:02', '2026-04-13 16:27:29', NULL, NULL, 1, 1, '2026-04-02 04:59:02', 'Bank to M-PESA transfer of KES 3,200.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 3926CFQD3972. M-PESA Ref ID: UCV6BB0M8H\r\n\r\nDue in 10 days 20%', NULL),
+(362, 11, 1, 5000.00, '2026-03-31', 0, 'repaid', '2026-04-02 05:01:37', '2026-04-13 16:22:56', NULL, NULL, 1, 1, '2026-04-02 05:01:37', 'Bank to M-PESA transfer of KES 5,000.00 to 254724606690 - SHADRACK CHERUIYOT successfully processed. Transaction Ref ID: 3936VBGY2825. M-PESA Ref ID: UD1HDBDUSY', NULL),
+(363, 2, 1, 25000.00, '2026-03-30', 0, 'repaid', '2026-04-02 05:08:26', '2026-04-17 18:13:28', NULL, NULL, 15, 1, '2026-04-02 05:08:26', 'UCU9XB5HFB Confirmed. Ksh25,000.00 sent to Edward  Kipsanai 0710920629 on 30/3/26 at 6:35 PM.', NULL),
+(364, 9, 2, 73077.12, '2026-03-18', 0, 'disbursed', '2026-04-02 05:17:32', '2026-04-02 05:18:17', NULL, NULL, 1, 0, NULL, 'rolled over facility because of an office scandal and no payment for a month', NULL),
+(365, 48, 1, 25000.00, '2026-04-04', 0, 'repaid', '2026-04-04 10:58:42', '2026-04-18 18:09:11', NULL, NULL, 1, 1, '2026-04-04 10:58:42', 'Bank to M-PESA transfer of KES 25,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 3960XHRB9386. M-PESA Ref ID: UD4ALBIZKO\r\n\r\nDue in 10 days at 20% interest \r\n\r\nPayable on or before 14/4/2026 KES 30,000', NULL),
+(366, 62, 1, 4200.00, '2026-03-14', 0, 'repaid', '2026-04-04 11:06:48', '2026-04-04 11:07:35', NULL, NULL, 1, 1, '2026-04-04 11:06:48', 'rolled over', NULL),
+(367, 62, 1, 5040.00, '2026-03-24', 0, 'repaid', '2026-04-04 11:08:07', '2026-04-13 17:18:59', NULL, NULL, 1, 1, '2026-04-04 11:08:07', 'rolled over', NULL),
+(368, 62, 1, 10368.00, '2026-03-21', 0, 'repaid', '2026-04-04 11:10:14', '2026-04-13 17:17:21', NULL, NULL, 1, 1, '2026-04-04 11:10:14', 'rolled over', NULL),
+(369, 72, 1, 10000.00, '2026-04-05', 0, 'repaid', '2026-04-05 15:43:36', '2026-04-16 15:07:20', 68, NULL, 1, 1, '2026-04-05 15:43:36', 'rolled over loan', NULL),
+(370, 29, 1, 24000.00, '2026-04-05', 0, 'repaid', '2026-04-08 06:06:39', '2026-04-16 15:00:18', NULL, NULL, 1, 1, '2026-04-08 06:06:39', '[21:48, 07/04/2026] Dennis Kibet: We will have to roll over\r\n[22:41, 07/04/2026] Nigel Cecil Otieno Loans Client: Niaje, nikama itabidi', NULL),
+(371, 53, 1, 1500.00, '2026-04-08', 0, 'repaid', '2026-04-08 06:12:05', '2026-04-20 07:41:07', NULL, NULL, 1, 1, '2026-04-08 06:12:05', 'Bank to M-PESA transfer of KES 1,500.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 3993UINQ7428. M-PESA Ref ID: UD86BBWAX7', NULL),
+(372, 11, 1, 5000.00, '2026-04-10', 0, 'repaid', '2026-04-13 16:24:48', '2026-04-21 04:04:50', NULL, NULL, 1, 0, NULL, 'roll over for the next 10 days', NULL),
+(373, 53, 1, 3040.00, '2026-04-10', 0, 'repaid', '2026-04-13 16:30:11', '2026-04-22 06:42:33', NULL, NULL, 1, 1, '2026-04-13 16:30:11', 'rolled over for the next 10 days', NULL),
+(374, 21, 2, 342732.00, '2026-04-03', 0, 'disbursed', '2026-04-13 16:43:27', '2026-04-13 16:43:27', NULL, NULL, 1, 1, '2026-04-13 16:43:27', 'rolled over facility', NULL),
+(375, 62, 1, 18489.00, '2026-03-31', 0, 'repaid', '2026-04-13 17:18:24', '2026-04-13 17:23:12', NULL, NULL, 1, 0, NULL, 'roll over facility', NULL),
+(376, 62, 1, 22186.80, '2026-04-10', 0, 'repaid', '2026-04-13 17:24:58', '2026-04-22 06:40:46', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
+(377, 64, 1, 10000.00, '2026-04-15', 0, 'disbursed', '2026-04-15 10:11:31', '2026-04-15 10:11:31', NULL, NULL, 1, 1, '2026-04-15 10:11:31', 'UDFAI12TXH Confirmed. You have received Ksh10,000.00 from IM BANK LIMITED- APP on 15/4/26 at 2:35 PM. New M-PESA balance is Ksh10,392.57. Buy goods with M-PESA.', NULL),
+(378, 67, 1, 7500.00, '2026-04-14', 0, 'repaid', '2026-04-15 10:20:49', '2026-04-23 06:21:46', NULL, NULL, 1, 1, '2026-04-15 10:20:49', 'Bank to M-PESA transfer of KES 7,500.00 to 254700742394 - MICHAEL NZUKA MUSYIMI successfully processed. Transaction Ref ID: 4049LFRF6379. M-PESA Ref ID: UDEOI142NU', NULL),
+(379, 68, 1, 10000.00, '2026-04-15', 0, 'disbursed', '2026-04-15 10:22:37', '2026-04-15 10:22:37', 48, 'Friend', 1, 1, '2026-04-15 10:22:37', 'Bank to M-PESA transfer of KES 10,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 4055ZDCU6256. M-PESA Ref ID: UDFBM13SLE', NULL),
+(380, 50, 13, 66000.00, '2026-03-20', 0, 'disbursed', '2026-04-15 10:25:47', '2026-04-15 10:26:22', NULL, NULL, 1, 0, NULL, 'roll over facility for 3 months', NULL),
+(381, 72, 1, 10000.00, '2026-04-15', 0, 'disbursed', '2026-04-16 15:08:27', '2026-04-16 15:08:27', 68, 'Friend', 1, 1, '2026-04-16 15:08:27', 'rolled over loan', NULL),
+(382, 2, 1, 30000.00, '2026-04-09', 0, 'repaid', '2026-04-17 18:14:40', '2026-04-22 07:01:57', NULL, NULL, 15, 1, '2026-04-17 18:14:40', 'rolled over facility', NULL),
+(383, 2, 5, 110796.40, '2026-04-09', 0, 'disbursed', '2026-04-17 18:17:37', '2026-04-17 19:00:26', NULL, NULL, 15, 0, NULL, 'Rolled over', NULL),
+(384, 11, 1, 6000.00, '2026-04-20', 0, 'disbursed', '2026-04-21 04:05:45', '2026-04-21 04:05:45', NULL, NULL, 1, 1, '2026-04-21 04:05:45', '[09:03, 21/04/2026] Dennis Kibet: We roll over?\r\n[09:04, 21/04/2026] Shady Kip Cheruiyot eCitizen: Yew sir, currently it\'s bad\r\n[09:04, 21/04/2026] Dennis Kibet: Sawa chief, you will sort when paid', NULL),
+(385, 68, 1, 20000.00, '2026-04-20', 0, 'disbursed', '2026-04-22 06:45:45', '2026-04-22 06:45:56', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 15,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 4102UYKB3384. M-PESA Ref ID: UDKBM1Q6KM\r\n\r\nPayable 30/4/2016 as KES 18,000', NULL),
+(386, 70, 1, 1000.00, '2026-04-22', 0, 'disbursed', '2026-04-22 07:00:21', '2026-04-22 07:00:21', NULL, NULL, 1, 1, '2026-04-22 07:00:21', 'Bank to M-PESA transfer of KES 1,000.00 to 0725408209 - nigel kimutai yegon successfully processed. Transaction Ref ID: 4114DTIN9494. M-PESA Ref ID: UDMIT1JYA4 \r\n\r\n10 DAYS 20% INTEREST FACILITY \r\nPayable on or before 1st May as KES 1200', NULL),
+(387, 2, 1, 10000.00, '2026-04-22', 0, 'disbursed', '2026-04-23 05:54:09', '2026-04-23 05:54:09', NULL, NULL, 15, 1, '2026-04-23 05:54:09', 'UDM9X1UI8J Confirmed. Ksh10,000.00 sent to Edward  Kipsanai 0710920629 on 22/4/26 at 12:57 PM.', NULL),
+(388, 58, 14, 10000.00, '2026-04-23', 0, 'disbursed', '2026-04-23 06:52:30', '2026-04-23 06:52:30', NULL, NULL, 1, 1, '2026-04-23 06:52:30', 'Bank to M-PESA transfer of KES 10,000.00 to 254722778298 - VIVIAN NEKESA SIMIYU successfully processed. Transaction Ref ID: 4124CXRR4189. M-PESA Ref ID: UDN321V2ZZ\r\n\r\n5 days 11k', NULL),
+(389, 53, 1, 5000.00, '2026-04-23', 0, 'disbursed', '2026-04-26 06:43:02', '2026-04-26 06:43:02', NULL, NULL, 1, 1, '2026-04-26 06:43:02', 'Bank to M-PESA transfer of KES 3,300.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4125JYFE4889. M-PESA Ref ID: UDN6B1PHVO\r\n\r\nPayable 3rd May 2026 as KES 3,960\r\n\r\nBank to M-PESA transfer of KES 1,700.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4127SODY1166. M-PESA Ref ID: UDN6B1RC19\r\n\r\n5k total', NULL);
 
 -- --------------------------------------------------------
 
@@ -1065,7 +1263,9 @@ INSERT INTO `loan_types` (`id`, `name`, `period`, `unit`, `interest_rate`, `pena
 (10, 'Quick Loans 3 months 10% monthly', 3, 'months', 30.00, 10.00, 'Upto 300k! 2 weeks!', '2025-05-29 15:05:07', '2025-05-29 15:05:07'),
 (11, 'Quick Loans 2 months 15% monthly', 2, 'months', 30.00, 10.00, 'Upto 300k! 2 weeks!', '2025-05-29 15:05:07', '2025-05-29 15:05:07'),
 (12, 'Quick Loans 2 months 20% monthly', 2, 'months', 20.00, 10.00, 'Upto 300k! 2 weeks!', '2025-05-29 15:05:07', '2025-05-29 15:05:07'),
-(13, 'Quick Loans 3 months 60% ', 3, 'months', 60.00, 10.00, 'Upto 250k! 2 weeks!', '2025-05-29 15:05:07', '2025-05-29 15:05:07');
+(13, 'Quick Loans 3 months 60% ', 3, 'months', 60.00, 10.00, 'Upto 250k! 2 weeks!', '2025-05-29 15:05:07', '2025-05-29 15:05:07'),
+(14, 'Emergency 5 Days', 5, 'days', 10.00, 7.50, 'Upto 250k!', '2026-01-29 11:23:31', '2026-01-29 11:23:23'),
+(15, 'Family 3 months 2% monthly', 3, 'months', 6.00, 10.00, 'Upto 300k! 2 weeks!', '2025-05-29 15:05:07', '2025-05-29 15:05:07');
 
 -- --------------------------------------------------------
 
@@ -1586,7 +1786,148 @@ INSERT INTO `repayments` (`id`, `loan_id`, `amount`, `transaction`, `repayment_d
 (414, 258, 169000.00, 'ROLL OVER', '2025-12-29', '2026-01-12 13:25:25', '2026-01-12 13:25:25'),
 (415, 276, 55000.00, 'UAF9Q3UZHE', '2026-01-15', '2026-01-15 16:39:02', '2026-01-15 16:39:02'),
 (416, 276, 5000.00, 'CREDIT DISCOUNT', '2026-01-15', '2026-01-15 16:39:17', '2026-01-15 16:39:17'),
-(417, 257, 50748.00, 'ROLL OVER', '2026-01-03', '2026-01-15 16:40:05', '2026-01-15 16:40:05');
+(417, 257, 50748.00, 'ROLL OVER', '2026-01-03', '2026-01-15 16:40:05', '2026-01-15 16:40:05'),
+(418, 277, 42000.00, '00070057202601191709408dcb2a08', '2026-01-19', '2026-01-20 08:02:39', '2026-01-20 08:02:39'),
+(419, 274, 48000.00, 'UAJ8O4BE8Z', '2026-01-19', '2026-01-20 08:03:10', '2026-01-20 08:03:10'),
+(420, 278, 83000.00, '165097985236', '2026-01-21', '2026-01-21 06:07:00', '2026-01-21 06:07:00'),
+(421, 281, 7000.00, 'UAL5X4JNT1', '2026-01-21', '2026-01-22 07:31:41', '2026-01-22 07:31:41'),
+(422, 281, 200.00, 'CREDIT DISCOUNT', '2026-01-21', '2026-01-22 07:32:02', '2026-01-22 07:32:02'),
+(423, 269, 500000.00, '0007005720260127095017de75acd2', '2026-01-27', '2026-01-27 06:14:17', '2026-01-27 06:14:17'),
+(424, 278, 5000.00, 'UAQ9X4X5YI', '2026-01-26', '2026-01-27 06:17:16', '2026-01-27 06:17:16'),
+(425, 278, 8000.00, 'MBNHE9DTRFHI7TO3', '2026-01-22', '2026-01-27 06:28:04', '2026-01-27 06:28:04'),
+(426, 262, 20000.00, 'UAS6O4Z741', '2026-01-28', '2026-01-28 11:59:08', '2026-01-28 11:59:08'),
+(427, 285, 33000.00, 'UARPX4WGMF', '2026-01-27', '2026-01-29 08:26:42', '2026-01-29 08:26:42'),
+(428, 262, 100000.00, 'ROLL OVER', '2026-01-24', '2026-01-29 10:07:56', '2026-02-26 17:56:28'),
+(429, 278, 30000.00, 'UAQ9X4X754', '2026-01-26', '2026-01-30 19:24:33', '2026-01-30 19:24:33'),
+(430, 269, 364000.00, 'ROLL OVER', '2026-01-22', '2026-02-01 19:37:16', '2026-02-24 16:10:46'),
+(431, 151, 15000.00, '197739595312', '2026-02-03', '2026-02-03 14:34:38', '2026-02-03 14:36:35'),
+(432, 282, 300000.00, 'ROLL OVER', '2026-01-31', '2026-02-03 14:41:38', '2026-02-03 14:41:38'),
+(433, 290, 106000.00, 'UB6D85XEMG', '2026-02-06', '2026-02-09 13:35:53', '2026-02-09 13:35:53'),
+(434, 290, 6000.00, 'BROKER FEES', '2026-02-06', '2026-02-09 13:36:43', '2026-02-09 13:36:43'),
+(435, 286, 10560.00, 'UB9PX665CY', '2026-02-09', '2026-02-09 13:38:21', '2026-02-09 13:38:21'),
+(436, 275, 54440.00, 'UB9PX665CY', '2026-02-09', '2026-02-09 13:38:47', '2026-02-09 13:38:47'),
+(437, 275, 65560.00, 'ROLL OVER', '2026-02-09', '2026-02-09 13:39:03', '2026-02-09 13:39:03'),
+(438, 278, 3000.00, 'UB59X5V43U', '2026-02-04', '2026-02-09 13:44:37', '2026-02-09 13:44:37'),
+(439, 278, 1000.00, 'UB49X5UFY6', '2026-02-04', '2026-02-09 13:44:53', '2026-02-09 13:44:53'),
+(440, 293, 25000.00, 'SALARY', '2026-02-05', '2026-02-09 13:48:00', '2026-02-09 13:48:00'),
+(441, 283, 17280.00, 'UBB6O6AE13', '2026-02-10', '2026-02-11 10:01:29', '2026-02-11 10:01:52'),
+(442, 256, 25000.00, 'UBDTZ6TVNS', '2026-02-10', '2026-02-17 13:42:28', '2026-02-17 13:42:28'),
+(443, 289, 360000.00, 'ROLL OVER', '2026-02-10', '2026-02-17 13:46:53', '2026-02-17 13:46:53'),
+(444, 279, 219700.00, 'ROLL OVER', '2026-01-31', '2026-02-18 05:26:27', '2026-02-18 05:26:27'),
+(445, 280, 60897.60, 'ROLL OVER', '2026-02-03', '2026-02-18 05:34:39', '2026-02-18 05:34:39'),
+(446, 292, 80000.00, 'UBJ8O76R0T', '2026-02-19', '2026-02-19 08:59:20', '2026-02-19 08:59:20'),
+(447, 315, 60000.00, 'ROLL OVER', '2026-02-19', '2026-02-19 09:40:36', '2026-02-19 09:40:36'),
+(448, 226, 18310.00, 'CREDIT DISCOUNT', '2026-02-02', '2026-02-19 10:10:11', '2026-02-19 10:10:11'),
+(449, 292, 40000.00, 'ROLL OVER', '2026-02-19', '2026-02-21 21:12:59', '2026-02-21 21:12:59'),
+(450, 319, 20000.00, 'UBL8O7D9EU', '2026-02-21', '2026-02-21 21:15:22', '2026-02-21 21:15:22'),
+(451, 288, 100000.00, '0001005720260224162117447c4ymz', '2026-02-24', '2026-02-24 14:47:08', '2026-02-24 14:47:08'),
+(452, 288, 200000.00, '0001005720260224162356457ihiu1', '2026-02-24', '2026-02-24 14:47:35', '2026-02-24 14:47:35'),
+(453, 307, 168000.00, 'ROLL OVER', '2026-02-21', '2026-02-24 15:56:11', '2026-02-24 15:56:11'),
+(454, 307, 12000.00, 'BROKER FEES', '2026-02-21', '2026-02-24 15:56:27', '2026-02-24 15:56:27'),
+(455, 309, 13248.00, 'ROLL OVER', '2026-02-21', '2026-02-24 15:57:31', '2026-02-24 16:00:49'),
+(456, 309, 1152.00, 'BROKER FEES', '2026-02-21', '2026-02-24 15:58:28', '2026-02-24 15:58:28'),
+(457, 321, 8212.80, 'BROKER FEES', '2026-02-27', '2026-02-24 16:06:40', '2026-03-03 06:41:17'),
+(458, 269, 432000.00, 'CREDIT DISCOUNT', '2026-01-22', '2026-02-24 16:13:14', '2026-02-24 16:13:28'),
+(459, 319, 30000.00, 'UBQS88E6WC', '2026-02-26', '2026-02-26 06:41:37', '2026-02-26 06:41:37'),
+(460, 314, 36000.00, 'UBQBM7YL7I', '2026-02-26', '2026-02-26 17:20:28', '2026-02-26 17:20:28'),
+(461, 287, 20000.00, 'UBQ6O7P73Y', '2026-02-26', '2026-02-26 17:55:06', '2026-02-26 17:55:06'),
+(462, 287, 100000.00, 'ROLL OVER', '2026-02-26', '2026-02-26 17:58:54', '2026-02-26 17:58:54'),
+(463, 313, 6000.00, 'UBROI82WIW', '2026-02-27', '2026-02-27 17:05:12', '2026-02-27 17:05:12'),
+(464, 321, 41160.00, 'UBRD87VOUZ', '2026-02-27', '2026-02-27 19:24:19', '2026-02-27 19:24:19'),
+(465, 316, 192000.00, 'ROLL OVER', '2026-02-28', '2026-02-27 19:31:32', '2026-02-27 19:31:32'),
+(466, 317, 120000.00, 'UBS9Q7YQJQ', '2026-02-28', '2026-02-28 10:22:28', '2026-02-28 10:22:28'),
+(467, 321, 150000.00, 'ROLL OVER', '2026-02-27', '2026-03-03 06:40:19', '2026-03-03 06:40:19'),
+(468, 324, 12000.00, 'BROKER FEES', '2026-03-13', '2026-03-03 06:43:55', '2026-03-03 06:43:55'),
+(469, 311, 285610.00, 'ROLL OVER', '2026-03-03', '2026-03-04 06:05:40', '2026-03-04 06:05:40'),
+(470, 323, 250000.00, 'UC64A90L08', '2026-03-06', '2026-03-06 12:56:13', '2026-03-06 12:56:13'),
+(471, 256, 55000.00, 'ROLL OVER', '2026-03-06', '2026-03-06 12:56:45', '2026-03-06 12:56:45'),
+(472, 310, 432000.00, 'ROLL OVER', '2026-02-20', '2026-03-06 12:59:17', '2026-03-06 12:59:17'),
+(473, 330, 518400.00, 'ROLL OVER', '2026-03-02', '2026-03-06 13:03:28', '2026-03-06 13:03:28'),
+(474, 288, 64000.00, 'PESALINK', '2026-03-08', '2026-03-08 13:55:57', '2026-03-08 13:55:57'),
+(475, 288, 684320.00, 'CREDIT DISCOUNT', '2026-03-08', '2026-03-08 13:56:21', '2026-03-08 13:56:21'),
+(476, 328, 600.00, 'UC86B8O2US', '2026-03-08', '2026-03-08 14:31:44', '2026-03-08 14:31:44'),
+(477, 328, 1000.00, 'UC86B8OH18', '2026-03-08', '2026-03-11 18:56:04', '2026-03-11 18:56:04'),
+(478, 328, 1000.00, 'UC86B8OLGX', '2026-03-08', '2026-03-11 18:56:23', '2026-03-11 18:56:23'),
+(479, 334, 55000.00, 'UCCFZ933Y7', '2026-03-12', '2026-03-12 11:17:58', '2026-03-12 11:17:58'),
+(480, 291, 85228.00, 'ROLL OVER', '2026-03-09', '2026-03-12 11:18:49', '2026-03-12 11:18:49'),
+(481, 328, 1000.00, 'UC86B8OB4R', '2026-03-08', '2026-03-12 11:24:05', '2026-03-12 11:24:05'),
+(482, 320, 4000.00, 'UCD6O93ZED', '2026-03-13', '2026-03-14 19:48:28', '2026-03-14 19:48:43'),
+(483, 320, 1280.00, 'CREDIT DISCOUNT', '2026-03-13', '2026-03-14 19:49:10', '2026-03-14 19:49:10'),
+(484, 324, 168000.00, 'UCDD895ZAZ', '2026-03-13', '2026-03-14 19:49:56', '2026-03-14 19:49:56'),
+(485, 327, 18000.00, 'ROLL OVER', '2026-03-13', '2026-03-14 19:53:12', '2026-03-14 19:53:12'),
+(486, 151, 1357518.00, 'ROLL OVER', '2026-02-03', '2026-03-14 19:58:21', '2026-03-14 20:00:44'),
+(487, 340, 7200.00, 'ROLL OVER', '2026-03-02', '2026-03-15 18:47:02', '2026-03-15 18:47:02'),
+(488, 341, 8640.00, 'ROLL OVER', '2026-03-12', '2026-03-15 18:48:37', '2026-03-15 18:48:37'),
+(489, 342, 10368.00, 'ROLL OVER', '2026-03-21', '2026-03-15 18:50:55', '2026-04-04 11:09:31'),
+(490, 336, 500.00, 'UCG6B9H4WP', '2026-03-16', '2026-03-18 16:36:00', '2026-03-18 16:36:00'),
+(491, 336, 1900.00, 'UCH6B9H6IA', '2026-03-16', '2026-03-18 16:36:16', '2026-03-18 16:36:16'),
+(492, 333, 18000.00, 'UCIAL9PG2R', '2026-03-19', '2026-03-19 05:16:34', '2026-03-19 05:16:34'),
+(493, 332, 24000.00, 'UCIBM9XI4K', '2026-03-18', '2026-03-19 05:17:03', '2026-03-19 05:17:03'),
+(494, 250, 114439.80, 'ROLL OVER', '2026-02-27', '2026-03-20 18:22:22', '2026-03-20 18:23:15'),
+(495, 338, 21600.00, 'UCNKBA2UAO', '2026-03-23', '2026-03-24 14:35:05', '2026-03-24 14:35:05'),
+(496, 339, 49500.00, 'UCOHDAJFL9', '2026-03-24', '2026-03-24 19:28:31', '2026-03-24 19:28:31'),
+(497, 318, 6000.00, 'UCOBDAI1OC', '2026-03-24', '2026-03-25 11:38:15', '2026-03-25 11:38:15'),
+(498, 346, 6000.00, 'UCPALAGDK9', '2026-03-25', '2026-03-26 06:04:45', '2026-03-26 06:04:45'),
+(499, 343, 2000.00, 'UCQEVAMP9Y', '2026-03-26', '2026-03-26 20:56:09', '2026-03-26 20:56:09'),
+(500, 343, 10000.00, 'ROLL OVER', '2026-03-26', '2026-03-26 20:56:19', '2026-03-26 20:56:19'),
+(501, 337, 60000.00, 'UCQ9QAL1NG', '2026-03-26', '2026-03-26 20:58:07', '2026-03-26 20:58:07'),
+(502, 344, 2800.00, 'UCS6BAR30I', '2026-03-28', '2026-03-29 16:41:28', '2026-03-29 16:41:28'),
+(503, 344, 1200.00, 'UCS6BAN50W', '2026-03-28', '2026-03-29 16:42:19', '2026-03-29 16:42:19'),
+(504, 369, 2000.00, 'UCS6BAN8ZZ', '2026-03-28', '2026-03-29 16:42:41', '2026-03-29 16:42:41'),
+(505, 322, 160000.00, 'ROLL OVER', '2026-03-26', '2026-04-02 04:49:56', '2026-04-02 04:54:47'),
+(506, 322, 20000.00, 'UCV9XB859B', '2026-03-31', '2026-04-02 04:54:18', '2026-04-02 04:54:18'),
+(507, 345, 39600.00, 'UCU9XB3ZQX', '2026-03-30', '2026-04-02 05:07:20', '2026-04-02 05:07:20'),
+(508, 350, 9800.00, 'UCUGCAZTET', '2026-03-30', '2026-04-02 05:09:52', '2026-04-02 05:09:52'),
+(509, 312, 73077.12, 'ROLL OVER', '2026-03-18', '2026-04-02 05:16:16', '2026-04-02 05:16:26'),
+(510, 326, 4200.00, 'ROLL OVER', '2026-03-14', '2026-04-04 11:05:46', '2026-04-04 11:05:59'),
+(511, 366, 5040.00, 'ROLL OVER', '2026-03-24', '2026-04-04 11:07:35', '2026-04-04 11:07:35'),
+(512, 359, 11000.00, '00630057202604032133052fb2e439', '2026-04-03', '2026-04-04 11:13:51', '2026-04-04 11:13:51'),
+(513, 351, 12000.00, 'UD5SGALUXT', '2026-04-05', '2026-04-05 09:21:56', '2026-04-05 09:21:56'),
+(514, 353, 2000.00, 'UD5EVBR6UM', '2026-04-05', '2026-04-05 15:42:40', '2026-04-05 15:42:40'),
+(515, 353, 10000.00, 'ROLL OVER', '2026-04-05', '2026-04-05 15:42:55', '2026-04-05 15:42:55'),
+(516, 308, 18000.00, 'UD7GCBW9X8', '2026-03-16', '2026-04-08 05:54:18', '2026-04-08 05:54:18'),
+(517, 354, 24000.00, 'ROLL OVER', '2026-04-05', '2026-04-08 06:05:43', '2026-04-08 06:05:43'),
+(518, 355, 1200.00, 'UD76BBT9AX', '2026-04-05', '2026-04-08 06:09:41', '2026-04-08 06:10:09'),
+(519, 361, 800.00, 'UD76BBT9AX', '2026-04-07', '2026-04-08 06:10:57', '2026-04-08 06:10:57'),
+(520, 362, 1000.00, 'UDAHD0JY97', '2026-04-10', '2026-04-13 16:22:38', '2026-04-13 16:22:38'),
+(521, 362, 5000.00, 'ROLL OVER', '2026-04-10', '2026-04-13 16:22:56', '2026-04-13 16:22:56'),
+(522, 361, 3040.00, 'ROLL OVER', '2026-04-10', '2026-04-13 16:27:29', '2026-04-13 16:27:29'),
+(523, 357, 11000.00, 'UDABM0LERC', '2026-04-10', '2026-04-13 16:34:15', '2026-04-13 16:34:15'),
+(524, 356, 6600.00, 'UD9OI0J2U5', '2026-04-09', '2026-04-13 16:38:31', '2026-04-13 16:38:31'),
+(525, 325, 342732.00, 'ROLL OVER', '2026-04-03', '2026-04-13 16:42:26', '2026-04-13 16:42:26'),
+(526, 368, 12441.60, 'ROLL OVER', '2026-03-31', '2026-04-13 17:17:21', '2026-04-13 17:17:21'),
+(527, 367, 6048.00, 'ROLL OVER', '2026-04-03', '2026-04-13 17:18:59', '2026-04-13 17:19:12'),
+(528, 375, 22186.80, 'ROLL OVER', '2026-04-10', '2026-04-13 17:23:12', '2026-04-13 17:23:36'),
+(529, 357, 41000.00, 'UDDBM0XT1E', '2026-04-13', '2026-04-14 06:39:52', '2026-04-14 06:40:13'),
+(530, 357, 2000.00, 'UDEBM0Z49A', '2026-04-14', '2026-04-14 06:54:18', '2026-04-14 06:54:18'),
+(531, 357, 21600.00, 'CREDIT DISCOUNT', '2026-04-14', '2026-04-14 06:54:47', '2026-04-14 06:54:47'),
+(532, 365, 16000.00, 'UDFAL0TXHB', '2026-04-15', '2026-04-15 10:12:36', '2026-04-15 10:12:36'),
+(533, 370, 10000.00, 'UDFKB0ONZY', '2026-03-15', '2026-04-15 10:16:30', '2026-04-15 10:16:30'),
+(534, 329, 66000.00, 'ROLL OVER', '2026-03-20', '2026-04-15 10:24:29', '2026-04-15 10:24:29'),
+(535, 370, 18800.00, 'UDGKB0S6QI', '2026-04-16', '2026-04-16 15:00:18', '2026-04-16 15:04:25');
+INSERT INTO `repayments` (`id`, `loan_id`, `amount`, `transaction`, `repayment_date`, `created_at`, `updated_at`) VALUES
+(536, 370, 2000.00, 'UDFEV0ZRS1', '2026-04-15', '2026-04-16 15:00:47', '2026-04-16 15:05:41'),
+(537, 369, 10000.00, 'ROLL OVER', '2026-04-15', '2026-04-16 15:07:20', '2026-04-16 15:07:20'),
+(538, 381, 1000.00, 'UDGEV13YEB', '2026-04-17', '2026-04-17 04:26:56', '2026-04-17 04:26:56'),
+(539, 363, 30000.00, 'ROLL OVER', '2026-04-09', '2026-04-17 18:13:28', '2026-04-17 18:13:28'),
+(540, 335, 110796.40, 'ROLL OVER', '2026-04-09', '2026-04-17 18:16:19', '2026-04-17 18:16:19'),
+(541, 371, 1448.00, 'UDH6B137T1', '2026-04-17', '2026-04-17 18:41:14', '2026-04-17 18:41:14'),
+(542, 365, 16000.00, 'UDIAL15ZLB', '2026-04-17', '2026-04-18 18:09:11', '2026-04-18 18:09:11'),
+(543, 365, 800.00, 'UDIAL16LCX', '2026-04-18', '2026-04-18 18:09:40', '2026-04-18 18:10:09'),
+(544, 365, 3200.00, 'CREDIT DISCOUNT', '2026-04-18', '2026-04-18 18:10:29', '2026-04-18 18:10:29'),
+(545, 371, 400.00, 'UDK6B1C0JB', '2026-04-20', '2026-04-20 07:41:07', '2026-04-20 07:41:31'),
+(546, 266, 10000.00, 'UDKFG1GB48', '2026-04-18', '2026-04-20 08:13:46', '2026-04-20 08:13:46'),
+(547, 266, 54155.50, 'CREDIT DISCOUNT', '2026-01-02', '2026-04-20 08:14:46', '2026-04-20 08:16:21'),
+(548, 373, 648.00, 'UDK6B1DFIB', '2026-04-20', '2026-04-20 16:21:51', '2026-04-20 16:21:51'),
+(549, 372, 6000.00, 'ROLL OVER', '2026-04-20', '2026-04-21 04:04:50', '2026-04-21 04:04:50'),
+(550, 376, 26700.00, 'UDL1U1MSJM', '2026-04-21', '2026-04-22 06:40:46', '2026-04-22 06:40:46'),
+(551, 373, 2500.00, 'UDL6B1HSIL', '2026-04-21', '2026-04-22 06:42:33', '2026-04-22 06:42:33'),
+(552, 373, 500.00, 'UDL6B1I22V', '2026-04-21', '2026-04-22 06:42:57', '2026-04-22 06:42:57'),
+(553, 373, 364.80, 'CREDIT DISCOUNT', '2026-04-21', '2026-04-22 06:43:37', '2026-04-22 06:43:37'),
+(554, 382, 36000.00, 'UDLPX1KFBE', '2026-04-21', '2026-04-22 07:01:57', '2026-04-22 07:01:57'),
+(555, 382, 3600.00, 'CREDIT DISCOUNT', '2026-04-21', '2026-04-22 07:02:12', '2026-04-22 07:02:12'),
+(556, 378, 9000.00, 'CREDIT DISCOUNT', '2026-04-24', '2026-04-23 06:21:46', '2026-04-23 06:22:08'),
+(557, 377, 9000.00, 'UDPAI2A2WO', '2026-04-25', '2026-04-26 06:23:55', '2026-04-26 06:23:55');
 
 -- --------------------------------------------------------
 
@@ -1623,19 +1964,54 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('3ECtJhErIetUTayN8KYvLsbwAYFRHdYsTCZESv4y', NULL, '206.168.34.205', 'Mozilla/5.0 (compatible; CensysInspect/1.1; +https://about.censys.io/)', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiWmw0cldPeU9iTlZsRG1xbkY4SDBSOE5YMVJzN2Y0MkhEdEtYSjJucyI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1768608901),
-('EIbpztVkGJe3Hez2eGeWTxWvM1sLh1630wEriexh', NULL, '44.248.252.193', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.7559.59 Safari/537.36 Edge/18.19582', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiODlHNHM1dVZGMWp5M1h1bjg1Q0FFTXc4NlN6MGdhaG55SEhxazJhUiI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1768611508),
-('gEXwbfZeWES286AG2gfHEmcGwd481kwRvqPHWQnF', NULL, '35.160.143.34', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36 Edge/18.19582', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoid3IwVFZBejgzVlhuZkJyNlZ2UUo4MHpVTnBzRHRFSnFlU2V2bThJeCI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MjY6Imh0dHA6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1768610168),
-('hmoYDil2sdiW0pI7GI2GWy92EWmCSM5iWspreq6C', NULL, '3.18.186.238', 'air.ai/scanning Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/126.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiN0xZaEFRZGdEY0p6cWRXVUZTM01UUmlHbWFtQWVhYXEwbFgyU1UyTyI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1768530322),
-('k1RwpIAP4vDmvvd8FzsUastKay2m1oR140t1Kym4', 1, '196.216.69.246', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiSkVWdnM3bFRUc0pOMHduMFR5b05PTGtjTVE0dmtIQWsybm5mdnFseSI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjk6Il9wcmV2aW91cyI7YToxOntzOjM6InVybCI7czozNzoiaHR0cHM6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhL2Rhc2hib2FyZCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1768574730),
-('MN2xkcdoXo9ho55X0PtZCReVNviWUZT2aBLaHsH4', NULL, '3.18.186.238', 'air.ai/scanning Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/126.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiRGwxRzJJT0tWdFFzaWlqOGxYNEtTdHI3MFV0UXJjZFdDOElGREp6biI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MjY6Imh0dHA6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1768530322),
-('NJonD9yy0afX6yOranCmCMu6YL2i772kIg0Cqmik', 1, '41.90.172.61', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiY3dyUzU3bTNhRU9YM2hyTkd4YXRiY0dmUkk4MFd0R2laeWVmSXh1UiI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjk6Il9wcmV2aW91cyI7YToxOntzOjM6InVybCI7czozNzoiaHR0cHM6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhL2Rhc2hib2FyZCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1768503178),
-('TLk7EBpyxHbegvTjgixI7GpYBXRnPImluWvUmSDm', NULL, '167.94.138.182', 'Mozilla/5.0 (compatible; CensysInspect/1.1; +https://about.censys.io/)', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiVG5NVFI5bnNxNVRnbW1TYkRHS2Z0MUNhV1hjZUJ1TTcxbG9weHJVZyI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MjY6Imh0dHA6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1768609431),
-('XEM9ILjSBZsCjIQMOb5xXix3aftP5WPD7fNVvJ2N', 1, '41.90.172.61', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoic2VxNUQ4b0h6OGdHZjlMWlIzaWtvUHJBR1Vvc29JWXY0eVVtOWk5ZyI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjk6Il9wcmV2aW91cyI7YToxOntzOjM6InVybCI7czoyNzoiaHR0cHM6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1768725332),
-('xOv22PEd3RLZRfQfLSMsg5CInZ7MEWyi50pBcyki', NULL, '34.220.171.1', 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Mobile/15E148 Safari/604.1', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiSExsTFlZaEdrdXhrMXNQSXpmWnhrM2JaVkFjbzVxQjVhVmZBUGFzRCI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MjY6Imh0dHA6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1768527427),
-('y2EYt4IOqeOjquae6ilC8X3WhLJe5xBfXR68Uzpw', NULL, '35.166.128.147', 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiNWYyc1NuVzBJVHBRSHoxUEJZdHFnZDVuaEdxaVNWcWJqeTBQZHJrbCI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1768529388),
-('Y6U7oavW48izIoaHmuyi03K1xNPquyV1e4UdZc0V', 1, '41.90.172.61', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiUkZwMWt5OHFlWnpOd3pETE9MYXhIMW1qYWczYnh4RGtzazcxaVZuUyI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjk6Il9wcmV2aW91cyI7YToxOntzOjM6InVybCI7czozNzoiaHR0cHM6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhL2Rhc2hib2FyZCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1768681499),
-('ysUWbRszRWmbl4NjNe0Id2bPyGcCqCMFeR7BlYLg', NULL, '3.139.242.79', 'air.ai/scanning Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/126.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiZTJrNms3NXo2WXVSZVBCcndLekhDMDNaQWFMSk9tSDRDaXo0UUVVNiI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1768530211);
+('CskuLIkb1PW8SoD1FT0ohn7S76MWYNxwfsDZktr2', 1, '41.90.172.224', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiQ3dNZ05SaEJ0OUNQWTl0Vlk1VHUyOTlnN2xOYmczRlVLYzJJbzBGSCI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mzc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYS9kYXNoYm9hcmQiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX1zOjUwOiJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7aToxO30=', 1777217702),
+('nKILNYhwwam4CXsMYhRlSUauyAPtJlaIMkvgWqVY', 1, '105.160.126.142', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiYnBSNElvNE9XWmlodVF5UFNFSm5zUEN3bXk2dTMzam5xdVdtQU9FSyI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjk6Il9wcmV2aW91cyI7YToxOntzOjM6InVybCI7czozNzoiaHR0cHM6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhL2Rhc2hib2FyZCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1777193906),
+('pJLYGqCrkVausYbIcNp6Sq6uhBDG6CBtJgjhMKmB', NULL, '74.7.227.24', 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.3; +https://openai.com/gptbot)', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiUWJJVnJHbkx1czVPNmV1bmFVS2k3ZXVWNHJhNlNjV3ZBUkRHUEVwciI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MzM6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYS9sb2dpbiI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1777213661);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `system`
+--
+
+CREATE TABLE `system` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `logo` varchar(255) DEFAULT NULL,
+  `logo_dark` varchar(255) DEFAULT NULL,
+  `logo_icon` varchar(255) DEFAULT NULL,
+  `favicon` varchar(255) DEFAULT NULL,
+  `slogan` varchar(255) DEFAULT NULL,
+  `timezone` varchar(100) NOT NULL DEFAULT 'UTC',
+  `date_format` varchar(50) NOT NULL DEFAULT 'd-m-Y',
+  `time_format` varchar(50) NOT NULL DEFAULT 'H:i:s',
+  `currency` varchar(50) NOT NULL DEFAULT 'KES',
+  `currency_symbol` varchar(50) NOT NULL DEFAULT 'KSh',
+  `primary_color` varchar(50) DEFAULT NULL,
+  `secondary_color` varchar(50) DEFAULT NULL,
+  `contact_email` varchar(255) DEFAULT NULL,
+  `contact_phone` varchar(50) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `location` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `meta_description` text DEFAULT NULL,
+  `meta_keywords` text DEFAULT NULL,
+  `maintenance_mode` tinyint(1) NOT NULL DEFAULT 0,
+  `pagination_limit` int(11) NOT NULL DEFAULT 15,
+  `custom_css` text DEFAULT NULL,
+  `custom_js` text DEFAULT NULL,
+  `settings` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `website_pages` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `social_media` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `system`
+--
+
+INSERT INTO `system` (`id`, `name`, `logo`, `logo_dark`, `logo_icon`, `favicon`, `slogan`, `timezone`, `date_format`, `time_format`, `currency`, `currency_symbol`, `primary_color`, `secondary_color`, `contact_email`, `contact_phone`, `address`, `location`, `meta_description`, `meta_keywords`, `maintenance_mode`, `pagination_limit`, `custom_css`, `custom_js`, `settings`, `website_pages`, `social_media`, `created_at`, `updated_at`) VALUES
+(1, 'Aiyo Invites', 'logo.svg', NULL, NULL, NULL, 'Your trusted application', 'UTC', 'd-m-Y', 'H:i:s', 'KES', 'KSh', '#3A57E8', '#08B1BA', NULL, NULL, NULL, '{\"country\":\"\",\"city\":\"\",\"name\":\"\",\"latitude\":\"\",\"longitude\":\"\"}', NULL, NULL, 0, 15, NULL, NULL, '{\"notifications\":{\"email_notifications\":true,\"push_notifications\":true,\"sms_notifications\":false,\"notification_sound\":true},\"security\":{\"two_factor_auth\":false,\"login_attempts\":5,\"session_timeout\":30,\"password_expiry\":90},\"integrations\":{\"google_analytics\":\"\",\"google_maps_key\":\"\",\"mail_driver\":\"smtp\",\"mail_host\":\"\",\"mail_port\":\"587\",\"mail_username\":\"\",\"mail_password\":\"\"},\"backup\":{\"auto_backup\":true,\"backup_frequency\":\"daily\",\"backup_retention\":30,\"backup_to_cloud\":false},\"company\":{\"website\":\"\",\"phone\":\"\",\"email\":\"\",\"address\":\"\",\"about\":\"\",\"mission\":\"\",\"vision\":\"\",\"values\":\"\"},\"currency_position\":\"before\"}', '{\"home\":{\"enabled\":true,\"title\":\"Home\",\"slug\":\"\",\"show_in_menu\":true,\"order\":1},\"about\":{\"enabled\":true,\"title\":\"About Us\",\"slug\":\"about\",\"show_in_menu\":true,\"order\":2},\"services\":{\"enabled\":true,\"title\":\"Services\",\"slug\":\"services\",\"show_in_menu\":true,\"order\":3},\"contact\":{\"enabled\":true,\"title\":\"Contact Us\",\"slug\":\"contact\",\"show_in_menu\":true,\"order\":4}}', '{\"facebook\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-facebook-fill\",\"name\":\"Facebook\",\"color\":\"#1877F2\",\"order\":1},\"twitter\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-twitter-fill\",\"name\":\"Twitter\",\"color\":\"#1DA1F2\",\"order\":2},\"instagram\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-instagram-fill\",\"name\":\"Instagram\",\"color\":\"#E4405F\",\"order\":3},\"linkedin\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-linkedin-fill\",\"name\":\"LinkedIn\",\"color\":\"#0A66C2\",\"order\":4}}', '2026-01-18 09:44:28', '2026-03-06 11:41:39');
 
 -- --------------------------------------------------------
 
@@ -1667,6 +2043,7 @@ INSERT INTO `tellers` (`id`, `user_id`, `branch`, `created_at`, `updated_at`) VA
 CREATE TABLE `users` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `name` varchar(255) NOT NULL,
+  `avatar` varchar(255) DEFAULT NULL,
   `phone` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `email_verified_at` timestamp NULL DEFAULT NULL,
@@ -1691,8 +2068,7 @@ CREATE TABLE `users` (
   `kin_relation` varchar(100) DEFAULT NULL,
   `kin_id_type` varchar(100) DEFAULT NULL,
   `kin_id_number` varchar(100) DEFAULT NULL,
-  `signature` varchar(255) DEFAULT NULL,
-  `passport_path` varchar(255) DEFAULT NULL,
+  `signature` text DEFAULT NULL,
   `id_type` varchar(100) DEFAULT NULL,
   `id_number` varchar(100) DEFAULT NULL,
   `id_front_path` varchar(255) DEFAULT NULL,
@@ -1703,65 +2079,74 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `phone`, `email`, `email_verified_at`, `password`, `role`, `status`, `remember_token`, `created_at`, `updated_at`, `gender`, `dob`, `pob`, `nationality`, `marital_status`, `religion`, `disability`, `education`, `kin_name`, `kin_email`, `kin_phone`, `kin_occupation`, `kin_relation`, `kin_id_type`, `kin_id_number`, `signature`, `passport_path`, `id_type`, `id_number`, `id_front_path`, `id_back_path`) VALUES
-(1, 'Dennis Kibett', '0717492048', 'kibettdennis@gmail.com', NULL, '$2y$12$2CR8.J2PitDIJoOoZZAfuuvcM0lU9zLj6kLxVksy2RiU7aPySXxQK', 'admin', 0, 'v0qG505cpfHkAUHPO7miNKlXvnSYGZF0XV7FdjLEjaLvyAWMhiSrVWsBYk4l', '2025-04-17 11:41:51', '2025-10-30 19:49:49', 'male', '1994-03-24', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Joseph Koech', 'josephkkoech@gmail.com', '+254722580928', 'Regional Administrator', 'Father', 'national_id', '0587257', 'signature_Dennis_Kibett.png', NULL, 'national_id', '31425580', NULL, NULL),
-(2, 'Edward Kibet', '+254 710 920629', 'edwardkipsanai94@gmail.com', NULL, '$2y$12$HNUj2oDPc4GNbBKze3XbB.gsZFsEp7W2VOXu.wcKU8AIpBsK9E9jq', 'borrower', 0, NULL, '2025-04-17 11:42:36', '2025-04-17 16:41:00', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(3, 'Isiro Agencies', '0727088262', 'isiroagencies@gmail.com', NULL, '$2y$12$JMXtud5UquYiEDMC7CRhyOEMvsX70.oUG8s/AsbRu4O285gIGQwfG', 'broker', 0, 'm3WqL8GFLzcquzxgt4Zl8hdNdomO3dJM8kRhWdGrG154O6VFbK202EFz0rfW', '2025-04-17 11:43:36', '2025-04-17 16:41:05', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(6, 'BILDAD WAMBUA', '0712345678', 'bildadwambua@gmail.com', NULL, '$2y$12$MQaKkMN8wDjjbcbWmAuFGeYl9ZWZXP11b1.jw5JYamJ1nqLPDc8Pq', 'borrower', 1, NULL, '2025-04-17 12:21:34', '2025-04-17 12:21:34', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(7, 'Keneth Otieno Owino', '0790113034', 'kenowino@gmail.com', NULL, '$2y$12$TxyyVlWqdhMwBK1E2Vc1..GyPQzFRvy7icMJOgJuthUAmB1D/y6pW', 'borrower', 0, NULL, '2025-04-17 13:02:01', '2025-04-17 13:02:01', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(8, 'Michelle moraa sese', '254793867121', 'michellesese99@gmail.com', NULL, '$2y$12$4VGUFOjrMXOxqpY1i2HNPegukv9eI91aj9JOfikUSwEdyiBu4VQQu', 'borrower', 1, NULL, '2025-04-17 13:12:47', '2025-04-17 13:12:47', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(9, 'MARKLEWIS WACHIRA GATUTHA', '+254742421530', 'markwachira07@gmail.com', NULL, '$2y$12$Ef0YDy2KjAYZeV7vs2kyU.0nBIV0BMoG8UkTNrX5byblnm2p/txJq', 'borrower', 0, 'CxyThXOGCUwzfLeCjjeeN8QDUJZ2YiN1IfTcJdf8Azboi9ql3gpKTklFv6wy', '2025-04-17 13:22:24', '2025-04-17 13:22:24', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(10, 'CHRISTOPHER EPARA ISURA', '+254713985762', 'isuracarhire@gmail.com', NULL, '$2y$12$1/aF94HNoHf2SXwbYh/.xOgdT2qWkkQjNm0uwdX6TSf03pXnDyd.2', 'borrower', 1, NULL, '2025-04-17 13:27:08', '2025-04-17 13:27:08', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(11, 'Shadrack Cheruiyot', '0719744247', 'shadykip@gmail.com', NULL, '$2y$12$RNt00OcAUyd6ryZ/sFRGgOLjBd.WSjPUylJUFnaOY94.KJ/ACqbpG', 'borrower', 0, NULL, '2025-04-17 13:29:11', '2025-10-24 11:01:28', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signature_Shadrack_Cheruiyot.png', NULL, NULL, '31586471', NULL, NULL),
-(13, 'Dennis Kibet', '+254717492048', 'karleighdeno@gmail.com', NULL, '$2y$12$2CR8.J2PitDIJoOoZZAfuuvcM0lU9zLj6kLxVksy2RiU7aPySXxQK', 'borrower', 0, 'iGo37kDejLgb1rkvJ2PoOO4ixpfeQb6zALak8nusiajJDktzx9zeW7nhHGKf', '2025-04-17 13:32:34', '2025-10-23 19:15:20', 'male', '1994-03-24', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Samson Kiplangat', 'samsontanui25@gmail.com', '0717492048', 'Accountant', 'Brother', 'national_id', '3400000', 'signature_Dennis_Kibet.png', NULL, 'national_id', '31425580', NULL, NULL),
-(14, 'MOSES OKURUTU BARASA', '254726104495', 'mosesbarasa@gmail.com', NULL, '$2y$12$STSR.E/TpRR86bXF3Jdo3OXldtd7YAPk183NisR1HD7eRbXB6.54G', 'borrower', 0, NULL, '2025-04-17 14:07:25', '2025-04-17 14:07:25', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(15, 'Samson Kiplangat', '0701607959', 'samsontanui25@gmail.com', NULL, '$2y$12$pBYO6eGOW1r2bgxqG9ePJ..06DxMb1bZGeJ/UVp7DtAaB8bO2Ngya', 'admin', 0, '6g4lcvyGHhKnziD43gRsHznruRgY5FHGEwDCXgc0E24K2FoWScT5hPKDZGPS', '2025-04-17 14:20:54', '2025-12-27 08:12:41', 'male', '2025-05-21', NULL, 'KE', 'single', 'Christian', 0, 'Master\'s Degree', 'Joseph Koech', 'josephkkoech@gmail.com', '254722580928', 'Business man', 'Father', 'national_id', '0587257', 'signature_Samson_Kiplangat.png', NULL, 'national_id', '34418665', NULL, NULL),
-(16, 'DENIS LEVIS NGIRA', '+254721381582', 'ngirangira@gmail.com', NULL, '$2y$12$XZ8sfnO/wYVqOo6AApuyxOMsfDHGBaIgT2IhHtCA.DyN6GGFWQoS.', 'borrower', 0, NULL, '2025-04-17 14:24:34', '2025-04-17 14:24:34', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(17, 'LINNER JEPKEMBOI KOECH', '0720540112', 'ljkoech@gmail.com', NULL, '$2y$12$ORh0wj9X0ste0XVVc5wa3edhnpkCgZrpqURDczj5t0OLsGU32dX4u', 'borrower', 0, NULL, '2025-04-17 14:29:23', '2025-04-17 14:29:23', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(18, 'Stephanie Kanyeki', '+254727088262', 'stephaniekanyeki@gmail.com', NULL, '$2y$12$5hzR.H/wPVoMr9Qz95VW7u.L6lvnIbe.mr5xd7xumiMD7uJjz3b0W', 'borrower', 1, NULL, '2025-04-20 10:39:32', '2025-04-20 10:39:32', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(19, 'CFO County Busia', '0700123456', 'busiacfo@gmail.com', NULL, '$2y$12$h896m0HMnTjHiXNj5JiIvOkh7EDLFqpmn9iYs0aqoD7BJeY0NCN16', 'borrower', 0, NULL, '2025-04-20 17:14:25', '2025-04-20 17:14:25', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(20, 'JOSEPH KOECH', '0722580928', 'josephkkoech@gmail.com', NULL, '$2y$12$FwGXheD3OexInOl/tWVxluF4rJDTh6l2loNnD5I0OIYlpQ//0NQ/C', 'borrower', 1, NULL, '2025-04-20 17:45:22', '2025-04-20 17:45:22', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(21, 'David Ihaji', '0717465550', 'davidihaji@gmail.com', NULL, '$2y$12$tgVICqfy81Ab75UjvFirCOe3sl5H74yR9fhhSXTKMGpscRpeEt/Jy', 'borrower', 1, NULL, '2025-04-22 13:34:37', '2025-10-29 12:41:16', 'male', '1995-04-23', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Peter', 'nyenzo@gmail.com', '0796952247', 'Tech', 'Brother', 'national_id', '31930122', 'signature_David_Ihaji.png', NULL, 'national_id', '31930121', 'id-documents/0MftMeNEPFqhlUSs5aH8WOjRH4gZo7by4J9RHDRD.png', 'id-documents/Ay2f4tFEcT9J0qje0Gm7wbDMqqS9YbTB1YvtAJtY.png'),
-(22, 'Justine Omori', '0721855878', 'justineomori@gmail.com', NULL, '$2y$12$WklPbJc9w7aDMncNznJ70.ikODU0icUKLaBr5a6WBn0yb0l6PR2ia', 'borrower', 1, NULL, '2025-05-07 12:10:19', '2025-05-07 12:10:19', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(23, 'Joseph', '+255758556562', 'lamearkaaya@gmail.com', NULL, '$2y$12$oRdMr9kL9rqxBJK0v3TQv.pvflSdVOwgwUtCmMaG.CY7c0GlCCE0i', 'admin', 1, NULL, '2025-05-08 10:53:11', '2025-05-08 10:53:11', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(24, 'Steve Omwenga', '+254 727 665808', 'steveomwenga@gmail.com', NULL, '$2y$12$1sd9TZHAnikJzo9u5IQLOOubmQ0AFrlyoafY9MLajVN3XHtMFRaHK', 'borrower', 0, NULL, '2025-05-13 06:49:55', '2025-05-13 06:49:55', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(25, 'DOREEN NTARANGWI', '+254710438971', 'doreenntarangwi@gmail.com', NULL, '$2y$12$z6QRzg8ktp/YWvd33nvhYeUQxv2YB109l3gZjpElykM/.o5WxgX7u', 'borrower', 1, NULL, '2025-05-15 08:08:59', '2025-05-15 08:08:59', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(26, 'Ann Njora', '+254 722 596985', 'kirajsupplierskenya@gmail.com', NULL, '$2y$12$JTGPNwFVmH3kFCQffkVLlePz0/qaFV7c7JsSSVnujmHI/XYtxLga6', 'borrower', 0, 'WU70YAjW4SXP4j2m4Ys6nM1C91lEpQzULs442bpFhR02gmD06yUatuxFUXYN', '2025-05-19 12:45:53', '2025-11-25 07:18:08', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signature_Ann_Njora.png', NULL, NULL, NULL, NULL, NULL),
-(27, 'JOSEPH KINGORI WAMBUGU', '+254 714 390696', 'josephkingori@gmail.com', NULL, '$2y$12$8cGto1IdjyPNIiM0HN48IuRmUHcarG8rjmGqXVaDMJhlkvomvO10O', 'borrower', 0, NULL, '2025-05-20 13:03:03', '2025-05-20 13:03:03', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '', NULL, NULL, NULL, '28539464', NULL, NULL),
-(28, 'Njeri Nduati', '0720517386', 'njerinduati@gmail.com', NULL, '$2y$12$C.r6Fgc1lc8xmkJtTWMTe.r/UR2qhW5S6qohBouDgOKU3d9Oo.lHe', 'borrower', 0, NULL, '2025-05-25 18:36:15', '2025-05-25 18:36:15', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '29753954', NULL, NULL),
-(29, 'Nigel Cecil Otieno', '+254 721 655906', 'cecilmash@gmail.com', NULL, '$2y$12$5Sbd9JS17UvgL6rgTh4dwO7ciB./oJOHau9jtLxUDWGqRyTKuscFC', 'borrower', 0, NULL, '2025-05-27 13:47:29', '2025-10-29 07:03:27', 'male', '1985-03-25', NULL, 'KENYAN', 'single', NULL, 0, NULL, 'Barry Macharia', 'barryblacks@gmail.com', '0720899750', 'Businessman', 'Brother', 'national_id', '22445566', 'signature_Nigel_Cecil_Otieno.png', NULL, 'national_id', '24011567', 'id-documents/mZ0nHUoGwxYUruZ1ioNvZJpnm9JUY82EFqTF6OPK.jpg', 'id-documents/2uoCUuOyIDQCAenJLrPuH1gbgfLdizW83cdyknWi.jpg'),
-(30, 'Ian Kipkorir Cheruiyot', '0710911168', 'iankcheruiyot@gmail.com', NULL, '$2y$12$QUvaA6TvKXP1xf3/3GU00.TGelMgTOAVPml2Vljx1chW/2CGYU0gG', 'admin', 1, NULL, '2025-05-29 05:14:33', '2025-05-29 05:14:33', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(31, 'Leon Musau', '0720747652', 'musau.mumo@yahoo.com', NULL, '$2y$12$.a1YhqdA3iowLpeULmC8EOiEpTITJw5UNipRS/xxEfQQeBq3vLthu', 'borrower', 0, NULL, '2025-05-29 13:47:36', '2025-05-29 13:47:36', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(32, 'Brian Kiprop Kiprono', '0720098561', 'briankiprop@gmail.com', NULL, '$2y$12$GxQC0YyruW8LgBwdU7O8zuhxDjvsCzRtM8qoq34LZkD8fWQlK482O', 'borrower', 1, NULL, '2025-06-02 11:17:53', '2025-06-02 11:17:53', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(33, 'Alan Kipng\'etich Limo', '0705596198', 'limoalan@gmail.com', NULL, '$2y$12$TZ3mZ4LycemIe6Urg8X2oeYfD6Bdk6VsXnLR6sCNvzKSE15soyHFa', 'borrower', 0, NULL, '2025-06-14 10:26:20', '2025-06-14 10:26:20', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '31667416', NULL, NULL),
-(34, 'MOLUK AWAD', '0725833011', 'molukawad519@gmail.com', NULL, '$2y$12$dozzobeZBqXkor14yj8lJuRuHOH601FKA9iI4yB48hpdNg1UZjMw2', 'borrower', 0, 'A2jaRU9ng7dGHKMdOdPHcXcAvl1HSiuWmxTaEaDsnJ0lGWqSwyDPoxxffxuu', '2025-06-15 13:55:59', '2025-06-15 13:55:59', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(35, 'Lewis Kimutai', '0725697837', 'leuville6@gmail.com', NULL, '$2y$12$VQsSkFy5bS.wpUElVPh8y.n7D2WKd.1DQlAgS1AOg8kz1Ua5tZgRC', 'borrower', 0, NULL, '2025-06-20 18:30:23', '2025-06-20 18:30:23', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(36, 'Newton Wesonga Okumu', '0703654828', 'newtoncarloz@gmail.com', NULL, '$2y$12$Wxj00avSUmFTTVsquTqRouBQY0.akLqfj.Nl.czNQ7ZlmFbYILDnm', 'borrower', 1, NULL, '2025-06-21 06:15:40', '2025-06-21 06:15:40', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(37, 'BRIAN KIPLANGAT', '0706099588', 'briankiplangatbk@gmail.com', NULL, '$2y$12$ArbwFMHaiL/rCrXnx.VHounCl/3rOUbPO2OwRJYu9ErQVDRsCU5/S', 'borrower', 1, NULL, '2025-06-23 07:43:27', '2025-06-23 07:43:27', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(38, 'HONOURINE NZISA MUTUNGA', '+254729080190', 'honourinenzisa@gmail.com', NULL, '$2y$12$nP6kWDrHZrMx6A3GkycO5.VNP7S.f3CoHmpUlcCJgRv3zs9FeE4K6', 'borrower', 0, NULL, '2025-07-07 08:51:03', '2025-07-07 08:51:03', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(39, 'Faith Chepngetich', '0700701380', 'chepngetichfaith981@gmail.com', NULL, '$2y$12$12yyIb3Y0op09RDuG.GBn.U2NYXkp.9.Y2xCmmXrcccZsfZTfTrA.', 'borrower', 0, 'G3w4zV027oUDqDFWomDWq2YgILmyVHttMBQS9wnsa3Cb38tclTkT21umNDgQ', '2025-07-13 16:11:22', '2025-07-13 16:11:22', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(40, 'Ian Otieno Okoth', '0719795614', 'ianokoth@gmail.com', NULL, '$2y$12$bfTyyCGeKrzCEtU1WQZh5em967lE2kU0fLRvQ8jgPCzgDOxvy.llC', 'borrower', 0, NULL, '2025-07-14 11:35:57', '2025-07-14 11:35:57', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(41, 'Cynthia Wanjiru Muhia', '+254 717 459536', 'cynthiashiro78@gmail.com', NULL, '$2y$12$bO3E9MoR5kXMmYxKfZ1IJ.JU8NgFR283MNCG/lIiiZ3KOWza0O4UC', 'borrower', 0, 'mbWJ31V0W1EcyI5A0eckNUDTEbTgk92YCbihO5jmtUcZVlroH33jUU77JWbr', '2025-07-15 10:00:13', '2025-07-15 10:00:13', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(42, 'Francis Kabutu', '0728167511', 'kabutu.frank@gmail.com', NULL, '$2y$12$VknLy1ceuXycC3ZgvpjDfum6b6FNMMHiIq6YT6CuMDGhLPYesmPm6', 'borrower', 1, NULL, '2025-07-17 10:52:30', '2025-07-17 10:52:30', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(43, 'Brian', '0717503595', 'gachugubrian8@gmail.com', NULL, '$2y$12$GNKcltFvv5DmYlB6yGtf6.iYjL4fx5FKbT.oEigQktpAxOvTgsw52', 'borrower', 0, NULL, '2025-07-28 06:05:53', '2025-07-28 06:05:53', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(44, 'Arnold Maina', '+254724574681', 'arnold.x.maina@gmail.com', NULL, '$2y$12$dXOkpwX5CB9Ft2iaL6lUYOEqhex5utpQBJbhXrtEbHsIsb/7qsVjC', 'admin', 0, NULL, '2025-08-06 05:11:15', '2025-08-06 05:11:15', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(45, 'Ruth Sudoi Makalla', '+254 721 440306', 'rsmakallah@gmail.com', NULL, '$2y$12$EHzV094qb9bZ88BvsxYkLuiccJ8ZUc4AxXGudlWvhGQ6Y423Wk9.O', 'borrower', 0, NULL, '2025-08-06 11:25:20', '2025-08-06 11:25:20', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(46, 'Michelle Muriithi', '0732792642', 'michthi.mm@gmail.com', NULL, '$2y$12$JjG3FMRdhKucKdYVblAOouvAREuzGHoB4aLLgIFwlZYZ1CUqh8oHS', 'admin', 0, NULL, '2025-08-12 14:29:27', '2025-08-12 14:29:27', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(47, 'Kelvin Keter', '0727025050', 'kipchirchir101@gmail.com', NULL, '$2y$12$8QZw5VeEAiX6E2GIu6M5UOFAQswu0TAER1ht22HcLvTvHJ3UetubC', 'borrower', 0, NULL, '2025-08-14 07:30:39', '2025-08-14 07:30:39', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(48, 'Sharon Chemurgor', '0704815115', 'chemurgorsharon@gmail.com', NULL, '$2y$12$lIKTaV/PMy9/MbWW55kO7eKfVeHmygm3Ug9uyg8B6NzGd8FMg9Hdy', 'borrower', 0, NULL, '2025-08-19 14:58:14', '2025-08-19 14:58:14', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(49, 'Peter Tanui', '0701134508', 'thetanlit6@gmail.com', NULL, '$2y$12$tjpGbnZbXxtIIv53nEp4L.d.bcEoXsfhNXJToCiXtYTP669H0pVw2', 'teller', 0, 'aX6h8TUgu4woLFSU8Vncbfr43G0J4ZRcd3omSLIRZqXH0eYKSfRSDTeY5ADj', '2025-09-02 07:51:46', '2025-10-15 10:45:32', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signature_Peter_Tanui.png', NULL, NULL, NULL, NULL, NULL),
-(50, 'Mohamed Abdirahim Abdi', '0721544928', 'mohaabdi41@gmail.com', NULL, '$2y$12$CVQWIt6FGp..1WoA8tbBL.hnoxaDIDhFrVhHoZtjaUEoOKiGsXZZi', 'borrower', 0, 'Av2fj49VRHgKc6WUG6hEivJXyLIw1XCKCMp1yQFDQVazAmaXxll8bzPjSKsk', '2025-09-10 06:39:51', '2025-10-27 10:13:24', 'male', '1993-04-20', NULL, 'Kenyan', 'single', 'Muslim', 0, NULL, 'TAYIB haithar', 'mohaabdi41@gmail.com', '0723597683', 'Businessman', 'Brother', 'national_id', '36827361', 'signature_Mohamed_Abdirahim_Abdi.png', NULL, 'national_id', '36827364', 'id-documents/DNLFpZa2hXxTmhI7GUJSaxXby9KkNCqMm5Sel8rU.jpg', 'id-documents/VQnXyNlVCCJpKKz74z6CPnGufSVqrALa9Pwl81YR.jpg'),
-(51, 'Kelvin', '0726471918', 'c.kelvinrotich@gmail.com', NULL, '$2y$12$Lu9zm/hSdT2PT08yOzz.9.yz/ZqEjg3UAEg.q1Vx5VLkEDmS5.1s.', 'borrower', 0, NULL, '2025-09-14 12:24:32', '2025-09-14 12:24:32', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(52, 'Marion Lewenei', '0705254257', 'leweneimarion@gmail.com', NULL, '$2y$12$4/HAJTqnsZ/.QW/BRleIsuS.jT.rvb3tLqyE1aFfyAsZvA8awbMbO', 'borrower', 0, NULL, '2025-10-01 09:11:31', '2025-11-21 05:42:00', 'female', '2025-05-15', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Maureen Mathithi', 'irenejunnie@gmail.com', '+254705254257', 'businessperson', 'Business Partner', 'national_id', '36340048', 'signature_Marion_Lewenei.png', NULL, 'national_id', '40543156', NULL, NULL),
-(53, 'EMMANUEL Ruwa Tsuma', '0768384462', 'emmanueltsuma19@gmail.com', NULL, '$2y$12$FGGft4sVzQSfpjlt.2VijOxzY8a/7lC0PLUtJlyhK2Aahi80JiLHq', 'borrower', 0, NULL, '2025-10-03 06:04:44', '2025-10-25 04:44:02', 'male', '2000-06-27', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Ronald ruwa', 'ronaldtsuma21@gmail.com', '0705110637', 'Human resource officer', 'Father', 'national_id', '8435579', 'signature_EMMANUEL_Ruwa_Tsuma.png', NULL, 'national_id', '38276910', 'id-documents/YE5aPHeTXZaDSZagkvH8rPOs5bNyYR5WkK9sebFZ.jpg', 'id-documents/u1AdJo50lkrTAohkTQcS3q2QuLLrYQoLVnrLCnQI.jpg'),
-(54, 'Isaac Ngugi', '0711499655', 'isaacngugibaker@gmail.com', NULL, '$2y$12$/IyJDyyBqHgyN10RhOw/u.oaFnjcibWlI3dgu7/uFyo7kxIjCvvme', 'borrower', 0, NULL, '2025-10-08 04:06:13', '2025-11-04 03:59:42', 'male', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signature_Isaac_Ngugi.png', NULL, NULL, NULL, NULL, NULL),
-(55, 'Lawrence Kipngetich Byegon', '0722778422', 'lawrencebyegon@gmail.com', NULL, '$2y$12$RDyjh/WTwbe2EumZLmeMMO3QApL/QXqDlv8srp.WzycTAOdOJdpOS', 'borrower', 1, NULL, '2025-10-23 05:37:11', '2025-10-26 07:54:26', 'male', '1994-05-01', NULL, 'Kenyan', 'married', 'Christian', 0, NULL, 'Mildred Asili', 'mildredasili21@gmail.com', '0717633016', 'Businesswoman', 'Business Partner', 'national_id', '38353237', 'signature_Lawrence_Kipngetich_Byegon.png', NULL, 'national_id', '31757677', 'id-documents/naw4em7mhBqObFUwTZIbCkCkoPMSgK3cgCHvMTEg.jpg', 'id-documents/yIAOFuUMIkIpqPT71ITNriTVI5C76L6M0XuKBGCn.jpg'),
-(56, 'Francis Ndungu', '0742386797', 'frankietheuri@gmail.com', NULL, '$2y$12$9qYfC4yjURl5XAjRDxPavOm5ooZdf4NPZBdXlWG44MOuKErGKbC/i', 'borrower', 0, NULL, '2025-10-24 03:31:10', '2025-10-24 04:07:23', 'male', '1996-10-05', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Julie Wanjiru', 'julie.wanjiru1@gmail.com', '0114204599', 'Logistician', 'Sister', 'national_id', '30146007', 'signature_Francis_Ndungu.png', NULL, 'national_id', '3313892', 'id-documents/kkzoNCDiAeejsCYixVoQ7PH3tR7cjZdQFaZ1zFVo.jpg', 'id-documents/djfdMdje61nUNps5Q6anDSyxBH13hf0eEF7hND18.jpg'),
-(57, 'Douglas Kipchirchir Yegon', '0701849455', 'yegondouglas@gmail.com', NULL, '$2y$12$N.ac.IwoRAc/ahSex9kMkeu/yqbq8UwDiq/wxXUWZ8nfAOQbscLPe', 'borrower', 0, NULL, '2025-10-24 09:49:49', '2025-10-24 13:12:24', 'male', '1996-01-04', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Elvis Kipkoech Yegon', 'elviskyegon@gmail.com', '0717752055', 'Businessman', 'Brother', 'national_id', '0734970', 'signature_Douglas_Kipchirchir_Yegon.png', NULL, 'national_id', '32507485', 'id-documents/EMC78WWzte1K4r4SUGczhNcnZEzZ3tRSBnEydcAO.jpg', 'id-documents/OpYuy3P29xfoGaqZ5sSH5aJLjGaC5KUcPtIYHmlS.jpg'),
-(58, 'Vivian', '722778298', 'viviansimiyu77@gmail.com', NULL, '$2y$12$8bYJi.ZeyquI/Xcp87hiuOncTWxq4YXHcLQ/iL/41JIwj1Gryri0i', 'borrower', 0, NULL, '2025-10-25 13:22:18', '2025-10-25 13:22:18', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(59, 'Justin nyarindo', '796165555', 'aguilanmilano@gmail.com', NULL, '$2y$12$DHM3FZFQQPbaRPchxlxifOZC9iXDb8yfWiK8Z38b6OfZXSmL5KEg2', 'borrower', 0, NULL, '2025-10-27 13:40:41', '2025-10-27 15:22:31', 'male', '1996-07-03', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Stella nyarindo', 'stelanyarindo@yahoo.com', '0723396150', 'Secretary', 'Mother', 'national_id', '15247846', 'signature_Justin_nyarindo.png', NULL, 'national_id', '34760573', 'id-documents/dWt8NmMfqdXOtIIoibeyQMbeNemkVBfQ0o4nE5og.jpg', 'id-documents/ABumIl2Hs09QcHVrYKMsmTRiIPpQjUkoYvDaEy8T.jpg'),
-(62, 'Douglas Lutomia', '0799918736', 'douglaslutomia13@gmail.com', NULL, '$2y$12$rpm9tsP1K9SgQytf3biZQ.jTFR5uS2yflzOMWfMcveQ5Y.bqZvDh6', 'borrower', 0, NULL, '2025-12-22 10:11:02', '2025-12-22 10:11:02', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(63, 'Morris Hafare Segelan', '0716893824', 'morrishafare@gmail.com', NULL, '$2y$12$XYydzEfQvPnIIxNRdbQPeexqnbjdr2/.P4wXT0FFcmK/F7FOBCMuS', 'borrower', 0, NULL, '2025-12-22 10:31:24', '2025-12-22 10:34:20', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signature_Morris_Hafare_Segelan.png', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `avatar`, `phone`, `email`, `email_verified_at`, `password`, `role`, `status`, `remember_token`, `created_at`, `updated_at`, `gender`, `dob`, `pob`, `nationality`, `marital_status`, `religion`, `disability`, `education`, `kin_name`, `kin_email`, `kin_phone`, `kin_occupation`, `kin_relation`, `kin_id_type`, `kin_id_number`, `signature`, `id_type`, `id_number`, `id_front_path`, `id_back_path`) VALUES
+(1, 'Dennis Kibett', 'avatars/HdBHuvf6S6ibGQh84Asue6XvRcgPiRMw68fLaXnC.png', '0717492048', 'kibettdennis@gmail.com', NULL, '$2y$12$2CR8.J2PitDIJoOoZZAfuuvcM0lU9zLj6kLxVksy2RiU7aPySXxQK', 'admin', 0, 'Vdf4DyGIcRaAYNSvI7m5z8ofhpoizS2lJvBoRoEgQUwEjp4bNmed1IfBvJ9E', '2025-04-17 11:41:51', '2026-01-27 19:19:09', 'male', '1994-03-24', NULL, 'Kenya', 'single', 'Christianity', 0, 'Bachelor\'s Degree', 'Joseph Koech', 'josephkkoech@gmail.com', '+254722580928', 'Regional Administrator', 'Father', 'national_id', '0587257', 'signatures/signature_Dennis_Kibett.png', 'National ID', '31425580', 'id_cards/gi21rr49gf83kPyfu5RidoXExHg4ryw7nNVQAx11.jpg', 'id_cards/EUFh2ypgIKD3mVPhDJCRam2qZXKjytJBuU2UWJL7.jpg'),
+(2, 'Edward Kibet', '', '+254 710 920629', 'edwardkipsanai94@gmail.com', NULL, '$2y$12$HNUj2oDPc4GNbBKze3XbB.gsZFsEp7W2VOXu.wcKU8AIpBsK9E9jq', 'borrower', 0, NULL, '2025-04-17 11:42:36', '2026-01-22 20:30:33', 'male', NULL, NULL, 'Kenya', 'single', 'Christianity', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 'Isiro Agencies', '', '0727088262', 'isiroagencies@gmail.com', NULL, '$2y$12$JMXtud5UquYiEDMC7CRhyOEMvsX70.oUG8s/AsbRu4O285gIGQwfG', 'broker', 0, 'm3WqL8GFLzcquzxgt4Zl8hdNdomO3dJM8kRhWdGrG154O6VFbK202EFz0rfW', '2025-04-17 11:43:36', '2025-04-17 16:41:05', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(6, 'BILDAD WAMBUA', '', '0712345678', 'bildadwambua@gmail.com', NULL, '$2y$12$MQaKkMN8wDjjbcbWmAuFGeYl9ZWZXP11b1.jw5JYamJ1nqLPDc8Pq', 'borrower', 1, NULL, '2025-04-17 12:21:34', '2025-04-17 12:21:34', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 'Keneth Otieno Owino', '', '0790113034', 'kenowino@gmail.com', NULL, '$2y$12$TxyyVlWqdhMwBK1E2Vc1..GyPQzFRvy7icMJOgJuthUAmB1D/y6pW', 'borrower', 0, NULL, '2025-04-17 13:02:01', '2025-04-17 13:02:01', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(8, 'Michelle moraa sese', '', '254793867121', 'michellesese99@gmail.com', NULL, '$2y$12$4VGUFOjrMXOxqpY1i2HNPegukv9eI91aj9JOfikUSwEdyiBu4VQQu', 'borrower', 1, NULL, '2025-04-17 13:12:47', '2025-04-17 13:12:47', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(9, 'MARKLEWIS WACHIRA GATUTHA', '', '+254742421530', 'markwachira07@gmail.com', NULL, '$2y$12$Ef0YDy2KjAYZeV7vs2kyU.0nBIV0BMoG8UkTNrX5byblnm2p/txJq', 'borrower', 0, 'CxyThXOGCUwzfLeCjjeeN8QDUJZ2YiN1IfTcJdf8Azboi9ql3gpKTklFv6wy', '2025-04-17 13:22:24', '2025-04-17 13:22:24', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 'CHRISTOPHER EPARA ISURA', '', '+254713985762', 'isuracarhire@gmail.com', NULL, '$2y$12$1/aF94HNoHf2SXwbYh/.xOgdT2qWkkQjNm0uwdX6TSf03pXnDyd.2', 'borrower', 1, NULL, '2025-04-17 13:27:08', '2025-04-17 13:27:08', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 'Shadrack Cheruiyot', '', '0719744247', 'shadykipkorir@gmail.com', NULL, '$2y$12$omwtR4JZbfdt/JvbD/i2yubuzZ1lYf2lRnL58fK29kdxiIRYyYOw6', 'borrower', 0, NULL, '2025-04-17 13:29:11', '2026-02-03 06:19:24', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '31586471', NULL, NULL),
+(13, 'Dennis Kibet', '', '+254717492048', 'karleighdeno@gmail.com', NULL, '$2y$12$2CR8.J2PitDIJoOoZZAfuuvcM0lU9zLj6kLxVksy2RiU7aPySXxQK', 'borrower', 0, 'iGo37kDejLgb1rkvJ2PoOO4ixpfeQb6zALak8nusiajJDktzx9zeW7nhHGKf', '2025-04-17 13:32:34', '2026-02-09 17:54:40', 'male', '1994-03-24', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Samson Kiplangat', 'samsontanui25@gmail.com', '0717492048', 'Accountant', 'Brother', 'national_id', '3400000', 'signatures/signature_Dennis_Kibet.png', 'national_id', '31425580', NULL, NULL),
+(14, 'MOSES OKURUTU BARASA', '', '254726104495', 'mosesbarasa@gmail.com', NULL, '$2y$12$STSR.E/TpRR86bXF3Jdo3OXldtd7YAPk183NisR1HD7eRbXB6.54G', 'borrower', 0, NULL, '2025-04-17 14:07:25', '2025-04-17 14:07:25', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(15, 'Samson Kiplangat', '', '0701607959', 'samsontanui25@gmail.com', NULL, '$2y$12$pBYO6eGOW1r2bgxqG9ePJ..06DxMb1bZGeJ/UVp7DtAaB8bO2Ngya', 'admin', 0, '6g4lcvyGHhKnziD43gRsHznruRgY5FHGEwDCXgc0E24K2FoWScT5hPKDZGPS', '2025-04-17 14:20:54', '2025-12-27 08:12:41', 'male', '2025-05-21', NULL, 'KE', 'single', 'Christian', 0, 'Master\'s Degree', 'Joseph Koech', 'josephkkoech@gmail.com', '254722580928', 'Business man', 'Father', 'national_id', '0587257', 'signatures/signature_Samson_Kiplangat.png', 'national_id', '34418665', NULL, NULL),
+(16, 'DENIS LEVIS NGIRA', '', '+254721381582', 'ngirangira@gmail.com', NULL, '$2y$12$XZ8sfnO/wYVqOo6AApuyxOMsfDHGBaIgT2IhHtCA.DyN6GGFWQoS.', 'borrower', 0, NULL, '2025-04-17 14:24:34', '2025-04-17 14:24:34', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(17, 'LINNER JEPKEMBOI KOECH', '', '0720540112', 'ljkoech@gmail.com', NULL, '$2y$12$ORh0wj9X0ste0XVVc5wa3edhnpkCgZrpqURDczj5t0OLsGU32dX4u', 'borrower', 0, NULL, '2025-04-17 14:29:23', '2025-04-17 14:29:23', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(18, 'Stephanie Kanyeki', '', '+254727088262', 'stephaniekanyeki@gmail.com', NULL, '$2y$12$5hzR.H/wPVoMr9Qz95VW7u.L6lvnIbe.mr5xd7xumiMD7uJjz3b0W', 'borrower', 1, NULL, '2025-04-20 10:39:32', '2025-04-20 10:39:32', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(19, 'CFO County Busia', '', '0700123456', 'busiacfo@gmail.com', NULL, '$2y$12$h896m0HMnTjHiXNj5JiIvOkh7EDLFqpmn9iYs0aqoD7BJeY0NCN16', 'borrower', 0, NULL, '2025-04-20 17:14:25', '2025-04-20 17:14:25', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(20, 'JOSEPH KOECH', '', '0722580928', 'josephkkoech@gmail.com', NULL, '$2y$12$FwGXheD3OexInOl/tWVxluF4rJDTh6l2loNnD5I0OIYlpQ//0NQ/C', 'borrower', 1, NULL, '2025-04-20 17:45:22', '2025-04-20 17:45:22', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(21, 'David Ihaji', '', '0717465550', 'davidihaji@gmail.com', NULL, '$2y$12$tgVICqfy81Ab75UjvFirCOe3sl5H74yR9fhhSXTKMGpscRpeEt/Jy', 'borrower', 1, NULL, '2025-04-22 13:34:37', '2026-02-01 19:34:19', 'male', '1995-04-23', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Peter', 'nyenzo@gmail.com', '0796952247', 'Tech', 'Brother', 'national_id', '31930122', NULL, 'national_id', '31930121', 'id-documents/0MftMeNEPFqhlUSs5aH8WOjRH4gZo7by4J9RHDRD.png', 'id-documents/Ay2f4tFEcT9J0qje0Gm7wbDMqqS9YbTB1YvtAJtY.png'),
+(22, 'Justine Omori', '', '0721855878', 'justineomori@gmail.com', NULL, '$2y$12$WklPbJc9w7aDMncNznJ70.ikODU0icUKLaBr5a6WBn0yb0l6PR2ia', 'borrower', 1, NULL, '2025-05-07 12:10:19', '2025-05-07 12:10:19', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(23, 'Joseph', '', '+255758556562', 'lamearkaaya@gmail.com', NULL, '$2y$12$oRdMr9kL9rqxBJK0v3TQv.pvflSdVOwgwUtCmMaG.CY7c0GlCCE0i', 'admin', 1, NULL, '2025-05-08 10:53:11', '2025-05-08 10:53:11', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(24, 'Steve Omwenga', '', '+254 727 665808', 'steveomwenga@gmail.com', NULL, '$2y$12$1sd9TZHAnikJzo9u5IQLOOubmQ0AFrlyoafY9MLajVN3XHtMFRaHK', 'borrower', 0, NULL, '2025-05-13 06:49:55', '2025-05-13 06:49:55', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(25, 'DOREEN NTARANGWI', '', '+254710438971', 'doreenntarangwi@gmail.com', NULL, '$2y$12$z6QRzg8ktp/YWvd33nvhYeUQxv2YB109l3gZjpElykM/.o5WxgX7u', 'borrower', 1, NULL, '2025-05-15 08:08:59', '2025-05-15 08:08:59', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(26, 'Ann Njora', '', '+254 722 596985', 'kirajsupplierskenya@gmail.com', NULL, '$2y$12$JTGPNwFVmH3kFCQffkVLlePz0/qaFV7c7JsSSVnujmHI/XYtxLga6', 'borrower', 0, 'WU70YAjW4SXP4j2m4Ys6nM1C91lEpQzULs442bpFhR02gmD06yUatuxFUXYN', '2025-05-19 12:45:53', '2026-01-28 11:58:28', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(27, 'JOSEPH KINGORI WAMBUGU', '', '+254 714 390696', 'josephkingori@gmail.com', NULL, '$2y$12$8cGto1IdjyPNIiM0HN48IuRmUHcarG8rjmGqXVaDMJhlkvomvO10O', 'borrower', 0, NULL, '2025-05-20 13:03:03', '2025-05-20 13:03:03', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '', NULL, NULL, '28539464', NULL, NULL),
+(28, 'Njeri Nduati', '', '0720517386', 'njerinduati@gmail.com', NULL, '$2y$12$C.r6Fgc1lc8xmkJtTWMTe.r/UR2qhW5S6qohBouDgOKU3d9Oo.lHe', 'borrower', 0, NULL, '2025-05-25 18:36:15', '2025-05-25 18:36:15', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '29753954', NULL, NULL),
+(29, 'Nigel Cecil Otieno', '', '+254 721 655906', 'cecilmash@gmail.com', NULL, '$2y$12$5Sbd9JS17UvgL6rgTh4dwO7ciB./oJOHau9jtLxUDWGqRyTKuscFC', 'borrower', 0, NULL, '2025-05-27 13:47:29', '2025-10-29 07:03:27', 'male', '1985-03-25', NULL, 'KENYAN', 'single', NULL, 0, NULL, 'Barry Macharia', 'barryblacks@gmail.com', '0720899750', 'Businessman', 'Brother', 'national_id', '22445566', 'signatures/signature_Nigel_Cecil_Otieno.png', 'national_id', '24011567', 'id-documents/mZ0nHUoGwxYUruZ1ioNvZJpnm9JUY82EFqTF6OPK.jpg', 'id-documents/2uoCUuOyIDQCAenJLrPuH1gbgfLdizW83cdyknWi.jpg'),
+(30, 'Ian Kipkorir Cheruiyot', '', '0710911168', 'iankcheruiyot@gmail.com', NULL, '$2y$12$QUvaA6TvKXP1xf3/3GU00.TGelMgTOAVPml2Vljx1chW/2CGYU0gG', 'admin', 1, NULL, '2025-05-29 05:14:33', '2025-05-29 05:14:33', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(31, 'Leon Musau', '', '0720747652', 'musau.mumo@teflontradingltd.co.ke', NULL, '$2y$12$WU2gPKt9m5qTKZPhoPzUIeEkyTMPKK3QCUwB.2rwe46cBJsQif1/G', 'borrower', 1, 'VH3X52MKGcLon0bybPJmawH46jKpP4YatLdpyC57HBhYGpSaVLOiOqkKZao0', '2025-05-29 13:47:36', '2026-02-09 17:16:38', 'male', '1991-07-25', NULL, 'KE', 'single', NULL, 0, 'Master\'s Degree', 'Micahel Musau', 'mukikiilumusau@gmail.com', '+254721374196', 'coffee trader', 'Brother', 'national_id', '32313915', 'signatures/signature_Leon_Musau_1770660998.png', 'national_id', '32313898', 'id-documents/xACFanBfJtr4nUIOMm4XGMtsv5gbiWhIqksinlaL.jpg', 'id-documents/OsxovFf5SSZznQOKEmA78jEmMU2QwbXNaMFgF43p.jpg'),
+(32, 'Brian Kiprop Kiprono', '', '0720098561', 'briankiprop@gmail.com', NULL, '$2y$12$GxQC0YyruW8LgBwdU7O8zuhxDjvsCzRtM8qoq34LZkD8fWQlK482O', 'borrower', 1, NULL, '2025-06-02 11:17:53', '2025-06-02 11:17:53', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(33, 'Alan Kipng\'etich Limo', '', '0705596198', 'limoalan@gmail.com', NULL, '$2y$12$TZ3mZ4LycemIe6Urg8X2oeYfD6Bdk6VsXnLR6sCNvzKSE15soyHFa', 'borrower', 0, NULL, '2025-06-14 10:26:20', '2025-06-14 10:26:20', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '31667416', NULL, NULL),
+(34, 'MOLUK AWAD', '', '0725833011', 'molukawad519@gmail.com', NULL, '$2y$12$dozzobeZBqXkor14yj8lJuRuHOH601FKA9iI4yB48hpdNg1UZjMw2', 'borrower', 0, 'A2jaRU9ng7dGHKMdOdPHcXcAvl1HSiuWmxTaEaDsnJ0lGWqSwyDPoxxffxuu', '2025-06-15 13:55:59', '2025-06-15 13:55:59', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(35, 'Lewis Kimutai', '', '0725697837', 'leuville6@gmail.com', NULL, '$2y$12$VQsSkFy5bS.wpUElVPh8y.n7D2WKd.1DQlAgS1AOg8kz1Ua5tZgRC', 'borrower', 0, NULL, '2025-06-20 18:30:23', '2025-06-20 18:30:23', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(36, 'Newton Wesonga Okumu', '', '0703654828', 'newtoncarloz@gmail.com', NULL, '$2y$12$Wxj00avSUmFTTVsquTqRouBQY0.akLqfj.Nl.czNQ7ZlmFbYILDnm', 'borrower', 1, NULL, '2025-06-21 06:15:40', '2025-06-21 06:15:40', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(37, 'BRIAN KIPLANGAT', '', '0706099588', 'briankiplangatbk@gmail.com', NULL, '$2y$12$ArbwFMHaiL/rCrXnx.VHounCl/3rOUbPO2OwRJYu9ErQVDRsCU5/S', 'borrower', 1, NULL, '2025-06-23 07:43:27', '2025-06-23 07:43:27', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(38, 'HONOURINE NZISA MUTUNGA', '', '+254729080190', 'honourinenzisa@gmail.com', NULL, '$2y$12$nP6kWDrHZrMx6A3GkycO5.VNP7S.f3CoHmpUlcCJgRv3zs9FeE4K6', 'borrower', 0, NULL, '2025-07-07 08:51:03', '2025-07-07 08:51:03', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(39, 'Faith Chepngetich', '', '0700701380', 'chepngetichfaith981@gmail.com', NULL, '$2y$12$12yyIb3Y0op09RDuG.GBn.U2NYXkp.9.Y2xCmmXrcccZsfZTfTrA.', 'borrower', 0, 'G3w4zV027oUDqDFWomDWq2YgILmyVHttMBQS9wnsa3Cb38tclTkT21umNDgQ', '2025-07-13 16:11:22', '2025-07-13 16:11:22', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(40, 'Ian Otieno Okoth', '', '0719795614', 'ianokoth@gmail.com', NULL, '$2y$12$bfTyyCGeKrzCEtU1WQZh5em967lE2kU0fLRvQ8jgPCzgDOxvy.llC', 'borrower', 0, NULL, '2025-07-14 11:35:57', '2025-07-14 11:35:57', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(41, 'Cynthia Wanjiru Muhia', '', '+254 717 459536', 'cynthiashiro78@gmail.com', NULL, '$2y$12$bO3E9MoR5kXMmYxKfZ1IJ.JU8NgFR283MNCG/lIiiZ3KOWza0O4UC', 'borrower', 0, 'mbWJ31V0W1EcyI5A0eckNUDTEbTgk92YCbihO5jmtUcZVlroH33jUU77JWbr', '2025-07-15 10:00:13', '2025-07-15 10:00:13', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(42, 'Francis Kabutu', '', '0728167511', 'kabutu.frank@gmail.com', NULL, '$2y$12$VknLy1ceuXycC3ZgvpjDfum6b6FNMMHiIq6YT6CuMDGhLPYesmPm6', 'borrower', 1, NULL, '2025-07-17 10:52:30', '2025-07-17 10:52:30', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(43, 'Brian', '', '0717503595', 'gachugubrian8@gmail.com', NULL, '$2y$12$GNKcltFvv5DmYlB6yGtf6.iYjL4fx5FKbT.oEigQktpAxOvTgsw52', 'borrower', 0, NULL, '2025-07-28 06:05:53', '2025-07-28 06:05:53', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(44, 'Arnold Maina', '', '+254724574681', 'arnold.x.maina@gmail.com', NULL, '$2y$12$dXOkpwX5CB9Ft2iaL6lUYOEqhex5utpQBJbhXrtEbHsIsb/7qsVjC', 'admin', 0, NULL, '2025-08-06 05:11:15', '2025-08-06 05:11:15', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(45, 'Ruth Sudoi Makalla', '', '+254 721 440306', 'rsmakallah@gmail.com', NULL, '$2y$12$EHzV094qb9bZ88BvsxYkLuiccJ8ZUc4AxXGudlWvhGQ6Y423Wk9.O', 'borrower', 0, NULL, '2025-08-06 11:25:20', '2025-08-06 11:25:20', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(46, 'Michelle Muriithi', '', '0732792642', 'michthi.mm@gmail.com', NULL, '$2y$12$JjG3FMRdhKucKdYVblAOouvAREuzGHoB4aLLgIFwlZYZ1CUqh8oHS', 'admin', 0, NULL, '2025-08-12 14:29:27', '2025-08-12 14:29:27', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(47, 'Kelvin Keter', '', '0727025050', 'kipchirchir101@gmail.com', NULL, '$2y$12$8QZw5VeEAiX6E2GIu6M5UOFAQswu0TAER1ht22HcLvTvHJ3UetubC', 'borrower', 0, NULL, '2025-08-14 07:30:39', '2025-08-14 07:30:39', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(48, 'Sharon Chemurgor', '', '0704815115', 'chemurgorsharon@gmail.com', NULL, '$2y$12$lIKTaV/PMy9/MbWW55kO7eKfVeHmygm3Ug9uyg8B6NzGd8FMg9Hdy', 'borrower', 0, NULL, '2025-08-19 14:58:14', '2025-08-19 14:58:14', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(49, 'Peter Tanui', '', '0701134508', 'thetanlit6@gmail.com', NULL, '$2y$12$tjpGbnZbXxtIIv53nEp4L.d.bcEoXsfhNXJToCiXtYTP669H0pVw2', 'teller', 0, 'aX6h8TUgu4woLFSU8Vncbfr43G0J4ZRcd3omSLIRZqXH0eYKSfRSDTeY5ADj', '2025-09-02 07:51:46', '2025-10-15 10:45:32', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Peter_Tanui.png', NULL, NULL, NULL, NULL),
+(50, 'Mohamed Abdirahim Abdi', '', '0721544928', 'mohaabdi41@gmail.com', NULL, '$2y$12$CVQWIt6FGp..1WoA8tbBL.hnoxaDIDhFrVhHoZtjaUEoOKiGsXZZi', 'borrower', 0, 'Av2fj49VRHgKc6WUG6hEivJXyLIw1XCKCMp1yQFDQVazAmaXxll8bzPjSKsk', '2025-09-10 06:39:51', '2025-10-27 10:13:24', 'male', '1993-04-20', NULL, 'Kenyan', 'single', 'Muslim', 0, NULL, 'TAYIB haithar', 'mohaabdi41@gmail.com', '0723597683', 'Businessman', 'Brother', 'national_id', '36827361', 'signatures/signature_Mohamed_Abdirahim_Abdi.png', 'national_id', '36827364', 'id-documents/DNLFpZa2hXxTmhI7GUJSaxXby9KkNCqMm5Sel8rU.jpg', 'id-documents/VQnXyNlVCCJpKKz74z6CPnGufSVqrALa9Pwl81YR.jpg'),
+(51, 'Kelvin', '', '0726471918', 'c.kelvinrotich@gmail.com', NULL, '$2y$12$Lu9zm/hSdT2PT08yOzz.9.yz/ZqEjg3UAEg.q1Vx5VLkEDmS5.1s.', 'borrower', 0, NULL, '2025-09-14 12:24:32', '2025-09-14 12:24:32', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(52, 'Marion Lewenei', '', '0705254257', 'leweneimarion@gmail.com', NULL, '$2y$12$4/HAJTqnsZ/.QW/BRleIsuS.jT.rvb3tLqyE1aFfyAsZvA8awbMbO', 'borrower', 0, NULL, '2025-10-01 09:11:31', '2025-11-21 05:42:00', 'female', '2025-05-15', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Maureen Mathithi', 'irenejunnie@gmail.com', '+254705254257', 'businessperson', 'Business Partner', 'national_id', '36340048', 'signatures/signature_Marion_Lewenei.png', 'national_id', '40543156', NULL, NULL),
+(53, 'EMMANUEL Ruwa Tsuma', '', '0768384462', 'emmanueltsuma19@gmail.com', NULL, '$2y$12$FdDOhmJWdlP4u0JRcT3sBOftNNL2Rl0MPGUNz1Q1Q6h0/SIY02bmm', 'borrower', 1, NULL, '2025-10-03 06:04:44', '2026-03-06 10:05:01', 'male', '2000-06-27', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Ronald ruwa', 'ronaldtsuma21@gmail.com', '0705110637', 'Human resource officer', 'Father', 'national_id', '8435579', 'signatures/signature_EMMANUEL_Ruwa_Tsuma.png', 'national_id', '38276910', 'id-documents/YE5aPHeTXZaDSZagkvH8rPOs5bNyYR5WkK9sebFZ.jpg', 'id-documents/u1AdJo50lkrTAohkTQcS3q2QuLLrYQoLVnrLCnQI.jpg'),
+(54, 'Isaac Ngugi', '', '0711499655', 'isaacngugibaker@gmail.com', NULL, '$2y$12$/IyJDyyBqHgyN10RhOw/u.oaFnjcibWlI3dgu7/uFyo7kxIjCvvme', 'borrower', 0, NULL, '2025-10-08 04:06:13', '2025-11-04 03:59:42', 'male', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Isaac_Ngugi.png', NULL, NULL, NULL, NULL),
+(55, 'Lawrence Kipngetich Byegon', 'avatars/l3VJhlbbZj8ipDk8RnLcF6y40LExyflK4TomEmUL.jpg', '0722778422', 'lawrencebyegon@gmail.com', NULL, '$2y$12$RDyjh/WTwbe2EumZLmeMMO3QApL/QXqDlv8srp.WzycTAOdOJdpOS', 'borrower', 1, NULL, '2025-10-23 05:37:11', '2025-10-26 07:54:26', 'male', '1994-05-01', NULL, 'Kenyan', 'married', 'Christian', 0, NULL, 'Mildred Asili', 'mildredasili21@gmail.com', '0717633016', 'Businesswoman', 'Business Partner', 'national_id', '38353237', 'signatures/signature_Lawrence_Kipngetich_Byegon.png', 'national_id', '31757677', 'id-documents/naw4em7mhBqObFUwTZIbCkCkoPMSgK3cgCHvMTEg.jpg', 'id-documents/yIAOFuUMIkIpqPT71ITNriTVI5C76L6M0XuKBGCn.jpg'),
+(56, 'Francis Ndungu', '', '0742386797', 'frankietheuri@gmail.com', NULL, '$2y$12$9qYfC4yjURl5XAjRDxPavOm5ooZdf4NPZBdXlWG44MOuKErGKbC/i', 'borrower', 0, NULL, '2025-10-24 03:31:10', '2026-02-01 19:45:48', 'male', '1996-10-05', NULL, 'Kenya', 'single', 'Christian', 0, NULL, 'Julie Wanjiru', 'julie.wanjiru1@gmail.com', '0114204599', 'Logistician', 'Sister', 'national_id', '30146007', NULL, 'National ID', '33103892', 'id-documents/kkzoNCDiAeejsCYixVoQ7PH3tR7cjZdQFaZ1zFVo.jpg', 'id-documents/djfdMdje61nUNps5Q6anDSyxBH13hf0eEF7hND18.jpg'),
+(57, 'Douglas Kipchirchir Yegon', 'avatars/1pU9bhJ1n7D1pOchC8HX3sjPjyQvqQYROnL8cGZe.jpg', '0701849455', 'yegondouglas@gmail.com', NULL, '$2y$12$N.ac.IwoRAc/ahSex9kMkeu/yqbq8UwDiq/wxXUWZ8nfAOQbscLPe', 'borrower', 0, NULL, '2025-10-24 09:49:49', '2025-10-24 13:12:24', 'male', '1996-01-04', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Elvis Kipkoech Yegon', 'elviskyegon@gmail.com', '0717752055', 'Businessman', 'Brother', 'national_id', '0734970', 'signatures/signature_Douglas_Kipchirchir_Yegon.png', 'national_id', '32507485', 'id-documents/EMC78WWzte1K4r4SUGczhNcnZEzZ3tRSBnEydcAO.jpg', 'id-documents/OpYuy3P29xfoGaqZ5sSH5aJLjGaC5KUcPtIYHmlS.jpg'),
+(58, 'Vivian Simiyu', '', '722778298', 'viviansimiyu77@gmail.com', NULL, '$2y$12$8bYJi.ZeyquI/Xcp87hiuOncTWxq4YXHcLQ/iL/41JIwj1Gryri0i', 'borrower', 0, NULL, '2025-10-25 13:22:18', '2026-04-26 06:57:39', 'female', NULL, NULL, 'Kenya', 'single', 'Christianity', 0, 'Bachelor\'s Degree', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'National ID', NULL, NULL, NULL),
+(59, 'Justin nyarindo', 'avatars/1jLvUxRf2uVvqvNN7EgmR3hAKMVz99hRceMqMGeY.jpg', '0796165555', 'aguilanmilano@gmail.com', NULL, '$2y$12$DHM3FZFQQPbaRPchxlxifOZC9iXDb8yfWiK8Z38b6OfZXSmL5KEg2', 'borrower', 0, NULL, '2025-10-27 13:40:41', '2026-02-02 13:16:40', 'male', '1996-07-03', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Stella nyarindo', 'stelanyarindo@yahoo.com', '0723396150', 'Secretary', 'Mother', 'national_id', '15247846', 'signatures/signature_Justin_Nyarindo.png', 'national_id', '34760573', 'id-documents/dWt8NmMfqdXOtIIoibeyQMbeNemkVBfQ0o4nE5og.jpg', 'id-documents/ABumIl2Hs09QcHVrYKMsmTRiIPpQjUkoYvDaEy8T.jpg'),
+(62, 'Douglas Lutomia', '', '0799918736', 'douglaslutomia13@gmail.com', NULL, '$2y$12$rpm9tsP1K9SgQytf3biZQ.jTFR5uS2yflzOMWfMcveQ5Y.bqZvDh6', 'borrower', 0, '5uuAXM5Bb58xcg32nyteRR1qpwcMQAutd2JAEx0zi54Sb8x9Lvz38qwwHsda', '2025-12-22 10:11:02', '2026-02-03 05:07:58', 'male', '1997-06-03', NULL, 'Kenya', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Eric Odhiambo', 'ericodhiambo@gmail.com', '0718664393', 'Dog trainer', 'Brother', 'national_id', '28472342', 'signatures/signature_Douglas_Lutomia.png', 'national_id', '33555254', 'id-documents/6VgExuInfnnT9taPNmQejLcRNq8HZxI450CiisF9.jpg', 'id-documents/m4c2eTCLo1Uj6RZeQ6UyzfFXORYImZLSZY09VDLH.jpg'),
+(63, 'Morris Hafare Segelan', '', '0716893824', 'morrishafare@gmail.com', NULL, '$2y$12$XYydzEfQvPnIIxNRdbQPeexqnbjdr2/.P4wXT0FFcmK/F7FOBCMuS', 'borrower', 0, NULL, '2025-12-22 10:31:24', '2025-12-22 10:34:20', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Morris_Hafare_Segelan.png', NULL, NULL, NULL, NULL),
+(64, 'Judy Kerebi', '', '0741 960 917', 'judykerebi23@gmail.com', NULL, '$2y$12$KS9qsb9J9YPaFwvJc34SMesmXKyRq17SaL8gnzN0H/Q/trFazHWhu', 'borrower', 1, 'bmdTBflv37S49rppyYH4VM30PeNdc4nO8aKFdHvsyNWQ72ULwFMsXpj71TmB', '2026-01-20 09:03:36', '2026-04-11 09:41:21', 'female', '1999-02-09', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Farida Kebaso', 'faridakebaso1@gmail.com', '+254718534504', 'Business', 'Business Partner', 'national_id', '42191432', 'signatures/signature_Judy_Kerebi.png', 'national_id', '36138998', 'id-documents/kuPygKRuhL6oj6jqkF69AQeDwy4b69DykWwx4nUg.jpg', 'id-documents/xtp2kK9k157Np83ZMRQ2unxYSdzPzTmAK82vMycX.jpg'),
+(65, 'Hesbon Kiprotich Kerewo', 'avatars/Dw2FhaoXteB6YjHy4fzIxvLxX5me5wLGsm8xT91x.jpg', '0706077705', 'hezkerewo@gmail.com', NULL, '$2y$12$NT4nA1qQn24bsrfJWeykd.gOJYuPwOVL64PMYP7iK7bchPDk.zA8C', 'borrower', 0, 'UO8Fx3w8IPnIAVVJ4ZhjpWnZ7WBKNzeRfOVyH9DYW0KPKCPI1hXeni9Hd7DQ', '2026-01-21 06:27:38', '2026-02-02 13:32:56', 'male', NULL, NULL, NULL, 'married', 'Christian', 0, 'Bachelor\'s Degree', 'Tony Kimosop', NULL, '0794864738', 'Business man', 'Brother', 'national_id', '30317319', 'signatures/signature_Hesbon_Kiprotich_Kerewo.png', 'National_Id', '30319319', 'id-documents/gb4dwWWVxiSqhSCvqdYvuJRwx7JUK3oxjzqhCE2F.png', 'id-documents/BDiGmMGsxQHGk6K9aCEELSqEepQFNxMkA5CIKlIT.png'),
+(66, 'Jacob', '', '0791250828', 'jacobgimachombe@gmail.com', NULL, '$2y$12$sDuHMFS3QUNPrqY6frCOlOT0BmlvsCjEhO2B0Za4mfAGGtp5VF4RK', 'borrower', 0, NULL, '2026-01-21 07:15:44', '2026-01-21 07:35:13', 'male', NULL, NULL, NULL, 'married', 'Christian', 0, 'Bachelor\'s Degree', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Jacob.png', NULL, NULL, NULL, NULL),
+(67, 'Michael Nzuka', NULL, '0700742393', 'musyiminzuka3@gmail.com', NULL, '$2y$12$TyQr75ASmFeVbqXtdtCvIepyt45m2U4UXrpOF7v71/VgSoSmYtYGC', 'borrower', 0, NULL, '2026-02-18 08:27:11', '2026-02-18 08:50:25', 'male', '1994-11-04', NULL, 'Kenya', 'single', 'Christianity', 0, 'Master\'s Degree', 'Grace Musyimi', 'gracemusyimi72@gmail.com', '+254716815488', 'Policies and Governance', 'Sister', 'national_id', '35658056', 'signatures/signature_Michael_Nzuka.png', 'National ID', '31529341', NULL, NULL),
+(68, 'Deborah', NULL, '0791733405', 'deborahmurgor7@gmail.com', NULL, '$2y$12$aAEBH17kgQP9w6dCjtev/eHuQtWNAlUX6YwMsGXTo556LoPkJpLBq', 'borrower', 0, NULL, '2026-02-18 08:56:28', '2026-02-18 08:56:28', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(69, 'Ronald Kemei', NULL, '+254714995946', 'kemeirnld@gmail.com', NULL, '$2y$12$euP7hNWhVfQ3m7Fr4vGAXuiL7REKowJlxqZKLmC2iDkzCFQZCvmvW', 'borrower', 1, 'xOcQhyfWId9jkeLqjmj8cg2w8AT4vYth4dCJ34a9h9lh8zNZoBYrzzyJOEMd', '2026-02-18 14:51:36', '2026-02-19 10:09:08', 'male', '1990-05-12', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Bethwel Kiprono', 'felixmaru@yahoo.com', '+254 790 819905', 'Business/freelancer', 'Business Partner', 'national_id', '29480845', 'signatures/signature_Ronald_Kemei.png', 'national_id', '29762505', 'id-documents/zMn7oIMMtSc1CSuwDDc2vunirYzWFYWbaz2XKuR4.jpg', 'id-documents/hJetnNYA1fjKx321pOBe7eUA0TEuUCAq7zazvI0b.jpg'),
+(70, 'Nigel Kimutai', NULL, '0725408209', 'nigelkimutai@gmail.com', NULL, '$2y$12$tRL3hw45tFpda00vVb4xB.vdQIG3kn9LoDmGfZVB67/1TQ3v9DFjK', 'borrower', 1, NULL, '2026-02-23 13:47:01', '2026-02-23 14:09:18', 'male', '1994-03-23', NULL, 'KE', 'single', NULL, 0, NULL, 'Prisca Choge', 'priscachoge@gmail.com', '0720978776', 'Business', 'Mother', 'national_id', '30953061', 'signatures/signature_Nigel_Kimutai.png', 'national_id', '30953061', 'id-documents/1MNy81qcXk0NFSHa1lWdKQoupc6qrj877ecKALMV.jpg', 'id-documents/BoT1TvQ4J39KP2Y2CjT6oz3QqT75L8CwgmazR1Qa.jpg'),
+(71, 'Yvonne Jemutai', NULL, '0701986999', 'yvonnejemutai3967@gmail.com', NULL, '$2y$12$dxZg4KvdGlZyZnB.nQIIl.JPwe34GxL3dxbXHKZIjKOyUmbrqtNj6', 'borrower', 0, NULL, '2026-03-06 04:57:07', '2026-03-07 11:53:44', 'female', '1996-10-28', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Vicky Jelagat', 'vickyjelagat@gmail.com', '254757869890', 'Pharmacist', 'Sister', 'national_id', '38086262', 'signatures/signature_Yvonne_Jemutai.png', 'national_id', '33246104', 'id-documents/FECg9du15dXA9E1rgjetCVbap6wPmPJRZqKpONHb.jpg', 'id-documents/nGLk6DhAwWnc5HXZkamQsShN0C5HduhVCrlwobfK.jpg'),
+(72, 'Teresa waitherero Ndirangu', NULL, '0745878281', 'teresawaitherero@gmail.com', NULL, '$2y$12$O8X6ZphiU339Q7iGcq5YC.58i9gm8hVAKC/L.YPOccS/yT9CEAecC', 'borrower', 0, NULL, '2026-03-16 09:02:56', '2026-03-16 09:02:56', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1822,7 +2207,6 @@ ALTER TABLE `bank_accounts`
 --
 ALTER TABLE `borrowers`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `borrowers_national_id_unique` (`national_id`),
   ADD KEY `borrowers_user_id_foreign` (`user_id`),
   ADD KEY `borrowers_broker_id_foreign` (`broker_id`);
 
@@ -1953,6 +2337,12 @@ ALTER TABLE `sessions`
   ADD KEY `sessions_last_activity_index` (`last_activity`);
 
 --
+-- Indexes for table `system`
+--
+ALTER TABLE `system`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `tellers`
 --
 ALTER TABLE `tellers`
@@ -1987,7 +2377,7 @@ ALTER TABLE `bank_accounts`
 -- AUTO_INCREMENT for table `borrowers`
 --
 ALTER TABLE `borrowers`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
 
 --
 -- AUTO_INCREMENT for table `brokers`
@@ -2005,7 +2395,7 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `disbursements`
 --
 ALTER TABLE `disbursements`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=318;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=423;
 
 --
 -- AUTO_INCREMENT for table `failed_jobs`
@@ -2023,7 +2413,7 @@ ALTER TABLE `jobs`
 -- AUTO_INCREMENT for table `loans`
 --
 ALTER TABLE `loans`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=282;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=390;
 
 --
 -- AUTO_INCREMENT for table `loan_agreement_sections`
@@ -2047,7 +2437,7 @@ ALTER TABLE `loan_risk_assessments`
 -- AUTO_INCREMENT for table `loan_types`
 --
 ALTER TABLE `loan_types`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `migrations`
@@ -2059,13 +2449,19 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `repayments`
 --
 ALTER TABLE `repayments`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=418;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=558;
 
 --
 -- AUTO_INCREMENT for table `repayment_overflows`
 --
 ALTER TABLE `repayment_overflows`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `system`
+--
+ALTER TABLE `system`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `tellers`
@@ -2077,7 +2473,7 @@ ALTER TABLE `tellers`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
 
 --
 -- Constraints for dumped tables

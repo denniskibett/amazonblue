@@ -56,9 +56,8 @@ class User extends Authenticatable
             'disability' => 'boolean',
         ];
     }
-    /**
-     * Get social links with proper URLs
-     */
+
+
     public function getSocialLinksAttribute()
     {
         $social = $this->social ?: [];

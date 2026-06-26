@@ -16,28 +16,19 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        
         $user = auth()->user();
         $chartData = $this->getChartData();
         $data = [];
         $currentMonthStart = Carbon::now()->startOfMonth();
         $dueLoans = $this->getDueLoans($user);
 
-        // Helper function to filter out specific transaction types
-        $filterTransactions = function($query) {
-            return $query->whereNotIn('transaction', ['ROLL OVER', 'CREDIT DISCOUNT']);
-        };
-
-        logger('Auth check:', [
-            'authenticated' => auth()->check(),
-            'user_id' => auth()->id(),
-            'user' => auth()->user()
-        ]);
+        // Prepare monthly data for chart
+        $monthlyData = $this->prepareMonthlyData($chartData);
 
         switch ($user->role) {
             case 'admin':
                 $data = [
-                    // Loan Metrics (unchanged)
+                    // Loan Metrics
                     'totalLoans' => Loan::count(),
                     'loansThisMonth' => Loan::where('created_at', '>=', $currentMonthStart)->count(),
                     'completedLoans' => Loan::completed()->count(),
@@ -45,17 +36,15 @@ class DashboardController extends Controller
                                             ->where('updated_at', '>=', $currentMonthStart)
                                             ->count(),
 
-                    // Financial Metrics - FILTERED
-                    'totalDisbursements' => Disbursement::sum('amount'),
+                    // Financial Metrics
+                    'totalDisbursements' => Disbursement::sum('amount') ?? 0,
                     'disbursementsThisMonth' => Disbursement::where('disburse_date', '>=', $currentMonthStart)
-                                                        // ->whereNotIn('transaction', ['ROLL OVER', 'CREDIT DISCOUNT'])
-                                                        ->sum('amount'),
-                    'totalRepayments' => Repayment::sum('amount'),
+                                                        ->sum('amount') ?? 0,
+                    'totalRepayments' => Repayment::sum('amount') ?? 0,
                     'repaymentsThisMonth' => Repayment::where('created_at', '>=', $currentMonthStart)
-                                                    // ->whereNotIn('transaction', ['ROLL OVER', 'CREDIT DISCOUNT'])
-                                                    ->sum('amount'),
+                                                    ->sum('amount') ?? 0,
 
-                    // User Metrics (unchanged)
+                    // User Metrics
                     'borrowerCount' => User::borrowers()->count(),
                     'newBorrowersThisMonth' => User::borrowers()
                                                 ->where('created_at', '>=', $currentMonthStart)
@@ -65,66 +54,52 @@ class DashboardController extends Controller
 
                     // Additional Data
                     'chartData' => $chartData,
+                    'monthlyData' => $monthlyData,
                     'recentLoans' => Loan::with(['user', 'loanType'])->latest()->take(5)->get(),
                     'dueLoans' => $dueLoans,
-                    'todayTransactions' => Repayment::whereDate('created_at', today())
-                                                // ->whereNotIn('transaction', ['ROLL OVER', 'CREDIT DISCOUNT'])
-                                                ->count(),
+                    'todayTransactions' => Repayment::whereDate('created_at', today())->count(),
 
                     'loanStatusData' => [
                         'pending' => Loan::where('status', 'pending')->count(),
                         'disbursed' => Loan::where('status', 'disbursed')->count(),
                         'approved' => Loan::where('status', 'approved')->count(),
                         'rejected' => Loan::where('status', 'rejected')->count(),
+                        'repaid' => Loan::where('status', 'repaid')->count(),
                     ],
                     'disbursementTrends' => $this->getDisbursementTrends(),
                 ];
                 break;
 
-                case 'borrower':
-                    $data = [
-                        // Loan metrics
-                        'totalLoans' => $user->loans()->count(),
-                        'loansThisMonth' => $user->loans()
-                                                ->where('created_at', '>=', $currentMonthStart)
-                                                ->count(),
-                        
-                        // Repayment metrics - FILTERED
-                        'totalRepayments' => $user->repayments()
-                                                // ->whereNotIn('repayments.transaction', ['ROLL OVER', 'CREDIT DISCOUNT', 'BAD DEBT'])
-                                                ->sum('repayments.amount'),
-                        'repaymentsThisMonth' => $user->repayments()
-                                                    ->where('repayments.created_at', '>=', $currentMonthStart)
-                                                    // ->whereNotIn('repayments.transaction', ['ROLL OVER', 'CREDIT DISCOUNT', 'BAD DEBT'])
-                                                    ->sum('repayments.amount'),
-                        
-                        // Disbursement metrics - FIXED to use disbursements table
-                        'totalDisbursements' => $user->disbursements()
-                                                    // ->whereNotIn('disbursements.transaction', ['ROLL OVER', 'CREDIT DISCOUNT', 'BAD DEBT'])
-                                                    ->sum('disbursements.amount'),
-                        'disbursementsThisMonth' => $user->disbursements()
-                                                        ->where('disbursements.created_at', '>=', $currentMonthStart)
-                                                        // ->whereNotIn('disbursements.transaction', ['ROLL OVER', 'CREDIT DISCOUNT', 'BAD DEBT'])
-                                                        ->sum('disbursements.amount'),
-                        
-                        // Loan status metrics
-                        'totalBorrowed' => $user->loans()->sum('amount'),
-                        'borrowedThisMonth' => $user->loans()
-                                                ->where('borrow_date', '>=', $currentMonthStart)
-                                                ->sum('amount'),
-                        'dueLoans' => $dueLoans,
+            case 'borrower':
+                $data = [
+                    'totalLoans' => $user->loans()->count(),
+                    'loansThisMonth' => $user->loans()
+                                            ->where('created_at', '>=', $currentMonthStart)
+                                            ->count(),
+                    'totalRepayments' => $user->repayments()->sum('repayments.amount') ?? 0,
+                    'repaymentsThisMonth' => $user->repayments()
+                                                ->where('repayments.created_at', '>=', $currentMonthStart)
+                                                ->sum('repayments.amount') ?? 0,
+                    'totalDisbursements' => $user->disbursements()->sum('disbursements.amount') ?? 0,
+                    'disbursementsThisMonth' => $user->disbursements()
+                                                    ->where('disbursements.created_at', '>=', $currentMonthStart)
+                                                    ->sum('disbursements.amount') ?? 0,
+                    'totalBorrowed' => $user->loans()->sum('amount') ?? 0,
+                    'borrowedThisMonth' => $user->loans()
+                                            ->where('borrow_date', '>=', $currentMonthStart)
+                                            ->sum('amount') ?? 0,
+                    'dueLoans' => $dueLoans,
+                    'chartData' => $chartData,
+                    'monthlyData' => $monthlyData,
+                    'biodataComplete' => $user->hasCompleteBiodata(),
+                    'missingBiodataFields' => $user->getMissingBiodataFields(),
+                    'biodataCompletionPercentage' => $user->getBiodataCompletionPercentage(),
+                ];
+                break;
 
-                        // Biodata completion
-                        'biodataComplete' => $user->hasCompleteBiodata(),
-                        'missingBiodataFields' => $user->getMissingBiodataFields(),
-                        'biodataCompletionPercentage' => $user->getBiodataCompletionPercentage(),
-                    ];
-                    break;
-                case 'broker':
-                // Get the authenticated user's broker profile
-                $broker = $user->broker()->firstOrFail();
+            case 'broker':
+                $broker = $user->broker()->first();
 
-                // Add null check for broker profile
                 if (!$broker) {
                     abort(403, 'Broker profile not found');
                 }
@@ -132,50 +107,111 @@ class DashboardController extends Controller
                 $borrowerIds = $broker->borrowers()->pluck('user_id');
 
                 $data = [
-                    // Client Metrics (unchanged)
                     'broker' => $broker,
                     'clients' => $broker->borrowers()->count(),
                     'newClientsThisMonth' => $broker->borrowers()
                                                 ->where('created_at', '>=', $currentMonthStart)
                                                 ->count(),
-                    
-                    // Loan Metrics: Add broker_status condition
                     'activeLoans' => Loan::whereIn('user_id', $borrowerIds)
                                     ->where('broker_status', 1)
                                     ->active()
                                     ->count(),
-                    
-                    // Earnings Calculations - FILTERED
-                    'totalInterest' => $this->calculateBrokerEarnings($broker, 'interest'),
-                    'totalPenalty' => $this->calculateBrokerEarnings($broker, 'penalty'),
-                    
-                    // Loan Status: Add broker_status condition
-                    'dueLoans' => $dueLoans->where('status', 'disbursed')->where('broker_status', 1),
-                    'overdueLoans' => $dueLoans->where('status', 'overdue')->where('broker_status', 1),
+                    'totalInterest' => $this->calculateBrokerEarnings($broker, 'interest') ?? 0,
+                    'totalPenalty' => $this->calculateBrokerEarnings($broker, 'penalty') ?? 0,
+                    'dueLoans' => $dueLoans,
+                    'overdueLoans' => $dueLoans->filter(function($loan) {
+                        return $loan->status === 'overdue';
+                    }),
+                    'chartData' => $chartData,
+                    'monthlyData' => $monthlyData,
                 ];
                 break;
 
             case 'teller':
                 $data = [
                     'todaysDisbursements' => Disbursement::whereDate('disburse_date', today())
-                                                    ->whereNotIn('transaction', ['ROLL OVER', 'CREDIT DISCOUNT'])
-                                                    ->sum('amount'),
+                                                    ->sum('amount') ?? 0,
                     'monthDisbursements' => Disbursement::where('disburse_date', '>=', $currentMonthStart)
-                                                    ->whereNotIn('transaction', ['ROLL OVER', 'CREDIT DISCOUNT'])
-                                                    ->sum('amount'),
-                    'collectedRepayments' => Repayment::whereNotIn('transaction', ['ROLL OVER', 'CREDIT DISCOUNT'])->sum('amount'),
+                                                    ->sum('amount') ?? 0,
+                    'collectedRepayments' => Repayment::sum('amount') ?? 0,
                     'monthRepayments' => Repayment::where('created_at', '>=', $currentMonthStart)
-                                            ->whereNotIn('transaction', ['ROLL OVER', 'CREDIT DISCOUNT'])
-                                            ->sum('amount'),
+                                            ->sum('amount') ?? 0,
                     'dueLoans' => $dueLoans,
+                    'chartData' => $chartData,
+                    'monthlyData' => $monthlyData,
+                ];
+                break;
+            
+            default:
+                $data = [
+                    'dueLoans' => $dueLoans,
+                    'chartData' => $chartData,
+                    'monthlyData' => $monthlyData,
                 ];
                 break;
         }
-        
+
+        // Ensure all required variables exist for the view
+        $data = array_merge([
+            'totalLoans' => 0,
+            'loansThisMonth' => 0,
+            'completedLoans' => 0,
+            'completedThisMonth' => 0,
+            'totalDisbursements' => 0,
+            'disbursementsThisMonth' => 0,
+            'totalRepayments' => 0,
+            'repaymentsThisMonth' => 0,
+            'borrowerCount' => 0,
+            'newBorrowersThisMonth' => 0,
+            'brokerCount' => 0,
+            'tellerCount' => 0,
+            'totalBorrowed' => 0,
+            'borrowedThisMonth' => 0,
+            'chartData' => ['months' => [], 'loans' => [], 'disbursements' => [], 'repayments' => []],
+            'monthlyData' => ['labels' => [], 'loanData' => [], 'disbursementData' => [], 'repaymentData' => []],
+            'recentLoans' => collect(),
+            'dueLoans' => collect(),
+            'todayTransactions' => 0,
+            'loanStatusData' => ['pending' => 0, 'disbursed' => 0, 'approved' => 0, 'rejected' => 0, 'repaid' => 0],
+            'disbursementTrends' => [],
+            'biodataComplete' => false,
+            'biodataCompletionPercentage' => 0,
+            'missingBiodataFields' => [],
+            'broker' => null,
+            'clients' => 0,
+            'newClientsThisMonth' => 0,
+            'activeLoans' => 0,
+            'totalInterest' => 0,
+            'totalPenalty' => 0,
+            'overdueLoans' => collect(),
+            'todaysDisbursements' => 0,
+            'monthDisbursements' => 0,
+            'collectedRepayments' => 0,
+            'monthRepayments' => 0,
+        ], $data);
+
         return view('dashboard', $data);
     }
 
-    // Update the getChartData method to also filter out these transactions
+    private function prepareMonthlyData($chartData)
+    {
+        if (empty($chartData['months'])) {
+            return [
+                'labels' => [],
+                'loanData' => [],
+                'disbursementData' => [],
+                'repaymentData' => []
+            ];
+        }
+
+        return [
+            'labels' => $chartData['months'],
+            'loanData' => $chartData['loans'],
+            'disbursementData' => $chartData['disbursements'],
+            'repaymentData' => $chartData['repayments']
+        ];
+    }
+
     private function getChartData()
     {
         $months = [];
@@ -183,19 +219,16 @@ class DashboardController extends Controller
         $disbursements = [];
         $repayments = [];
         
-        // Get the earliest date from all three data sources
         $earliestLoanDate = Loan::min('borrow_date');
         $earliestDisbursementDate = Disbursement::min('disburse_date');
         $earliestRepaymentDate = Repayment::min('repayment_date');
         
-        // Find the earliest date among all sources
         $earliestDate = collect([
             $earliestLoanDate,
             $earliestDisbursementDate,
             $earliestRepaymentDate
         ])->filter()->min();
         
-        // If no data exists, return empty arrays
         if (!$earliestDate) {
             return [
                 'months' => [],
@@ -205,52 +238,37 @@ class DashboardController extends Controller
             ];
         }
         
-        $startDate = now()->subMonths(5)->startOfMonth();
+        $startDate = Carbon::parse($earliestDate)->startOfMonth();
         $endDate = now()->endOfMonth();
         
-        // Adjust start date if we have older data
-        if ($earliestDate < $startDate) {
-            $startDate = Carbon::parse($earliestDate)->startOfMonth();
-        }
-        
-        // Generate all months in the range
         $currentDate = $startDate->copy();
         while ($currentDate <= $endDate) {
             $monthName = $currentDate->format('M Y');
             $months[] = $monthName;
-            
-            // Initialize data for this month
             $loans[] = 0;
             $disbursements[] = 0;
             $repayments[] = 0;
-            
             $currentDate->addMonth();
         }
         
-        // Get loan data grouped by month - FILTERED
         $loanData = Loan::whereBetween('borrow_date', [$startDate, $endDate])
             ->selectRaw('DATE_FORMAT(borrow_date, "%Y-%m") as month, SUM(amount) as total')
             ->groupBy('month')
             ->pluck('total', 'month')
             ->toArray();
         
-        // Get disbursement data grouped by month - FILTERED
         $disbursementData = Disbursement::whereBetween('disburse_date', [$startDate, $endDate])
-            // ->whereNotIn('transaction', ['ROLL OVER', 'CREDIT DISCOUNT', 'BAD DEBT'])
             ->selectRaw('DATE_FORMAT(disburse_date, "%Y-%m") as month, SUM(amount) as total')
             ->groupBy('month')
             ->pluck('total', 'month')
             ->toArray();
         
-        // Get repayment data grouped by month - FILTERED
         $repaymentData = Repayment::whereBetween('repayment_date', [$startDate, $endDate])
-            // ->whereNotIn('transaction', ['ROLL OVER', 'CREDIT DISCOUNT', 'BAD DEBT'])
             ->selectRaw('DATE_FORMAT(repayment_date, "%Y-%m") as month, SUM(amount) as total')
             ->groupBy('month')
             ->pluck('total', 'month')
             ->toArray();
         
-        // Fill the data arrays with actual values
         $currentDate = $startDate->copy();
         foreach ($months as $index => $monthName) {
             $monthKey = $currentDate->format('Y-m');
@@ -312,35 +330,30 @@ class DashboardController extends Controller
             $loanType = $loan->loanType;
 
             if ($type === 'interest') {
-                // Broker client: fixed interest
                 if ($user->broker) {
                     return $broker->interest_client;
                 }
-                // Non-broker: percentage of loan interest
                 $loanInterest = ($loanType->interest_rate / 100) * $loan->amount;
                 return ($broker->interest_broker / 100) * $loanInterest;
             }
 
             if ($type === 'penalty') {
-                // Calculate due date and overdue days
-                $borrowDate = \Carbon\Carbon::parse($loan->borrow_date);
+                $borrowDate = Carbon::parse($loan->borrow_date);
                 $dueDate = $borrowDate->copy()->add(
                     $loanType->period, 
                     $loanType->unit
                 );
-                $today = \Carbon\Carbon::today();
+                $today = Carbon::today();
                 $overdueDays = max(0, $today->diffInDays($dueDate, false) * -1);
 
                 if ($overdueDays <= 0) {
-                    return 0; // No penalty if not overdue
+                    return 0;
                 }
 
-                // Broker client: fixed penalty
                 if ($user->broker) {
                     return $broker->penalty_client;
                 }
 
-                // Non-broker: commission-based penalty
                 $totalRepayments = $loan->repayments->sum('amount');
                 $penaltyAmount = ($broker->penalty_broker / 100) 
                             * ($loan->penalty_rate / 100) 
@@ -355,14 +368,15 @@ class DashboardController extends Controller
 
     private function getDueLoans($user)
     {
-        $baseQuery = Loan::with(['borrower', 'loanType'])
-            ->where('status', 'disbursed')
+        $baseQuery = Loan::with(['user', 'loanType'])
+            ->whereIn('status', ['disbursed', 'approved'])
             ->join('loan_types', 'loans.loan_type_id', '=', 'loan_types.id')
             ->select('loans.*');
 
         switch ($user->role) {
             case 'admin':
             case 'teller':
+                // Get all loans with status disbursed or approved
                 break;
 
             case 'borrower':
@@ -370,26 +384,33 @@ class DashboardController extends Controller
                 break;
 
             case 'broker':
-                $currentBrokerId = $user->broker->id;
-                $borrowerIds = Borrower::where('broker_id', $currentBrokerId)
-                    ->pluck('user_id');
-                $baseQuery->whereIn('loans.user_id', $borrowerIds);
+                $currentBrokerId = $user->broker->id ?? null;
+                if ($currentBrokerId) {
+                    $borrowerIds = Borrower::where('broker_id', $currentBrokerId)
+                        ->pluck('user_id');
+                    $baseQuery->whereIn('loans.user_id', $borrowerIds);
+                }
                 break;
         }
 
-        return $baseQuery->get()->map(function ($loan) {
+        $loans = $baseQuery->get();
+
+        return $loans->map(function ($loan) {
             $borrowDate = Carbon::parse($loan->borrow_date)->startOfDay();
             $dueDate = $borrowDate->copy();
 
-            switch ($loan->loanType->unit) {
+            switch ($loan->loanType->unit ?? 'days') {
                 case 'days':
-                    $dueDate->addDays($loan->loanType->period);
+                    $dueDate->addDays($loan->loanType->period ?? 30);
                     break;
                 case 'weeks':
-                    $dueDate->addWeeks($loan->loanType->period);
+                    $dueDate->addWeeks($loan->loanType->period ?? 4);
                     break;
                 case 'months':
-                    $dueDate->addMonths($loan->loanType->period);
+                    $dueDate->addMonths($loan->loanType->period ?? 1);
+                    break;
+                default:
+                    $dueDate->addDays(30);
                     break;
             }
 
@@ -410,9 +431,6 @@ class DashboardController extends Controller
             }
 
             return $loan;
-        })->sortBy('remaining_days'); // Sort by remaining days (ascending)
+        })->sortBy('remaining_days')->values();
     }
-
-
- 
 }

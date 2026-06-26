@@ -139,38 +139,24 @@ public function checkSignature(User $user)
     try {
         $hasSignature = !empty($user->signature);
         $signatureUrl = null;
+        $fileExists = false;
 
         if ($hasSignature) {
             $path = $user->signature;
-
-            Log::debug('SignatureService: Checking signature file', [
-                'user_id' => $user->id,
-                'path' => $path,
-                'file_exists' => Storage::disk('public')->exists($path),
-                'all_signature_files' => collect(Storage::disk('public')->files('images/signatures'))->toArray()
-            ]);
-
-            if (Storage::disk('public')->exists($path)) {
+            $fileExists = Storage::disk('public')->exists($path);
+            
+            if ($fileExists) {
                 $signatureUrl = Storage::disk('public')->url($path);
-                Log::debug('SignatureService: Signature file found', [
-                    'user_id' => $user->id,
-                    'path' => $path,
-                    'url' => $signatureUrl
-                ]);
-            } else {
-                Log::warning('SignatureService: Signature file missing, clearing DB record', [
-                    'user_id' => $user->id,
-                    'path' => $path
-                ]);
-                $user->update(['signature' => null]);
-                $hasSignature = false;
             }
+            // Don't clear the DB record automatically
         }
 
         return [
             'hasSignature' => $hasSignature,
+            'signatureExists' => $fileExists, // Add this flag
             'signatureUrl' => $signatureUrl,
-            'filename' => $user->signature
+            'filename' => $user->signature,
+            'path' => $hasSignature ? $user->signature : null
         ];
     } catch (\Exception $e) {
         Log::error('SignatureService: Error checking signature', [
@@ -179,8 +165,10 @@ public function checkSignature(User $user)
         ]);
         return [
             'hasSignature' => false,
+            'signatureExists' => false,
             'signatureUrl' => null,
-            'filename' => null
+            'filename' => null,
+            'path' => null
         ];
     }
 }

@@ -2,399 +2,750 @@
 
 @section('content')
     <!-- Breadcrumb Start -->
-    <div x-data="{ pageName: 'Profile' }">
+    <div x-data="{ pageName: 'User Profile' }">
         @include('partials.breadcrumb')
     </div>
     <!-- Breadcrumb End -->
 
-    <!-- Profile Header -->
-    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6 mb-6">
-        <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            <div class="flex w-full flex-col items-center gap-6 xl:flex-row">
-                <div class="h-20 w-20 overflow-hidden rounded-full border border-gray-200 dark:border-gray-700">
-                    @if($user->avatar)
-                        <img src="{{ Storage::url($user->avatar) }}" alt="Profile Photo" class="h-full w-full object-cover">
-                    @else
-                        <div class="h-full w-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
-                            <i class="fas fa-user text-gray-400 text-2xl"></i>
-                        </div>
-                    @endif
-                </div>
-                <div class="order-3 xl:order-2">
-                    <h4 class="mb-2 text-center text-lg font-semibold xl:text-left">{{ $user->name }}</h4>
-                    <div class="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
-                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ ucfirst($user->role) }} Profile</p>
-                        @if($user->role === 'borrower' && $user->borrower)
-                            <div class="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
-                            <div class="flex items-center">
-                                <span class="px-2 py-1 text-xs font-medium rounded-full 
-                                    @if($user->borrower->risk_category === 'Low Risk') bg-green-100 text-green-800
-                                    @elseif($user->borrower->risk_category === 'Medium Risk') bg-yellow-100 text-yellow-800
-                                    @elseif($user->borrower->risk_category === 'High Risk') bg-orange-100 text-orange-800
-                                    @else bg-red-100 text-red-800 @endif">
-                                    {{ $user->borrower->risk_category }}
-                                </span>
-                                <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                                    4Cs Score: {{ $user->borrower->calculate4csScore()['overall'] }}/100
-                                </span>
-                            </div>
+    <!-- Main Content -->
+    <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+        <!-- Profile Header -->
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6 mb-6">
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                <div class="flex w-full flex-col items-center gap-6 xl:flex-row">
+                    <div class="h-20 w-20 overflow-hidden rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+                        @if($user->avatar)
+                            <img 
+                                src="{{ Storage::url($user->avatar) }}" 
+                                alt="Profile Photo" 
+                                class="h-full w-full object-cover"
+                            >
+                        @else
+                            @php
+                                $names = explode(' ', trim($user->name));
+                                $initials = strtoupper(
+                                    collect($names)
+                                        ->take(2)
+                                        ->map(fn($n) => substr($n, 0, 1))
+                                        ->implode('')
+                                );
+                            @endphp
+                    
+                            <span class="text-xl font-semibold text-gray-600 dark:text-gray-300">
+                                {{ $initials }}
+                            </span>
                         @endif
                     </div>
-                </div>
-                <div class="order-2 flex grow items-center gap-2 xl:order-3 xl:justify-end">
-                    @if($user->role === 'borrower')
-                        <a href="{{ route('loans.create', $user->id) }}" 
-                           class="flex items-center gap-2 rounded-full border border-blue-600 bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 hover:border-blue-700 transition-colors">
-                            <i class="fas fa-plus"></i> New Loan
-                        </a>
-                    @endif
-                    
-                    <!-- Edit Profile Button -->
-                    <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')"
-                        class="flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">
-                        <i class="fas fa-edit"></i> Edit Profile
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Biodata Completion Alert with Sections -->
-    @if($user->role === 'borrower' && !$user->hasCompleteBiodata())
-    @php
-        $completionData = $user->getBiodataCompletionBySections();
-        $overallPercentage = $user->getBiodataCompletionPercentage();
-    @endphp
-    <div class="mb-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-5 dark:border-yellow-800 dark:bg-yellow-900/20 lg:p-6">
-        <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center">
-                <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-500 mr-3 text-lg"></i>
-                <div>
-                    <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                        Profile Incomplete ({{ $overallPercentage }}%)
-                    </h3>
-                    <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                        Complete your profile to get better loan terms
-                    </p>
+                    <div class="order-3 xl:order-2">
+                        <h4 class="mb-2 text-center text-lg font-semibold xl:text-left">{{ $user->name }}</h4>
+                        <div class="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ ucfirst($user->role) }} Profile</p>
+                            @if($user->role === 'borrower' && $user->borrower)
+                                <div class="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
+                                <div class="flex items-center">
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                        @if($user->borrower->risk_category === 'Low Risk') bg-green-100 text-green-800
+                                        @elseif($user->borrower->risk_category === 'Medium Risk') bg-yellow-100 text-yellow-800
+                                        @elseif($user->borrower->risk_category === 'High Risk') bg-orange-100 text-orange-800
+                                        @else bg-red-100 text-red-800 @endif">
+                                        {{ $user->borrower->risk_category }}
+                                    </span>
+                                    <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                                        4Cs Score: {{ $user->borrower->calculate4csScore()['overall'] }}/100
+                                    </span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="order-2 flex grow items-center gap-2 xl:order-3 xl:justify-end">
+                        @if($user->role === 'borrower')
+                            <a href="{{ route('loans.create', $user->id) }}" 
+                               class="flex items-center gap-2 rounded-full border border-blue-600 bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 hover:border-blue-700 transition-colors">
+                                <i class="fas fa-plus"></i> New Loan
+                            </a>
+                        @endif
+                        
+                        <!-- Edit Profile Button -->
+                        <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')"
+                            class="flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">
+                            <i class="fas fa-edit"></i> Edit Profile
+                        </button>
+                    </div>
                 </div>
             </div>
-            <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')"
-                class="text-sm text-yellow-800 dark:text-yellow-200 hover:text-yellow-900 dark:hover:text-yellow-100 font-medium">
-                Complete Now <i class="fas fa-arrow-right ml-1"></i>
-            </button>
         </div>
         
-        <!-- Progress Bars by Section -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-            @foreach($completionData['sections'] as $sectionName => $section)
-            <div>
-                <div class="flex justify-between text-xs text-yellow-700 dark:text-yellow-300 mb-1">
-                    <span>{{ $section['name'] }}</span>
-                    <span>{{ $section['percentage'] }}%</span>
-                </div>
-                <div class="h-2 bg-yellow-100 dark:bg-yellow-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-yellow-500 transition-all duration-300" 
-                         style="width: {{ $section['percentage'] }}%"></div>
-                </div>
-                @if(count($section['missing']) > 0)
-                <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-1 truncate" title="{{ implode(', ', $section['missing']) }}">
-                    Missing: {{ count($section['missing']) }} field(s)
-                </p>
-                @endif
-            </div>
-            @endforeach
-        </div>
-    </div>
-    @endif
+        @include('partials.card.users-card', ['user' => $user])
 
-    @include('partials.card.users-card', ['user' => $user])
-
-    <!-- User Details Card -->
-    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6 mb-6">
-        <h3 class="mb-5 text-lg font-semibold lg:mb-7">Personal Information</h3>
-        
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                    <i class="fas fa-user text-blue-600 dark:text-blue-400 text-lg"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Name</p>
-                    <p class="font-medium">{{ $user->name }}</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                    <i class="fas fa-envelope text-green-600 dark:text-green-400 text-lg"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                    <p class="font-medium">{{ $user->email }}</p>
-                </div>
+        <!-- Main Tabbed Content -->
+        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+            <!-- Tab Header -->
+            <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">User Profile Details</h3>
             </div>
 
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                    <i class="fas fa-phone text-purple-600 dark:text-purple-400 text-lg"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Phone</p>
-                    <p class="font-medium">{{ $user->phone ?? 'N/A' }}</p>
-                </div>
-            </div>
+            <!-- Tab Body -->
+            <div class="p-6">
+                <div x-data="{ activeTab: 'profile' }" class="space-y-6">
+                    <!-- Tab Navigation -->
+                    <div class="border-b border-gray-200 dark:border-gray-800">
+                        <nav class="-mb-px flex space-x-2 overflow-x-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:h-1.5">
+                            <!-- Profile Tab -->
+                            <button
+                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
+                                x-bind:class="activeTab === 'profile' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                                x-on:click="activeTab = 'profile'"
+                            >
+                                <i class="fas fa-user-circle text-lg"></i>
+                                Profile
+                                @if($user->role === 'borrower' && !$user->hasCompleteBiodata())
+                                    @php $overallPercentage = $user->getBiodataCompletionPercentage(); @endphp
+                                    <span class="inline-flex items-center justify-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-500/15 dark:text-yellow-500">
+                                        {{ $overallPercentage }}%
+                                    </span>
+                                @endif
+                            </button>
 
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
-                    <i class="fas fa-user-tag text-pink-600 dark:text-pink-400 text-lg"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Role</p>
-                    <p class="font-medium">{{ ucfirst($user->role) }}</p>
-                </div>
-            </div>
-        </div>
+                            <!-- Documents Tab -->
+                            <button
+                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
+                                x-bind:class="activeTab === 'documents' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                                x-on:click="activeTab = 'documents'"
+                            >
+                                <i class="fas fa-file-alt text-lg"></i>
+                                Documents
+                                @php
+                                    $docCount = 0;
+                                    if($user->avatar) $docCount++;
+                                    if($user->id_front_path) $docCount++;
+                                    if($user->id_back_path) $docCount++;
+                                    if($user->signature) $docCount++;
+                                @endphp
+                                <span class="inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-600 dark:bg-blue-500/15 dark:text-blue-400">
+                                    {{ $docCount }}/4
+                                </span>
+                            </button>
 
-        <!-- Additional Personal Information -->
-        @if($user->gender || $user->dob || $user->nationality || $user->id_number)
-        <div class="grid grid-cols-1 gap-6 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 md:grid-cols-2 lg:grid-cols-4">
-            @if($user->gender)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Gender</p>
-                <p class="font-medium">{{ ucfirst($user->gender) }}</p>
-            </div>
-            @endif
-            
-            @if($user->dob)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Date of Birth</p>
-                <p class="font-medium">
-                    {{ $user->dob ? \Carbon\Carbon::parse($user->dob)->format('Y-m-d') : 'N/A' }} 
-                    (Age: {{ $user->age ?? 'N/A' }})
-                </p>
-            </div>
-            @endif
-            
-            @if($user->nationality)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Nationality</p>
-                <p class="font-medium">{{ $user->nationality }}</p>
-            </div>
-            @endif
+                            <!-- Employment Tab (Only for borrowers) -->
+                            @if($user->role === 'borrower')
+                            <button
+                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
+                                x-bind:class="activeTab === 'employment' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                                x-on:click="activeTab = 'employment'"
+                            >
+                                <i class="fas fa-briefcase text-lg"></i>
+                                Employment
+                            </button>
+                            @endif
 
-            @if($user->id_number)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ $user->id_type ?? 'ID' }} Number</p>
-                <p class="font-medium">{{ $user->id_number }}</p>
-            </div>
-            @endif
-        </div>
-        @endif
-    </div>
+                            <!-- Next of Kin Tab -->
+                            @if($user->kin_name)
+                            <button
+                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
+                                x-bind:class="activeTab === 'kin' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                                x-on:click="activeTab = 'kin'"
+                            >
+                                <i class="fas fa-users text-lg"></i>
+                                Next of Kin
+                            </button>
+                            @endif
 
-    <!-- Identity Documents Section -->
-    <div class="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-3">
-        <!-- Passport Photo -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6">
-            <h3 class="mb-4 text-lg font-semibold">Passport Photo</h3>
-            <div class="flex justify-center">
-                @if($user->avatar)
-                    <div class="relative group">
-                        <img src="{{ Storage::url($user->avatar) }}" 
-                             alt="Passport Photo" 
-                             class="w-48 h-48 rounded-lg object-cover border border-gray-200 dark:border-gray-700">
-                        <a href="{{ Storage::url($user->avatar) }}" 
-                           target="_blank" 
-                           class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all rounded-lg">
-                            <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
-                        </a>
+                            <!-- Loan History Tab -->
+                            <button
+                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
+                                x-bind:class="activeTab === 'loans' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                                x-on:click="activeTab = 'loans'"
+                            >
+                                <i class="fas fa-history text-lg"></i>
+                                Loan History
+                                <span class="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-500/15 dark:text-gray-400">
+                                    {{ $user->loans->count() }}
+                                </span>
+                            </button>
+                        </nav>
                     </div>
-                @else
-                    <div class="w-48 h-48 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
-                        <div class="text-center">
-                            <i class="fas fa-camera text-gray-400 dark:text-gray-500 text-3xl mx-auto"></i>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">No Photo</p>
+
+                    <!-- Tab Content -->
+                    <div class="pt-4">
+                        <!-- Profile Tab Content -->
+                        <div x-show="activeTab === 'profile'" x-cloak>
+                            <!-- Profile Completion Alert -->
+                            @if($user->role === 'borrower' && !$user->hasCompleteBiodata())
+                                @php
+                                    $completionData = $user->getBiodataCompletionBySections();
+                                    $overallPercentage = $user->getBiodataCompletionPercentage();
+                                @endphp
+                                <div class="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-5 dark:border-yellow-800 dark:bg-yellow-900/20">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/50">
+                                                <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-500"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
+                                                    Profile Incomplete ({{ $overallPercentage }}%)
+                                                </h4>
+                                                <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                                                    Complete your profile to get better loan terms
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')"
+                                            class="inline-flex items-center gap-2 rounded-lg border border-yellow-500 bg-yellow-500 px-4 py-2 text-sm font-medium text-yellow-900 transition-colors hover:bg-yellow-600">
+                                            Complete Now <i class="fas fa-arrow-right ml-1"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Progress Grid -->
+                                    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                        @foreach($completionData['sections'] as $sectionName => $section)
+                                            <div class="rounded-lg border border-yellow-100 bg-white/50 p-3 dark:border-yellow-800/50 dark:bg-gray-800/30">
+                                                <div class="mb-2 flex items-center justify-between">
+                                                    <span class="text-xs font-medium text-yellow-800 dark:text-yellow-300">{{ $section['name'] }}</span>
+                                                    <span class="text-xs font-bold text-yellow-700 dark:text-yellow-400">{{ $section['percentage'] }}%</span>
+                                                </div>
+                                                <div class="h-1.5 rounded-full bg-yellow-100 dark:bg-yellow-900/50">
+                                                    <div class="h-full rounded-full bg-yellow-500 transition-all duration-300" 
+                                                         style="width: {{ $section['percentage'] }}%"></div>
+                                                </div>
+                                                @if(count($section['missing']) > 0)
+                                                    <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400 truncate" 
+                                                       title="{{ implode(', ', $section['missing']) }}">
+                                                        Missing {{ count($section['missing']) }} field(s)
+                                                    </p>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- Personal Information Grid -->
+                            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                <!-- Basic Information -->
+                                <div class="space-y-6">
+                                    <div>
+                                        <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Basic Information</h4>
+                                        <div class="space-y-4">
+                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">Full Name</span>
+                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->name }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">Email Address</span>
+                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->email }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">Phone Number</span>
+                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->phone ?? 'N/A' }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">Gender</span>
+                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ ucfirst($user->gender) ?? 'N/A' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Personal Details -->
+                                    <div>
+                                        <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Personal Details</h4>
+                                        <div class="space-y-4">
+                                            @if($user->dob)
+                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">Date of Birth</span>
+                                                <span class="font-medium text-gray-800 dark:text-white/90">
+                                                    {{ \Carbon\Carbon::parse($user->dob)->format('M d, Y') }} 
+                                                    <span class="text-xs text-gray-500">({{ $user->age ?? 'N/A' }} years)</span>
+                                                </span>
+                                            </div>
+                                            @endif
+                                            
+                                            @if($user->nationality)
+                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">Nationality</span>
+                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->nationality }}</span>
+                                            </div>
+                                            @endif
+                                            
+                                            @if($user->id_number)
+                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">{{ $user->id_type ?? 'ID' }} Number</span>
+                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->id_number }}</span>
+                                            </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Additional Information -->
+                                <div class="space-y-6">
+                                    <!-- Status Information -->
+                                    <div>
+                                        <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status Information</h4>
+                                        <div class="space-y-4">
+                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">User Status</span>
+                                                <span class="rounded-full px-3 py-1 text-xs font-medium
+                                                    @if($user->status === 0)
+                                                        bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-500
+                                                    @elseif($user->status === 1)
+                                                        bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-500
+                                                    @endif
+                                                ">
+                                                    {{ $user->status === 0 ? 'Active' : 'Inactive' }}
+                                                </span>
+
+                                            </div>
+                                            
+                                            @if($user->role === 'borrower' && $user->borrower)
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Borrower Status</span>
+                                            
+                                                    <span class="rounded-full px-3 py-1 text-xs font-medium
+                                                        @if((int) $user->borrower->status === 1)
+                                                            bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-500
+                                                        @else
+                                                            bg-gray-100 text-gray-800 dark:bg-gray-500/15 dark:text-gray-400
+                                                        @endif
+                                                    ">
+                                                        {{ (int) $user->borrower->status === 1 ? 'Active' : 'Inactive' }}
+                                                    </span>
+                                                </div>
+                                            @endif
+                                            
+                                                                                        
+                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">Account Created</span>
+                                                <span class="font-medium text-gray-800 dark:text-white/90">
+                                                    {{ \Carbon\Carbon::parse($user->created_at)->format('M d, Y') }}
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">Last Updated</span>
+                                                <span class="font-medium text-gray-800 dark:text-white/90">
+                                                    {{ \Carbon\Carbon::parse($user->updated_at)->format('M d, Y') }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Additional Details -->
+                                    <div>
+                                        <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Additional Details</h4>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            @if($user->marital_status)
+                                            <div>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">Marital Status</p>
+                                                <p class="font-medium text-gray-800 dark:text-white/90">{{ ucfirst($user->marital_status) }}</p>
+                                            </div>
+                                            @endif
+                                            
+                                            @if($user->education)
+                                            <div>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">Education</p>
+                                                <p class="font-medium text-gray-800 dark:text-white/90">{{ $user->education }}</p>
+                                            </div>
+                                            @endif
+                                            
+                                            @if($user->religion)
+                                            <div>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">Religion</p>
+                                                <p class="font-medium text-gray-800 dark:text-white/90">{{ $user->religion }}</p>
+                                            </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Documents Tab Content -->
+                        <div x-show="activeTab === 'documents'" x-cloak>
+                            <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                                <!-- Passport Photo -->
+                                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+                                    <div class="mb-4 flex items-center justify-between">
+                                        <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">Passport Photo</h4>
+                                        @if($user->avatar)
+                                            <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-500/15 dark:text-green-500">
+                                                Uploaded
+                                            </span>
+                                        @else
+                                            <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-500/15 dark:text-gray-400">
+                                                Missing
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <div class="flex justify-center">
+                                        @if($user->avatar)
+                                            <div class="relative group w-full">
+                                                <img 
+                                                    src="{{ Storage::url($user->avatar) }}" 
+                                                    alt="Passport Photo"
+                                                    class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+                                                >
+                                                <a href="{{ Storage::url($user->avatar) }}" target="_blank"
+                                                   class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
+                                                    <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
+                                                </a>
+                                            </div>
+                                        @else
+                                            <div class="h-48 w-full rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
+                                                <div class="text-center">
+                                                    <i class="fas fa-camera text-gray-400 dark:text-gray-500 text-3xl mx-auto mb-3"></i>
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400">No Photo</p>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    @if($user->avatar)
+                                        <div class="mt-4 flex justify-center">
+                                            <a href="{{ Storage::url($user->avatar) }}" target="_blank"
+                                               class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
+                                                <i class="fas fa-external-link-alt"></i> View Full Size
+                                            </a>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- ID Front -->
+                                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+                                    <div class="mb-4 flex items-center justify-between">
+                                        <div>
+                                            <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">ID Front</h4>
+                                            @if($user->id_type)
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $user->id_type }}</p>
+                                            @endif
+                                        </div>
+                                        @if($user->id_front_path)
+                                            <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-500/15 dark:text-green-500">
+                                                Uploaded
+                                            </span>
+                                        @else
+                                            <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-500/15 dark:text-gray-400">
+                                                Missing
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <div class="flex justify-center">
+                                        @if($user->id_front_path)
+                                            <div class="relative group w-full">
+                                                <img
+                                                    src="{{ Storage::url($user->id_front_path) }}"
+                                                    alt="ID Front"
+                                                    class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+                                                >
+                                                <a href="{{ Storage::url($user->id_front_path) }}" target="_blank"
+                                                   class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
+                                                    <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
+                                                </a>
+                                            </div>
+                                        @else
+                                            <div class="h-48 w-full rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
+                                                <div class="text-center">
+                                                    <i class="fas fa-id-card text-gray-400 dark:text-gray-500 text-3xl mx-auto mb-3"></i>
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400">No ID Front</p>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    @if($user->id_front_path)
+                                        <div class="mt-4 flex justify-center">
+                                            <a href="{{ Storage::url($user->id_front_path) }}" target="_blank"
+                                               class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
+                                                <i class="fas fa-external-link-alt"></i> View Full Size
+                                            </a>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- ID Back -->
+                                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+                                    <div class="mb-4 flex items-center justify-between">
+                                        <div>
+                                            <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">ID Back</h4>
+                                            @if($user->id_type)
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $user->id_type }}</p>
+                                            @endif
+                                        </div>
+                                        @if($user->id_back_path)
+                                            <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-500/15 dark:text-green-500">
+                                                Uploaded
+                                            </span>
+                                        @else
+                                            <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-500/15 dark:text-gray-400">
+                                                Missing
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <div class="flex justify-center">
+                                        @if($user->id_back_path)
+                                            <div class="relative group w-full">
+                                                <img
+                                                    src="{{ Storage::url($user->id_back_path) }}"
+                                                    alt="ID Back"
+                                                    class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+                                                >
+                                                <a href="{{ Storage::url($user->id_back_path) }}" target="_blank"
+                                                   class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
+                                                    <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
+                                                </a>
+                                            </div>
+                                        @else
+                                            <div class="h-48 w-full rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
+                                                <div class="text-center">
+                                                    <i class="fas fa-id-card text-gray-400 dark:text-gray-500 text-3xl mx-auto mb-3"></i>
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400">No ID Back</p>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    @if($user->id_back_path)
+                                        <div class="mt-4 flex justify-center">
+                                            <a href="{{ Storage::url($user->id_back_path) }}" target="_blank"
+                                               class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
+                                                <i class="fas fa-external-link-alt"></i> View Full Size
+                                            </a>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- Signature -->
+                                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+                                    <div class="mb-4 flex items-center justify-between">
+                                        <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">Digital Signature</h4>
+                                        @if($user->signature)
+                                            <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-500/15 dark:text-green-500">
+                                                Uploaded
+                                            </span>
+                                        @else
+                                            <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-500/15 dark:text-gray-400">
+                                                Missing
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <div class="flex justify-center">
+                                        @if($user->signature)
+                                            <div class="relative group w-full">
+                                                <img
+                                                    src="{{ Storage::url($user->signature) }}"
+                                                    alt="Digital Signature"
+                                                    class="h-48 w-full rounded-lg object-contain border border-gray-200 dark:border-gray-700 bg-white p-4"
+                                                >
+                                                <a href="{{ Storage::url($user->signature) }}" target="_blank"
+                                                   class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
+                                                    <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
+                                                </a>
+                                            </div>
+                                        @else
+                                            <div class="h-48 w-full rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
+                                                <div class="text-center">
+                                                    <i class="fas fa-signature text-gray-400 dark:text-gray-500 text-3xl mx-auto mb-3"></i>
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400">No Signature</p>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    @if($user->signature)
+                                        <div class="mt-4 flex justify-center">
+                                            <a href="{{ Storage::url($user->signature) }}" target="_blank"
+                                               class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
+                                                <i class="fas fa-external-link-alt"></i> View Full Size
+                                            </a>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Employment Tab Content -->
+                        @if($user->role === 'borrower')
+                        <div x-show="activeTab === 'employment'" x-cloak>
+                            @if($user->borrower && $user->borrower->income_type)
+                                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    <!-- Employment Details -->
+                                    <div class="space-y-6">
+                                        <div>
+                                            <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employment Details</h4>
+                                            <div class="space-y-4">
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Client Type</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">
+                                                        {{ $user->borrower->client_type === 0 ? 'Individual' : 'Non-Individual/Corporate' }}
+                                                    </span>
+                                                </div>
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Employment Status</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">
+                                                        {{ ucfirst(str_replace('_', ' ', $user->borrower->income_type)) }}
+                                                    </span>
+                                                </div>
+                                                @if($user->borrower->job_title)
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Job Title</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->borrower->job_title }}</span>
+                                                </div>
+                                                @endif
+                                                @if($user->borrower->department)
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Department</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->borrower->department }}</span>
+                                                </div>
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <!-- Salary Information -->
+                                        <div>
+                                            <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Salary Information</h4>
+                                            <div class="space-y-4">
+                                                @if($user->borrower->gross_salary)
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Gross Salary</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">KES {{ number_format($user->borrower->gross_salary, 2) }}</span>
+                                                </div>
+                                                @endif
+                                                @if($user->borrower->net_salary)
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Net Salary</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">KES {{ number_format($user->borrower->net_salary, 2) }}</span>
+                                                </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Organization Details -->
+                                    <div class="space-y-6">
+                                        <div>
+                                            <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Organization Details</h4>
+                                            <div class="space-y-4">
+                                                @if($user->borrower->employer_name)
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Employer Name</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->borrower->employer_name }}</span>
+                                                </div>
+                                                @endif
+                                                @if($user->borrower->workplace)
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Workplace</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->borrower->workplace }}</span>
+                                                </div>
+                                                @endif
+                                                @if($user->borrower->employer_email)
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Organization Email</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->borrower->employer_email }}</span>
+                                                </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="text-center py-8">
+                                    <i class="fas fa-briefcase text-gray-400 text-4xl mb-4"></i>
+                                    <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Employment Information</h4>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Employment information has not been added yet</p>
+                                    <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')"
+                                        class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs transition-colors hover:bg-brand-600">
+                                        <i class="fas fa-plus"></i> Add Employment Details
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+                        @endif
+
+                        <!-- Next of Kin Tab Content -->
+                        <div x-show="activeTab === 'kin'" x-cloak>
+                            @if($user->kin_name)
+                                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    <div class="space-y-6">
+                                        <!-- Kin Details -->
+                                        <div>
+                                            <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Next of Kin Details</h4>
+                                            <div class="space-y-4">
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Full Name</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->kin_name }}</span>
+                                                </div>
+                                                @if($user->kin_relation)
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Relationship</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->kin_relation }}</span>
+                                                </div>
+                                                @endif
+                                                @if($user->kin_phone)
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Phone Number</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->kin_phone }}</span>
+                                                </div>
+                                                @endif
+                                                @if($user->kin_email)
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Email Address</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->kin_email }}</span>
+                                                </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Additional Kin Information -->
+                                    <div class="space-y-6">
+                                        @if($user->kin_occupation)
+                                        <div>
+                                            <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Additional Information</h4>
+                                            <div class="space-y-4">
+                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Occupation</span>
+                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->kin_occupation }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @else
+                                <div class="text-center py-8">
+                                    <i class="fas fa-users text-gray-400 text-4xl mb-4"></i>
+                                    <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Next of Kin Information</h4>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Next of kin information has not been added yet</p>
+                                    <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')"
+                                        class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs transition-colors hover:bg-brand-600">
+                                        <i class="fas fa-plus"></i> Add Next of Kin
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- Loan History Tab Content -->
+                        <div x-show="activeTab === 'loans'" x-cloak>
+                            @if($user->loans->count() > 0)
+                                @include('partials.table.table-loans', ['loans' => $user->loans, 'userView' => true])
+                            @else
+                                <div class="text-center py-8">
+                                    <i class="fas fa-history text-gray-400 text-4xl mb-4"></i>
+                                    <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Loan History</h4>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">This user has no loan history yet</p>
+                                    @if($user->role === 'borrower')
+                                        <a href="{{ route('loans.create', $user->id) }}" 
+                                           class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs transition-colors hover:bg-brand-600">
+                                            <i class="fas fa-plus"></i> Create First Loan
+                                        </a>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     </div>
-                @endif
-            </div>
-        </div>
-
-        <!-- ID Front -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6">
-            <h3 class="mb-4 text-lg font-semibold">
-                {{ $user->id_type ?? 'ID' }} Front
-                @if($user->id_type)
-                    <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $user->id_type }})</span>
-                @endif
-            </h3>
-            <div class="flex justify-center">
-                @if($user->id_front_path)
-                    <div class="relative group">
-                        <img src="{{ Storage::url($user->id_front_path) }}" 
-                             alt="ID Front" 
-                             class="w-48 h-32 rounded-lg object-cover border border-gray-200 dark:border-gray-700">
-                        <a href="{{ Storage::url($user->id_front_path) }}" 
-                           target="_blank" 
-                           class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all rounded-lg">
-                            <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
-                        </a>
-                    </div>
-                @else
-                    <div class="w-48 h-32 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
-                        <div class="text-center">
-                            <i class="fas fa-id-card text-gray-400 dark:text-gray-500 text-3xl mx-auto"></i>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">No ID Front</p>
-                        </div>
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        <!-- ID Back -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6">
-            <h3 class="mb-4 text-lg font-semibold">
-                {{ $user->id_type ?? 'ID' }} Back
-                @if($user->id_type)
-                    <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $user->id_type }})</span>
-                @endif
-            </h3>
-            <div class="flex justify-center">
-                @if($user->id_back_path)
-                    <div class="relative group">
-                        <img src="{{ Storage::url($user->id_back_path) }}" 
-                             alt="ID Back" 
-                             class="w-48 h-32 rounded-lg object-cover border border-gray-200 dark:border-gray-700">
-                        <a href="{{ Storage::url($user->id_back_path) }}" 
-                           target="_blank" 
-                           class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all rounded-lg">
-                            <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
-                        </a>
-                    </div>
-                @else
-                    <div class="w-48 h-32 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
-                        <div class="text-center">
-                            <i class="fas fa-id-card text-gray-400 dark:text-gray-500 text-3xl mx-auto"></i>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">No ID Back</p>
-                        </div>
-                    </div>
-                @endif
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Signature Section -->
-    @if($user->signature)
-    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6 mb-6">
-        <h3 class="mb-4 text-lg font-semibold">Digital Signature</h3>
-        <div class="flex justify-center">
-            <div class="relative group">
-                <img src="{{ Storage::url($user->signature) }}" 
-                     alt="Digital Signature" 
-                     class="h-20 rounded-lg border border-gray-200 dark:border-gray-700">
-                <a href="{{ Storage::url($user->signature) }}" 
-                   target="_blank" 
-                   class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all rounded-lg">
-                    <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-lg"></i>
-                </a>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Borrower Employment Information -->
-    @if($user->role === 'borrower' && $user->borrower && $user->borrower->income_type)
-    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6 mb-6">
-        <h3 class="mb-5 text-lg font-semibold lg:mb-7">Employment Information</h3>
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Income Type</p>
-                <p class="font-medium">{{ ucfirst(str_replace('_', ' ', $user->borrower->income_type)) }}</p>
-            </div>
-            
-            @if($user->borrower->job_title)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Job Title</p>
-                <p class="font-medium">{{ $user->borrower->job_title }}</p>
-            </div>
-            @endif
-            
-            @if($user->borrower->net_salary)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Net Salary</p>
-                <p class="font-medium">KES {{ number_format($user->borrower->net_salary, 2) }}</p>
-            </div>
-            @endif
-            
-            @if($user->borrower->workplace)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Workplace</p>
-                <p class="font-medium">{{ $user->borrower->workplace }}</p>
-            </div>
-            @endif
-            
-            @if($user->borrower->employer_name)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Employer Name</p>
-                <p class="font-medium">{{ $user->borrower->employer_name }}</p>
-            </div>
-            @endif
-            
-            @if($user->borrower->department)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Department</p>
-                <p class="font-medium">{{ $user->borrower->department }}</p>
-            </div>
-            @endif
-        </div>
-    </div>
-    @endif
-
-    <!-- Next of Kin Information -->
-    @if($user->kin_name)
-    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6 mb-6">
-        <h3 class="mb-5 text-lg font-semibold lg:mb-7">Next of Kin</h3>
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Name</p>
-                <p class="font-medium">{{ $user->kin_name }}</p>
-            </div>
-            
-            @if($user->kin_relation)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Relationship</p>
-                <p class="font-medium">{{ $user->kin_relation }}</p>
-            </div>
-            @endif
-            
-            @if($user->kin_phone)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Phone</p>
-                <p class="font-medium">{{ $user->kin_phone }}</p>
-            </div>
-            @endif
-            
-            @if($user->kin_email)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                <p class="font-medium">{{ $user->kin_email }}</p>
-            </div>
-            @endif
-            
-            @if($user->kin_occupation)
-            <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Occupation</p>
-                <p class="font-medium">{{ $user->kin_occupation }}</p>
-            </div>
-            @endif
-        </div>
-    </div>
-    @endif
-
-    <!-- Loans Table -->
-    @include('partials.table.table-loans', ['loans' => $user->loans, 'userView' => true])
-
-    <!-- Edit Profile Modal - SIMPLIFIED VERSION -->
+    <!-- Edit Profile Modal - ADD THE WORKING MODAL FROM FIRST CODE -->
     <div id="editProfileModal" class="fixed inset-0 z-99999 overflow-y-auto hidden">
         <div class="flex items-center justify-center min-h-screen p-5">
             <!-- Backdrop -->
@@ -643,7 +994,6 @@
                                     type="text"
                                     name="kin_name"
                                     value="{{ old('kin_name', $user->kin_name) }}"
-                                    {{-- required --}}
                                     class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                                 />
                             </div>
@@ -656,7 +1006,6 @@
                                     type="text"
                                     name="kin_relation"
                                     value="{{ old('kin_relation', $user->kin_relation) }}"
-                                    {{-- required --}}
                                     placeholder="e.g., Spouse, Parent, Sibling"
                                     class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                                 />
@@ -936,70 +1285,56 @@
     </div>
 @endsection
 
-@push('scripts')
-<script>
-    // Simple JavaScript for conditional employment fields
-    document.addEventListener('DOMContentLoaded', function() {
-        const incomeTypeSelect = document.querySelector('select[name="income_type"]');
-        const employmentFields = document.querySelectorAll('.col-span-2');
-        
-        function toggleEmploymentFields() {
-            const value = incomeTypeSelect?.value;
-            const isUnemployedOrStudent = value === 'unemployed' || value === 'student';
-            
-            employmentFields.forEach(field => {
-                if (field.classList.contains('col-span-2')) {
-                    field.style.display = isUnemployedOrStudent ? 'none' : 'block';
-                }
-            });
+@push('styles')
+<style>
+    [x-cloak] {
+        display: none !important;
+    }
+    
+    .tab-content {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
         }
-        
-        if (incomeTypeSelect) {
-            incomeTypeSelect.addEventListener('change', toggleEmploymentFields);
-            toggleEmploymentFields(); // Initial check
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
-    });
-</script>
+    }
+    
+    .document-hover {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .document-hover:hover {
+        transform: translateY(-2px);
+    }
+    
+    .group-hover\:scale-110:hover {
+        transform: scale(1.1);
+    }
+</style>
 @endpush
 
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('editProfileForm');
+        // Set default tab based on URL hash or first available
+        const hash = window.location.hash.substring(1);
+        const validTabs = ['profile', 'documents', 'employment', 'kin', 'loans'];
         
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                console.log('Form submitting...');
-                console.log('Form data:', new FormData(form));
-                
-                // Optional: Show loading state
-                const submitBtn = form.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-                    submitBtn.disabled = true;
-                }
-            });
+        if (hash && validTabs.includes(hash)) {
+            document.querySelector(`[x-data]`).__x.$data.activeTab = hash;
         }
         
-        // Your existing code...
-        const incomeTypeSelect = document.querySelector('select[name="income_type"]');
-        const employmentFields = document.querySelectorAll('.col-span-2');
-        
-        function toggleEmploymentFields() {
-            const value = incomeTypeSelect?.value;
-            const isUnemployedOrStudent = value === 'unemployed' || value === 'student';
-            
-            employmentFields.forEach(field => {
-                if (field.classList.contains('col-span-2')) {
-                    field.style.display = isUnemployedOrStudent ? 'none' : 'block';
-                }
-            });
-        }
-        
-        if (incomeTypeSelect) {
-            incomeTypeSelect.addEventListener('change', toggleEmploymentFields);
-            toggleEmploymentFields(); // Initial check
-        }
+        // Update URL when tab changes
+        document.querySelector(`[x-data]`).__x.$watch('activeTab', (value) => {
+            window.history.replaceState(null, null, `#${value}`);
+        });
     });
 </script>
 @endpush

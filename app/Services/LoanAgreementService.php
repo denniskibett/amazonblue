@@ -692,14 +692,14 @@ private function getSignaturePath($user)
         return null;
     }
 
-    // $user->signature now contains full relative path like 'images/signatures/filename.png'
-    $path = $user->signature;
+    // DB value MUST be: signatures/filename.png
+    $relativePath = $user->signature;
 
-    // Use Storage to check if file exists
-    return Storage::disk('public')->exists($path) 
-        ? Storage::disk('public')->path($path) 
-        : null;
+    $absolutePath = storage_path('app/public/' . $relativePath);
+
+    return file_exists($absolutePath) ? $absolutePath : null;
 }
+
 
 
     private function getPeriodText($period, $unit)

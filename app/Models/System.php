@@ -276,7 +276,7 @@ class System extends Model
             "city": "",
             "name": "",
             "latitude": "",
-            "longitude": "",
+            "longitude": ""
         }',
     ];
 
