@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Repayment;
 use App\Models\Loan;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule; // Add this for unique validation
 
 class RepaymentController extends Controller
 {
@@ -13,10 +12,8 @@ class RepaymentController extends Controller
     {
         $user = auth()->user();
         
-        // Base query
         $query = Repayment::with(['loan.borrower'])->latest();
         
-        // Filter based on user role
         if ($user->role === 'broker') {
             $query->whereHas('loan', function($q) use ($user) {
                 $q->where('broker_id', $user->id);
@@ -41,7 +38,6 @@ class RepaymentController extends Controller
         $loan_id = $request->get('loan_id');
         $loan = Loan::with('borrower')->findOrFail($loan_id);
         
-        // Authorization check
         if ($user->role === 'borrower' && $loan->user_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }
@@ -55,46 +51,51 @@ class RepaymentController extends Controller
     
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'loan_id' => 'required|exists:loans,id',
-            'amount' => 'required|numeric|min:1',
-            'transaction' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('repayments')->where(function ($query) use ($request) {
-                    return $query->where('loan_id', $request->loan_id);
-                })
-            ],
+            'amount' => 'required|numeric|min:0.01',
             'repayment_date' => 'required|date',
-        ], [
-            'transaction.unique' => 'This transaction reference has already been used for this loan.'
+            'transaction' => 'required|string|max:255|unique:repayments,transaction,NULL,id,loan_id,' . $request->loan_id,
+            'mode' => 'nullable|string|max:100',
         ]);
-    
-        $loan = Loan::with('borrower')->findOrFail($request->loan_id);
-        $user = auth()->user();
+
+        $repayment = Repayment::create($validated);
+
+        // Check if loan is fully repaid
+        $loan = Loan::find($validated['loan_id']);
+        $totalRepayments = $loan->repayments()->sum('amount');
+        $totalDue = $loan->amount + ($loan->interest ?? 0) + ($loan->penalty_amount ?? 0);
         
-        // Authorization check
-        if ($user->role === 'borrower' && $loan->user_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
+        if ($totalRepayments >= $totalDue) {
+            $loan->status = 'repaid';
+            $loan->save();
         }
-        
-        if ($user->role === 'broker' && $loan->broker_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
-        }
-    
-        Repayment::create($request->all());
-        $loan->updateStatusIfNeeded();
-    
-        return redirect()->route('users.loans.show', [
-            'user' => $loan->user_id, 
-            'loan' => $loan->id
-        ])->with('success', 'Repayment recorded successfully.');
+
+        return response()->json([
+            'message' => 'Repayment created successfully!',
+            'data' => $repayment
+        ], 201);
+    }
+
+    public function update(Request $request, Repayment $repayment)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'repayment_date' => 'required|date',
+            'transaction' => 'required|string|max:255|unique:repayments,transaction,' . $repayment->id . ',id,loan_id,' . $repayment->loan_id,
+            'mode' => 'nullable|string|max:100',
+        ]);
+
+        $repayment->update($validated);
+
+        return response()->json([
+            'message' => 'Repayment updated successfully!',
+            'data' => $repayment
+        ], 200);
     }
 
     public function show(Repayment $repayment)
     {
-        // Simple authorization check
         $user = auth()->user();
         $loan = $repayment->loan;
         
@@ -111,7 +112,6 @@ class RepaymentController extends Controller
 
     public function edit(Repayment $repayment)
     {
-        // Simple authorization check - only brokers and admin can edit
         $user = auth()->user();
         $loan = $repayment->loan;
         
@@ -126,42 +126,8 @@ class RepaymentController extends Controller
         return view('repayments.edit', compact('repayment'));
     }
 
-    public function update(Request $request, Repayment $repayment)
-    {
-        // Simple authorization check - only brokers and admin can update
-        $user = auth()->user();
-        $loan = $repayment->loan;
-        
-        if ($user->role === 'broker' && $loan->broker_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
-        }
-        
-        if (!in_array($user->role, ['admin', 'broker'])) {
-            abort(403, 'Unauthorized action.');
-        }
-        
-        $request->validate([
-            'amount' => 'required|numeric|min:1',
-            'transaction' => [
-                'required',
-                'string',
-                Rule::unique('repayments')->ignore($repayment->id)->where(function ($query) use ($repayment) {
-                    return $query->where('loan_id', $repayment->loan_id);
-                })
-            ],
-            'repayment_date' => 'required|date',
-        ], [
-            'transaction.unique' => 'This transaction reference has already been used for this loan.'
-        ]);
-
-        $repayment->update($request->all());
-
-        return redirect()->route('repayments.index')->with('success', 'Repayment updated.');
-    }
-
     public function destroy(Repayment $repayment)
     {
-        // Simple authorization check - only brokers and admin can delete
         $user = auth()->user();
         $loan = $repayment->loan;
         
@@ -174,6 +140,9 @@ class RepaymentController extends Controller
         }
         
         $repayment->delete();
-        return back()->with('success', 'Repayment deleted.');
+        
+        return response()->json([
+            'message' => 'Repayment deleted successfully!'
+        ], 200);
     }
 }

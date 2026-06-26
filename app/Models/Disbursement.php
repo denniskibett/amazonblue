@@ -11,9 +11,9 @@ class Disbursement extends Model
 
     protected $fillable = ['loan_id', 'amount', 'transaction', 'mode', 'disburse_date', 'payment_date'];
 
-    protected $dates = [
-        'disburse_date', 
-        'payment_date',
+    protected $casts = [
+        'disburse_date' => 'datetime',
+        'payment_date' => 'datetime',
     ];
 
     public function loan()

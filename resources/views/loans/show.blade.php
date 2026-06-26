@@ -11,6 +11,7 @@
                     @if($loan->status === 'approved') bg-green-100 text-green-800
                     @elseif($loan->status === 'disbursed') bg-blue-100 text-blue-800
                     @elseif($loan->status === 'rejected') bg-red-100 text-red-800
+                    @elseif($loan->status === 'repaid') bg-purple-100 text-purple-800
                     @else bg-gray-100 text-gray-800 @endif">
                     {{ ucfirst($loan->status) }}
                 </div>
@@ -45,17 +46,17 @@
                     </p>
                 </div>
                 
-                <div class="pt-4">
-                    <a href="{{ route('loans.generatePdf', ['id' => $loan->user_id, 'loanId' => $loan->id]) }}" 
-                    class="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                        </svg>
-                        Download PDF
-                    </a>
-                </div>
+<div class="pt-4">
+    <a href="{{ route('loans.generatePdf', ['loan' => $loan->id, 'loanId' => $loan->id]) }}" 
+    class="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+        Download PDF
+    </a>
+</div>
 
-                <!-- In the Loan Details Sidebar -->
+                <!-- Agreement Buttons -->
                 <div class="pt-4 space-y-2">
                     <a href="{{ route('loans.agreement.download', $loan->id) }}" 
                     class="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs hover:bg-blue-600">
@@ -74,8 +75,8 @@
                     </a>
                 </div>
 
-                <!-- Add risk assessment section if available -->
-                @if($loan->riskAssessments->isNotEmpty())
+                <!-- Risk Assessment -->
+                @if(isset($loan->riskAssessments) && $loan->riskAssessments->isNotEmpty())
                 <div class="border-t border-gray-200 pt-4 mt-4">
                     <h3 class="text-md font-semibold mb-3">Risk Assessment</h3>
                     @php $latestAssessment = $loan->getLatestRiskAssessment(); @endphp
@@ -98,22 +99,10 @@
                 </div>
                 @endif
 
-                {{-- Add this section in the Loan Details Sidebar --}}
+                <!-- Additional Information -->
                 @if($loan->guarantor_id || $loan->loan_officer_id || $loan->consent || $hasSignature)
                 <div class="border-t border-gray-200 pt-4 mt-4">
                     <h3 class="text-md font-semibold mb-3">Additional Information</h3>
-                    
-                    {{-- Debug info - remove this after testing --}}
-                    @if(auth()->user()->role === 'admin')
-                    <div class="mb-2 p-2 bg-yellow-100 rounded text-xs">
-                        <strong>Debug Info:</strong><br>
-                        Guarantor ID: {{ $loan->guarantor_id }}<br>
-                        Loan Officer ID: {{ $loan->loan_officer_id }}<br>
-                        Consent: {{ $loan->consent ? 'Yes' : 'No' }}<br>
-                        Sign: {{ $loan->signature ? 'Yes' : 'No' }}<br>
-                        Has Signature: {{ $hasSignature ? 'Yes' : 'No' }}
-                    </div>
-                    @endif
                     
                     @if($loan->guarantor_id && $loan->guarantor)
                     <div class="mb-3">
@@ -140,14 +129,12 @@
                     </div>
                     @endif
                     
-                    {{-- Signature Display --}}
-                    @if($hasSignature)
+                    <!-- Signature Display -->
+                    @if($hasSignature && $loan->user && $loan->user->signature)
                     <div class="border-t border-gray-200 pt-6 dark:border-gray-800">
                         <h3 class="text-lg font-medium mb-4">Digital Signature</h3>
                         
                         <div class="flex items-center space-x-6 p-5 border border-gray-300 rounded-2xl bg-white shadow-sm dark:bg-gray-900">
-                            
-                            <!-- Signature Image -->
                             <div class="flex-shrink-0 p-2 bg-white border border-gray-200 rounded-xl overflow-hidden">
                                 <div class="flex items-center justify-center h-24 w-40 bg-transparent">
                                     <img src="{{ asset('storage/' . $loan->user->signature) }}" 
@@ -156,7 +143,6 @@
                                 </div>
                             </div>
 
-                            <!-- Signature Details -->
                             <div class="flex flex-col justify-center">
                                 <p class="font-semibold text-gray-800 dark:text-white">{{ $loan->user->name }}’s Signature</p>
                                 <p class="text-sm text-gray-600 dark:text-gray-400">
@@ -169,14 +155,12 @@
                         </div>
                     </div>
                     @endif
-
-
                 </div>
                 @endif
-                
             </div>
         </div>
         
+        <!-- Financial Summary -->
         <div class="border-t border-gray-200 pt-4">
             <h3 class="text-md font-semibold mb-3">Financial Summary</h3>
             <div class="space-y-3">
@@ -275,7 +259,6 @@
                     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
                         {{ $loan->user->phone ?? 'Phone not available' }}<br>
                         {{ $loan->user->email ?? '' }}<br>
-                        {{-- {{ $loan->user->id ?? '' }}<br> --}}
                         {{ $loan->user->country ?? '' }}
                     </p>
                     <span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
@@ -294,81 +277,62 @@
             <div class="mb-6 overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
                 <div class="max-w-full overflow-x-auto">
                     <div class="min-w-[1026px]">
-                        <!-- table header start -->
+                        <!-- table header -->
                         <div class="grid grid-cols-11 px-5 py-3 bg-gray-50">
                             <div class="col-span-1 flex items-center">
                                 <p class="text-sm font-medium text-gray-700 dark:text-gray-400">#</p>
                             </div>
                             <div class="col-span-5 flex items-center">
-                                <p class="text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Charge Description
-                                </p>
+                                <p class="text-sm font-medium text-gray-700 dark:text-gray-400">Charge Description</p>
                             </div>
                             <div class="col-span-2 flex items-center">
-                                <p class="text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Rate
-                                </p>
+                                <p class="text-sm font-medium text-gray-700 dark:text-gray-400">Rate</p>
                             </div>
                             <div class="col-span-3 flex items-center">
-                                <p class="w-full text-right text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Amount (KES)
-                                </p>
+                                <p class="w-full text-right text-sm font-medium text-gray-700 dark:text-gray-400">Amount (KES)</p>
                             </div>
                         </div>
-                        <!-- table header end -->
 
-                        <!-- table body start -->
+                        <!-- Principal -->
                         <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
                             <div class="col-span-1 flex items-center">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">1</p>
                             </div>
                             <div class="col-span-5 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    Principal Amount
-                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Principal Amount</p>
                             </div>
                             <div class="col-span-2 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    -
-                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">-</p>
                             </div>
                             <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-gray-500 dark:text-gray-400">
-                                     {{ number_format($principal, 2) }}
-                                </p>
+                                <p class="text-right text-sm text-gray-500 dark:text-gray-400">{{ number_format($principal, 2) }}</p>
                             </div>
                         </div>
 
+                        <!-- Interest -->
                         <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
                             <div class="col-span-1 flex items-center">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">2</p>
                             </div>
                             <div class="col-span-5 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    Interest ({{ number_format($interest_rate, 0) }}%)
-                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Interest ({{ number_format($interest_rate, 0) }}%)</p>
                             </div>
                             <div class="col-span-2 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    - {{-- KES {{ number_format($interest, 2) }} * 1  --}}
-                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">-</p>
                             </div>
                             <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-gray-500 dark:text-gray-400">
-                                    {{ number_format($interest, 2) }}
-                                </p>
+                                <p class="text-right text-sm text-gray-500 dark:text-gray-400">{{ number_format($interest, 2) }}</p>
                             </div>
                         </div>
 
+                        <!-- Penalties -->
                         @if($penalty_amount > 0)
                         <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
                             <div class="col-span-1 flex items-center">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">3</p>
                             </div>
                             <div class="col-span-5 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    Penalties ({{ number_format($base_penalty_rate, 0) }}% daily)
-                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Penalties ({{ number_format($base_penalty_rate, 0) }}% daily)</p>
                             </div>
                             <div class="col-span-2 flex items-center">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -376,113 +340,79 @@
                                 </p>
                             </div>
                             <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-red-500 dark:text-red-400">
-                                    {{ number_format($penalty_amount, 2) }}
-                                </p>
+                                <p class="text-right text-sm text-red-500 dark:text-red-400">{{ number_format($penalty_amount, 2) }}</p>
                             </div>
                         </div>
                         @endif
 
+                        <!-- Broker Fees -->
                         @if($is_brokered)
                         <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
                             <div class="col-span-1 flex items-center">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">4</p>
                             </div>
                             <div class="col-span-5 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    Broker Fees (Interest {{ number_format($brokerRate, 0) }}% +Penalties {{ number_format($penalty_rate, 0) }}%)
-                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Broker Fees (Interest {{ number_format($brokerRate, 0) }}% + Penalties {{ number_format($penalty_rate, 0) }}%)</p>
                             </div>
                             <div class="col-span-2 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    KES {{ number_format($total_broker_fees, 2) }}
-                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">KES {{ number_format($total_broker_fees, 2) }}</p>
                             </div>
                             <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-gray-500 dark:text-gray-400">
-                                    -
-                                </p>
+                                <p class="text-right text-sm text-gray-500 dark:text-gray-400">-</p>
                             </div>
                         </div>
                         @endif
 
+                        <!-- Total Repayments -->
                         <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
                             <div class="col-span-1 flex items-center">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">5</p>
                             </div>
                             <div class="col-span-5 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    Total Repayments
-                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Total Repayments</p>
                             </div>
                             <div class="col-span-2 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    -
-                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">-</p>
                             </div>
                             <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-green-500 dark:text-green-400">
-                                    -{{ number_format($total_repayments, 2) }}
-                                </p>
+                                <p class="text-right text-sm text-green-500 dark:text-green-400">-{{ number_format($total_repayments, 2) }}</p>
                             </div>
                         </div>
-                        <!-- table body end -->
                     </div>
                 </div>
             </div>
-            <!-- Loan Charges Table End -->
 
+            <!-- Summary -->
             <div class="my-6 border-b border-gray-100 pb-6 dark:border-gray-800">
                 <div class="flex justify-between mb-2">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Principal + Interest + Penalties:
-                    </p>
-                    <p class="text-sm text-gray-700 dark:text-gray-300">
-                        KES {{ number_format($principal_plus_interest + $penalty_amount, 2) }}
-                    </p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Principal + Interest + Penalties:</p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">KES {{ number_format($principal_plus_interest + $penalty_amount, 2) }}</p>
                 </div>
-                
                 
                 <div class="flex justify-between mb-3">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Repayments:
-                    </p>
-                    <p class="text-sm text-gray-700 dark:text-gray-300">
-                        -KES {{ number_format($total_repayments, 2) }}
-                    </p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Repayments:</p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">-KES {{ number_format($total_repayments, 2) }}</p>
                 </div>
-                {{-- <div class="flex justify-between mb-3">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Grand Total:
-                    </p>
-                    <p class="text-sm text-gray-700 dark:text-gray-300">
-                        KES {{ number_format($total_repayments - $principal_plus_interest + $penalty_amount, 2) }}
-                    </p>
-                </div> --}}
 
                 <div class="flex justify-between pt-4 border-t">
-                    <p class="text-lg font-semibold text-gray-800 dark:text-white/90">
-                        Balance Due:
-                    </p>
+                    <p class="text-lg font-semibold text-gray-800 dark:text-white/90">Balance Due:</p>
                     <p class="text-lg font-bold @if($outstanding_balance > 0) text-red-600 @else text-green-600 @endif">
                         KES {{ number_format($outstanding_balance, 2) }}
                     </p>
                 </div>
-                
             </div>
-                
 
-            <!-- Disbursements and Repayments Section -->
+            <!-- Disbursements and Repayments -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <!-- Disbursements -->
-                <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+                <div class="bg-white p-4 rounded-lg shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-lg font-semibold">Disbursements</h3>
                         @if(auth()->user()->role !== 'borrower')
-                            <a href="{{ route('disbursements.create', ['loan_id' => $loan->id]) }}" 
-                            class="text-xs bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded">
+                            <button onclick="openDisbursementModal({{ $loan->id }})" 
+                                class="text-xs bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded">
                                 + Add
-                            </a>
+                            </button>
                         @endif
                     </div>
                     
@@ -491,16 +421,21 @@
                     @else
                         <div class="space-y-2">
                             @foreach($loan->disbursements as $disbursement)
-                                <div class="flex justify-between items-center border-b pb-2">
+                                <div class="flex justify-between items-center border-b pb-2 dark:border-gray-700">
                                     <div>
                                         <p class="text-sm font-medium">KES {{ number_format($disbursement->amount, 2) }}</p>
-                                        <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($disbursement->disburse_date)->format('M d, Y') }}</p>
+                                        <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($disbursement->disburse_date)->format('M d, Y H:i') }}</p>
+                                        @if($disbursement->transaction_ref)
+                                            <p class="text-xs text-gray-400">Ref: {{ $disbursement->transaction_ref }}</p>
+                                        @endif
                                     </div>
-                                    <div>
+                                    <div class="text-right">
                                         <p class="text-xs text-gray-500">{{ $disbursement->transaction ?? 'N/A' }}</p>
+                                        <p class="text-xs text-gray-400">{{ $disbursement->mode ?? '' }}</p>
                                         @if(auth()->user()->role !== 'borrower')
-                                        <div class="flex space-x-1 mt-1">
-                                            <a href="{{ route('disbursements.edit', $disbursement->id) }}" class="text-blue-600 text-xs hover:underline">Edit</a>
+                                        <div class="flex space-x-1 mt-1 justify-end">
+                                            <button onclick="openDisbursementModal(null, {{ json_encode($disbursement) }})" 
+                                                class="text-blue-600 text-xs hover:underline">Edit</button>
                                             <form action="{{ route('disbursements.destroy', $disbursement->id) }}" method="POST" class="inline">
                                                 @csrf
                                                 @method('DELETE')
@@ -520,14 +455,14 @@
                 </div>
 
                 <!-- Repayments -->
-                <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+                <div class="bg-white p-4 rounded-lg shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-lg font-semibold">Repayments</h3>
                         @if(auth()->user()->role !== 'borrower')
-                            <a href="{{ route('repayments.create', ['loan_id' => $loan->id]) }}" 
-                            class="text-xs bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded">
+                            <button onclick="openRepaymentModal({{ $loan->id }})" 
+                                class="text-xs bg-green-500 hover:bg-green-700 text-white py-1 px-2 rounded">
                                 + Add
-                            </a>
+                            </button>
                         @endif
                     </div>
                     
@@ -536,16 +471,21 @@
                     @else
                         <div class="space-y-2">
                             @foreach($loan->repayments as $repayment)
-                                <div class="flex justify-between items-center border-b pb-2">
+                                <div class="flex justify-between items-center border-b pb-2 dark:border-gray-700">
                                     <div>
                                         <p class="text-sm font-medium">KES {{ number_format($repayment->amount, 2) }}</p>
-                                        <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($repayment->repayment_date)->format('M d, Y') }}</p>
+                                        <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($repayment->repayment_date)->format('M d, Y H:i') }}</p>
+                                        @if($repayment->transaction_ref)
+                                            <p class="text-xs text-gray-400">Ref: {{ $repayment->transaction_ref }}</p>
+                                        @endif
                                     </div>
-                                    <div>
+                                    <div class="text-right">
                                         <p class="text-xs text-gray-500">{{ $repayment->transaction ?? 'N/A' }}</p>
+                                        <p class="text-xs text-gray-400">{{ $repayment->mode ?? '' }}</p>
                                         @if(auth()->user()->role !== 'borrower')
-                                        <div class="flex space-x-1 mt-1">
-                                            <a href="{{ route('repayments.edit', $repayment->id) }}" class="text-blue-600 text-xs hover:underline">Edit</a>
+                                        <div class="flex space-x-1 mt-1 justify-end">
+                                            <button onclick="openRepaymentModal(null, {{ json_encode($repayment) }})" 
+                                                class="text-blue-600 text-xs hover:underline">Edit</button>
                                             <form action="{{ route('repayments.destroy', $repayment->id) }}" method="POST" class="inline">
                                                 @csrf
                                                 @method('DELETE')
@@ -562,27 +502,15 @@
                             </div>
                         </div>
                     @endif
-                </div> 
+                </div>
             </div>
 
+            <!-- Print Button -->
             <div class="flex items-center justify-end gap-3">
                 <button onclick="window.print()"
-                    class="flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
-                >
-                    <svg
-                        class="fill-current"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            fill-rule="evenodd"
-                            clip-rule="evenodd"
-                            d="M6.99578 4.08398C6.58156 4.08398 6.24578 4.41977 6.24578 4.83398V6.36733H13.7542V5.62451C13.7542 5.42154 13.672 5.22724 13.5262 5.08598L12.7107 4.29545C12.5707 4.15983 12.3835 4.08398 12.1887 4.08398H6.99578ZM15.2542 6.36902V5.62451C15.2542 5.01561 15.0074 4.43271 14.5702 4.00891L13.7547 3.21839C13.3349 2.81151 12.7733 2.58398 12.1887 2.58398H6.99578C5.75314 2.58398 4.74578 3.59134 4.74578 4.83398V6.36902C3.54391 6.41522 2.58374 7.40415 2.58374 8.61733V11.3827C2.58374 12.5959 3.54382 13.5848 4.74561 13.631V15.1665C4.74561 16.4091 5.75297 17.4165 6.99561 17.4165H13.0041C14.2467 17.4165 15.2541 16.4091 15.2541 15.1665V13.6311C16.456 13.585 17.4163 12.596 17.4163 11.3827V8.61733C17.4163 7.40414 16.4561 6.41521 15.2542 6.36902ZM4.74561 11.6217V12.1276C4.37292 12.084 4.08374 11.7671 4.08374 11.3827V8.61733C4.08374 8.20312 4.41953 7.86733 4.83374 7.86733H15.1663C15.5805 7.86733 15.9163 8.20312 15.9163 8.61733V11.3827C15.9163 11.7673 15.6269 12.0842 15.2541 12.1277V11.6217C15.2541 11.2075 14.9183 10.8717 14.5041 10.8717H5.49561C5.08139 10.8717 4.74561 11.2075 4.74561 11.6217ZM6.24561 12.3717V15.1665C6.24561 15.5807 6.58139 15.9165 6.99561 15.9165H13.0041C13.4183 15.9165 13.7541 15.5807 13.7541 15.1665V12.3717H6.24561Z"
-                            fill=""
-                        />
+                    class="flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600">
+                    <svg class="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M6.99578 4.08398C6.58156 4.08398 6.24578 4.41977 6.24578 4.83398V6.36733H13.7542V5.62451C13.7542 5.42154 13.672 5.22724 13.5262 5.08598L12.7107 4.29545C12.5707 4.15983 12.3835 4.08398 12.1887 4.08398H6.99578ZM15.2542 6.36902V5.62451C15.2542 5.01561 15.0074 4.43271 14.5702 4.00891L13.7547 3.21839C13.3349 2.81151 12.7733 2.58398 12.1887 2.58398H6.99578C5.75314 2.58398 4.74578 3.59134 4.74578 4.83398V6.36902C3.54391 6.41522 2.58374 7.40415 2.58374 8.61733V11.3827C2.58374 12.5959 3.54382 13.5848 4.74561 13.631V15.1665C4.74561 16.4091 5.75297 17.4165 6.99561 17.4165H13.0041C14.2467 17.4165 15.2541 16.4091 15.2541 15.1665V13.6311C16.456 13.585 17.4163 12.596 17.4163 11.3827V8.61733C17.4163 7.40414 16.4561 6.41521 15.2542 6.36902ZM4.74561 11.6217V12.1276C4.37292 12.084 4.08374 11.7671 4.08374 11.3827V8.61733C4.08374 8.20312 4.41953 7.86733 4.83374 7.86733H15.1663C15.5805 7.86733 15.9163 8.20312 15.9163 8.61733V11.3827C15.9163 11.7673 15.6269 12.0842 15.2541 12.1277V11.6217C15.2541 11.2075 14.9183 10.8717 14.5041 10.8717H5.49561C5.08139 10.8717 4.74561 11.2075 4.74561 11.6217ZM6.24561 12.3717V15.1665C6.24561 15.5807 6.58139 15.9165 6.99561 15.9165H13.0041C13.4183 15.9165 13.7541 15.5807 13.7541 15.1665V12.3717H6.24561Z" fill=""/>
                     </svg>
                     Print Statement
                 </button>
@@ -590,6 +518,12 @@
         </div>
     </div>
 </div>
+
+{{-- Include Modals --}}
+@include('partials.modal.disbursement-create-modal')
+@include('partials.modal.repayment-create-modal')
+@include('partials.modal.alert-modal')
+
 @endsection
 
 @push('styles')

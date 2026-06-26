@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Disbursement;
 use App\Models\Loan;
-use App\Models\User;
 use Illuminate\Http\Request;
 
 class DisbursementController extends Controller
@@ -12,17 +11,11 @@ class DisbursementController extends Controller
     public function index()
     {
         if (auth()->user()->role === 'admin') {
-            // Load all disbursements with their associated loans and users
             $disbursements = Disbursement::with(['loan.user'])->get();
-            return view('disbursements.index', [
-                'disbursements' => $disbursements,
-            ]);
+            return view('disbursements.index', compact('disbursements'));
         } else {
-            // Load loans for the authenticated user with their disbursements
             $loans = auth()->user()->loans()->with('disbursements')->get();
-            return view('disbursements.index', [
-                'loans' => $loans,
-            ]);
+            return view('disbursements.index', compact('loans'));
         }
     }
 
@@ -35,23 +28,52 @@ class DisbursementController extends Controller
     public function create(Request $request)
     {
         $loan = Loan::findOrFail($request->loan_id);
-      
         $loans = Loan::all();
-        return view('disbursements.create', compact('loans','loan'));
+        return view('disbursements.create', compact('loans', 'loan'));
     }
 
-    public function store(Request $request, Loan $loan)
+    public function store(Request $request)
     {
-        $request->validate([
-            'amount' => 'required|numeric',
+        $validated = $request->validate([
+            'loan_id' => 'required|exists:loans,id',
+            'amount' => 'required|numeric|min:0.01',
             'disburse_date' => 'required|date',
-            'payment_date' => 'required|date',
-            'mode' => 'required|string',
+            'transaction' => 'required|string|max:255',
+            'mode' => 'nullable|string|max:100',
+            'payment_date' => 'nullable|date',
         ]);
-        Disbursement::create($request->all());
-        $user = $loan->user->id;
-        // /users/{user}/loans/{loan}
-        return redirect()->to("/users/$user/loans/$loan->id");
+
+        $disbursement = Disbursement::create($validated);
+
+        // Update loan status if approved
+        $loan = Loan::find($validated['loan_id']);
+        if ($loan && $loan->status === 'approved') {
+            $loan->status = 'disbursed';
+            $loan->save();
+        }
+
+        return response()->json([
+            'message' => 'Disbursement created successfully!',
+            'data' => $disbursement
+        ], 201);
+    }
+
+    public function update(Request $request, Disbursement $disbursement)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'disburse_date' => 'required|date',
+            'transaction' => 'required|string|max:255',
+            'mode' => 'nullable|string|max:100',
+            'payment_date' => 'nullable|date',
+        ]);
+
+        $disbursement->update($validated);
+
+        return response()->json([
+            'message' => 'Disbursement updated successfully!',
+            'data' => $disbursement
+        ], 200);
     }
 
     public function destroy($id)
@@ -59,31 +81,14 @@ class DisbursementController extends Controller
         $disbursement = Disbursement::findOrFail($id);
         $disbursement->delete();
 
-        return redirect()->back();
+        return response()->json([
+            'message' => 'Disbursement deleted successfully!'
+        ], 200);
     }
 
     public function edit(Disbursement $disbursement)
     {
-        // Load related loan data
         $disbursement->load('loan');
         return view('disbursements.edit', compact('disbursement'));
-    }
-
-    public function update(Request $request, Disbursement $disbursement)
-    {
-        $request->validate([
-            'amount' => 'required|numeric',
-            'disburse_date' => 'required|date',
-            'payment_date' => 'required|date',
-            'mode' => 'required|string',
-        ]);
-
-        $disbursement->update($request->only([
-            'amount', 'disburse_date', 'payment_date', 'mode'
-        ]));
-
-        // Redirect back to loan details
-        $loan = $disbursement->loan;
-        return redirect()->to("/users/{$loan->user_id}/loans/{$loan->id}");
     }
 }
