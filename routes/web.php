@@ -1,4 +1,5 @@
 <?php
+// routes/web.php
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\SystemController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\LoanController;
 use App\Http\Controllers\DisbursementController;
 use App\Http\Controllers\RepaymentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReportController;
 
 // Public Routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -62,7 +64,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Custom Loan Routes
     Route::prefix('loans/{loan}')->name('loans.')->group(function () {
-        // PDF generation - keep the original parameter name 'id' for user_id
         Route::get('/generate-pdf/{loanId}', [LoanController::class, 'generatePdf'])->name('generatePdf');
         Route::get('/agreement/download', [LoanController::class, 'downloadAgreement'])->name('agreement.download');
         Route::get('/agreement/show', [LoanController::class, 'showAgreement'])->name('agreement.show');
@@ -80,7 +81,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Repayments Resource
     Route::resource('repayments', RepaymentController::class);
 
- 
+    // ============ REPORTS ROUTES ============
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::get('/{reportType}', [ReportController::class, 'show'])->name('show');
+        Route::get('/export', [ReportController::class, 'export'])->name('export');
+    });
 
     // System Settings
     Route::prefix('system')->name('system.')->group(function () {

@@ -382,7 +382,7 @@
           <!-- Menu Item Loan Reports -->
           <li>
             <a
-              href="{{ route('loans.index') }}"
+              href="{{ route('reports.index') }}"
               @click="selected = (selected === 'LoanReports' ? '':'LoanReports')"
               class="menu-item group"
               :class=" (selected === 'LoanReports') || (page === 'loanReports') ? 'menu-item-active' : 'menu-item-inactive'"
