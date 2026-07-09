@@ -12,6 +12,8 @@ use App\Http\Controllers\DisbursementController;
 use App\Http\Controllers\RepaymentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\InvestmentController;
+use App\Http\Controllers\PartnerController;
 
 // Public Routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -86,6 +88,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('index');
         Route::get('/{reportType}', [ReportController::class, 'show'])->name('show');
         Route::get('/export', [ReportController::class, 'export'])->name('export');
+    });
+
+    // ============ INVESTMENT ROUTES ============
+    Route::prefix('investments')->name('investments.')->middleware(['auth', 'verified'])->group(function () {
+        Route::get('/', [InvestmentController::class, 'index'])->name('index');
+        Route::get('/{investment}', [InvestmentController::class, 'show'])->name('show');
+        Route::post('/store', [InvestmentController::class, 'store'])->name('store');
+        Route::put('/update/{investment}', [InvestmentController::class, 'update'])->name('update');
+        Route::delete('/destroy/{investment}', [InvestmentController::class, 'destroy'])->name('destroy');
+        Route::post('/{investment}/note', [InvestmentController::class, 'addNote'])->name('note.add');
+        Route::post('/{investment}/milestone', [InvestmentController::class, 'addMilestone'])->name('milestone.add');
+        Route::post('/{investment}/funding', [InvestmentController::class, 'addFunding'])->name('funding.add');
+        Route::get('/data', [InvestmentController::class, 'getData'])->name('data');
+        Route::get('/stats', [InvestmentController::class, 'getStats'])->name('stats');
+    });
+
+    // ============ PARTNER ROUTES ============
+    Route::prefix('partners')->name('partners.')->middleware(['auth', 'verified'])->group(function () {
+        Route::get('/', [PartnerController::class, 'index'])->name('index');
+        Route::get('/show/{partner}', [PartnerController::class, 'show'])->name('show');
+        Route::post('/store', [PartnerController::class, 'store'])->name('store');
+        Route::put('/update/{partner}', [PartnerController::class, 'update'])->name('update');
+        Route::delete('/destroy/{partner}', [PartnerController::class, 'destroy'])->name('destroy');
+        Route::post('/{partner}/contribution', [PartnerController::class, 'addContribution'])->name('contribution.add');
+        Route::post('/{partner}/withdraw', [PartnerController::class, 'withdraw'])->name('withdraw');
+        Route::post('/{partner}/profit', [PartnerController::class, 'distributeProfit'])->name('profit.distribute');
+        Route::get('/data', [PartnerController::class, 'getData'])->name('data');
+        Route::get('/stats', [PartnerController::class, 'getStats'])->name('stats');
     });
 
     // System Settings

@@ -1,4 +1,5 @@
 <?php
+// app/Models/User.php
 
 namespace App\Models;
 
@@ -7,11 +8,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
-
 
     protected $fillable = [
         'name', 
@@ -57,9 +56,9 @@ class User extends Authenticatable
             'disability' => 'boolean',
         ];
     }
-    /**
-     * Get social links with proper URLs
-     */
+
+    // ============ SOCIAL LINKS ============
+    
     public function getSocialLinksAttribute()
     {
         $social = $this->social ?: [];
@@ -85,9 +84,6 @@ class User extends Authenticatable
         return $links;
     }
 
-    /**
-     * Extract username from URL or return as-is
-     */
     public function getSocialUsernamesAttribute()
     {
         $social = $this->social ?: [];
@@ -100,21 +96,16 @@ class User extends Authenticatable
         return $usernames;
     }
 
-    /**
-     * Helper to extract username from URL
-     */
     private function extractUsername($url)
     {
         if (empty($url)) {
             return '';
         }
         
-        // If it's already a username (no dots, no slashes), return it
         if (!str_contains($url, '.') && !str_contains($url, '/')) {
             return $url;
         }
         
-        // Remove protocol and domain
         $patterns = [
             'facebook' => [
                 '/^https?:\/\/(www\.)?facebook\.com\//',
@@ -132,7 +123,6 @@ class User extends Authenticatable
             ]
         ];
         
-        // Try to match known patterns
         foreach ($patterns as $platformPatterns) {
             foreach ($platformPatterns as $pattern) {
                 if (preg_match($pattern, $url)) {
@@ -141,31 +131,22 @@ class User extends Authenticatable
             }
         }
         
-        // If no match, return as-is
         return $url;
     }
 
-    /**
-     * Helper to create full URL from username
-     */
     private function getSocialUrl($value, $baseUrl)
     {
         if (empty($value)) {
             return null;
         }
         
-        // If it's already a URL, return it
         if (filter_var($value, FILTER_VALIDATE_URL)) {
             return $value;
         }
         
-        // Otherwise, append to base URL
         return rtrim($baseUrl, '/') . '/' . ltrim($value, '/');
     }
 
-    /**
-     * Prepare social data for storage
-     */
     public function prepareSocialData($data)
     {
         $social = [];
@@ -175,14 +156,11 @@ class User extends Authenticatable
                 continue;
             }
             
-            // Clean the value
             $value = trim($value);
             
-            // If it's a full URL, store as-is
             if (filter_var($value, FILTER_VALIDATE_URL)) {
                 $social[$platform] = $value;
             } else {
-                // Store as username
                 $social[$platform] = $this->cleanUsername($value);
             }
         }
@@ -190,15 +168,13 @@ class User extends Authenticatable
         return $social;
     }
 
-    /**
-     * Clean username (remove @ symbol, trim)
-     */
     private function cleanUsername($username)
     {
         return ltrim(trim($username), '@');
     }
 
-    // Relationships
+    // ============ RELATIONSHIPS ============
+
     public function borrower()
     {
         return $this->hasOne(Borrower::class, 'user_id');
@@ -217,6 +193,14 @@ class User extends Authenticatable
     public function admin()
     {
         return $this->hasOne(Admin::class);
+    }
+
+    /**
+     * Partner relationship - A user can be a partner
+     */
+    public function partner()
+    {
+        return $this->hasOne(Partner::class);
     }
 
     public function loans()
@@ -263,7 +247,29 @@ class User extends Authenticatable
         return $this->hasMany(Loan::class, 'guarantor_id');
     }
 
-    // Scopes
+    // ============ HELPER METHODS ============
+
+    public function isPartner(): bool
+    {
+        return $this->role === 'partner' && $this->partner;
+    }
+
+    public function getPartnerDashboardAttribute()
+    {
+        if (!$this->isPartner()) {
+            return null;
+        }
+
+        return [
+            'partner' => $this->partner,
+            'transactions' => $this->partner->transactions()->latest()->limit(10)->get(),
+            'investments' => $this->partner->investments,
+            'loan_allocations' => $this->partner->loanAllocations
+        ];
+    }
+
+    // ============ SCOPES ============
+
     public function scopeBorrowers($query)
     {
         return $query->where('role', 'borrower');
@@ -279,7 +285,13 @@ class User extends Authenticatable
         return $query->where('role', 'teller');
     }
 
-    // Helper Methods
+    public function scopePartners($query)
+    {
+        return $query->where('role', 'partner');
+    }
+
+    // ============ ACCESSORS ============
+
     public function getAgeAttribute()
     {
         return $this->dob ? $this->dob->age : null;
@@ -311,7 +323,6 @@ class User extends Authenticatable
         ];
     }
 
-
     public function getAvatarUrlAttribute()
     {
         return $this->avatar ? Storage::url($this->avatar) : null;
@@ -332,7 +343,9 @@ class User extends Authenticatable
         return $this->signature ? Storage::url($this->signature) : null;
     }
 
-     public function getBiodataCompletionBySections()
+    // ============ BIODATA COMPLETION ============
+
+    public function getBiodataCompletionBySections()
     {
         $sections = [
             'personal' => [
@@ -425,25 +438,18 @@ class User extends Authenticatable
         ];
     }
 
-
     public function hasCompleteBiodata($threshold = 80)
     {
         $completionData = $this->getBiodataCompletionBySections();
         return $completionData['overall_percentage'] >= $threshold;
     }
 
-    /**
-     * Get biodata completion percentage
-     */
     public function getBiodataCompletionPercentage()
     {
         $completionData = $this->getBiodataCompletionBySections();
         return $completionData['overall_percentage'];
     }
 
-    /**
-     * Get missing biodata fields
-     */
     public function getMissingBiodataFields()
     {
         $missingFields = [];
@@ -457,5 +463,4 @@ class User extends Authenticatable
         
         return array_unique($missingFields);
     }
-
 }
