@@ -107,7 +107,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ============ PARTNER ROUTES ============
     Route::prefix('partners')->name('partners.')->middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [PartnerController::class, 'index'])->name('index');
-        Route::get('/show/{partner}', [PartnerController::class, 'show'])->name('show');
+        Route::get('/{partner}', [PartnerController::class, 'show'])->name('show');
         Route::post('/store', [PartnerController::class, 'store'])->name('store');
         Route::put('/update/{partner}', [PartnerController::class, 'update'])->name('update');
         Route::delete('/destroy/{partner}', [PartnerController::class, 'destroy'])->name('destroy');

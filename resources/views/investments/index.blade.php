@@ -28,7 +28,7 @@
     <!-- Stats Cards -->
     @include('partials.card.investments-stats-card')
 
-    <!-- Investment Table (Contains ALL modals) -->
-    @include('partials.table.table-investments', ['investments' => $investments, 'partners' => $partners ?? []])
+    <!-- Investment Table -->
+    @include('partials.table.table-investments', ['investments' => $investments, 'partners' => $partners ?? [], 'users' => $users ?? []])
 </div>
 @endsection

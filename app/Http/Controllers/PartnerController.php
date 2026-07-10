@@ -11,9 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class PartnerController extends Controller
 {
-    /**
-     * Display a listing of partners.
-     */
+
     public function index()
     {
         $partners = Partner::with(['user'])
@@ -22,10 +20,12 @@ class PartnerController extends Controller
             ->map(function ($partner) {
                 return [
                     'id' => $partner->id,
+                    'user_id' => $partner->user_id,
                     'name' => $partner->name,
                     'email' => $partner->email,
                     'phone' => $partner->phone,
                     'company_name' => $partner->company_name,
+                    'registration_number' => $partner->registration_number,
                     'type' => $partner->type,
                     'status' => $partner->status,
                     'total_contribution' => $partner->total_contribution,
@@ -33,6 +33,15 @@ class PartnerController extends Controller
                     'total_invested' => $partner->total_invested,
                     'total_returned' => $partner->total_returned,
                     'net_position' => $partner->net_position,
+                    'profit_share_rate' => $partner->profit_share_rate,
+                    'max_loan_to_value' => $partner->max_loan_to_value,
+                    'risk_tolerance' => $partner->risk_tolerance,
+                    'bank_account_name' => $partner->bank_account_name,
+                    'bank_account_number' => $partner->bank_account_number,
+                    'bank_name' => $partner->bank_name,
+                    'swift_code' => $partner->swift_code,
+                    'tax_id' => $partner->tax_id,
+                    'notes' => $partner->notes,
                     'created_at' => $partner->created_at?->format('Y-m-d H:i:s'),
                     'user_name' => $partner->user?->name ?? 'No User',
                 ];
@@ -47,7 +56,10 @@ class PartnerController extends Controller
             'total_returned' => $partners->sum('total_returned'),
         ];
 
-        $users = User::where('role', 'partner')->whereDoesntHave('partner')->get();
+        // Get users that can be associated with partners
+        $users = User::where('role', 'partner')
+            ->orWhereDoesntHave('partner')
+            ->get(['id', 'name', 'email', 'role']);
 
         return view('partners.index', compact('partners', 'stats', 'users'));
     }

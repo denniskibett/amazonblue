@@ -11,56 +11,28 @@ class Investment extends Model
     use HasFactory;
 
     protected $fillable = [
-        // Basic Info
+        'user_id',
         'name', 'type', 'sector', 'sub_sector',
         'country', 'region', 'city', 'address',
-        
-        // Corporate Structure
         'company_name', 'registration_number', 'incorporation_date', 'legal_structure',
-        
-        // Financials (Pre-Investment)
         'ebitda_pre_investment', 'revenue_pre_investment', 'net_profit_pre_investment',
         'total_assets_pre_investment', 'total_liabilities_pre_investment',
-        
-        // Financials (Current)
         'current_value', 'expected_return', 'actual_return',
         'revenue_current', 'profit_current', 'valuation_current',
-        
-        // Investment Metrics
         'initial_amount', 'irr', 'payback_period_months', 'break_even_point',
-        
-        // Dates
         'purchase_date', 'maturity_date', 'exit_date',
-        
-        // Risk
         'risk_rating', 'risk_factors',
-        
-        // Stakeholders (JSON)
         'stakeholders',
-        
-        // Documents
         'pitch_deck_path', 'financial_model_path', 'due_diligence_path', 'legal_docs',
-        
-        // Research
         'market_research', 'competitive_landscape', 'swot_analysis', 'key_assumptions',
-        
-        // Notes (JSON)
         'notes',
-        
-        // Tracking
         'status', 'stage', 'milestones',
-        
-        // Funding
         'total_funding_raised', 'funding_partners',
-        
-        // Updates
         'updates',
-        
         'created_by', 'updated_by'
     ];
 
     protected $casts = [
-        // Financials
         'ebitda_pre_investment' => 'decimal:2',
         'revenue_pre_investment' => 'decimal:2',
         'net_profit_pre_investment' => 'decimal:2',
@@ -76,8 +48,6 @@ class Investment extends Model
         'irr' => 'decimal:2',
         'break_even_point' => 'decimal:2',
         'total_funding_raised' => 'decimal:2',
-        
-        // JSON Fields
         'risk_factors' => 'array',
         'stakeholders' => 'array',
         'legal_docs' => 'array',
@@ -86,8 +56,6 @@ class Investment extends Model
         'milestones' => 'array',
         'funding_partners' => 'array',
         'updates' => 'array',
-        
-        // Dates
         'incorporation_date' => 'date',
         'purchase_date' => 'date',
         'maturity_date' => 'date',
@@ -95,6 +63,11 @@ class Investment extends Model
     ];
 
     // ============ RELATIONSHIPS ============
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function disbursements()
     {

@@ -1,6 +1,7 @@
 {{-- resources/views/partials/table/table-investments.blade.php --}}
 @php
     $partners = $partners ?? [];
+    $users = $users ?? [];
 @endphp
 
 <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6"
@@ -45,7 +46,7 @@
       </div>
 
       <button 
-          @click="openCreateModal()"
+          @click="window.dispatchEvent(new CustomEvent('open-investment-create'))"
           class="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-theme-sm font-medium text-gray-500 shadow-theme-xs ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03]">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -69,6 +70,7 @@
               </span>
             </div>
           </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sector</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
@@ -114,10 +116,16 @@
                 <span class="text-blue-600 font-medium">{{ ucfirst(substr($investment['name'], 0, 1)) }}</span>
               </div>
               <div>
-                <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">{{ $investment['name'] }}</p>
+                <a href="{{ route('investments.show', $investment['id']) }}" class="hover:text-blue-600 dark:hover:text-blue-400">
+                  <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">{{ $investment['name'] }}</p>
+                </a>
                 <span class="text-gray-500 text-theme-xs dark:text-gray-400">{{ $investment['company_name'] ?? 'N/A' }}</span>
               </div>
             </div>
+          </td>
+
+          <td class="py-3 hidden sm:table-cell">
+            <span class="text-gray-800 text-theme-sm dark:text-white/90">{{ $investment['user_name'] ?? 'N/A' }}</span>
           </td>
 
           <td class="py-3 hidden sm:table-cell">
@@ -163,12 +171,12 @@
 
           <td class="py-3 text-right">
             <div class="flex justify-end space-x-3">
-              <button @click="showInvestment({{ $investment['id'] }})" class="text-blue-600 hover:text-blue-900" title="View">
+              <a href="{{ route('investments.show', $investment['id']) }}" class="text-blue-600 hover:text-blue-900" title="View">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                 </svg>
-              </button>
+              </a>
 
               <button @click="editInvestment({{ $investment['id'] }})" class="text-green-600 hover:text-green-900" title="Edit">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -188,10 +196,14 @@
           <td class="py-3 sm:hidden">
             <div class="flex items-center gap-3">
               <div class="h-[40px] w-[40px] overflow-hidden rounded-md bg-blue-100 flex items-center justify-center">
-                <span class="text-blue-600 font-medium">{{ ucfirst(substr($investment['name'], 0, 1)) }}</span>
+                <a href="{{ route('investments.show', $investment['id']) }}">
+                  <span class="text-blue-600 font-medium">{{ ucfirst(substr($investment['name'], 0, 1)) }}</span>
+                </a>
               </div>
               <div>
-                <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">{{ $investment['name'] }}</p>
+                <a href="{{ route('investments.show', $investment['id']) }}" class="hover:text-blue-600 dark:hover:text-blue-400">
+                  <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">{{ $investment['name'] }}</p>
+                </a>
                 <span class="text-gray-500 text-theme-xs dark:text-gray-400">{{ $investment['company_name'] ?? 'N/A' }}</span>
               </div>
             </div>
@@ -202,12 +214,12 @@
           </td>
 
           <td class="py-3 sm:hidden text-right">
-            <button @click="showInvestment({{ $investment['id'] }})" class="text-blue-600 hover:text-blue-900 inline-block mr-2" title="View">
+            <a href="{{ route('investments.show', $investment['id']) }}" class="text-blue-600 hover:text-blue-900 inline-block mr-2" title="View">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               </svg>
-            </button>
+            </a>
           
             <button @click="editInvestment({{ $investment['id'] }})" class="text-green-600 hover:text-green-900 inline-block mr-2" title="Edit">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -224,7 +236,7 @@
         </tr>
       @empty
         <tr>
-          <td colspan="8" class="py-8 text-center">
+          <td colspan="9" class="py-8 text-center">
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -255,7 +267,7 @@
   </div>
 
   <!-- Create/Edit Modal -->
-  @include('partials.modal.investments-create-modal', ['partners' => $partners])
+  @include('partials.modal.investments-create-modal', ['partners' => $partners, 'users' => $users])
 
   <!-- Show Modal -->
   @include('partials.modal.investments-show-modal')
@@ -300,17 +312,14 @@ document.addEventListener('alpine:init', function() {
                 this.filteredData = [...this.allData];
                 this.updateTable();
 
-                // Listen for refresh events
                 window.addEventListener('refresh-investments', () => {
                     console.log('Refresh event received');
                     this.refreshData();
                 });
             },
 
-            // This is the key method that opens the create modal
             openCreateModal() {
                 console.log('Open create modal triggered');
-                // Dispatch event to open the create modal
                 window.dispatchEvent(new CustomEvent('open-investment-create'));
             },
 
@@ -321,17 +330,18 @@ document.addEventListener('alpine:init', function() {
                 }));
             },
 
-            editInvestment(investment) {
-                console.log('Edit investment:', investment);
-                window.dispatchEvent(new CustomEvent('edit-investment', {
-                    detail: { investment }
-                }));
+            editInvestment(id) {
+                const investment = this.allData.find(item => item.id === id);
+                if (investment) {
+                    window.dispatchEvent(new CustomEvent('edit-investment', {
+                        detail: { investment }
+                    }));
+                }
             },
 
-            deleteInvestment(investment) {
-                console.log('Delete investment:', investment);
+            deleteInvestment(id, name) {
                 window.dispatchEvent(new CustomEvent('delete-investment', {
-                    detail: { id: investment.id, name: investment.name }
+                    detail: { id, name }
                 }));
             },
 

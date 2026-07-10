@@ -2,6 +2,7 @@
 <div x-data="partnerFormModal()" 
      x-init="initPartnerModal()"
      x-show="isOpen" 
+     x-cloak
      class="fixed inset-0 z-99999 overflow-y-auto" 
      style="display: none;"
      x-transition:enter="transition ease-out duration-300"
@@ -31,90 +32,134 @@
                     @csrf
                     <input type="hidden" x-model="formData.id">
                     
-                    <!-- Basic Information -->
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <!-- User Association (only for admin) -->
+                    <div x-show="isAdmin" class="border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h5 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">User Association</h5>
                         <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                Partner Name <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" 
-                                   x-model="formData.name" 
-                                   class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                                   placeholder="e.g., John Doe" required>
-                            <template x-if="errors.name">
-                                <p class="mt-1 text-sm text-red-500" x-text="errors.name[0]"></p>
+                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Associate with User</label>
+                            <div class="relative z-20 bg-transparent">
+                                <select x-model="formData.user_id" 
+                                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30">
+                                    <option value="">-- No User --</option>
+                                    <template x-for="user in users" :key="user.id">
+                                        <option :value="user.id" x-text="user.name + ' (' + user.email + ')'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Associating a user allows them to log in and manage this partner account.</p>
+                            <template x-if="errors.user_id">
+                                <p class="mt-1 text-sm text-red-500" x-text="errors.user_id[0]"></p>
                             </template>
                         </div>
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                Email <span class="text-red-500">*</span>
-                            </label>
-                            <input type="email" 
-                                   x-model="formData.email" 
-                                   class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                                   placeholder="john@example.com" required>
-                            <template x-if="errors.email">
-                                <p class="mt-1 text-sm text-red-500" x-text="errors.email[0]"></p>
-                            </template>
+                    </div>
+                    
+                    <!-- Basic Information -->
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h5 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">Basic Information</h5>
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                    Partner Name <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" 
+                                       x-model="formData.name" 
+                                       class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                                       placeholder="e.g., John Doe" required>
+                                <template x-if="errors.name">
+                                    <p class="mt-1 text-sm text-red-500" x-text="errors.name[0]"></p>
+                                </template>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                    Email <span class="text-red-500">*</span>
+                                </label>
+                                <input type="email" 
+                                       x-model="formData.email" 
+                                       class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                                       placeholder="john@example.com" required>
+                                <template x-if="errors.email">
+                                    <p class="mt-1 text-sm text-red-500" x-text="errors.email[0]"></p>
+                                </template>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Contact & Company -->
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Phone</label>
-                            <input type="text" 
-                                   x-model="formData.phone" 
-                                   class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                                   placeholder="+254 700 000 000">
-                        </div>
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Company Name</label>
-                            <input type="text" 
-                                   x-model="formData.company_name" 
-                                   class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                                   placeholder="e.g., ABC Investments Ltd">
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h5 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">Contact & Company</h5>
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Phone</label>
+                                <input type="text" 
+                                       x-model="formData.phone" 
+                                       class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                                       placeholder="+254 700 000 000">
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Company Name</label>
+                                <input type="text" 
+                                       x-model="formData.company_name" 
+                                       class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                                       placeholder="e.g., ABC Investments Ltd">
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Registration Number</label>
+                                <input type="text" 
+                                       x-model="formData.registration_number" 
+                                       class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                                       placeholder="e.g., PVT-2024-001">
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Tax ID</label>
+                                <input type="text" 
+                                       x-model="formData.tax_id" 
+                                       class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                                       placeholder="e.g., 12345678">
+                            </div>
                         </div>
                     </div>
 
                     <!-- Type & Status -->
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                Partner Type <span class="text-red-500">*</span>
-                            </label>
-                            <div class="relative z-20 bg-transparent">
-                                <select x-model="formData.type" 
-                                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                                    <option value="individual">Individual</option>
-                                    <option value="corporate">Corporate</option>
-                                    <option value="institutional">Institutional</option>
-                                </select>
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h5 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">Type & Status</h5>
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                    Partner Type <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative z-20 bg-transparent">
+                                    <select x-model="formData.type" 
+                                            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
+                                        <option value="individual">Individual</option>
+                                        <option value="corporate">Corporate</option>
+                                        <option value="institutional">Institutional</option>
+                                    </select>
+                                </div>
+                                <template x-if="errors.type">
+                                    <p class="mt-1 text-sm text-red-500" x-text="errors.type[0]"></p>
+                                </template>
                             </div>
-                            <template x-if="errors.type">
-                                <p class="mt-1 text-sm text-red-500" x-text="errors.type[0]"></p>
-                            </template>
-                        </div>
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                Status <span class="text-red-500">*</span>
-                            </label>
-                            <div class="relative z-20 bg-transparent">
-                                <select x-model="formData.status" 
-                                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                    <option value="suspended">Suspended</option>
-                                </select>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                    Status <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative z-20 bg-transparent">
+                                    <select x-model="formData.status" 
+                                            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                        <option value="suspended">Suspended</option>
+                                    </select>
+                                </div>
+                                <template x-if="errors.status">
+                                    <p class="mt-1 text-sm text-red-500" x-text="errors.status[0]"></p>
+                                </template>
                             </div>
-                            <template x-if="errors.status">
-                                <p class="mt-1 text-sm text-red-500" x-text="errors.status[0]"></p>
-                            </template>
                         </div>
                     </div>
 
                     <!-- Financial Settings -->
-                    <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
                         <h5 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">Financial Settings</h5>
                         <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
                             <div>
@@ -153,7 +198,7 @@
                     </div>
 
                     <!-- Banking Details -->
-                    <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
                         <h5 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">Banking Details</h5>
                         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             <div>
@@ -191,11 +236,14 @@
 
                     <!-- Notes -->
                     <div>
-                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Notes</label>
-                        <textarea x-model="formData.notes" 
-                                  rows="3" 
-                                  class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                                  placeholder="Any notes about this partner..."></textarea>
+                        <h5 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">Additional Information</h5>
+                        <div>
+                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Notes</label>
+                            <textarea x-model="formData.notes" 
+                                      rows="3" 
+                                      class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                                      placeholder="Any notes about this partner..."></textarea>
+                        </div>
                     </div>
 
                     <!-- Form Actions -->
@@ -224,76 +272,18 @@
 </div>
 
 <script>
-function partnerFormModal() {
-    return {
-        isOpen: false,
-        isSubmitting: false,
-        isEditMode: false,
-        errors: {},
-        formData: {
-            id: null,
-            name: '',
-            email: '',
-            phone: '',
-            company_name: '',
-            registration_number: '',
-            type: 'individual',
-            status: 'active',
-            profit_share_rate: '',
-            max_loan_to_value: '75',
-            risk_tolerance: 'moderate',
-            bank_account_name: '',
-            bank_account_number: '',
-            bank_name: '',
-            swift_code: '',
-            tax_id: '',
-            notes: ''
-        },
-        
-        get modalTitle() {
-            return this.isEditMode ? 'Edit Partner' : 'Create New Partner';
-        },
-        
-        get modalSubtitle() {
-            return this.isEditMode ? 'Update partner details' : 'Add a new partner to your network';
-        },
-        
-        get submitButtonText() {
-            return this.isEditMode ? 'Update Partner' : 'Create Partner';
-        },
-        
-        get loadingText() {
-            return this.isEditMode ? 'Updating...' : 'Creating...';
-        },
-        
-        get submitUrl() {
-            return this.isEditMode 
-                ? `/partners/update/${this.formData.id}`
-                : '{{ route("partners.store") }}';
-        },
-        
-        get method() {
-            return this.isEditMode ? 'PUT' : 'POST';
-        },
-        
-        initPartnerModal() {
-            // Listen for create event
-            window.addEventListener('open-partner-create', () => {
-                this.openCreate();
-            });
-            
-            // Listen for edit event
-            window.addEventListener('edit-partner', (event) => {
-                this.openEdit(event.detail.partner);
-            });
-        },
-        
-        openCreate() {
-            this.isEditMode = false;
-            this.isOpen = true;
-            this.errors = {};
-            this.formData = {
+document.addEventListener('alpine:init', function() {
+    Alpine.data('partnerFormModal', function() {
+        return {
+            isOpen: false,
+            isSubmitting: false,
+            isEditMode: false,
+            isAdmin: false,
+            errors: {},
+            users: [],
+            formData: {
                 id: null,
+                user_id: '',
                 name: '',
                 email: '',
                 phone: '',
@@ -310,78 +300,176 @@ function partnerFormModal() {
                 swift_code: '',
                 tax_id: '',
                 notes: ''
-            };
-            document.body.style.overflow = 'hidden';
-        },
-        
-        openEdit(partner) {
-            this.isEditMode = true;
-            this.isOpen = true;
-            this.errors = {};
-            this.formData = {
-                id: partner.id,
-                name: partner.name || '',
-                email: partner.email || '',
-                phone: partner.phone || '',
-                company_name: partner.company_name || '',
-                registration_number: partner.registration_number || '',
-                type: partner.type || 'individual',
-                status: partner.status || 'active',
-                profit_share_rate: partner.profit_share_rate || '',
-                max_loan_to_value: partner.max_loan_to_value || '75',
-                risk_tolerance: partner.risk_tolerance || 'moderate',
-                bank_account_name: partner.bank_account_name || '',
-                bank_account_number: partner.bank_account_number || '',
-                bank_name: partner.bank_name || '',
-                swift_code: partner.swift_code || '',
-                tax_id: partner.tax_id || '',
-                notes: partner.notes || ''
-            };
-            document.body.style.overflow = 'hidden';
-        },
-        
-        close() {
-            this.isOpen = false;
-            this.isSubmitting = false;
-            document.body.style.overflow = '';
-        },
-        
-        async submitForm() {
-            this.isSubmitting = true;
-            this.errors = {};
+            },
             
-            try {
-                const response = await fetch(this.submitUrl, {
-                    method: this.method,
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(this.formData)
+            get modalTitle() {
+                return this.isEditMode ? 'Edit Partner' : 'Create New Partner';
+            },
+            
+            get modalSubtitle() {
+                return this.isEditMode ? 'Update partner details' : 'Add a new partner to your network';
+            },
+            
+            get submitButtonText() {
+                return this.isEditMode ? 'Update Partner' : 'Create Partner';
+            },
+            
+            get loadingText() {
+                return this.isEditMode ? 'Updating...' : 'Creating...';
+            },
+            
+            get submitUrl() {
+                return this.isEditMode 
+                    ? `/partners/update/${this.formData.id}`
+                    : '{{ route("partners.store") }}';
+            },
+            
+            get method() {
+                return this.isEditMode ? 'PUT' : 'POST';
+            },
+            
+            initPartnerModal() {
+                console.log('Partner form modal initialized');
+                
+                // Check if user is admin (injected from Laravel)
+                this.isAdmin = {{ auth()->user()->role === 'admin' ? 'true' : 'false' }};
+                
+                // Load users from the users prop passed via Alpine
+                this.users = @json($users ?? []);
+                
+                // Listen for create event
+                window.addEventListener('open-partner-create', () => {
+                    console.log('Received open-partner-create event');
+                    this.openCreate();
                 });
                 
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    if (response.status === 422 && data.errors) {
-                        this.errors = data.errors;
-                        window.showAlert('error', 'Please check the form for errors.', 'Validation Error');
-                    } else {
-                        throw new Error(data.message || 'Failed to save partner');
-                    }
-                } else {
-                    window.showAlert('success', data.message || 'Partner saved successfully.', 'Success!');
-                    this.close();
-                    setTimeout(() => location.reload(), 500);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                window.showAlert('error', error.message || 'Failed to save partner.', 'Error');
-            } finally {
+                // Listen for edit event
+                window.addEventListener('edit-partner', (event) => {
+                    console.log('Received edit-partner event');
+                    this.openEdit(event.detail.partner);
+                });
+            },
+            
+            openCreate() {
+                this.isEditMode = false;
+                this.isOpen = true;
+                this.errors = {};
+                this.formData = {
+                    id: null,
+                    user_id: '',
+                    name: '',
+                    email: '',
+                    phone: '',
+                    company_name: '',
+                    registration_number: '',
+                    type: 'individual',
+                    status: 'active',
+                    profit_share_rate: '',
+                    max_loan_to_value: '75',
+                    risk_tolerance: 'moderate',
+                    bank_account_name: '',
+                    bank_account_number: '',
+                    bank_name: '',
+                    swift_code: '',
+                    tax_id: '',
+                    notes: ''
+                };
+                document.body.style.overflow = 'hidden';
+            },
+            
+            openEdit(partner) {
+                console.log('Opening edit for partner:', partner);
+                this.isEditMode = true;
+                this.isOpen = true;
+                this.errors = {};
+                this.formData = {
+                    id: partner.id || null,
+                    user_id: partner.user_id || '',
+                    name: partner.name || '',
+                    email: partner.email || '',
+                    phone: partner.phone || '',
+                    company_name: partner.company_name || '',
+                    registration_number: partner.registration_number || '',
+                    type: partner.type || 'individual',
+                    status: partner.status || 'active',
+                    profit_share_rate: partner.profit_share_rate || '',
+                    max_loan_to_value: partner.max_loan_to_value || '75',
+                    risk_tolerance: partner.risk_tolerance || 'moderate',
+                    bank_account_name: partner.bank_account_name || '',
+                    bank_account_number: partner.bank_account_number || '',
+                    bank_name: partner.bank_name || '',
+                    swift_code: partner.swift_code || '',
+                    tax_id: partner.tax_id || '',
+                    notes: partner.notes || ''
+                };
+                document.body.style.overflow = 'hidden';
+            },
+            
+            close() {
+                this.isOpen = false;
                 this.isSubmitting = false;
+                document.body.style.overflow = '';
+            },
+            
+            async submitForm() {
+                this.isSubmitting = true;
+                this.errors = {};
+                
+                try {
+                    console.log('Submitting form to:', this.submitUrl);
+                    console.log('Form data:', this.formData);
+                    
+                    const response = await fetch(this.submitUrl, {
+                        method: this.method,
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(this.formData)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        if (response.status === 422 && data.errors) {
+                            this.errors = data.errors;
+                            window.dispatchEvent(new CustomEvent('show-alert', {
+                                detail: {
+                                    type: 'error',
+                                    title: 'Validation Error',
+                                    message: Object.values(data.errors)[0][0] || 'Please check the form for errors.'
+                                }
+                            }));
+                        } else {
+                            throw new Error(data.message || 'Failed to save partner');
+                        }
+                    } else {
+                        window.dispatchEvent(new CustomEvent('show-alert', {
+                            detail: {
+                                type: 'success',
+                                title: 'Success!',
+                                message: data.message || 'Partner saved successfully.'
+                            }
+                        }));
+                        this.close();
+                        // Refresh the partners table
+                        window.dispatchEvent(new CustomEvent('refresh-partners'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    window.dispatchEvent(new CustomEvent('show-alert', {
+                        detail: {
+                            type: 'error',
+                            title: 'Error',
+                            message: error.message || 'Failed to save partner.'
+                        }
+                    }));
+                } finally {
+                    this.isSubmitting = false;
+                }
             }
-        }
-    }
-}
+        };
+    });
+});
 </script>
