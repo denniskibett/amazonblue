@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forgot Password | {{ SystemHelper::appName() }}</title>
+    <title>Forgot Password | {{ \App\Helpers\SystemHelper::appName() }}</title>
 
     @vite([
         'resources/css/app.css',
@@ -87,11 +87,11 @@
             <a href="{{ route('dashboard') }}" class="mb-4 block">
                   <img
                         class=" dark:block h-40 w-auto"
-                        src="{{ SystemHelper::logoUrl(true) ?? asset('images/logo/auth-logo-dark.svg') }}"
-                        alt="{{ SystemHelper::appName() }} Logo"
+                        src="{{ \App\Helpers\SystemHelper::logoUrl(true) ?? asset('images/logo/auth-logo-dark.svg') }}"
+                        alt="{{ \App\Helpers\SystemHelper::appName() }} Logo"
                     />
             </a>
-            <p class="text-center text-gray-400 dark:text-white/60">{{ SystemHelper::slogan() }}</p>
+            <p class="text-center text-gray-400 dark:text-white/60">{{ \App\Helpers\SystemHelper::slogan() }}</p>
         </div>
     </div>
 

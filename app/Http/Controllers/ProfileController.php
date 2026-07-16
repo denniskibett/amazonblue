@@ -29,12 +29,29 @@ class ProfileController extends Controller
         $completionPercentage = $user->getBiodataCompletionPercentage();
         $missingFields = $user->getMissingBiodataFields();
         
-        return view('profile.show', compact('user', 'completionPercentage', 'missingFields'));
+        // Check if profile is locked
+        $isProfileLocked = $user->shouldShowLock();
+        $loanStatusMessage = $user->getLoanStatusMessage();
+        $lockedFields = $user->getLockedFields();
+        
+        return view('profile.show', compact(
+            'user', 
+            'completionPercentage', 
+            'missingFields',
+            'isProfileLocked',
+            'loanStatusMessage',
+            'lockedFields'
+        ));
     }
 
     public function edit(Request $request): View
     {
         $user = $request->user()->load(['broker', 'borrower', 'teller']);
+        
+        // Check if profile is locked
+        $isProfileLocked = $user->shouldShowLock();
+        $loanStatusMessage = $user->getLoanStatusMessage();
+        $lockedFields = $user->getLockedFields();
         
         // Get categories for dropdowns
         $religions = Category::where('category_type', 'religion')->orderBy('name')->get();
@@ -45,63 +62,41 @@ class ProfileController extends Controller
         // Get countries for nationality dropdown
         $countries = Countries::all()
             ->map(function ($country) {
-
-                $flag = '🏳️'; // Default flag if none found
-
+                $flag = '🏳️';
                 if (isset($country->flag)) {
                     try {
-                        // Pragmarx Countries exposes it as an object
                         if (is_object($country->flag) && property_exists($country->flag, 'emoji')) {
                             $flag = $country->flag->emoji;
-                        } 
-                        // Some data structures may have array form (rare)
-                        elseif (is_array($country->flag) && isset($country->flag['emoji'])) {
+                        } elseif (is_array($country->flag) && isset($country->flag['emoji'])) {
                             $flag = $country->flag['emoji'];
                         }
                     } catch (\Throwable $e) {
-                        $flag = '🏳️'; // fallback
+                        $flag = '🏳️';
                     }
                 }
-
-
                 return [
-                    'code' => $country->cca2, // ISO Alpha-2 code e.g. KE
-                    'iso3' => $country->cca3, // ISO Alpha-3 code e.g. KEN
-                    'name' => $country->name->common, // Full country name
-                    'official_name' => $country->name->official, // Official name
-                    'flag' => $flag ?? '🏳️', // Emoji flag
-                    'nationality' => $country->demonyms['eng']['m'] ?? null, // e.g. Kenyan
-                    'capital' => optional($country->capital)->first() ?? null, // Capital city
-                    'region' => $country->region ?? null, // Region (e.g. Africa)
-                    'subregion' => $country->subregion ?? null, // Subregion
-
-                    // Currency data
+                    'code' => $country->cca2,
+                    'iso3' => $country->cca3,
+                    'name' => $country->name->common,
+                    'official_name' => $country->name->official,
+                    'flag' => $flag,
+                    'nationality' => $country->demonyms['eng']['m'] ?? null,
+                    'capital' => optional($country->capital)->first() ?? null,
+                    'region' => $country->region ?? null,
+                    'subregion' => $country->subregion ?? null,
                     'currency' => collect($country->currencies ?? [])->keys()->first(),
                     'currency_name' => collect($country->currencies ?? [])->first()['name'] ?? null,
                     'currency_symbol' => collect($country->currencies ?? [])->first()['symbol'] ?? null,
-
-                    // International dialing info
-                    'calling_code' => isset($country->idd['root'])
-                        ? $country->idd['root'] . (optional($country->idd['suffixes'])->first() ?? '')
-                        : null,
-
-                    // Internet domain
+                    'calling_code' => isset($country->idd['root']) ? $country->idd['root'] . (optional($country->idd['suffixes'])->first() ?? '') : null,
                     'tld' => optional($country->tld)->first() ?? null,
                 ];
-
             })
             ->sortBy('name')
             ->values();
             
-
-        // Simply check if user has signature
         $hasSignature = !empty($user->signature);
-        
-        // Calculate completion data for the view
         $completionPercentage = $user->getBiodataCompletionPercentage();
         $missingFields = $user->getMissingBiodataFields();
-        
-        // Calculate section completion counts including borrower fields
         $sectionCounts = $this->getSectionCompletionCounts($user);
         
         return view('profile.edit', compact(
@@ -114,7 +109,10 @@ class ProfileController extends Controller
             'educationLevels',
             'incomeTypes',
             'sectionCounts',
-            'countries'
+            'countries',
+            'isProfileLocked',
+            'loanStatusMessage',
+            'lockedFields'
         ));
     }
 
@@ -122,14 +120,27 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         
+        // Check if profile is locked - prevent updates if locked
+        if ($user->shouldShowLock()) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your profile is locked because you have an active loan. Please contact support for assistance.',
+                ], 403);
+            }
+            
+            return redirect()->route('profile.show')
+                ->withErrors(['error' => 'Your profile is locked because you have an active loan. Please contact support for assistance.']);
+        }
+        
         // Basic validation rules
         $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$user->id,
             'phone' => 'required|string|max:20|unique:users,phone,'.$user->id,
             'gender' => 'required|in:male,female,other',
-            'dob' => 'required|date|before:today|after:1900-01-01',
-            'nationality' => 'required|string|size:2', // Now storing country code (2 letters)
+            'dob' => 'required|date_format:d/m/Y|before:today|after:01/01/1900',
+            'nationality' => 'required|string|size:2',
             'marital_status' => 'required|in:single,married,divorced,widowed',
             'religion' => 'nullable|string|max:100',
             'education' => 'nullable|string|max:100',
@@ -204,13 +215,30 @@ class ProfileController extends Controller
         // Convert disability to boolean
         $validatedData['disability'] = $request->has('disability');
         
-        // Format date of birth
+        // Parse DOB from DD/MM/YYYY to YYYY-MM-DD for database
         if (!empty($validatedData['dob'])) {
-            $validatedData['dob'] = Carbon::parse($validatedData['dob']);
+            try {
+                $validatedData['dob'] = Carbon::createFromFormat('d/m/Y', $validatedData['dob'])->format('Y-m-d');
+            } catch (\Exception $e) {
+                try {
+                    $validatedData['dob'] = Carbon::parse($validatedData['dob'])->format('Y-m-d');
+                } catch (\Exception $e2) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'dob' => ['Invalid date format. Please use DD/MM/YYYY.']
+                    ]);
+                }
+            }
         }
         
         // Update basic user info
-        $user->fill($validatedData);
+        $userData = $validatedData;
+        $dob = $userData['dob'] ?? null;
+        unset($userData['dob']);
+        
+        $user->fill($userData);
+        if ($dob) {
+            $user->dob = $dob;
+        }
         
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
@@ -298,7 +326,6 @@ class ProfileController extends Controller
         return redirect()->route('profile.edit')->with('status', 'password-updated');
     }
 
-    
     public function password(Request $request)
     {
         $request->validate([
@@ -339,13 +366,21 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 
-    public function saveSignature(Request $request, SignatureService $signatureService): JsonResponse
-    {
+    public function saveSignature(Request $request, SignatureService $signatureService): JsonResponse    {
+        $user = $request->user();
+        
+        // Check if profile is locked
+        if ($user->shouldShowLock()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your profile is locked because you have an active loan. Please contact support for assistance.',
+            ], 403);
+        }
+        
         $request->validate([
             'signature_data' => 'required|string',
         ]);
 
-        $user = $request->user();
         $result = $signatureService->saveSignature($request->signature_data, $user);
 
         if ($result['success']) {
@@ -366,6 +401,15 @@ class ProfileController extends Controller
     public function deleteSignature(Request $request, SignatureService $signatureService): JsonResponse
     {
         $user = $request->user();
+        
+        // Check if profile is locked
+        if ($user->shouldShowLock()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your profile is locked because you have an active loan. Please contact support for assistance.',
+            ], 403);
+        }
+        
         $result = $signatureService->deleteSignature($user);
 
         if ($result['success']) {
@@ -384,6 +428,14 @@ class ProfileController extends Controller
     public function autoSave(Request $request)
     {
         $user = $request->user();
+        
+        // Check if profile is locked
+        if ($user->shouldShowLock()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your profile is locked because you have an active loan. Please contact support for assistance.',
+            ], 403);
+        }
         
         $rules = [
             'name' => 'sometimes|required|string|max:255',
@@ -429,7 +481,7 @@ class ProfileController extends Controller
                     'borrower' => []
                 ],
                 'filled' => 0,
-                'total' => 5
+                'total' => 4
             ],
             'next-of-kin' => [
                 'name' => 'Next of Kin',
@@ -495,7 +547,4 @@ class ProfileController extends Controller
 
         return $sections;
     }
-
-    
-
 }

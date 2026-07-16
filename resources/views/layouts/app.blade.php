@@ -5,21 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ SystemHelper::appName() }} | {{ ucfirst(request()->segment(1) ?? 'Dashboard') }}</title>
+    <title>{{ \App\Helpers\SystemHelper::appName() }} | {{ ucfirst(request()->segment(1) ?? 'Dashboard') }}</title>
 
     {{-- Dynamic Meta --}}
-    @if(SystemHelper::metaDescription())
-        <meta name="description" content="{{ SystemHelper::metaDescription() }}">
+    @if(\App\Helpers\SystemHelper::metaDescription())
+        <meta name="description" content="{{ \App\Helpers\SystemHelper::metaDescription() }}">
     @endif
 
-    @if(SystemHelper::metaKeywords())
-        <meta name="keywords" content="{{ SystemHelper::metaKeywords() }}">
+    @if(\App\Helpers\SystemHelper::metaKeywords())
+        <meta name="keywords" content="{{ \App\Helpers\SystemHelper::metaKeywords() }}">
     @endif
 
     {{-- Dynamic Favicon --}}
-    <link rel="icon" type="image/x-icon" href="{{ SystemHelper::faviconUrl() }}">
-    <link rel="shortcut icon" type="image/x-icon" href="{{ SystemHelper::faviconUrl() }}">
-    <link rel="apple-touch-icon" href="{{ SystemHelper::faviconUrl() }}">
+    <link rel="icon" type="image/x-icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}">
+    <link rel="apple-touch-icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}">
 
     {{-- Fonts --}}
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -36,12 +36,12 @@
 
     <style>    
         :root {
-            --primary-color: {{ SystemHelper::primaryColor() }};
-            --secondary-color: {{ SystemHelper::secondaryColor() }};
+            --primary-color: {{ \App\Helpers\SystemHelper::primaryColor() }};
+            --secondary-color: {{ \App\Helpers\SystemHelper::secondaryColor() }};
             
             /* RGB values for opacity support */
-            --primary-rgb: {{ implode(',', sscanf(SystemHelper::primaryColor(), "#%02x%02x%02x")) }};
-            --secondary-rgb: {{ implode(',', sscanf(SystemHelper::secondaryColor(), "#%02x%02x%02x")) }};
+            --primary-rgb: {{ implode(',', sscanf(\App\Helpers\SystemHelper::primaryColor(), "#%02x%02x%02x")) }};
+            --secondary-rgb: {{ implode(',', sscanf(\App\Helpers\SystemHelper::secondaryColor(), "#%02x%02x%02x")) }};
             
             /* Opacity variants using rgba */
             --primary-10: rgba(var(--primary-rgb), 0.1);

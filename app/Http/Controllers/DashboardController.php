@@ -71,6 +71,11 @@ class DashboardController extends Controller
                 break;
 
             case 'borrower':
+                // Get biodata completion data
+                $biodataComplete = $user->hasCompleteBiodata();
+                $missingFields = $user->getMissingBiodataFields();
+                $completionPercentage = $user->getBiodataCompletionPercentage();
+                
                 $data = [
                     'totalLoans' => $user->loans()->count(),
                     'loansThisMonth' => $user->loans()
@@ -91,9 +96,9 @@ class DashboardController extends Controller
                     'dueLoans' => $dueLoans,
                     'chartData' => $chartData,
                     'monthlyData' => $monthlyData,
-                    'biodataComplete' => $user->hasCompleteBiodata(),
-                    'missingBiodataFields' => $user->getMissingBiodataFields(),
-                    'biodataCompletionPercentage' => $user->getBiodataCompletionPercentage(),
+                    'biodataComplete' => $biodataComplete,
+                    'missingBiodataFields' => $missingFields,
+                    'biodataCompletionPercentage' => $completionPercentage,
                 ];
                 break;
 

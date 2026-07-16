@@ -3056,28 +3056,28 @@
         },
         {
             "name": "pragmarx/countries",
-            "version": "v1.0.1",
+            "version": "v1.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/antonioribeiro/countries.git",
-                "reference": "ac65c3ca0c4f2578e99aaeebb772fb0df009f71c"
+                "reference": "a54aa058339892a2cf24d117bea6baf43f9eb6a0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/antonioribeiro/countries/zipball/ac65c3ca0c4f2578e99aaeebb772fb0df009f71c",
-                "reference": "ac65c3ca0c4f2578e99aaeebb772fb0df009f71c",
+                "url": "https://api.github.com/repos/antonioribeiro/countries/zipball/a54aa058339892a2cf24d117bea6baf43f9eb6a0",
+                "reference": "a54aa058339892a2cf24d117bea6baf43f9eb6a0",
                 "shasum": ""
             },
             "require": {
                 "colinodell/json5": "^2.0|^3.0",
-                "illuminate/collections": "^10.48|^11.0|^12.0",
+                "illuminate/collections": "^10.48|^11.0|^12.0|^13.0",
                 "nette/caching": "^3.0|^4.0",
                 "php": "^8.1|^8.2|^8.3|^8.4",
                 "psr/simple-cache": "^3.0"
             },
             "require-dev": {
                 "gasparesganga/php-shapefile": "^3.4",
-                "laravel/framework": "^10.0|^11.0|^12.0",
+                "laravel/framework": "^10.0|^11.0|^12.0|^13.0",
                 "phpstan/phpstan": "^1.12",
                 "phpunit/phpunit": "^9.0|^10.0|^11.0",
                 "timeweb/phpstan-enum": "^3.0|^4.0"
@@ -3119,9 +3119,9 @@
             ],
             "support": {
                 "issues": "https://github.com/antonioribeiro/countries/issues",
-                "source": "https://github.com/antonioribeiro/countries/tree/v1.0.1"
+                "source": "https://github.com/antonioribeiro/countries/tree/v1.0.2"
             },
-            "time": "2025-08-19T12:13:51+00:00"
+            "time": "2026-03-29T11:04:53+00:00"
         },
         {
             "name": "psr/clock",
@@ -9132,5 +9132,5 @@
         "php": "^8.2"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }

@@ -7,9 +7,9 @@
       content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
     />
       <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-      <title>Sign In | {{ SystemHelper::appName() }}</title>
+      <title>Sign In | {{ \App\Helpers\SystemHelper::appName() }}</title>
     
-    <!-- Vite Assets -->
+     <!-- Vite Assets -->
     @vite([
         'resources/css/app.css',
         'resources/js/app.js',
@@ -22,11 +22,50 @@
 
     <!-- Auto-load all JS components -->
     @php
-        $components = array_diff(scandir(resource_path('js/components')), array('..', '.'));
+        // Get all JS component files
+        $components = collect(File::allFiles(resource_path('js/components')))
+            ->filter(fn($file) => $file->getExtension() === 'js')
+            ->map(fn($file) => 'resources/js/components/'.$file->getRelativePathname())
+            ->values()
+            ->all();
+        
+        // Get system colors
+        $primaryColor = \App\Helpers\SystemHelper::primaryColor();
+        $secondaryColor = \App\Helpers\SystemHelper::secondaryColor();
     @endphp
-    @foreach ($components as $component)
-        @vite(['resources/js/components/' . $component])
-    @endforeach
+
+    <!-- Dynamic Styles for System Colors -->
+    <style>
+        :root {
+            --brand-50: <?php echo $primaryColor; ?>0d;
+            --brand-100: <?php echo $primaryColor; ?>1a;
+            --brand-200: <?php echo $primaryColor; ?>33;
+            --brand-300: <?php echo $primaryColor; ?>4d;
+            --brand-400: <?php echo $primaryColor; ?>66;
+            --brand-500: <?php echo $primaryColor; ?>;
+            --brand-600: <?php echo $primaryColor; ?>cc;
+            --brand-700: <?php echo $primaryColor; ?>99;
+            --brand-800: <?php echo $primaryColor; ?>66;
+            --brand-900: <?php echo $primaryColor; ?>33;
+            --brand-950: <?php echo $primaryColor; ?>1a;
+        }
+
+        .bg-brand-500 { background-color: var(--brand-500) !important; }
+        .bg-brand-600 { background-color: var(--brand-600) !important; }
+        .bg-brand-950 { background-color: var(--brand-950) !important; }
+        .border-brand-300 { border-color: var(--brand-300) !important; }
+        .border-brand-500 { border-color: var(--brand-500) !important; }
+        .text-brand-400 { color: var(--brand-400) !important; }
+        .text-brand-500 { color: var(--brand-500) !important; }
+        .text-brand-600 { color: var(--brand-600) !important; }
+        .hover\\:bg-brand-600:hover { background-color: var(--brand-600) !important; }
+        .hover\\:text-brand-600:hover { color: var(--brand-600) !important; }
+        .focus\\:border-brand-300:focus { border-color: var(--brand-300) !important; }
+        .focus\\:ring-brand-500\\/10:focus { --tw-ring-color: var(--brand-500) !important; }
+        .dark\\:focus\\:border-brand-800:focus { border-color: var(--brand-800) !important; }
+        .dark\\:text-brand-400 { color: var(--brand-400) !important; }
+    </style>
+
   </head>
   <body
     x-data="{ page: 'comingSoon', 'loaded': true, 'darkMode': false, 'stickyMenu': false, 'sidebarToggle': false, 'scrollTop': false }"
@@ -322,10 +361,22 @@
         <!-- ===== Common Grid Shape End ===== -->
         <div class="flex max-w-xs flex-col items-center">
           <a href="{{ route('dashboard') }}" class="mb-4 block">
-            <img src="{{ SystemHelper::authLogoUrl() ?? asset('images/logo/auth-logo.svg') }}" alt="Logo" />
+            {{-- <!-- Light logo -->
+            <img
+                class="dark:hidden h-40 w-auto"
+                src="{{ \App\Helpers\SystemHelper::logoUrl() ?? asset('images/logo/auth-logo.svg') }}"
+                alt="{{ \App\Helpers\SystemHelper::appName() }} Logo"
+            />
+            <!-- Dark logo --> --}}
+            <img
+                class=" dark:block h-40 w-auto"
+                src="{{ \App\Helpers\SystemHelper::logoUrl(true) ?? asset('images/logo/auth-logo-dark.svg') }}"
+                alt="{{ \App\Helpers\SystemHelper::appName() }} Logo"
+            />
+
           </a>
           <p class="text-center text-gray-400 dark:text-white/60">
-            {{ SystemHelper::slogan() }}
+            {{ \App\Helpers\SystemHelper::slogan() }}
           </p>
         </div>
       </div>
