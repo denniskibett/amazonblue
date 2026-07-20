@@ -2,15 +2,14 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-6" 
-     x-data="caseShow()" 
-     x-init="init(@json($caseData))">
+     x-data='caseShow(@js($caseData))'>
     
     <!-- Breadcrumb -->
     <nav class="flex mb-6" aria-label="Breadcrumb">
         <ol class="inline-flex items-center space-x-1 md:space-x-3">
             <li class="inline-flex items-center">
                 <a href="{{ route('dashboard') }}" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white">
-                    <svg class="w-3 h-3 mr-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-3 h-3 mr-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 6 10">
                         <path d="m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2a1 1 0 0 0 1.414 1.414L2 10.414V18a2 2 0 0 0 2 2h3a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h3a2 2 0 0 0 2-2v-7.586l.293.293a1 1 0 0 0 1.414-1.414Z"/>
                     </svg>
                     Home
@@ -91,8 +90,9 @@
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
             <p class="text-sm text-gray-500 dark:text-gray-400">Days in Default</p>
-            <p class="text-xl font-bold" :class="case.days_in_default > 90 ? 'text-red-600' : (case.days_in_default > 30 ? 'text-orange-600' : 'text-gray-600')" 
-               x-text="case.days_in_default"></p>
+            <p class="text-xl font-bold" x-text="case.days_in_default" 
+               :class="case.days_in_default > 90 ? 'text-red-600' : (case.days_in_default > 30 ? 'text-orange-600' : 'text-gray-600')">
+            </p>
         </div>
     </div>
 
@@ -104,7 +104,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Debtor Information</h3>
                 <div class="flex items-start gap-4">
-                    <div class="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg font-semibold" 
+                    <div class="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg font-semibold text-gray-700 dark:text-gray-300" 
                          x-text="case.user_initials || 'U'">
                     </div>
                     <div>
@@ -290,11 +290,11 @@
 @push('scripts')
 <script>
 document.addEventListener('alpine:init', () => {
-    Alpine.data('caseShow', () => ({
-        case: {},
+    Alpine.data('caseShow', (caseData) => ({
+        case: caseData || {},
         
-        init(caseData) {
-            this.case = caseData;
+        init() {
+            console.log('Case data initialized:', this.case);
         },
         
         formatCurrency(amount) {
@@ -344,29 +344,6 @@ document.addEventListener('alpine:init', () => {
             }));
         }
     }));
-});
-
-// Listen for edit events
-document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('edit-case', function(event) {
-        console.log('Edit case event received:', event.detail);
-        const caseData = event.detail.case;
-        if (document.getElementById('editCaseModal')) {
-            document.getElementById('editCaseModal').classList.remove('hidden');
-        }
-    });
-    
-    document.addEventListener('open-add-action', function(event) {
-        console.log('Add action event received:', event.detail);
-        // Implement add action modal logic
-        alert('Add action functionality - implement modal here');
-    });
-    
-    document.addEventListener('open-write-off', function(event) {
-        console.log('Write off event received:', event.detail);
-        // Implement write off modal logic
-        alert('Write off functionality - implement modal here');
-    });
 });
 </script>
 @endpush
