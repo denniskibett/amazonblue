@@ -44,8 +44,11 @@ class UserController extends Controller
 
     public function show(User $user)  
     {
-        // No need to find the user again, Laravel already injected it
+        // Load user relationships with loans ordered by borrow_date descending (newest first)
         $user->load([
+            'loans' => function ($query) {
+                $query->orderBy('borrow_date', 'desc');
+            },
             'loans.loanType', 
             'loans.repayments',
             'disbursements',
@@ -513,4 +516,132 @@ class UserController extends Controller
         
         return response()->json($userData);
     }
+
+/**
+ * Get user loans data for AJAX requests
+ * This is called by the case creation modal
+ * Route: GET /users/{user}/loans-data
+ */
+public function getUserLoansData(User $user)
+{
+    Log::info('getUserLoansData called for user ID: ' . $user->id);
+    
+    $loans = $user->loans()
+        ->with(['loanType', 'repayments'])
+        ->whereIn('status', ['disbursed', 'approved', 'overdue', 'defaulted', 'active'])
+        ->orderBy('borrow_date', 'desc')
+        ->get();
+    
+    Log::info('Found ' . $loans->count() . ' loans for user ' . $user->id);
+    
+    if ($loans->isEmpty()) {
+        return response()->json([
+            'loans' => [],
+            'npl_count' => 0,
+            'overdue_count' => 0,
+        ]);
+    }
+    
+    $formattedLoans = $loans->map(function ($loan) {
+        $dueDate = null;
+        $daysOverdue = 0;
+        $isOverdue = false;
+        $period = 0;
+        $outstandingBalance = 0;
+        $totalRepaid = 0;
+        $principalOutstanding = 0;
+        $interestOutstanding = 0;
+        $penaltyOutstanding = 0;
+        
+        // Calculate due date from loan type
+        if ($loan->loanType && $loan->borrow_date) {
+            $borrowDate = Carbon::parse($loan->borrow_date);
+            $period = $loan->loanType->period;
+            $unit = $loan->loanType->unit;
+            $dueDate = $borrowDate->copy();
+            
+            switch ($unit) {
+                case 'days': $dueDate->addDays($period); break;
+                case 'weeks': $dueDate->addWeeks($period); break;
+                case 'months': $dueDate->addMonths($period); break;
+                case 'years': $dueDate->addYears($period); break;
+                default: $dueDate->addDays($period); break;
+            }
+            
+            // FIX: Only count overdue days if due date has passed
+            if (now()->gt($dueDate)) {
+                $daysOverdue = now()->diffInDays($dueDate);
+                $isOverdue = true;
+            } else {
+                $daysOverdue = 0;
+                $isOverdue = false;
+            }
+        }
+        
+        // Calculate repayments
+        $totalRepaid = $loan->repayments->sum('amount');
+        $outstandingBalance = max(0, $loan->amount - $totalRepaid);
+        
+        // Calculate principal and interest outstanding
+        if ($loan->loanType) {
+            $interest = ($loan->loanType->interest_rate / 100) * $loan->amount;
+            $principalOutstanding = max(0, $loan->amount - $totalRepaid);
+            $interestOutstanding = max(0, $interest - max(0, $totalRepaid - $loan->amount));
+            
+            // Calculate penalty only if overdue
+            if ($isOverdue && $daysOverdue > 0) {
+                $penaltyRate = $loan->loanType->penalty_rate / 100;
+                $penaltyOutstanding = $outstandingBalance * $penaltyRate * $daysOverdue;
+            } else {
+                $penaltyOutstanding = 0;
+            }
+        }
+        
+        // NPL check: is_non_performing flag OR (is_overdue AND days_overdue > 2 × period)
+        $isNpl = $loan->is_non_performing || 
+                 ($isOverdue && $daysOverdue > ($period * 2));
+        
+        // Calculate default date from due date if overdue
+        $defaultDate = $loan->default_date;
+        if ($isOverdue && !$defaultDate) {
+            $defaultDate = $dueDate ? $dueDate->format('Y-m-d') : null;
+        }
+        
+        return [
+            'id' => $loan->id,
+            'amount' => $loan->amount,
+            'borrow_date' => $loan->borrow_date ? $loan->borrow_date->format('Y-m-d') : null,
+            'due_date' => $dueDate ? $dueDate->format('Y-m-d') : null,
+            'status' => $loan->status,
+            'is_non_performing' => $isNpl,
+            'is_overdue' => $isOverdue,
+            'days_overdue' => $daysOverdue,
+            'default_date' => $defaultDate,
+            'outstanding_balance' => $outstandingBalance,
+            'total_repaid' => $totalRepaid,
+            'principal_outstanding' => $principalOutstanding,
+            'interest_outstanding' => $interestOutstanding,
+            'penalty_outstanding' => $penaltyOutstanding,
+            'loan_type' => $loan->loanType ? $loan->loanType->name : null,
+            'period' => $period,
+            'unit' => $loan->loanType ? $loan->loanType->unit : 'days',
+            'interest_rate' => $loan->loanType ? $loan->loanType->interest_rate : 0,
+            'penalty_rate' => $loan->loanType ? $loan->loanType->penalty_rate : 0,
+        ];
+    });
+
+    $nplCount = $formattedLoans->filter(function($loan) {
+        return $loan['is_non_performing'] === true;
+    })->count();
+
+    $overdueCount = $formattedLoans->filter(function($loan) {
+        return $loan['is_overdue'] === true;
+    })->count();
+
+    return response()->json([
+        'loans' => $formattedLoans,
+        'npl_count' => $nplCount,
+        'overdue_count' => $overdueCount,
+    ]);
+}
 }

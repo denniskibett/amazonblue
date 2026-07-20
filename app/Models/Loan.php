@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Carbon\Carbon;
 
 class Loan extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -25,19 +27,38 @@ class Loan extends Model
         'loan_officer_id',
         'consent',
         'consent_date',
-        'signature'
+        'signature',
+        // NPL Fields
+        'is_non_performing',
+        'default_date',
+        'days_overdue',
+        'last_overdue_check',
+        'default_triggered',
+        'calculated_due_date',
+        'npl_trigger_threshold',
     ];
 
     protected $dates = [
         'borrow_date',
-        'consent_date'
+        'consent_date',
+        'default_date',
+        'calculated_due_date',
+        'last_overdue_check',
     ];
 
     protected $casts = [
         'borrow_date' => 'datetime',
         'consent_date' => 'datetime',
+        'default_date' => 'date',
+        'calculated_due_date' => 'date',
+        'last_overdue_check' => 'datetime',
         'consent' => 'boolean',
-        'amount' => 'decimal:2'
+        'broker_status' => 'boolean',
+        'is_non_performing' => 'boolean',
+        'default_triggered' => 'boolean',
+        'amount' => 'decimal:2',
+        'days_overdue' => 'integer',
+        'npl_trigger_threshold' => 'integer',
     ];
 
     // Define constants for loan statuses
@@ -49,8 +70,10 @@ class Loan extends Model
     const STATUS_OVERDUE = 'overdue';
     const STATUS_COMPLETED = 'completed';
     const STATUS_REPAID = 'repaid';
+    const STATUS_DEFAULTED = 'defaulted';
 
-    // Relationships
+    // ============ RELATIONSHIPS ============
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -104,14 +127,232 @@ class Loan extends Model
     public function repaymentOverflowsTo()
     {
         return $this->hasMany(RepaymentOverflow::class, 'to_loan_id');
-    }    
-
-
+    }
 
     public function broker()
     {
         return $this->belongsTo(Broker::class);
     }
+
+    public function recoveryCases()
+    {
+        return $this->hasMany(DebtRecoveryCase::class);
+    }
+
+    // ============ NPL METHODS ============
+
+    /**
+     * Calculate the due date for this loan based on loan type
+     */
+    public function calculateDueDate()
+    {
+        if (!$this->loanType || !$this->borrow_date) {
+            return null;
+        }
+
+        $borrowDate = Carbon::parse($this->borrow_date);
+        $period = $this->loanType->period;
+        $unit = $this->loanType->unit;
+
+        $dueDate = $borrowDate->copy();
+        switch ($unit) {
+            case 'days': $dueDate->addDays($period); break;
+            case 'weeks': $dueDate->addWeeks($period); break;
+            case 'months': $dueDate->addMonths($period); break;
+            case 'years': $dueDate->addYears($period); break;
+            default: $dueDate->addDays($period); break;
+        }
+
+        return $dueDate;
+    }
+
+    /**
+     * Calculate days overdue
+     */
+    public function calculateDaysOverdue()
+    {
+        // Calculate due date if not already calculated
+        if (!$this->calculated_due_date) {
+            $this->calculated_due_date = $this->calculateDueDate();
+            $this->save();
+        }
+
+        if (!$this->calculated_due_date) {
+            return 0;
+        }
+
+        $dueDate = Carbon::parse($this->calculated_due_date);
+        
+        // If due date is in the future, not overdue
+        if (now()->lt($dueDate)) {
+            return 0;
+        }
+
+        return now()->diffInDays($dueDate);
+    }
+
+    /**
+     * Check if loan is non-performing (NPL)
+     * NPL = Overdue > 2 × period (more than double the loan period)
+     */
+    public function isNonPerforming()
+    {
+        if (!$this->loanType) {
+            return false;
+        }
+
+        $daysOverdue = $this->calculateDaysOverdue();
+        $period = $this->loanType->period;
+        $nplThreshold = $period * 2; // More than double
+
+        return $daysOverdue > $nplThreshold;
+    }
+
+    /**
+     * Check if loan is overdue
+     */
+    public function isOverdue()
+    {
+        return $this->calculateDaysOverdue() > 0;
+    }
+
+    /**
+     * Get the NPL threshold (2 × period)
+     */
+    public function getNplThreshold()
+    {
+        if (!$this->loanType) {
+            return 0;
+        }
+        return $this->loanType->period * 2;
+    }
+
+    /**
+     * Update NPL status
+     */
+    public function updateNplStatus()
+    {
+        $daysOverdue = $this->calculateDaysOverdue();
+        $threshold = $this->getNplThreshold();
+        $isNpl = $daysOverdue > $threshold;
+
+        $this->days_overdue = $daysOverdue;
+        $this->npl_trigger_threshold = $threshold;
+        $this->last_overdue_check = now();
+
+        if ($isNpl && !$this->is_non_performing) {
+            // Loan has become NPL
+            $this->is_non_performing = true;
+            $this->default_date = now();
+            $this->default_triggered = true;
+            if ($this->status !== self::STATUS_DEFAULTED) {
+                $this->status = self::STATUS_DEFAULTED;
+            }
+        } elseif (!$isNpl && $this->is_non_performing) {
+            // Loan is no longer NPL (shouldn't happen often, but handle it)
+            $this->is_non_performing = false;
+        }
+
+        // Update status if overdue but not NPL
+        if ($daysOverdue > 0 && !$isNpl && $this->status !== self::STATUS_OVERDUE) {
+            $this->status = self::STATUS_OVERDUE;
+        }
+
+        // If not overdue and status is overdue or defaulted, revert to disbursed
+        if ($daysOverdue <= 0 && in_array($this->status, [self::STATUS_OVERDUE, self::STATUS_DEFAULTED])) {
+            if (!$this->isFullyRepaid()) {
+                $this->status = self::STATUS_DISBURSED;
+            }
+        }
+
+        $this->save();
+        return $this;
+    }
+
+    /**
+     * Get the recovery stage based on overdue days
+     */
+    public function getRecoveryStage()
+    {
+        $daysOverdue = $this->days_overdue ?? $this->calculateDaysOverdue();
+        $period = $this->loanType->period ?? 0;
+
+        if ($daysOverdue <= 0) {
+            return 'current';
+        }
+
+        $ratio = $daysOverdue / max(1, $period);
+
+        if ($ratio <= 0.5) {
+            return 'early_overdue';
+        } elseif ($ratio <= 1) {
+            return 'overdue';
+        } elseif ($ratio <= 2) {
+            return 'serious_overdue';
+        } else {
+            return 'npl';
+        }
+    }
+
+    /**
+     * Get human-readable recovery stage label
+     */
+    public function getRecoveryStageLabel()
+    {
+        $stages = [
+            'current' => 'Current',
+            'early_overdue' => 'Early Overdue (1-50% of period)',
+            'overdue' => 'Overdue (50-100% of period)',
+            'serious_overdue' => 'Seriously Overdue (100-200% of period)',
+            'npl' => 'Non-Performing (NPL)',
+        ];
+
+        return $stages[$this->getRecoveryStage()] ?? 'Unknown';
+    }
+
+    /**
+     * Get the recovery stage color
+     */
+    public function getRecoveryStageColor()
+    {
+        $colors = [
+            'current' => 'green',
+            'early_overdue' => 'yellow',
+            'overdue' => 'orange',
+            'serious_overdue' => 'orange',
+            'npl' => 'red',
+        ];
+
+        return $colors[$this->getRecoveryStage()] ?? 'gray';
+    }
+
+    /**
+     * Get the NPL badge class for UI
+     */
+    public function getNplBadgeClass()
+    {
+        if ($this->is_non_performing) {
+            return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+        } elseif ($this->isOverdue()) {
+            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+        }
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+    }
+
+    /**
+     * Get NPL badge text
+     */
+    public function getNplBadgeText()
+    {
+        if ($this->is_non_performing) {
+            return 'NPL';
+        } elseif ($this->isOverdue()) {
+            return 'Overdue (' . $this->days_overdue . ' days)';
+        }
+        return 'Current';
+    }
+
+    // ============ EXISTING METHODS ============
 
     // Pivot table methods for modular data
     public function updateAgreementSection($sectionType, $data)
@@ -266,7 +507,8 @@ class Loan extends Model
         return max(40, min(100, $score));
     }
 
-    // Scopes
+    // ============ SCOPES ============
+
     public function scopePending(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_PENDING);
@@ -294,15 +536,26 @@ class Loan extends Model
 
     public function scopeDisbursed($query)
     {
-        return $query->where('status', 'disbursed');
+        return $query->where('status', self::STATUS_DISBURSED);
     }
 
     public function scopeOverdue($query)
     {
-        return $query->where('status', 'overdue');
+        return $query->where('status', self::STATUS_OVERDUE);
     }
 
-    // Existing financial methods remain the same
+    public function scopeNonPerforming($query)
+    {
+        return $query->where('is_non_performing', true);
+    }
+
+    public function scopeDefaulted($query)
+    {
+        return $query->where('status', self::STATUS_DEFAULTED);
+    }
+
+    // ============ FINANCIAL METHODS ============
+
     public function getInterestAttribute()
     {
         $borrower = $this->user->borrower;
@@ -373,9 +626,9 @@ class Loan extends Model
         }
     
         $disbursementDate = $this->disbursements->first()->date ?? $this->borrow_date;
-        $dueDate = $this->calculateDueDate($disbursementDate);
+        $dueDate = $this->calculateDueDate();
         
-        if (now()->lte($dueDate)) {
+        if (!$dueDate || now()->lte($dueDate)) {
             return 0;
         }
     
@@ -384,27 +637,6 @@ class Loan extends Model
         $penaltyRate = $this->loanType->penalty_rate / 100;
         
         return $outstandingAtDueDate * $penaltyRate * $daysLate;
-    }
-    
-    protected function calculateDueDate($disbursementDate)
-    {
-        $period = $this->loanType->period;
-        $unit = $this->loanType->unit;
-        
-        $dueDate = \Carbon\Carbon::parse($disbursementDate);
-        
-        switch ($unit) {
-            case 'days':
-                return $dueDate->addDays($period);
-            case 'weeks':
-                return $dueDate->addWeeks($period);
-            case 'months':
-                return $dueDate->addMonths($period);
-            case 'years':
-                return $dueDate->addYears($period);
-            default:
-                return $dueDate;
-        }
     }
     
     protected function calculateOutstandingAtDueDate($dueDate)

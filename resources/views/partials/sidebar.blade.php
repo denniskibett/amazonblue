@@ -205,6 +205,49 @@
             </a>
           </li>
           <!-- Menu Item Disbursements -->
+
+          <!-- Menu Item Debt Recovery -->
+          <li>
+            <a
+              href="{{ route('cases.index') }}"
+              @click="selected = (selected === 'Recovery' ? '':'Recovery')"
+              class="menu-item group"
+              :class=" (selected === 'Recovery') || (page === 'recovery') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <svg
+                :class="(selected === 'Recovery') || (page === 'recovery') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM11.25 8C11.25 7.58579 11.5858 7.25 12 7.25C12.4142 7.25 12.75 7.58579 12.75 8V12.5H15.5C15.9142 12.5 16.25 12.8358 16.25 13.25C16.25 13.6642 15.9142 14 15.5 14H12C11.5858 14 11.25 13.6642 11.25 13.25V8Z"
+                  fill=""
+                />
+              </svg>
+
+              <span
+                class="menu-item-text"
+                :class="sidebarToggle ? 'lg:hidden' : ''"
+              >
+                Debt Recovery
+                @php
+                    $activeRecoveryCount = \App\Models\DebtRecoveryCase::open()->count();
+                @endphp
+                @if($activeRecoveryCount > 0)
+                <span class="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+                  {{ $activeRecoveryCount }}
+                </span>
+                @endif
+              </span>
+            </a>
+          </li>
+          <!-- Menu Item Debt Recovery -->
+
           @endif
 
           @if(Auth::user()->role === 'borrower')
@@ -275,6 +318,45 @@
             </a>
           </li>
           <!-- Menu Item Repayments -->
+
+          <!-- Menu Item My Recovery Status -->
+          <li>
+            <a
+              href="{{ route('recovery.cases.my') }}"
+              @click="selected = (selected === 'MyRecovery' ? '':'MyRecovery')"
+              class="menu-item group"
+              :class=" (selected === 'MyRecovery') || (page === 'my-recovery') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <svg
+                :class="(selected === 'MyRecovery') || (page === 'my-recovery') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM11.25 8C11.25 7.58579 11.5858 7.25 12 7.25C12.4142 7.25 12.75 7.58579 12.75 8V12.5H15.5C15.9142 12.5 16.25 12.8358 16.25 13.25C16.25 13.6642 15.9142 14 15.5 14H12C11.5858 14 11.25 13.6642 11.25 13.25V8Z"
+                  fill=""
+                />
+              </svg>
+
+              <span
+                class="menu-item-text"
+                :class="sidebarToggle ? 'lg:hidden' : ''"
+              >
+                My Recovery Status
+                @if($user->debtRecoveryCases()->open()->count() > 0)
+                <span class="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+                  {{ $user->debtRecoveryCases()->open()->count() }}
+                </span>
+                @endif
+              </span>
+            </a>
+          </li>
+          <!-- Menu Item My Recovery Status -->
           @endif
 
           @if(Auth::user()->role === 'broker')

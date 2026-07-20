@@ -85,6 +85,137 @@
     </div>
     @endif
 
+    <!-- NPL & Recovery Metrics (for admin & teller) -->
+    @if(in_array(auth()->user()->role, ['admin', 'teller']))
+    <div class="col-span-12">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <!-- Active Recovery Cases -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                        <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ $activeRecoveryCases ?? 0 }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Active Recovery Cases</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Total Debt in Recovery -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+                        <svg class="h-6 w-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white/90">KES {{ number_format($totalRecoveryDebt ?? 0, 2) }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Total Debt in Recovery</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recovery Rate -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                        <svg class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ $recoveryRate ?? 0 }}%</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Recovery Rate</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Urgent Cases -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
+                        <svg class="h-6 w-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ $urgentRecoveryCases ?? 0 }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Urgent Cases</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NPL Metrics Row -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- NPL Count -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                        <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ $nplCount ?? 0 }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Non-Performing Loans (NPL)</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Overdue Loans -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/30">
+                        <svg class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ $overdueCount ?? 0 }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Overdue Loans</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NPL Total Debt -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+                        <svg class="h-6 w-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white/90">KES {{ number_format($nplTotalDebt ?? 0, 2) }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Total NPL Debt</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NPL Recovery Rate -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+                        <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ $nplRecoveryRate ?? 0 }}%</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">NPL Recovery Rate</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Existing Metrics -->
     <div class="col-span-12 space-y-12 xl:col-span-12">
         @include('partials.metric-group.metric-group-01', [
             // Common metrics
@@ -130,6 +261,14 @@
         ])
     </div>
 
+    <!-- Recovery Cases Table (for admin & teller) -->
+    @if(in_array(auth()->user()->role, ['admin', 'teller']) && isset($recoveryCases) && $recoveryCases->count() > 0)
+    <div class="col-span-12">
+        @include('partials.table.table-recovery-cases', ['recoveryCases' => $recoveryCases])
+    </div>
+    @endif
+
+    <!-- Existing Due Loans Table -->
     <div class="col-span-12 xl:col-span-12">
         @include('partials.table.table-due-loans', ['dueLoans' => $dueLoans ?? collect()])
     </div>

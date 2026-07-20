@@ -8,6 +8,8 @@ use App\Models\Loan;
 use App\Models\User;
 use App\Models\Repayment;
 use App\Models\Disbursement;
+use App\Models\DebtRecoveryCase;
+use App\Models\RecoveryAction;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -25,9 +27,24 @@ class DashboardController extends Controller
         // Prepare monthly data for chart
         $monthlyData = $this->prepareMonthlyData($chartData);
 
+        // ============ RECOVERY DATA (All Roles) ============
+        $data['activeRecoveryCases'] = DebtRecoveryCase::open()->count();
+        $data['totalRecoveryDebt'] = DebtRecoveryCase::open()->sum('total_debt_amount');
+        $data['urgentRecoveryCases'] = DebtRecoveryCase::urgent()->open()->count();
+        
+        $totalDebt = DebtRecoveryCase::sum('total_debt_amount');
+        $totalRecovered = RecoveryAction::successful()->sum('amount_collected');
+        $data['recoveryRate'] = $totalDebt > 0 ? round(($totalRecovered / $totalDebt) * 100, 2) : 0;
+        
+        $data['recoveryCases'] = DebtRecoveryCase::with(['user', 'status', 'priority'])
+            ->orderBy('priority_id', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
         switch ($user->role) {
             case 'admin':
-                $data = [
+                $data = array_merge($data, [
                     // Loan Metrics
                     'totalLoans' => Loan::count(),
                     'loansThisMonth' => Loan::where('created_at', '>=', $currentMonthStart)->count(),
@@ -67,7 +84,7 @@ class DashboardController extends Controller
                         'repaid' => Loan::where('status', 'repaid')->count(),
                     ],
                     'disbursementTrends' => $this->getDisbursementTrends(),
-                ];
+                ]);
                 break;
 
             case 'borrower':
@@ -76,7 +93,12 @@ class DashboardController extends Controller
                 $missingFields = $user->getMissingBiodataFields();
                 $completionPercentage = $user->getBiodataCompletionPercentage();
                 
-                $data = [
+                // Get borrower recovery data
+                $myRecoveryCases = $user->debtRecoveryCases()->with(['status', 'priority'])->get();
+                $activeRecoveryCount = $user->debtRecoveryCases()->open()->count();
+                $hasActiveRecovery = $activeRecoveryCount > 0;
+                
+                $data = array_merge($data, [
                     'totalLoans' => $user->loans()->count(),
                     'loansThisMonth' => $user->loans()
                                             ->where('created_at', '>=', $currentMonthStart)
@@ -99,7 +121,11 @@ class DashboardController extends Controller
                     'biodataComplete' => $biodataComplete,
                     'missingBiodataFields' => $missingFields,
                     'biodataCompletionPercentage' => $completionPercentage,
-                ];
+                    // Recovery data for borrower
+                    'myRecoveryCases' => $myRecoveryCases,
+                    'hasActiveRecovery' => $hasActiveRecovery,
+                    'activeRecoveryCount' => $activeRecoveryCount,
+                ]);
                 break;
 
             case 'broker':
@@ -111,7 +137,7 @@ class DashboardController extends Controller
 
                 $borrowerIds = $broker->borrowers()->pluck('user_id');
 
-                $data = [
+                $data = array_merge($data, [
                     'broker' => $broker,
                     'clients' => $broker->borrowers()->count(),
                     'newClientsThisMonth' => $broker->borrowers()
@@ -129,11 +155,11 @@ class DashboardController extends Controller
                     }),
                     'chartData' => $chartData,
                     'monthlyData' => $monthlyData,
-                ];
+                ]);
                 break;
 
             case 'teller':
-                $data = [
+                $data = array_merge($data, [
                     'todaysDisbursements' => Disbursement::whereDate('disburse_date', today())
                                                     ->sum('amount') ?? 0,
                     'monthDisbursements' => Disbursement::where('disburse_date', '>=', $currentMonthStart)
@@ -144,15 +170,15 @@ class DashboardController extends Controller
                     'dueLoans' => $dueLoans,
                     'chartData' => $chartData,
                     'monthlyData' => $monthlyData,
-                ];
+                ]);
                 break;
             
             default:
-                $data = [
+                $data = array_merge($data, [
                     'dueLoans' => $dueLoans,
                     'chartData' => $chartData,
                     'monthlyData' => $monthlyData,
-                ];
+                ]);
                 break;
         }
 
@@ -193,6 +219,15 @@ class DashboardController extends Controller
             'monthDisbursements' => 0,
             'collectedRepayments' => 0,
             'monthRepayments' => 0,
+            // Recovery defaults
+            'activeRecoveryCases' => 0,
+            'totalRecoveryDebt' => 0,
+            'urgentRecoveryCases' => 0,
+            'recoveryRate' => 0,
+            'recoveryCases' => collect(),
+            'myRecoveryCases' => collect(),
+            'hasActiveRecovery' => false,
+            'activeRecoveryCount' => 0,
         ], $data);
 
         return view('dashboard', $data);

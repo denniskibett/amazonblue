@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name', 
@@ -62,6 +63,7 @@ class User extends Authenticatable
 
     // ============ RELATIONSHIPS ============
 
+    // Existing relationships
     public function borrower()
     {
         return $this->hasOne(Borrower::class, 'user_id');
@@ -80,6 +82,11 @@ class User extends Authenticatable
     public function admin()
     {
         return $this->hasOne(Admin::class);
+    }
+
+    public function partner()
+    {
+        return $this->hasOne(Partner::class);
     }
 
     public function loans()
@@ -119,6 +126,108 @@ class User extends Authenticatable
     public function guarantorLoans()
     {
         return $this->hasMany(Loan::class, 'guarantor_id');
+    }
+
+    // ============ NEW DEBT RECOVERY RELATIONSHIPS ============
+
+    public function userProfile()
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
+    public function addresses()
+    {
+        return $this->hasMany(Address::class);
+    }
+
+    public function contacts()
+    {
+        return $this->hasMany(Contact::class);
+    }
+
+    public function employments()
+    {
+        return $this->hasMany(Employment::class);
+    }
+
+    public function currentEmployment()
+    {
+        return $this->hasOne(Employment::class)->where('is_current', true);
+    }
+
+    public function assets()
+    {
+        return $this->hasMany(Asset::class);
+    }
+
+    public function paymentMethods()
+    {
+        return $this->hasMany(PaymentMethod::class);
+    }
+
+    public function primaryPaymentMethod()
+    {
+        return $this->hasOne(PaymentMethod::class)->where('is_primary', true);
+    }
+
+    public function debtRecoveryCases()
+    {
+        return $this->hasMany(DebtRecoveryCase::class, 'user_id');
+    }
+
+    public function activeRecoveryCases()
+    {
+        return $this->debtRecoveryCases()
+            ->whereHas('status', function ($q) {
+                $q->whereIn('slug', ['open', 'in_progress', 'negotiation', 'legal']);
+            });
+    }
+
+    public function loanRiskAssessments()
+    {
+        return $this->hasManyThrough(
+            LoanRiskAssessment::class,
+            Loan::class,
+            'user_id',
+            'loan_id',
+            'id',
+            'id'
+        );
+    }
+
+    public function creditBureauReports()
+    {
+        return $this->hasMany(CreditBureauReport::class);
+    }
+
+    public function skipTracingRecords()
+    {
+        return $this->hasMany(SkipTracing::class);
+    }
+
+    public function financialAssessments()
+    {
+        return $this->hasMany(FinancialAssessment::class);
+    }
+
+    public function assignedRecoveryCases()
+    {
+        return $this->hasMany(DebtRecoveryCase::class, 'assigned_to');
+    }
+
+    public function performedRecoveryActions()
+    {
+        return $this->hasMany(RecoveryAction::class, 'performed_by');
+    }
+
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    public function recoveryTasks()
+    {
+        return $this->hasMany(RecoveryTask::class, 'assigned_to');
     }
 
     // ============ SCOPES ============

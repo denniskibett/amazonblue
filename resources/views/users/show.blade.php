@@ -14,9 +14,17 @@
             <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                 <div class="flex w-full flex-col items-center gap-6 xl:flex-row">
                     <div class="h-20 w-20 overflow-hidden rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-100 dark:bg-gray-700">
-                        @if($user->avatar)
+                        @php
+                            $avatarUrl = null;
+                            if ($user->avatar) {
+                                $avatarUrl = Storage::url($user->avatar);
+                            } elseif ($user->profile_photo_path) {
+                                $avatarUrl = asset('storage/' . $user->profile_photo_path);
+                            }
+                        @endphp
+                        @if($avatarUrl)
                             <img 
-                                src="{{ Storage::url($user->avatar) }}" 
+                                src="{{ $avatarUrl }}" 
                                 alt="Profile Photo" 
                                 class="h-full w-full object-cover"
                             >
@@ -163,6 +171,21 @@
                                     {{ $user->loans->count() }}
                                 </span>
                             </button>
+
+                            <!-- Recovery Tab -->
+                            @if(in_array($user->role, ['admin', 'teller', 'borrower']) && $user->debtRecoveryCases->count() > 0)
+                            <button
+                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
+                                x-bind:class="activeTab === 'recovery' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                                x-on:click="activeTab = 'recovery'"
+                            >
+                                <i class="fas fa-gavel text-lg"></i>
+                                Recovery
+                                <span class="inline-flex items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600 dark:bg-red-500/15 dark:text-red-400">
+                                    {{ $user->debtRecoveryCases->count() }}
+                                </span>
+                            </button>
+                            @endif
                         </nav>
                     </div>
 
@@ -739,13 +762,105 @@
                                 </div>
                             @endif
                         </div>
+
+                        <!-- Recovery Tab Content -->
+                        <div x-show="activeTab === 'recovery'" x-cloak>
+                            @if($user->debtRecoveryCases->count() > 0)
+                                @foreach($user->debtRecoveryCases as $case)
+                                <div class="mb-6 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div>
+                                            <h4 class="text-lg font-semibold text-gray-800 dark:text-white/90">
+                                                Case #{{ $case->case_number }}
+                                            </h4>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                                Started: {{ $case->created_at->format('M d, Y') }}
+                                                @if($case->loan)
+                                                <span class="ml-4">Loan: #{{ $case->loan->loan_reference ?? $case->loan->id }}</span>
+                                                @endif
+                                            </p>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            @include('partials.recovery.status-badge', ['status' => $case->status])
+                                            @include('partials.recovery.priority-badge', ['priority' => $case->priority])
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">Total Debt</p>
+                                            <p class="text-lg font-bold text-red-600">KES {{ number_format($case->total_debt_amount, 2) }}</p>
+                                        </div>
+                                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">Recovered</p>
+                                            <p class="text-lg font-bold text-green-600">KES {{ number_format($case->getTotalRecovered(), 2) }}</p>
+                                        </div>
+                                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">Remaining</p>
+                                            <p class="text-lg font-bold text-orange-600">KES {{ number_format($case->getRemainingBalance(), 2) }}</p>
+                                        </div>
+                                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">Days in Default</p>
+                                            <p class="text-lg font-bold {{ $case->days_in_default > 90 ? 'text-red-600' : ($case->days_in_default > 30 ? 'text-orange-600' : 'text-gray-600') }}">
+                                                {{ $case->days_in_default }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    @if($case->actions->count() > 0)
+                                    <div class="mt-4">
+                                        <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Recent Actions</h5>
+                                        @include('partials.recovery.action-timeline', ['actions' => $case->actions->take(3)])
+                                        <a href="{{ route('recovery.cases.show', $case) }}" class="text-sm text-brand-600 hover:text-brand-700">
+                                            View All Actions →
+                                        </a>
+                                    </div>
+                                    @endif
+
+                                    @if($case->paymentPlans->count() > 0)
+                                    @php $activePlan = $case->getActivePaymentPlan(); @endphp
+                                    @if($activePlan)
+                                    <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                                    Active Payment Plan
+                                                </p>
+                                                <p class="text-xs text-blue-600 dark:text-blue-400">
+                                                    {{ $activePlan->installment_frequency }} installments of KES {{ number_format($activePlan->installment_amount, 2) }}
+                                                </p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                                    {{ $activePlan->progress_percentage }}% Complete
+                                                </p>
+                                                <div class="w-32 bg-blue-200 rounded-full h-2 dark:bg-blue-800">
+                                                    <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $activePlan->progress_percentage }}%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endif
+                                    @endif
+                                </div>
+                                @endforeach
+                            @else
+                                <div class="text-center py-8">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <h4 class="mt-2 text-lg font-medium text-gray-700 dark:text-gray-300">No Recovery Cases</h4>
+                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">This user has no debt recovery cases</p>
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Edit Profile Modal - ADD THE WORKING MODAL FROM FIRST CODE -->
+    <!-- Edit Profile Modal -->
     <div id="editProfileModal" class="fixed inset-0 z-99999 overflow-y-auto hidden">
         <div class="flex items-center justify-center min-h-screen p-5">
             <!-- Backdrop -->
@@ -1082,7 +1197,7 @@
                                 </select>
                             </div>
 
-                            <!-- Organization Information (for employed, self-employed, business owners) -->
+                            <!-- Organization Information -->
                             <div class="col-span-2">
                                 <h6 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Organization Information</h6>
                                 <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
@@ -1325,16 +1440,25 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Set default tab based on URL hash or first available
         const hash = window.location.hash.substring(1);
-        const validTabs = ['profile', 'documents', 'employment', 'kin', 'loans'];
+        const validTabs = ['profile', 'documents', 'employment', 'kin', 'loans', 'recovery'];
         
         if (hash && validTabs.includes(hash)) {
-            document.querySelector(`[x-data]`).__x.$data.activeTab = hash;
+            const el = document.querySelector(`[x-data]`);
+            if (el && el.__x) {
+                el.__x.$data.activeTab = hash;
+            }
         }
         
-        // Update URL when tab changes
-        document.querySelector(`[x-data]`).__x.$watch('activeTab', (value) => {
-            window.history.replaceState(null, null, `#${value}`);
-        });
+        // Update URL when tab changes - use a safer approach
+        const tabContainer = document.querySelector('[x-data]');
+        if (tabContainer) {
+            // Use Alpine's watch if available
+            if (tabContainer.__x) {
+                tabContainer.__x.$watch('activeTab', (value) => {
+                    window.history.replaceState(null, null, `#${value}`);
+                });
+            }
+        }
     });
 </script>
 @endpush

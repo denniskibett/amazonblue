@@ -1,5 +1,4 @@
 <?php
-// routes/web.php
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\SystemController;
@@ -14,6 +13,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\InvestmentController;
 use App\Http\Controllers\PartnerController;
+use App\Http\Controllers\CaseController;
 
 // Public Routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -47,9 +47,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password');
         Route::post('/password/confirm', [ProfileController::class, 'confirmPassword'])->name('password.confirm');
     });
-
+    
     // Users Resource
     Route::resource('users', UserController::class);
+
+    // ============ USER LOANS DATA (For Modal) ============
+    Route::get('/users/{user}/loans-data', [UserController::class, 'getUserLoansData'])->name('users.loans-data');
 
     // Custom User Loan Routes
     Route::prefix('users/{user}')->name('users.')->group(function () {
@@ -82,6 +85,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Repayments Resource
     Route::resource('repayments', RepaymentController::class);
+
+    // Cases Resource
+    Route::resource('cases', CaseController::class);
+    Route::get('cases/my', [CaseController::class, 'myCases'])->name('cases.my');
+    Route::patch('cases/{case}/recover', [CaseController::class, 'markAsRecovered'])->name('cases.recover');
+    Route::patch('cases/{case}/write-off', [CaseController::class, 'markAsWrittenOff'])->name('cases.write-off');
+    Route::post('cases/{case}/action', [CaseController::class, 'addAction'])->name('cases.action.add');
+    Route::get('cases/{case}/data', [CaseController::class, 'getCaseData'])->name('cases.data');
+    Route::get('cases/export/csv', [CaseController::class, 'export'])->name('cases.export');
+    Route::get('cases/stats', [CaseController::class, 'getStats'])->name('cases.stats');
 
     // ============ REPORTS ROUTES ============
     Route::prefix('reports')->name('reports.')->group(function () {

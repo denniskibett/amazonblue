@@ -8,10 +8,15 @@ use App\Models\User;
 use App\Models\Repayment;
 use App\Models\Broker;
 use App\Models\Borrower;
+use App\Models\DebtRecoveryCase;
+use App\Models\RecoveryStatus;
+use App\Models\RecoveryPriority;
+use App\Models\RecoveryCaseNote;
 use App\Pdf\LoanPDF;
 use App\Services\LoanCalculator;
 use App\Services\SignatureService;
 use App\Services\LoanAgreementService;
+use App\Services\NplDetectionService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -23,15 +28,371 @@ class LoanController extends Controller
     protected $loanCalculator;
     protected $signatureService;
     protected $loanAgreementService;
+    protected $nplDetectionService;
 
     public function __construct(
         LoanCalculator $loanCalculator,
         SignatureService $signatureService,
-        LoanAgreementService $loanAgreementService
+        LoanAgreementService $loanAgreementService,
+        NplDetectionService $nplDetectionService
     ) {
         $this->loanCalculator = $loanCalculator;
         $this->signatureService = $signatureService;
         $this->loanAgreementService = $loanAgreementService;
+        $this->nplDetectionService = $nplDetectionService;
+    }
+
+
+    public function store(Request $request)
+    {
+        $user = auth()->user();
+        
+        \Log::debug('Loan Store Request Data:', $request->all());
+        
+        $requestData = $request->all();
+        
+        // Determine which user to save signature for
+        $signatureUser = null;
+        if ($user->role === 'admin' || $user->role === 'teller') {
+            $signatureUser = User::find($request->user_id);
+        } else {
+            $signatureUser = $user;
+        }
+        
+        // Check for force create header
+        $forceCreate = $request->header('X-Force-Create') === 'true';
+        
+        // Set default values based on user role
+        if ($user->role === 'broker') {
+            $requestData['broker_status'] = 1;
+            $requestData['status'] = 'pending';
+        } elseif (!in_array($user->role, ['admin', 'teller'])) {
+            $requestData['status'] = 'pending';
+            $requestData['broker_status'] = 0;
+        }
+        
+        // Handle consent
+        $requestData['consent'] = $request->has('consent') && $request->consent === '1';
+        $requestData['consent_date'] = $requestData['consent'] ? now() : null;
+        
+        $rules = [
+            'loan_type_id' => 'required|exists:loan_types,id',
+            'amount' => 'required|numeric|min:1',
+            'borrow_date' => 'required|date',
+            'due_date' => 'required|date|after:borrow_date',
+            'status' => 'required|in:pending,approved,disbursed,repaid',
+            'reason' => 'required|string|min:10',
+            'guarantor_id' => 'nullable|exists:users,id',
+            'guarantor_relationship' => 'nullable|string|max:100',
+            'loan_officer_id' => 'nullable|exists:users,id',
+            'consent' => 'required|accepted',
+        ];
+        
+        // User validation based on role
+        if ($user->role === 'admin' || $user->role === 'teller') {
+            $rules['user_id'] = 'required|exists:users,id';
+            $rules['broker_status'] = 'required|in:0,1';
+        } elseif ($user->role === 'broker') {
+            $rules['user_id'] = [
+                'required',
+                'exists:users,id',
+                function ($attribute, $value, $fail) use ($user) {
+                    $isValidBorrower = User::where('id', $value)
+                        ->where('role', 'borrower')
+                        ->whereHas('borrower', function($query) use ($user) {
+                            $query->where('broker_id', $user->broker->id);
+                        })
+                        ->exists();
+                    
+                    if (!$isValidBorrower) {
+                        $fail('The selected borrower is not assigned to you.');
+                    }
+                }
+            ];
+        } else {
+            $rules['user_id'] = 'required|in:'.$user->id;
+            $requestData['user_id'] = $user->id;
+            $requestData['broker_status'] = 0;
+        }
+        
+        try {
+            // Get the user ID to check
+            $userId = $requestData['user_id'] ?? ($request->user_id ?? null);
+            
+            // Enhanced duplicate check with all active loans
+            if (!$forceCreate && $userId) {
+                $activeLoans = Loan::with(['loanType', 'user', 'repayments'])
+                    ->where('user_id', $userId)
+                    ->whereNotIn('status', ['repaid', 'rejected', 'completed'])
+                    ->where(function($query) {
+                        $query->where('status', 'pending')
+                            ->orWhere('status', 'approved')
+                            ->orWhere('status', 'disbursed')
+                            ->orWhere('status', 'active');
+                    })
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+                
+                if ($activeLoans->count() > 0) {
+                    $activeLoansData = [];
+                    $now = \Carbon\Carbon::now();
+                    
+                    foreach ($activeLoans as $existingLoan) {
+                        // Calculate due date
+                        $dueDate = \Carbon\Carbon::parse($existingLoan->borrow_date);
+                        if ($existingLoan->loanType) {
+                            $dueDate->add($existingLoan->loanType->period, $existingLoan->loanType->unit);
+                        }
+                        
+                        // Calculate days until due
+                        $daysUntilDue = $now->diffInDays($dueDate, false);
+                        
+                        // Calculate total repayments
+                        $totalRepayments = $existingLoan->repayments ? $existingLoan->repayments->sum('amount') : 0;
+                        $interest = ($existingLoan->loanType->interest_rate / 100) * $existingLoan->amount;
+                        $principalPlusInterest = $existingLoan->amount + $interest;
+                        $outstandingBalance = max($principalPlusInterest - $totalRepayments, 0);
+                        
+                        $activeLoansData[] = [
+                            'id' => $existingLoan->id,
+                            'amount' => $existingLoan->amount,
+                            'borrow_date' => $existingLoan->borrow_date,
+                            'borrow_date_formatted' => \Carbon\Carbon::parse($existingLoan->borrow_date)->format('M d, Y'),
+                            'due_date' => $dueDate->toDateString(),
+                            'due_date_formatted' => $dueDate->format('M d, Y'),
+                            'status' => $existingLoan->status,
+                            'status_display' => ucfirst($existingLoan->status),
+                            'days_until_due' => (int)$daysUntilDue,
+                            'days_until_due_text' => $daysUntilDue > 0 ? $daysUntilDue . ' days remaining' : ($daysUntilDue == 0 ? 'Due today' : abs($daysUntilDue) . ' days overdue'),
+                            'loan_type' => $existingLoan->loanType ? $existingLoan->loanType->name : 'Standard Loan',
+                            'interest_rate' => $existingLoan->loanType ? $existingLoan->loanType->interest_rate : 0,
+                            'period' => $existingLoan->loanType ? $existingLoan->loanType->period . ' ' . $existingLoan->loanType->unit : 'N/A',
+                            'total_repayments' => $totalRepayments,
+                            'outstanding_balance' => max(0, $outstandingBalance),
+                            'borrower_name' => $existingLoan->user ? $existingLoan->user->name : 'Unknown',
+                        ];
+                    }
+                    
+                    $message = 'This borrower already has ' . $activeLoans->count() . ' active loan(s). Would you like to create another one?';
+                    
+                    return response()->json([
+                        'success' => false,
+                        'message' => $message,
+                        'duplicate' => true,
+                        'active_loans' => $activeLoansData,
+                        'total_active' => $activeLoans->count()
+                    ], 409);
+                }
+            }
+            
+            $validatedData = $request->validate($rules);
+            
+            // Merge all data
+            $loanData = array_merge($validatedData, [
+                'status' => $requestData['status'] ?? 'pending',
+                'broker_status' => $requestData['broker_status'] ?? 0,
+                'consent' => $requestData['consent'],
+                'consent_date' => $requestData['consent_date'],
+            ]);
+            
+            $loan = Loan::create($loanData);
+
+            // ============ NPL: Calculate and set due date ============
+            if ($loan->loanType) {
+                $calculatedDueDate = $loan->calculateDueDate();
+                if ($calculatedDueDate) {
+                    $loan->calculated_due_date = $calculatedDueDate;
+                    $loan->npl_trigger_threshold = $loan->getNplThreshold();
+                    
+                    // Also set the due_date field for compatibility
+                    if (in_array('due_date', (array) $loan->getFillable())) {
+                        $loan->due_date = $calculatedDueDate;
+                    }
+                    
+                    $loan->save();
+                    
+                    Log::info('Loan #' . $loan->id . ' due date calculated: ' . $calculatedDueDate->format('Y-m-d'));
+                }
+            }
+            
+            // Handle signature if provided
+            if ($request->has('signature_data') && !empty($request->signature_data)) {
+                $signatureResult = $this->signatureService->saveSignature($request->signature_data, $signatureUser);
+                if (!$signatureResult['success']) {
+                    \Log::error('Signature save failed:', $signatureResult);
+                }
+            }
+            
+            // Generate agreement if consent was given
+            if ($loan->consent) {
+                try {
+                    $this->loanAgreementService->generateLoanAgreement($loan);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to generate loan agreement:', ['error' => $e->getMessage()]);
+                }
+            }
+            
+            // Return JSON response for AJAX
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Loan created successfully.',
+                    'loan' => $loan->load(['user', 'loanType']),
+                    'redirect' => route('loans.index')
+                ]);
+            }
+            
+            return redirect()->route('loans.index')->with('success', 'Loan created successfully.');
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            return redirect()->back()->withInput()->withErrors($e->errors());
+            
+        } catch (\Exception $e) {
+            \Log::error('Loan creation failed:', [
+                'error_message' => $e->getMessage(),
+                'error_trace' => $e->getTraceAsString(),
+            ]);
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create loan: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return back()->with('error', 'Failed to create loan: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    public function update(Request $request, Loan $loan)
+    {
+        $validated = $request->validate([
+            'loan_type_id'   => 'required|exists:loan_types,id',
+            'amount'         => 'required|numeric|min:1',
+            'borrow_date'    => 'required|date',
+            'status'         => 'required|in:pending,approved,disbursed,repaid,overdue,defaulted',
+            'broker_status'  => 'required|in:0,1',
+            'admin_notes'    => 'nullable|string',
+            'guarantor_id' => 'nullable|exists:users,id',
+            'guarantor_relationship' => 'nullable|string|max:100',
+            'loan_officer_id' => 'nullable|exists:users,id',
+            'consent' => 'sometimes|boolean',
+        ]);
+
+        // Handle consent update
+        if ($request->has('consent') && $request->consent === '1' && !$loan->consent) {
+            $validated['consent'] = true;
+            $validated['consent_date'] = now();
+        } elseif (!$request->has('consent') || $request->consent !== '1') {
+            $validated['consent'] = false;
+            $validated['consent_date'] = null;
+        }
+
+        // Check if status is being changed to disbursed - update NPL fields
+        if (isset($validated['status']) && $validated['status'] === 'disbursed') {
+            // Recalculate due date and NPL threshold
+            if ($loan->loanType) {
+                $calculatedDueDate = $loan->calculateDueDate();
+                if ($calculatedDueDate) {
+                    $loan->calculated_due_date = $calculatedDueDate;
+                    $loan->npl_trigger_threshold = $loan->getNplThreshold();
+                    if (in_array('due_date', (array) $loan->getFillable())) {
+                        $validated['due_date'] = $calculatedDueDate;
+                    }
+                }
+            }
+        }
+
+        $loan->update($validated);
+
+        // If loan status changed to defaulted, create recovery case
+        if ($request->has('status') && $request->status === 'defaulted') {
+            $this->createRecoveryCaseFromLoan($loan);
+        }
+
+        return redirect()->route('loans.edit', $loan->id)
+                         ->with('success', 'Loan updated successfully.');
+    }
+
+    /**
+     * Create a recovery case from a loan that has been marked as defaulted
+     */
+    private function createRecoveryCaseFromLoan($loan)
+    {
+        // Check if recovery case already exists
+        $existingCase = DebtRecoveryCase::where('loan_id', $loan->id)
+            ->whereHas('status', function($q) {
+                $q->whereIn('slug', ['open', 'in_progress', 'negotiation', 'legal']);
+            })
+            ->first();
+
+        if ($existingCase) {
+            return $existingCase;
+        }
+
+        // Calculate total debt
+        $totalDisbursed = $loan->disbursements->sum('amount') ?? $loan->amount;
+        $totalRepaid = $loan->repayments->sum('amount') ?? 0;
+        $interest = ($loan->loanType->interest_rate / 100) * $loan->amount;
+        $penalty = $loan->calculatePenalties();
+
+        $totalDebt = max(0, $totalDisbursed + $interest + $penalty - $totalRepaid);
+
+        // Get status and priority
+        $status = RecoveryStatus::where('slug', 'open')->first();
+        $priority = RecoveryPriority::where('slug', 'medium')->first();
+
+        if (!$status || !$priority) {
+            Log::error('Could not find recovery status or priority for loan #' . $loan->id);
+            return null;
+        }
+
+        // Generate case number
+        $year = now()->format('Y');
+        $count = DebtRecoveryCase::whereYear('created_at', $year)->count() + 1;
+        $caseNumber = 'DR-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+        // Find default assignee
+        $assignedTo = User::whereIn('role', ['admin', 'teller'])->first();
+
+        // Create the recovery case
+        $case = DebtRecoveryCase::create([
+            'user_id' => $loan->user_id,
+            'loan_id' => $loan->id,
+            'case_number' => $caseNumber,
+            'total_debt_amount' => $totalDebt,
+            'principal_outstanding' => max(0, $loan->amount - min($totalRepaid, $loan->amount)),
+            'interest_outstanding' => max(0, $interest - max(0, $totalRepaid - $loan->amount)),
+            'penalty_outstanding' => $penalty,
+            'fees_outstanding' => 0,
+            'default_date' => $loan->default_date ?? now(),
+            'days_in_default' => $loan->days_overdue ?? 0,
+            'status_id' => $status->id,
+            'priority_id' => $priority->id,
+            'assigned_to' => $assignedTo ? $assignedTo->id : null,
+            'recovery_officer' => $assignedTo ? $assignedTo->name : null,
+            'notes' => "Recovery case created from loan #{$loan->id} marked as defaulted.",
+            'created_by' => auth()->id(),
+        ]);
+
+        // Create initial note
+        RecoveryCaseNote::create([
+            'case_id' => $case->id,
+            'note_type' => 'alert',
+            'note' => "Case created from loan #{$loan->id} marked as defaulted. Total debt: KES " . number_format($totalDebt, 2),
+            'created_by' => auth()->id(),
+        ]);
+
+        Log::info("Recovery case created from loan #{$loan->id}: {$caseNumber}");
+
+        return $case;
     }
 
 
@@ -574,215 +935,6 @@ class LoanController extends Controller
         ]);
     }
 
-public function store(Request $request)
-{
-    $user = auth()->user();
-    
-    \Log::debug('Loan Store Request Data:', $request->all());
-    
-    $requestData = $request->all();
-    
-    // Determine which user to save signature for
-    $signatureUser = null;
-    if ($user->role === 'admin' || $user->role === 'teller') {
-        $signatureUser = User::find($request->user_id);
-    } else {
-        $signatureUser = $user;
-    }
-    
-    // Check for force create header
-    $forceCreate = $request->header('X-Force-Create') === 'true';
-    
-    // Set default values based on user role
-    if ($user->role === 'broker') {
-        $requestData['broker_status'] = 1;
-        $requestData['status'] = 'pending';
-    } elseif (!in_array($user->role, ['admin', 'teller'])) {
-        $requestData['status'] = 'pending';
-        $requestData['broker_status'] = 0;
-    }
-    
-    // Handle consent
-    $requestData['consent'] = $request->has('consent') && $request->consent === '1';
-    $requestData['consent_date'] = $requestData['consent'] ? now() : null;
-    
-    $rules = [
-        'loan_type_id' => 'required|exists:loan_types,id',
-        'amount' => 'required|numeric|min:1',
-        'borrow_date' => 'required|date',
-        'due_date' => 'required|date|after:borrow_date',
-        'status' => 'required|in:pending,approved,disbursed,repaid',
-        'reason' => 'required|string|min:10',
-        'guarantor_id' => 'nullable|exists:users,id',
-        'guarantor_relationship' => 'nullable|string|max:100',
-        'loan_officer_id' => 'nullable|exists:users,id',
-        'consent' => 'required|accepted',
-    ];
-    
-    // User validation based on role
-    if ($user->role === 'admin' || $user->role === 'teller') {
-        $rules['user_id'] = 'required|exists:users,id';
-        $rules['broker_status'] = 'required|in:0,1';
-    } elseif ($user->role === 'broker') {
-        $rules['user_id'] = [
-            'required',
-            'exists:users,id',
-            function ($attribute, $value, $fail) use ($user) {
-                $isValidBorrower = User::where('id', $value)
-                    ->where('role', 'borrower')
-                    ->whereHas('borrower', function($query) use ($user) {
-                        $query->where('broker_id', $user->broker->id);
-                    })
-                    ->exists();
-                
-                if (!$isValidBorrower) {
-                    $fail('The selected borrower is not assigned to you.');
-                }
-            }
-        ];
-    } else {
-        $rules['user_id'] = 'required|in:'.$user->id;
-        $requestData['user_id'] = $user->id;
-        $requestData['broker_status'] = 0;
-    }
-    
-    try {
-        // Get the user ID to check
-        $userId = $requestData['user_id'] ?? ($request->user_id ?? null);
-        
-        // Enhanced duplicate check with all active loans
-        if (!$forceCreate && $userId) {
-            $activeLoans = Loan::with(['loanType', 'user', 'repayments'])
-                ->where('user_id', $userId)
-                ->whereNotIn('status', ['repaid', 'rejected', 'completed'])
-                ->where(function($query) {
-                    $query->where('status', 'pending')
-                        ->orWhere('status', 'approved')
-                        ->orWhere('status', 'disbursed')
-                        ->orWhere('status', 'active');
-                })
-                ->orderBy('created_at', 'desc')
-                ->get();
-            
-            if ($activeLoans->count() > 0) {
-                $activeLoansData = [];
-                $now = \Carbon\Carbon::now();
-                
-                foreach ($activeLoans as $existingLoan) {
-                    // Calculate due date
-                    $dueDate = \Carbon\Carbon::parse($existingLoan->borrow_date);
-                    if ($existingLoan->loanType) {
-                        $dueDate->add($existingLoan->loanType->period, $existingLoan->loanType->unit);
-                    }
-                    
-                    // Calculate days until due
-                    $daysUntilDue = $now->diffInDays($dueDate, false);
-                    
-                    // Calculate total repayments
-                    $totalRepayments = $existingLoan->repayments ? $existingLoan->repayments->sum('amount') : 0;
-                    $interest = ($existingLoan->loanType->interest_rate / 100) * $existingLoan->amount;
-                    $principalPlusInterest = $existingLoan->amount + $interest;
-                    $outstandingBalance = max($principalPlusInterest - $totalRepayments, 0);
-                    
-                    $activeLoansData[] = [
-                        'id' => $existingLoan->id,
-                        'amount' => $existingLoan->amount,
-                        'borrow_date' => $existingLoan->borrow_date,
-                        'borrow_date_formatted' => \Carbon\Carbon::parse($existingLoan->borrow_date)->format('M d, Y'),
-                        'due_date' => $dueDate->toDateString(),
-                        'due_date_formatted' => $dueDate->format('M d, Y'),
-                        'status' => $existingLoan->status,
-                        'status_display' => ucfirst($existingLoan->status),
-                        'days_until_due' => (int)$daysUntilDue,
-                        'days_until_due_text' => $daysUntilDue > 0 ? $daysUntilDue . ' days remaining' : ($daysUntilDue == 0 ? 'Due today' : abs($daysUntilDue) . ' days overdue'),
-                        'loan_type' => $existingLoan->loanType ? $existingLoan->loanType->name : 'Standard Loan',
-                        'interest_rate' => $existingLoan->loanType ? $existingLoan->loanType->interest_rate : 0,
-                        'period' => $existingLoan->loanType ? $existingLoan->loanType->period . ' ' . $existingLoan->loanType->unit : 'N/A',
-                        'total_repayments' => $totalRepayments,
-                        'outstanding_balance' => max(0, $outstandingBalance),
-                        'borrower_name' => $existingLoan->user ? $existingLoan->user->name : 'Unknown',
-                    ];
-                }
-                
-                $message = 'This borrower already has ' . $activeLoans->count() . ' active loan(s). Would you like to create another one?';
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => $message,
-                    'duplicate' => true,
-                    'active_loans' => $activeLoansData,
-                    'total_active' => $activeLoans->count()
-                ], 409);
-            }
-        }
-        
-        $validatedData = $request->validate($rules);
-        
-        // Merge all data
-        $loanData = array_merge($validatedData, [
-            'status' => $requestData['status'] ?? 'pending',
-            'broker_status' => $requestData['broker_status'] ?? 0,
-            'consent' => $requestData['consent'],
-            'consent_date' => $requestData['consent_date'],
-        ]);
-        
-        $loan = Loan::create($loanData);
-        
-        // Handle signature if provided
-        if ($request->has('signature_data') && !empty($request->signature_data)) {
-            $signatureResult = $this->signatureService->saveSignature($request->signature_data, $signatureUser);
-            if (!$signatureResult['success']) {
-                \Log::error('Signature save failed:', $signatureResult);
-            }
-        }
-        
-        // Generate agreement if consent was given
-        if ($loan->consent) {
-            try {
-                $this->loanAgreementService->generateLoanAgreement($loan);
-            } catch (\Exception $e) {
-                \Log::error('Failed to generate loan agreement:', ['error' => $e->getMessage()]);
-            }
-        }
-        
-        // Return JSON response for AJAX
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Loan created successfully.',
-                'loan' => $loan->load(['user', 'loanType']),
-                'redirect' => route('loans.index')
-            ]);
-        }
-        
-        return redirect()->route('loans.index')->with('success', 'Loan created successfully.');
-        
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        }
-        return redirect()->back()->withInput()->withErrors($e->errors());
-        
-    } catch (\Exception $e) {
-        \Log::error('Loan creation failed:', [
-            'error_message' => $e->getMessage(),
-            'error_trace' => $e->getTraceAsString(),
-        ]);
-        
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create loan: ' . $e->getMessage()
-            ], 500);
-        }
-        
-        return back()->with('error', 'Failed to create loan: ' . $e->getMessage())->withInput();
-    }
-}
 
     public function edit(Loan $loan)
     {
@@ -800,34 +952,7 @@ public function store(Request $request)
         ]);
     }
     
-    public function update(Request $request, Loan $loan)
-    {
-        $validated = $request->validate([
-            'loan_type_id'   => 'required|exists:loan_types,id',
-            'amount'         => 'required|numeric|min:1',
-            'borrow_date'    => 'required|date',
-            'status'         => 'required|in:pending,approved,disbursed,repaid',
-            'broker_status'  => 'required|in:0,1',
-            'admin_notes'    => 'nullable|string',
-            'guarantor_id' => 'nullable|exists:users,id',
-            'guarantor_relationship' => 'nullable|string|max:100',
-            'loan_officer_id' => 'nullable|exists:users,id',
-            'consent' => 'sometimes|boolean',
-        ]);
 
-        // Handle consent update
-        if ($request->has('consent') && $request->consent === '1' && !$loan->consent) {
-            $validated['consent'] = true;
-            $validated['consent_date'] = now();
-        } elseif (!$request->has('consent') || $request->consent !== '1') {
-            $validated['consent'] = false;
-            $validated['consent_date'] = null;
-        }
-    
-        $loan->update($validated);
-        return redirect()->route('loans.edit', $loan->id)
-                         ->with('success', 'Loan updated successfully.');
-    }
     
     public function saveSignature(Request $request, Loan $loan)
     {

@@ -12,12 +12,96 @@
                     @elseif($loan->status === 'disbursed') bg-blue-100 text-blue-800
                     @elseif($loan->status === 'rejected') bg-red-100 text-red-800
                     @elseif($loan->status === 'repaid') bg-purple-100 text-purple-800
+                    @elseif($loan->status === 'defaulted') bg-red-100 text-red-800
                     @else bg-gray-100 text-gray-800 @endif">
                     {{ ucfirst($loan->status) }}
                 </div>
             </div>
+
+            <!-- ============ NPL STATUS SECTION ============ -->
+            <div class="mt-3 p-3 rounded-lg border
+                @if($loan->is_non_performing) 
+                    border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20
+                @elseif($loan->isOverdue())
+                    border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20
+                @else
+                    border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20
+                @endif
+            ">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        @if($loan->is_non_performing)
+                            <svg class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                            </svg>
+                            <span class="font-semibold text-red-800 dark:text-red-300">🚨 Non-Performing Loan (NPL)</span>
+                        @elseif($loan->isOverdue())
+                            <svg class="h-5 w-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="font-semibold text-yellow-800 dark:text-yellow-300">⚠️ Overdue</span>
+                        @else
+                            <svg class="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="font-semibold text-green-800 dark:text-green-300">✅ Performing</span>
+                        @endif
+                    </div>
+                    @if($loan->is_non_performing)
+                        <span class="text-xs text-red-600 dark:text-red-400 font-medium">
+                            {{ $loan->days_overdue ?? 0 }} days overdue
+                        </span>
+                    @endif
+                </div>
+                
+                @if($loan->is_non_performing)
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300">
+                        🔴 NPL Status: Defaulted
+                    </span>
+                    @if($loan->default_date)
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                        📅 Default Date: {{ \Carbon\Carbon::parse($loan->default_date)->format('M d, Y') }}
+                    </span>
+                    @endif
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium 
+                        @if(($loan->days_overdue ?? 0) > 90) bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300
+                        @elseif(($loan->days_overdue ?? 0) > 60) bg-orange-100 text-orange-800 dark:bg-orange-800/30 dark:text-orange-300
+                        @elseif(($loan->days_overdue ?? 0) > 30) bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300
+                        @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 @endif">
+                        📊 {{ $loan->days_overdue ?? 0 }} days in default
+                    </span>
+                    @if(isset($recoveryCase))
+                    <a href="{{ route('cases.show', $recoveryCase) }}" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-300 hover:bg-blue-200 transition-colors">
+                        📋 View Recovery Case
+                    </a>
+                    @endif
+                </div>
+                @elseif($loan->isOverdue())
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300">
+                        🟡 Overdue: {{ $loan->days_overdue ?? 0 }} days
+                    </span>
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                        ⏳ Threshold: {{ $loan->npl_trigger_threshold ?? 0 }} days until NPL
+                    </span>
+                </div>
+                @else
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300">
+                        ✅ Loan is performing
+                    </span>
+                    @if($loan->calculated_due_date)
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                        📅 Due: {{ \Carbon\Carbon::parse($loan->calculated_due_date)->format('M d, Y') }}
+                    </span>
+                    @endif
+                </div>
+                @endif
+            </div>
             
-            <div class="space-y-4">
+            <!-- Rest of the existing sidebar content -->
+            <div class="space-y-4 mt-4">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Loan ID</p>
                     <p class="text-lg font-bold">#{{ str_pad($loan->id, 5, '0', STR_PAD_LEFT) }}</p>
@@ -46,15 +130,15 @@
                     </p>
                 </div>
                 
-<div class="pt-4">
-    <a href="{{ route('loans.generatePdf', ['loan' => $loan->id, 'loanId' => $loan->id]) }}" 
-    class="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-        </svg>
-        Download PDF
-    </a>
-</div>
+                <div class="pt-4">
+                    <a href="{{ route('loans.generatePdf', ['loan' => $loan->id, 'loanId' => $loan->id]) }}" 
+                    class="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        Download PDF
+                    </a>
+                </div>
 
                 <!-- Agreement Buttons -->
                 <div class="pt-4 space-y-2">
@@ -523,6 +607,7 @@
 @include('partials.modal.disbursement-create-modal')
 @include('partials.modal.repayment-create-modal')
 @include('partials.modal.alert-modal')
+@include('partials.modal.cases-create-modal')
 
 @endsection
 
