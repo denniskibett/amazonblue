@@ -40,9 +40,9 @@
             <div>
                 <div class="flex items-center gap-3 flex-wrap">
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="case.case_number"></h1>
-                    @include('partials.recovery.status-badge', ['status' => $case->status])
-                    @include('partials.recovery.priority-badge', ['priority' => $case->priority])
-                    @if($case->loan && $case->loan->is_non_performing)
+                    @include('partials.recovery.status-badge', ['status' => $caseData->status])
+                    @include('partials.recovery.priority-badge', ['priority' => $caseData->priority])
+                    @if($caseData->loan && $caseData->loan->is_non_performing)
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
                             NPL Loan
                         </span>
@@ -179,7 +179,7 @@
                     <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Activity Timeline</h3>
                     <span class="text-sm text-gray-500 dark:text-gray-400" x-text="case.actions_count + ' actions'"></span>
                 </div>
-                @include('partials.recovery.action-timeline', ['actions' => $case->actions])
+                @include('partials.recovery.action-timeline', ['actions' => $caseData->actions])
             </div>
         </div>
 

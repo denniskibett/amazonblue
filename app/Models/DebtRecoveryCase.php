@@ -109,6 +109,7 @@ class DebtRecoveryCase extends Model
         return $this->hasMany(RecoveryPaymentPlan::class, 'case_id');
     }
 
+    
     public function activePaymentPlan()
     {
         return $this->hasOne(RecoveryPaymentPlan::class, 'case_id')
@@ -695,4 +696,6 @@ class DebtRecoveryCase extends Model
 
         return $badges[$this->priority->slug] ?? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     }
+
+    
 }

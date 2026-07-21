@@ -395,188 +395,169 @@ class CaseController extends Controller
         }
     }
 
-/**
- * Display the specified recovery case.
- */
-public function show(string $id)
-{
-    $case = DebtRecoveryCase::with([
-        'user',
-        'user.borrower',
-        'loan',
-        'loan.loanType',
-        'status',
-        'priority',
-        'assignedTo',
-        'actions' => function($query) {
-            $query->with(['actionType', 'performedBy'])
-                  ->orderBy('created_at', 'desc');
-        },
-        'paymentPlans',
-        'paymentPlans.installments',
-        'documents',
-        'notes',
-        'notes.createdBy',
-        'legalProceedings',
-        'legalDeadlines',
-        'communications',
-        'communications.communicationType',
-        'tasks',
-        'tasks.assignedTo',
-        'tasks.priority',
-    ])->findOrFail($id);
+    /**
+     * Display the specified recovery case.
+     */
+    public function show(string $id)
+    {
+        $caseData = DebtRecoveryCase::with([
+            'user',
+            'user.borrower',
+            'loan',
+            'loan.loanType',
+            'status',
+            'priority',
+            'assignedTo',
+            'actions',
+            'actions.actionType',
+            'actions.performedBy',
+            'paymentPlans',
+            'paymentPlans.installments',
+            'documents',
+            'notes',
+            'notes.createdBy',
+            'legalProceedings',
+            'legalDeadlines',
+            'communications',
+            'communications.communicationType',
+            'tasks',
+            'tasks.assignedTo',
+            'tasks.priority',
+        ])->findOrFail($id);
 
-    // Check permission
-    $user = Auth::user();
-    if ($user->role === 'borrower' && $case->user_id !== $user->id) {
-        abort(403, 'Unauthorized action.');
-    }
-    if ($user->role === 'broker') {
-        $broker = $user->broker;
-        if ($broker) {
-            $borrowerIds = Borrower::where('broker_id', $broker->id)->pluck('user_id');
-            if (!$borrowerIds->contains($case->user_id)) {
-                abort(403, 'Unauthorized action.');
-            }
-        } else {
+        // Check permission
+        $user = Auth::user();
+        if ($user->role === 'borrower' && $caseData->user_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }
-    }
+        if ($user->role === 'broker') {
+            $broker = $user->broker;
+            if ($broker) {
+                $borrowerIds = Borrower::where('broker_id', $broker->id)->pluck('user_id');
+                if (!$borrowerIds->contains($caseData->user_id)) {
+                    abort(403, 'Unauthorized action.');
+                }
+            } else {
+                abort(403, 'Unauthorized action.');
+            }
+        }
 
-    // Get NPL info if case is from a loan
-    $nplInfo = null;
-    if ($case->loan) {
-        try {
+        // FIX: Ensure paymentPlans is a collection, not a string
+        if (!($caseData->paymentPlans instanceof \Illuminate\Support\Collection) && is_string($caseData->paymentPlans)) {
+            // If it's a string (maybe JSON), try to decode it
+            $decoded = json_decode($caseData->paymentPlans, true);
+            if (is_array($decoded)) {
+                $caseData->paymentPlans = collect($decoded);
+            } else {
+                $caseData->paymentPlans = collect();
+            }
+        }
+
+        // Get NPL info if case is from a loan - FIXED: Safe method calls
+        $nplInfo = null;
+        if ($caseData->loan) {
+            // Get recovery stage using safe method with fallbacks
+            $recoveryStage = 'unknown';
+            $stageLabel = 'Unknown';
+            $stageColor = 'gray';
+            
+            try {
+                // Check if the loan has the getRecoveryStage method
+                if (method_exists($caseData->loan, 'getRecoveryStage')) {
+                    $recoveryStage = $caseData->loan->getRecoveryStage();
+                } else {
+                    // Manual calculation based on days overdue
+                    $daysOverdue = $caseData->loan->days_overdue ?? 0;
+                    $period = $caseData->loan->loanType->period ?? 30;
+                    $ratio = $daysOverdue / max(1, $period);
+                    
+                    if ($daysOverdue <= 0) {
+                        $recoveryStage = 'current';
+                    } elseif ($ratio <= 0.5) {
+                        $recoveryStage = 'early_overdue';
+                    } elseif ($ratio <= 1) {
+                        $recoveryStage = 'overdue';
+                    } elseif ($ratio <= 2) {
+                        $recoveryStage = 'serious_overdue';
+                    } else {
+                        $recoveryStage = 'npl';
+                    }
+                }
+            } catch (\Exception $e) {
+                // If method fails, use default
+                $recoveryStage = 'unknown';
+            }
+            
+            // Get stage label
+            try {
+                if (method_exists($caseData->loan, 'getRecoveryStageLabel')) {
+                    $stageLabel = $caseData->loan->getRecoveryStageLabel();
+                } else {
+                    // Manual mapping
+                    $stageMap = [
+                        'current' => 'Current',
+                        'early_overdue' => 'Early Overdue',
+                        'overdue' => 'Overdue',
+                        'serious_overdue' => 'Seriously Overdue',
+                        'npl' => 'Non-Performing (NPL)',
+                        'unknown' => 'Unknown',
+                    ];
+                    $stageLabel = $stageMap[$recoveryStage] ?? 'Unknown';
+                }
+            } catch (\Exception $e) {
+                $stageLabel = 'Unknown';
+            }
+            
+            // Get stage color
+            try {
+                if (method_exists($caseData->loan, 'getRecoveryStageColor')) {
+                    $stageColor = $caseData->loan->getRecoveryStageColor();
+                } else {
+                    // Manual mapping
+                    $colorMap = [
+                        'current' => 'green',
+                        'early_overdue' => 'yellow',
+                        'overdue' => 'orange',
+                        'serious_overdue' => 'orange',
+                        'npl' => 'red',
+                        'unknown' => 'gray',
+                    ];
+                    $stageColor = $colorMap[$recoveryStage] ?? 'gray';
+                }
+            } catch (\Exception $e) {
+                $stageColor = 'gray';
+            }
+            
             $nplInfo = [
-                'is_npl' => $case->loan->is_non_performing ?? false,
-                'days_overdue' => $case->loan->days_overdue ?? 0,
-                'threshold' => $case->loan->npl_trigger_threshold ?? 0,
-                'default_date' => $case->loan->default_date,
-                'recovery_stage' => $case->loan->getRecoveryStage(),
-                'stage_label' => $case->loan->getRecoveryStageLabel(),
-                'stage_color' => $case->loan->getRecoveryStageColor(),
-            ];
-        } catch (\Exception $e) {
-            $nplInfo = [
-                'is_npl' => $case->loan->is_non_performing ?? false,
-                'days_overdue' => $case->loan->days_overdue ?? 0,
-                'threshold' => $case->loan->npl_trigger_threshold ?? 0,
-                'default_date' => $case->loan->default_date,
-                'recovery_stage' => 'unknown',
-                'stage_label' => 'Unknown',
-                'stage_color' => 'gray',
+                'is_npl' => $caseData->loan->is_non_performing ?? false,
+                'days_overdue' => $caseData->loan->days_overdue ?? 0,
+                'threshold' => $caseData->loan->npl_trigger_threshold ?? 0,
+                'default_date' => $caseData->loan->default_date,
+                'recovery_stage' => $recoveryStage,
+                'stage_label' => $stageLabel,
+                'stage_color' => $stageColor,
             ];
         }
+
+        // Get related data
+        $actionTypes = ActionType::all();
+        $statuses = RecoveryStatus::all();
+        $priorities = RecoveryPriority::all();
+        $officers = User::whereIn('role', ['admin', 'teller'])->get();
+
+        // Build timeline manually
+        $timeline = $this->getCaseTimeline($caseData);
+
+        return view('cases.show', compact(
+            'caseData',
+            'actionTypes',
+            'statuses',
+            'priorities',
+            'officers',
+            'timeline',
+            'nplInfo'
+        ));
     }
-
-    // Get related data
-    $actionTypes = ActionType::all();
-    $statuses = RecoveryStatus::all();
-    $priorities = RecoveryPriority::all();
-    $officers = User::whereIn('role', ['admin', 'teller'])->get();
-
-    // Build timeline manually
-    $timeline = $this->getCaseTimeline($case);
-
-    // Prepare case data for Alpine.js with proper formatting
-    $caseData = $this->prepareCaseDataForView($case);
-
-    return view('cases.show', compact(
-        'case',
-        'caseData',
-        'actionTypes',
-        'statuses',
-        'priorities',
-        'officers',
-        'timeline',
-        'nplInfo'
-    ));
-}
-
-/**
- * Prepare case data for the view with proper formatting for Alpine.js
- */
-private function prepareCaseDataForView($case)
-{
-    return [
-        'id' => $case->id,
-        'case_number' => $case->case_number,
-        'user_id' => $case->user_id,
-        'user_name' => $case->user->name ?? 'N/A',
-        'user_email' => $case->user->email ?? 'N/A',
-        'user_phone' => $case->user->phone ?? null,
-        'user_initials' => $this->getInitials($case->user->name ?? 'User'),
-        'client_type' => $case->user->borrower->formatted_client_type ?? null,
-        'loan_id' => $case->loan_id,
-        'loan_type' => $case->loan->loanType->name ?? null,
-        'loan_amount' => (float) ($case->loan->amount ?? 0),
-        'loan_status' => $case->loan->status ?? null,
-        'is_non_performing' => $case->loan->is_non_performing ?? false,
-        'days_overdue' => $case->loan->days_overdue ?? 0,
-        'default_date_formatted' => $case->default_date ? $case->default_date->format('M d, Y') : null,
-        'last_contact_date_formatted' => $case->last_contact_date ? $case->last_contact_date->format('M d, Y') : null,
-        'next_action_date_formatted' => $case->next_action_date ? $case->next_action_date->format('M d, Y') : null,
-        'total_debt_amount' => (float) $case->total_debt_amount,
-        'total_recovered' => (float) $this->getTotalRecovered($case),
-        'remaining_balance' => (float) $this->getRemainingBalance($case),
-        'recovery_progress' => (float) ($case->recovery_progress ?? 0),
-        'days_in_default' => (int) ($case->days_in_default ?? 0),
-        'assigned_to_name' => $case->assignedTo->name ?? null,
-        'recovery_officer' => $case->recovery_officer ?? null,
-        'recovery_strategy' => $case->recovery_strategy ?? null,
-        'notes' => $case->notes ?? null,
-        'status_id' => $case->status_id,
-        'status_slug' => $case->status->slug ?? null,
-        'priority_id' => $case->priority_id,
-        'priority_slug' => $case->priority->slug ?? null,
-        'actions' => $case->actions->map(function($action) {
-            return [
-                'id' => $action->id,
-                'action_type' => $action->actionType->slug ?? 'other',
-                'action_type_label' => $action->actionType->name ?? 'Action',
-                'description' => $action->notes ?? $action->description ?? null,
-                'outcome' => $action->outcome,
-                'amount_collected' => (float) ($action->amount_collected ?? 0),
-                'created_at' => $action->created_at?->toISOString(),
-                'created_at_diff' => $action->created_at?->diffForHumans(),
-                'next_action_date' => $action->follow_up_date?->format('M d, Y'),
-            ];
-        })->toArray(),
-        'actions_count' => $case->actions->count(),
-        'payment_plans' => $case->paymentPlans->map(function($plan) {
-            return [
-                'id' => $plan->id,
-                'installment_frequency' => $plan->installment_frequency ?? 'Monthly',
-                'number_of_installments' => $plan->number_of_installments ?? 0,
-                'installment_amount' => (float) ($plan->installment_amount ?? 0),
-                'total_amount' => (float) ($plan->total_amount ?? 0),
-                'status' => $plan->status ?? 'proposed',
-                'remaining_balance' => (float) ($plan->remaining_balance ?? 0),
-                'progress_percentage' => (float) ($plan->progress_percentage ?? 0),
-            ];
-        })->toArray(),
-        'created_at' => $case->created_at?->toISOString(),
-        'created_at_diff' => $case->created_at?->diffForHumans(),
-        'updated_at' => $case->updated_at?->toISOString(),
-        'updated_at_diff' => $case->updated_at?->diffForHumans(),
-    ];
-}
-
-/**
- * Get initials from a name
- */
-private function getInitials($name)
-{
-    if (empty($name)) return 'U';
-    $words = explode(' ', $name);
-    $initials = '';
-    foreach ($words as $word) {
-        if (!empty($word)) {
-            $initials .= strtoupper($word[0]);
-        }
-    }
-    return substr($initials, 0, 2);
-}
 
     /**
      * Show the form for editing the specified recovery case.
@@ -967,36 +948,55 @@ private function getInitials($name)
                 'action_type_id' => $request->action_type_id,
                 'action_date' => $request->action_date,
                 'performed_by' => Auth::id(),
-                'contact_person' => $request->contact_person,
+                                'contact_person' => $request->contact_person,
                 'contact_relationship' => $request->contact_relationship,
                 'contact_phone' => $request->contact_phone,
                 'contact_email' => $request->contact_email,
-                'outcome' => $request->outcome ?? 'pending',
+                'outcome' => $request->outcome,
                 'promised_amount' => $request->promised_amount,
                 'promised_date' => $request->promised_date,
-                'amount_collected' => $request->amount_collected ?? 0,
+                'amount_collected' => $request->amount_collected,
                 'notes' => $request->notes,
                 'follow_up_date' => $request->follow_up_date,
                 'follow_up_notes' => $request->follow_up_notes,
             ]);
 
-            // Update case last contact date
-            $case->update([
-                'last_contact_date' => now(),
-                'next_action_date' => $request->follow_up_date ?? $case->next_action_date,
+            // Create case note
+            RecoveryCaseNote::create([
+                'case_id' => $case->id,
+                'note_type' => 'action',
+                'note' => "Action added: " . ($action->actionType->name ?? 'Unknown') . " by " . Auth::user()->name . ($request->notes ? ": " . $request->notes : ""),
+                'created_by' => Auth::id(),
             ]);
 
-            // If amount collected, update total debt
-            if ($request->amount_collected > 0) {
-                $newTotal = max(0, $case->total_debt_amount - $request->amount_collected);
-                $case->update(['total_debt_amount' => $newTotal]);
+            // Update last contact date if applicable
+            if ($request->action_date) {
+                $case->update([
+                    'last_contact_date' => $request->action_date,
+                ]);
+            }
 
-                // Check if fully recovered
-                if ($newTotal <= 0) {
+            // Update next action date if follow up is scheduled
+            if ($request->follow_up_date) {
+                $case->update([
+                    'next_action_date' => $request->follow_up_date,
+                ]);
+            }
+
+            // If amount collected, reduce outstanding amounts
+            if ($request->amount_collected && $request->amount_collected > 0) {
+                $remaining = $case->total_debt_amount - $request->amount_collected;
+                $case->update([
+                    'total_debt_amount' => max(0, $remaining),
+                ]);
+
+                // If fully collected, mark as recovered
+                if ($remaining <= 0) {
                     $recoveredStatus = RecoveryStatus::where('slug', 'recovered')->first();
                     if ($recoveredStatus) {
                         $case->update(['status_id' => $recoveredStatus->id]);
-                        // Update associated loan
+                        
+                        // Update loan if exists
                         if ($case->loan) {
                             $case->loan->update([
                                 'status' => Loan::STATUS_REPAID,
@@ -1007,24 +1007,16 @@ private function getInitials($name)
                 }
             }
 
-            // Create note
-            RecoveryCaseNote::create([
-                'case_id' => $case->id,
-                'note_type' => 'action',
-                'note' => "Action recorded: " . ($action->actionType->name ?? 'Unknown') . " by " . Auth::user()->name,
-                'created_by' => Auth::id(),
-            ]);
-
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Action recorded successfully.',
-                    'action' => $action->load('actionType')
+                    'message' => 'Action added successfully.',
+                    'action' => $action->load('actionType', 'performedBy')
                 ]);
             }
 
             return redirect()->route('cases.show', $case)
-                ->with('success', 'Action recorded successfully.');
+                ->with('success', 'Action added successfully.');
 
         } catch (\Exception $e) {
             Log::error('Failed to add action: ' . $e->getMessage());
@@ -1043,171 +1035,354 @@ private function getInitials($name)
     }
 
     /**
-     * Generate a unique case number.
+     * Add note to a case.
      */
-    private function generateCaseNumber()
+    public function addNote(Request $request, string $id)
     {
-        $year = now()->format('Y');
-        $count = DebtRecoveryCase::whereYear('created_at', $year)->count() + 1;
-        return 'DR-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
-    }
+        $case = DebtRecoveryCase::findOrFail($id);
 
-    /**
-     * Build case timeline from events.
-     */
-    private function getCaseTimeline($case)
-    {
-        $events = collect();
-
-        // Add actions
-        if ($case->actions && $case->actions->count() > 0) {
-            foreach ($case->actions as $action) {
-                // Safely get action type name
-                $actionTypeName = 'Action';
-                $actionTypeSlug = 'other';
-                
-                try {
-                    if ($action->actionType && is_object($action->actionType)) {
-                        $actionTypeName = $action->actionType->name ?? 'Action';
-                        $actionTypeSlug = $action->actionType->slug ?? 'other';
-                    } elseif (is_string($action->action_type_id) || is_int($action->action_type_id)) {
-                        // If it's just an ID, try to find the type
-                        $actionType = ActionType::find($action->action_type_id);
-                        if ($actionType) {
-                            $actionTypeName = $actionType->name ?? 'Action';
-                            $actionTypeSlug = $actionType->slug ?? 'other';
-                        }
-                    }
-                } catch (\Exception $e) {
-                    // Fallback to default
-                    $actionTypeName = 'Action';
-                    $actionTypeSlug = 'other';
-                }
-                
-                $events->push([
-                    'date' => $action->action_date ?? now(),
-                    'type' => 'action',
-                    'description' => $actionTypeName,
-                    'icon' => $this->getActionIcon($actionTypeSlug),
-                    'color' => $this->getActionColor($actionTypeSlug),
-                    'data' => $action,
-                ]);
-            }
-        }
-
-        // Add notes
-        if ($case->notes && $case->notes->count() > 0) {
-            foreach ($case->notes as $note) {
-                $noteType = $note->note_type ?? 'general';
-                $events->push([
-                    'date' => $note->created_at ?? now(),
-                    'type' => 'note',
-                    'description' => ucfirst(str_replace('_', ' ', $noteType)),
-                    'icon' => 'fa-sticky-note',
-                    'color' => 'gray',
-                    'data' => $note,
-                ]);
-            }
-        }
-
-        // Sort by date (newest first)
-        return $events->sortByDesc('date')->values();
-    }
-
-    /**
-     * Get icon for action type.
-     */
-    private function getActionIcon($slug)
-    {
-        $icons = [
-            'phone_call' => 'fa-phone',
-            'sms' => 'fa-sms',
-            'email' => 'fa-envelope',
-            'visit' => 'fa-building',
-            'letter' => 'fa-file-alt',
-            'legal_notice' => 'fa-gavel',
-            'negotiation' => 'fa-handshake',
-            'payment_arrangement' => 'fa-file-contract',
-            'field_visit' => 'fa-map-marker-alt',
-            'other' => 'fa-ellipsis-h',
-        ];
-        return $icons[$slug] ?? 'fa-ellipsis-h';
-    }
-
-    /**
-     * Get color for action type.
-     */
-    private function getActionColor($slug)
-    {
-        $colors = [
-            'phone_call' => 'blue',
-            'sms' => 'indigo',
-            'email' => 'purple',
-            'visit' => 'green',
-            'letter' => 'gray',
-            'legal_notice' => 'red',
-            'negotiation' => 'yellow',
-            'payment_arrangement' => 'emerald',
-            'field_visit' => 'teal',
-            'other' => 'gray',
-        ];
-        return $colors[$slug] ?? 'gray';
-    }
-
-    /**
-     * Get case data for AJAX requests.
-     */
-    public function getCaseData(string $id)
-    {
-        $case = DebtRecoveryCase::with(['user', 'status', 'priority', 'loan'])
-            ->findOrFail($id);
-
+        // Check permission
         $user = Auth::user();
         if ($user->role === 'borrower' && $case->user_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }
 
-        return response()->json([
-            'case' => $case,
-            'debtor' => $case->user,
-            'status' => $case->status,
-            'priority' => $case->priority,
-            'total_recovered' => $this->getTotalRecovered($case),
-            'remaining_balance' => $this->getRemainingBalance($case),
-            'last_action' => $case->actions()->latest()->first(),
-            'active_payment_plan' => $this->getActivePaymentPlan($case),
-            'npl_info' => $case->loan ? [
-                'is_npl' => $case->loan->is_non_performing,
-                'days_overdue' => $case->loan->days_overdue,
-            ] : null,
+        $validator = Validator::make($request->all(), [
+            'note_type' => 'required|in:general,action,alert,legal,negotiation,payment',
+            'note' => 'required|string',
+            'is_private' => 'boolean',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $note = RecoveryCaseNote::create([
+                'case_id' => $case->id,
+                'note_type' => $request->note_type,
+                'note' => $request->note,
+                'created_by' => Auth::id(),
+                'is_private' => $request->is_private ?? false,
+            ]);
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Note added successfully.',
+                    'note' => $note->load('createdBy')
+                ]);
+            }
+
+            return redirect()->route('cases.show', $case)
+                ->with('success', 'Note added successfully.');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to add note: ' . $e->getMessage());
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to add note: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()
+                ->with('error', 'Failed to add note: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**
-     * Get total recovered amount.
+     * Update action status.
      */
-    private function getTotalRecovered($case)
+    public function updateAction(Request $request, string $id, string $actionId)
     {
-        return $case->actions()->where('outcome', 'successful')->sum('amount_collected');
+        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $case = DebtRecoveryCase::findOrFail($id);
+        $action = RecoveryAction::where('case_id', $case->id)->findOrFail($actionId);
+
+        $validator = Validator::make($request->all(), [
+            'outcome' => 'nullable|in:successful,partial,failed,promise_to_pay,no_answer,wrong_number,refused,pending',
+            'promised_amount' => 'nullable|numeric|min:0',
+            'promised_date' => 'nullable|date',
+            'amount_collected' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string',
+            'follow_up_date' => 'nullable|date',
+            'follow_up_notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $action->update([
+                'outcome' => $request->outcome,
+                'promised_amount' => $request->promised_amount,
+                'promised_date' => $request->promised_date,
+                'amount_collected' => $request->amount_collected,
+                'notes' => $request->notes,
+                'follow_up_date' => $request->follow_up_date,
+                'follow_up_notes' => $request->follow_up_notes,
+            ]);
+
+            // If amount collected, reduce outstanding amounts
+            if ($request->amount_collected && $request->amount_collected > 0) {
+                $remaining = $case->total_debt_amount - $request->amount_collected;
+                $case->update([
+                    'total_debt_amount' => max(0, $remaining),
+                ]);
+
+                // If fully collected, mark as recovered
+                if ($remaining <= 0) {
+                    $recoveredStatus = RecoveryStatus::where('slug', 'recovered')->first();
+                    if ($recoveredStatus) {
+                        $case->update(['status_id' => $recoveredStatus->id]);
+                    }
+                }
+            }
+
+            // Update next action date if follow up is scheduled
+            if ($request->follow_up_date) {
+                $case->update([
+                    'next_action_date' => $request->follow_up_date,
+                ]);
+            }
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Action updated successfully.',
+                    'action' => $action
+                ]);
+            }
+
+            return redirect()->route('cases.show', $case)
+                ->with('success', 'Action updated successfully.');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update action: ' . $e->getMessage());
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update action: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()
+                ->with('error', 'Failed to update action: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**
-     * Get remaining balance.
+     * Get statistics for recovery cases.
      */
-    private function getRemainingBalance($case)
+    public function stats(Request $request)
     {
-        return max(0, $case->total_debt_amount - $this->getTotalRecovered($case));
+        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            // Overall stats
+            $overallStats = [
+                'total_cases' => DebtRecoveryCase::count(),
+                'total_debt_amount' => DebtRecoveryCase::sum('total_debt_amount'),
+                'cases_by_status' => [],
+                'cases_by_priority' => [],
+            ];
+
+            // Cases by status
+            $statusStats = RecoveryStatus::withCount('debtRecoveryCases')->get();
+            foreach ($statusStats as $status) {
+                $overallStats['cases_by_status'][$status->slug] = [
+                    'name' => $status->name,
+                    'count' => $status->debt_recovery_cases_count,
+                    'color' => $status->color ?? 'gray',
+                ];
+            }
+
+            // Cases by priority
+            $priorityStats = RecoveryPriority::withCount('debtRecoveryCases')->get();
+            foreach ($priorityStats as $priority) {
+                $overallStats['cases_by_priority'][$priority->slug] = [
+                    'name' => $priority->name,
+                    'count' => $priority->debt_recovery_cases_count,
+                    'color' => $priority->color ?? 'gray',
+                ];
+            }
+
+            // Monthly trend
+            $monthlyStats = DebtRecoveryCase::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count, SUM(total_debt_amount) as amount')
+                ->groupBy('month')
+                ->orderBy('month', 'desc')
+                ->limit(12)
+                ->get();
+
+            // Officer performance
+            $officerStats = User::whereIn('role', ['admin', 'teller'])
+                ->withCount(['assignedRecoveryCases', 'assignedRecoveryCases as recovered_count' => function($q) {
+                    $q->whereHas('status', function($sq) {
+                        $sq->where('slug', 'recovered');
+                    });
+                }])
+                ->get()
+                ->map(function ($officer) {
+                    return [
+                        'name' => $officer->name,
+                        'total_assigned' => $officer->assigned_recovery_cases_count,
+                        'recovered' => $officer->recovered_count,
+                        'recovery_rate' => $officer->assigned_recovery_cases_count > 0 
+                            ? round(($officer->recovered_count / $officer->assigned_recovery_cases_count) * 100, 2) 
+                            : 0,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'overall' => $overallStats,
+                    'monthly_trend' => $monthlyStats,
+                    'officer_performance' => $officerStats,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get recovery stats: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get recovery stats: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Get active payment plan.
+     * Generate a unique case number.
      */
-    private function getActivePaymentPlan($case)
+    private function generateCaseNumber()
     {
-        return $case->paymentPlans()
-            ->whereIn('status', ['proposed', 'accepted'])
-            ->latest()
-            ->first();
+        $prefix = 'RC';
+        $year = date('Y');
+        $month = date('m');
+        $count = DebtRecoveryCase::whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->count() + 1;
+        
+        return $prefix . $year . $month . str_pad($count, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Get case timeline.
+     */
+    private function getCaseTimeline($case)
+    {
+        $timeline = [];
+
+        // Add case creation
+        $timeline[] = [
+            'date' => $case->created_at,
+            'type' => 'creation',
+            'title' => 'Case Created',
+            'description' => "Case {$case->case_number} was created",
+            'user' => $case->createdBy ? $case->createdBy->name : 'System',
+        ];
+
+        // Add actions - SAFE: Check if it's iterable
+        if (isset($case->actions) && (is_array($case->actions) || $case->actions instanceof \Traversable)) {
+            foreach ($case->actions as $action) {
+                $timeline[] = [
+                    'date' => $action->action_date ?? now(),
+                    'type' => 'action',
+                    'title' => isset($action->actionType) ? ($action->actionType->name ?? 'Action') : 'Action',
+                    'description' => $action->notes ?? 'Action performed',
+                    'user' => isset($action->performedBy) ? $action->performedBy->name : 'Unknown',
+                    'outcome' => $action->outcome ?? null,
+                ];
+            }
+        }
+
+        // Add notes - SAFE: Check if it's iterable
+        if (isset($case->notes) && (is_array($case->notes) || $case->notes instanceof \Traversable)) {
+            foreach ($case->notes as $note) {
+                $timeline[] = [
+                    'date' => $note->created_at ?? now(),
+                    'type' => 'note',
+                    'title' => isset($note->note_type) ? ucfirst($note->note_type) . ' Note' : 'Note',
+                    'description' => $note->note ?? '',
+                    'user' => isset($note->createdBy) ? $note->createdBy->name : 'Unknown',
+                ];
+            }
+        }
+
+        // Add payment plans - SAFE: Check if it's iterable and not a string
+        if (isset($case->paymentPlans) && 
+            (is_array($case->paymentPlans) || $case->paymentPlans instanceof \Traversable) && 
+            !is_string($case->paymentPlans)) {
+            foreach ($case->paymentPlans as $plan) {
+                $timeline[] = [
+                    'date' => $plan->created_at ?? now(),
+                    'type' => 'payment_plan',
+                    'title' => 'Payment Plan Created',
+                    'description' => "Total amount: " . ($plan->total_amount ?? 0) . ", Installments: " . ($plan->installment_count ?? 0),
+                    'user' => isset($plan->createdBy) ? $plan->createdBy->name : 'Unknown',
+                ];
+            }
+
+            // Add installment payments - SAFE: Check if installments is iterable
+            foreach ($case->paymentPlans as $plan) {
+                if (isset($plan->installments) && 
+                    (is_array($plan->installments) || $plan->installments instanceof \Traversable) && 
+                    !is_string($plan->installments)) {
+                    foreach ($plan->installments as $installment) {
+                        if (isset($installment->status) && $installment->status === 'paid') {
+                            $paidDate = $installment->paid_date ?? $installment->due_date ?? now();
+                            $timeline[] = [
+                                'date' => $paidDate,
+                                'type' => 'payment',
+                                'title' => 'Installment Paid',
+                                'description' => "Amount: " . ($installment->amount ?? 0) . " paid on " . ($paidDate instanceof \Carbon\Carbon ? $paidDate->format('Y-m-d') : 'Unknown'),
+                                'user' => 'System',
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add status changes (from notes) - SAFE: Check if notes is iterable
+        if (isset($case->notes) && (is_array($case->notes) || $case->notes instanceof \Traversable)) {
+            foreach ($case->notes as $note) {
+                if (isset($note->note) && strpos($note->note, 'Status changed from') !== false) {
+                    $timeline[] = [
+                        'date' => $note->created_at ?? now(),
+                        'type' => 'status_change',
+                        'title' => 'Status Changed',
+                        'description' => $note->note ?? '',
+                        'user' => isset($note->createdBy) ? $note->createdBy->name : 'Unknown',
+                    ];
+                }
+            }
+        }
+
+        // Sort by date descending
+        usort($timeline, function ($a, $b) {
+            $dateA = $a['date'] ?? now();
+            $dateB = $b['date'] ?? now();
+            return $dateB <=> $dateA;
+        });
+
+        return $timeline;
     }
 
     /**
@@ -1219,8 +1394,9 @@ private function getInitials($name)
             abort(403, 'Unauthorized action.');
         }
 
-        $query = DebtRecoveryCase::with(['user', 'status', 'priority', 'assignedTo', 'loan']);
+        $query = DebtRecoveryCase::with(['user', 'status', 'priority', 'assignedTo']);
 
+        // Apply filters
         if ($request->has('status') && $request->status !== 'all') {
             $status = RecoveryStatus::where('slug', $request->status)->first();
             if ($status) {
@@ -1228,184 +1404,53 @@ private function getInitials($name)
             }
         }
 
+        if ($request->has('priority') && $request->priority !== 'all') {
+            $priority = RecoveryPriority::where('slug', $request->priority)->first();
+            if ($priority) {
+                $query->where('priority_id', $priority->id);
+            }
+        }
+
         $cases = $query->get();
 
-        $filename = 'recovery_cases_' . now()->format('Y-m-d_His') . '.csv';
-        
         $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"$filename\"",
+            'Case Number',
+            'Borrower',
+            'Total Debt',
+            'Status',
+            'Priority',
+            'Assigned To',
+            'Default Date',
+            'Days in Default',
+            'Created At',
         ];
 
-        $callback = function() use ($cases) {
-            $handle = fopen('php://output', 'w');
-            
+        $filename = 'recovery_cases_' . date('Y-m-d_His') . '.csv';
+        
+        $handle = fopen('php://output', 'w');
+        fputcsv($handle, $headers);
+
+        foreach ($cases as $case) {
             fputcsv($handle, [
-                'Case Number',
-                'Debtor',
-                'Debtor Phone',
-                'Debtor Email',
-                'Associated Loan ID',
-                'NPL Status',
-                'Days Overdue',
-                'Total Debt',
-                'Principal',
-                'Interest',
-                'Penalty',
-                'Fees',
-                'Status',
-                'Priority',
-                'Default Date',
-                'Days in Default',
-                'Assigned To',
-                'Created At',
-                'Last Contact',
+                $case->case_number,
+                $case->user ? $case->user->name : 'Unknown',
+                $case->total_debt_amount,
+                $case->status ? $case->status->name : 'Unknown',
+                $case->priority ? $case->priority->name : 'Unknown',
+                $case->assignedTo ? $case->assignedTo->name : 'Unassigned',
+                $case->default_date ? $case->default_date->format('Y-m-d') : '',
+                $case->days_in_default ?? 0,
+                $case->created_at ? $case->created_at->format('Y-m-d H:i') : '',
             ]);
-
-            foreach ($cases as $case) {
-                fputcsv($handle, [
-                    $case->case_number,
-                    $case->user->name,
-                    $case->user->phone ?? 'N/A',
-                    $case->user->email,
-                    $case->loan_id ?? 'N/A',
-                    $case->loan && $case->loan->is_non_performing ? 'Yes' : 'No',
-                    $case->loan ? $case->loan->days_overdue : 'N/A',
-                    number_format($case->total_debt_amount, 2),
-                    number_format($case->principal_outstanding, 2),
-                    number_format($case->interest_outstanding, 2),
-                    number_format($case->penalty_outstanding, 2),
-                    number_format($case->fees_outstanding, 2),
-                    $case->status->name ?? 'N/A',
-                    $case->priority->name ?? 'N/A',
-                    $case->default_date ? $case->default_date->format('Y-m-d') : 'N/A',
-                    $case->days_in_default,
-                    $case->assignedTo->name ?? 'Unassigned',
-                    $case->created_at ? $case->created_at->format('Y-m-d H:i') : 'N/A',
-                    $case->last_contact_date ? $case->last_contact_date->format('Y-m-d') : 'N/A',
-                ]);
-            }
-
-            fclose($handle);
-        };
-
-        return response()->stream($callback, 200, $headers);
-    }
-
-    /**
-     * Get statistics for dashboard widget.
-     */
-    public function getStats()
-    {
-        $stats = [
-            'total' => DebtRecoveryCase::count(),
-            'open' => DebtRecoveryCase::open()->count(),
-            'urgent' => DebtRecoveryCase::urgent()->count(),
-            'total_debt' => DebtRecoveryCase::sum('total_debt_amount'),
-            'recovered' => RecoveryAction::where('outcome', 'successful')->sum('amount_collected'),
-            'recovery_rate' => 0,
-            'npl_cases' => DebtRecoveryCase::whereHas('loan', function($q) {
-                $q->where('is_non_performing', true);
-            })->count(),
-        ];
-
-        if ($stats['total_debt'] > 0) {
-            $stats['recovery_rate'] = round(($stats['recovered'] / $stats['total_debt']) * 100, 2);
         }
 
-        return response()->json($stats);
-    }
+        fclose($handle);
 
-    /**
-     * Generate case data for the show view with proper formatting.
-     */
-    public function getCaseDataForView(string $id)
-    {
-        $case = DebtRecoveryCase::with([
-            'user',
-            'user.borrower',
-            'loan',
-            'loan.loanType',
-            'status',
-            'priority',
-            'assignedTo',
-            'actions' => function($query) {
-                $query->with(['actionType', 'performedBy'])
-                      ->orderBy('created_at', 'desc');
-            },
-            'paymentPlans',
-            'notes',
-        ])->findOrFail($id);
-
-        $user = Auth::user();
-        if ($user->role === 'borrower' && $case->user_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        // Build formatted data for Alpine
-        $formattedData = [
-            'id' => $case->id,
-            'case_number' => $case->case_number,
-            'user_id' => $case->user_id,
-            'user_name' => $case->user->name ?? 'N/A',
-            'user_email' => $case->user->email ?? 'N/A',
-            'user_phone' => $case->user->phone ?? null,
-            'user_initials' => $case->user->getInitialsAttribute() ?? 'U',
-            'client_type' => $case->user->borrower->formatted_client_type ?? null,
-            'loan_id' => $case->loan_id,
-            'loan_type' => $case->loan->loanType->name ?? null,
-            'loan_amount' => $case->loan->amount ?? 0,
-            'loan_status' => $case->loan->status ?? null,
-            'is_non_performing' => $case->loan->is_non_performing ?? false,
-            'days_overdue' => $case->loan->days_overdue ?? 0,
-            'default_date_formatted' => $case->default_date ? $case->default_date->format('M d, Y') : null,
-            'last_contact_date_formatted' => $case->last_contact_date ? $case->last_contact_date->format('M d, Y') : null,
-            'next_action_date_formatted' => $case->next_action_date ? $case->next_action_date->format('M d, Y') : null,
-            'total_debt_amount' => (float) $case->total_debt_amount,
-            'total_recovered' => (float) $this->getTotalRecovered($case),
-            'remaining_balance' => (float) $this->getRemainingBalance($case),
-            'recovery_progress' => (float) $case->recovery_progress,
-            'days_in_default' => $case->days_in_default ?? 0,
-            'assigned_to_name' => $case->assignedTo->name ?? null,
-            'recovery_officer' => $case->recovery_officer ?? null,
-            'recovery_strategy' => $case->recovery_strategy ?? null,
-            'notes' => $case->notes ?? null,
-            'status_id' => $case->status_id,
-            'status_slug' => $case->status->slug ?? null,
-            'priority_id' => $case->priority_id,
-            'priority_slug' => $case->priority->slug ?? null,
-            'actions' => $case->actions->map(function($action) {
-                return [
-                    'id' => $action->id,
-                    'action_type' => $action->actionType->slug ?? 'other',
-                    'action_type_label' => $action->actionType->name ?? 'Action',
-                    'description' => $action->notes ?? $action->description ?? null,
-                    'outcome' => $action->outcome,
-                    'amount_collected' => (float) $action->amount_collected,
-                    'created_at' => $action->created_at?->toISOString(),
-                    'created_at_diff' => $action->created_at?->diffForHumans(),
-                    'next_action_date' => $action->follow_up_date?->format('M d, Y'),
-                ];
-            }),
-            'actions_count' => $case->actions->count(),
-            'payment_plans' => $case->paymentPlans->map(function($plan) {
-                return [
-                    'id' => $plan->id,
-                    'installment_frequency' => $plan->installment_frequency,
-                    'number_of_installments' => $plan->number_of_installments,
-                    'installment_amount' => $plan->installment_amount,
-                    'total_amount' => (float) $plan->total_amount,
-                    'status' => $plan->status,
-                    'remaining_balance' => (float) $plan->remaining_balance,
-                    'progress_percentage' => $plan->progress_percentage,
-                ];
-            }),
-            'created_at' => $case->created_at?->toISOString(),
-            'created_at_diff' => $case->created_at?->diffForHumans(),
-            'updated_at' => $case->updated_at?->toISOString(),
-            'updated_at_diff' => $case->updated_at?->diffForHumans(),
-        ];
-
-        return response()->json($formattedData);
+        return response()->stream(function() use ($handle) {
+            // Stream already handled above
+        }, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }
