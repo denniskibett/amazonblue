@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Jul 16, 2026 at 12:42 PM
+-- Generation Time: Jul 30, 2026 at 07:12 PM
 -- Server version: 10.3.39-MariaDB-0ubuntu0.20.04.2
 -- PHP Version: 8.0.30
 
@@ -24,6 +24,92 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `action_types`
+--
+
+CREATE TABLE `action_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `action_types`
+--
+
+INSERT INTO `action_types` (`id`, `name`, `slug`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Phone Call', 'phone_call', 1, 10, NULL, NULL),
+(2, 'SMS', 'sms', 1, 20, NULL, NULL),
+(3, 'Email', 'email', 1, 30, NULL, NULL),
+(4, 'Visit', 'visit', 1, 40, NULL, NULL),
+(5, 'Letter', 'letter', 1, 50, NULL, NULL),
+(6, 'Legal Notice', 'legal_notice', 1, 60, NULL, NULL),
+(7, 'Negotiation', 'negotiation', 1, 70, NULL, NULL),
+(8, 'Payment Arrangement', 'payment_arrangement', 1, 80, NULL, NULL),
+(9, 'Field Visit', 'field_visit', 1, 90, NULL, NULL),
+(10, 'Other', 'other', 1, 999, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `addresses`
+--
+
+CREATE TABLE `addresses` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `address_type_id` bigint(20) UNSIGNED NOT NULL,
+  `address_line_1` varchar(255) DEFAULT NULL,
+  `address_line_2` varchar(255) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(100) DEFAULT NULL,
+  `postal_code` varchar(20) DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `is_primary` tinyint(1) DEFAULT 0,
+  `from_date` date DEFAULT NULL,
+  `to_date` date DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `address_types`
+--
+
+CREATE TABLE `address_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `address_types`
+--
+
+INSERT INTO `address_types` (`id`, `name`, `slug`, `description`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Current', 'current', NULL, 1, 10, NULL, NULL),
+(2, 'Previous', 'previous', NULL, 1, 20, NULL, NULL),
+(3, 'Permanent', 'permanent', NULL, 1, 30, NULL, NULL),
+(4, 'Postal', 'postal', NULL, 1, 40, NULL, NULL),
+(5, 'Business', 'business', NULL, 1, 50, NULL, NULL),
+(6, 'Other', 'other', NULL, 1, 999, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `admins`
 --
 
@@ -32,6 +118,128 @@ CREATE TABLE `admins` (
   `user_id` bigint(20) UNSIGNED NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `agency_case_assignments`
+--
+
+CREATE TABLE `agency_case_assignments` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED NOT NULL,
+  `agency_id` bigint(20) UNSIGNED NOT NULL,
+  `assignment_date` date NOT NULL,
+  `commission_rate` decimal(5,2) DEFAULT NULL,
+  `recovery_amount` decimal(15,2) DEFAULT NULL,
+  `agency_fees` decimal(15,2) DEFAULT NULL,
+  `status` enum('assigned','in_progress','recovered','returned') DEFAULT 'assigned',
+  `return_date` date DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `agency_contacts`
+--
+
+CREATE TABLE `agency_contacts` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `agency_id` bigint(20) UNSIGNED NOT NULL,
+  `contact_person` varchar(255) NOT NULL,
+  `title` varchar(100) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `phone_2` varchar(50) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `is_primary` tinyint(1) DEFAULT 0,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `assets`
+--
+
+CREATE TABLE `assets` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `asset_type_id` bigint(20) UNSIGNED NOT NULL,
+  `asset_name` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `registration_number` varchar(100) DEFAULT NULL,
+  `estimated_value` decimal(15,2) DEFAULT NULL,
+  `lien_holder` varchar(255) DEFAULT NULL,
+  `lien_amount` decimal(15,2) DEFAULT NULL,
+  `is_collateral` tinyint(1) DEFAULT 0,
+  `collateral_for_loan_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `valuation_date` date DEFAULT NULL,
+  `valuation_by` varchar(255) DEFAULT NULL,
+  `location` text DEFAULT NULL,
+  `status` enum('owned','financed','leased','repossessed','sold') DEFAULT 'owned',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `asset_types`
+--
+
+CREATE TABLE `asset_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `requires_registration` tinyint(1) DEFAULT 0,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `asset_types`
+--
+
+INSERT INTO `asset_types` (`id`, `name`, `slug`, `requires_registration`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Vehicle', 'vehicle', 1, 1, 10, NULL, NULL),
+(2, 'Property', 'property', 1, 1, 20, NULL, NULL),
+(3, 'Equipment', 'equipment', 0, 1, 30, NULL, NULL),
+(4, 'Inventory', 'inventory', 0, 1, 40, NULL, NULL),
+(5, 'Bank Account', 'bank_account', 0, 1, 50, NULL, NULL),
+(6, 'Investment', 'investment', 0, 1, 60, NULL, NULL),
+(7, 'Crypto Wallet', 'crypto_wallet', 0, 1, 70, NULL, NULL),
+(8, 'Other', 'other', 0, 1, 999, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `audit_logs`
+--
+
+CREATE TABLE `audit_logs` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `table_name` varchar(100) NOT NULL,
+  `record_id` bigint(20) UNSIGNED NOT NULL,
+  `action` enum('create','update','delete','restore','force_delete') NOT NULL,
+  `old_values` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `new_values` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `user_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -119,7 +327,7 @@ INSERT INTO `borrowers` (`id`, `broker_id`, `user_id`, `client_type`, `status`, 
 (74, NULL, 53, '1', 1, '2025-10-03 06:04:44', '2026-03-06 10:08:02', 'Employment', 20000.00, 20000.00, 'IT Assistant', 'Iebc', 'Government of kenya', 'emmanueltsuma19@gmail.com', 'Iebc', 'IT'),
 (75, NULL, 54, '0', 0, '2025-10-08 04:06:13', '2025-10-08 04:06:13', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (76, NULL, 55, '0', 1, '2025-10-23 05:37:11', '2025-10-26 07:54:26', 'Business', 50000.00, 38500.00, 'Director', 'Nairobi', 'Trademag Solutions', 'trademagsolutions@gmail.com', 'Director', 'Sourcing'),
-(77, NULL, 13, '0', 1, '2025-10-23 19:15:21', '2025-10-23 19:15:21', 'Employment', 130000.00, 100000.00, NULL, 'Kisumu', 'iPas', 'info@ipas.org', 'Senior Accountant', 'Accounts and Finance'),
+(77, NULL, 13, 'individual', 1, '2025-10-23 19:15:21', '2026-07-16 15:51:14', 'Employment', 130000.00, 100000.00, 'ICTO', 'Kisumu', 'iPas', 'info@ipas.org', NULL, 'Accounts and Finance'),
 (78, NULL, 56, 'individual', 1, '2025-10-24 03:31:10', '2026-02-01 19:45:11', 'Government', NULL, NULL, 'Dept Head Communications', 'City Hall', 'County Government Nairobi', 'info@nairobi.go.ke', 'Chief Officer/Director', 'Executive'),
 (79, NULL, 57, '0', 0, '2025-10-24 09:49:49', '2025-10-24 13:12:24', 'Business', 1768.00, 1226.00, 'Personal Assistant', 'Kileleshwa, Kangundo rd', 'Relay Services', 'yeggynick@gmail.com', 'Chief Executive Officer', 'office of the ceo'),
 (80, NULL, 58, 'individual', 0, '2025-10-25 13:22:18', '2026-04-26 06:57:39', 'employed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
@@ -141,7 +349,29 @@ INSERT INTO `borrowers` (`id`, `broker_id`, `user_id`, `client_type`, `status`, 
 (96, NULL, 75, '0', 0, '2026-05-11 06:03:12', '2026-05-11 06:03:12', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (97, NULL, 76, 'individual', 0, '2026-06-20 08:55:31', '2026-06-20 11:41:31', 'employed', NULL, 80000.00, 'Business Assistant', NULL, 'Susan Mutinda', 'suzzyndanu@yahoo.com', NULL, NULL),
 (98, NULL, 77, '0', 0, '2026-06-24 10:24:46', '2026-06-24 10:24:46', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(99, NULL, 84, 'individual', 0, '2026-06-26 14:40:16', '2026-06-26 15:31:30', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(99, NULL, 84, 'individual', 0, '2026-06-26 14:40:16', '2026-06-26 15:31:30', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(100, NULL, 91, '0', 1, '2026-07-16 13:04:57', '2026-07-16 13:23:48', 'Employment', NULL, 10000.00, 'INTERN', NULL, 'Sharet Enterprise', NULL, NULL, NULL),
+(101, NULL, 92, '0', 1, '2026-07-27 10:50:00', '2026-07-27 11:35:54', 'Employment', NULL, 250.00, 'Accountant', NULL, 'Bringetony ventures', NULL, NULL, NULL),
+(102, NULL, 93, '0', 0, '2026-07-30 05:23:26', '2026-07-30 05:23:26', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `borrower_contact_network`
+-- (See below for the actual view)
+--
+CREATE TABLE `borrower_contact_network` (
+`user_id` bigint(20) unsigned
+,`borrower_name` varchar(255)
+,`contact_id` bigint(20) unsigned
+,`contact_name` varchar(255)
+,`contact_phone` varchar(50)
+,`contact_email` varchar(255)
+,`contact_type` varchar(100)
+,`relationship_specific` varchar(100)
+,`is_primary_contact` tinyint(1)
+,`priority` tinyint(4)
+);
 
 -- --------------------------------------------------------
 
@@ -190,6 +420,33 @@ CREATE TABLE `broker_performance_report` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `bureau_names`
+--
+
+CREATE TABLE `bureau_names` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `website` varchar(255) DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `bureau_names`
+--
+
+INSERT INTO `bureau_names` (`id`, `name`, `slug`, `website`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'CRB Kenya', 'crb_kenya', NULL, 1, NULL, NULL),
+(2, 'TransUnion', 'transunion', NULL, 1, NULL, NULL),
+(3, 'Equifax', 'equifax', NULL, 1, NULL, NULL),
+(4, 'Experian', 'experian', NULL, 1, NULL, NULL),
+(5, 'Other', 'other', NULL, 1, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `cache`
 --
 
@@ -204,16 +461,15 @@ CREATE TABLE `cache` (
 --
 
 INSERT INTO `cache` (`key`, `value`, `expiration`) VALUES
-('laravel_cache_dfwormhd@immenseignite.info|107.173.160.167', 'i:1;', 1783424322),
-('laravel_cache_dfwormhd@immenseignite.info|107.173.160.167:timer', 'i:1783424322;', 1783424322),
-('laravel_cache_kahinjunicholas172@gmail.com|102.217.172.2', 'i:1;', 1782548275),
-('laravel_cache_kahinjunicholas172@gmail.com|102.217.172.2:timer', 'i:1782548275;', 1782548275),
-('laravel_cache_kerubolucy106@gmail.com|41.90.172.106', 'i:3;', 1782908417),
-('laravel_cache_kerubolucy106@gmail.com|41.90.172.106:timer', 'i:1782908417;', 1782908417),
-('laravel_cache_okvysgxr@immenseignite.info|192.210.150.199', 'i:5;', 1783424404),
-('laravel_cache_okvysgxr@immenseignite.info|192.210.150.199:timer', 'i:1783424404;', 1783424404),
-('laravel_cache_vjknikwy@immenseignite.info|198.12.69.94', 'i:1;', 1783424574),
-('laravel_cache_vjknikwy@immenseignite.info|198.12.69.94:timer', 'i:1783424574;', 1783424574);
+('laravel_cache_leomumz@gmail.com|197.232.157.60', 'i:1;', 1784722317),
+('laravel_cache_leomumz@gmail.com|197.232.157.60:timer', 'i:1784722317;', 1784722317),
+('laravel_cache_musau.mumo@teflontradingltd.co.ke|196.216.91.179', 'i:2;', 1784722975),
+('laravel_cache_musau.mumo@teflontradingltd.co.ke|196.216.91.179:timer', 'i:1784722975;', 1784722975),
+('laravel_cache_musau.mumo@teflontradingltd.co.ke|197.232.157.60', 'i:1;', 1784722759),
+('laravel_cache_musau.mumo@teflontradingltd.co.ke|197.232.157.60:timer', 'i:1784722759;', 1784722759),
+('laravel_cache_musau.mumo@yahoo.com|197.232.157.60', 'i:1;', 1784722358),
+('laravel_cache_musau.mumo@yahoo.com|197.232.157.60:timer', 'i:1784722358;', 1784722358),
+('laravel_cache_system_settings', 'O:17:\"App\\Models\\System\":33:{s:13:\"\0*\0connection\";s:5:\"mysql\";s:8:\"\0*\0table\";s:6:\"system\";s:13:\"\0*\0primaryKey\";s:2:\"id\";s:10:\"\0*\0keyType\";s:3:\"int\";s:12:\"incrementing\";b:1;s:7:\"\0*\0with\";a:0:{}s:12:\"\0*\0withCount\";a:0:{}s:19:\"preventsLazyLoading\";b:0;s:10:\"\0*\0perPage\";i:15;s:6:\"exists\";b:1;s:18:\"wasRecentlyCreated\";b:0;s:28:\"\0*\0escapeWhenCastingToString\";b:0;s:13:\"\0*\0attributes\";a:29:{s:2:\"id\";i:1;s:4:\"name\";s:18:\"Amazonblue Capital\";s:4:\"logo\";s:8:\"logo.svg\";s:9:\"logo_dark\";s:8:\"logo.svg\";s:9:\"logo_icon\";s:8:\"logo.svg\";s:7:\"favicon\";N;s:6:\"slogan\";s:24:\"Your trusted application\";s:8:\"timezone\";s:3:\"UTC\";s:11:\"date_format\";s:5:\"d-m-Y\";s:11:\"time_format\";s:5:\"H:i:s\";s:8:\"currency\";s:3:\"KES\";s:15:\"currency_symbol\";s:3:\"KSh\";s:13:\"primary_color\";s:7:\"#3A57E8\";s:15:\"secondary_color\";s:7:\"#08B1BA\";s:13:\"contact_email\";N;s:13:\"contact_phone\";N;s:7:\"address\";N;s:8:\"location\";s:63:\"{\"country\":\"\",\"city\":\"\",\"name\":\"\",\"latitude\":\"\",\"longitude\":\"\"}\";s:16:\"meta_description\";N;s:13:\"meta_keywords\";N;s:16:\"maintenance_mode\";i:0;s:16:\"pagination_limit\";i:15;s:10:\"custom_css\";N;s:9:\"custom_js\";N;s:8:\"settings\";s:614:\"{\"notifications\":{\"email_notifications\":true,\"push_notifications\":true,\"sms_notifications\":false,\"notification_sound\":true},\"security\":{\"two_factor_auth\":false,\"login_attempts\":5,\"session_timeout\":30,\"password_expiry\":90},\"integrations\":{\"google_analytics\":\"\",\"google_maps_key\":\"\",\"mail_driver\":\"smtp\",\"mail_host\":\"\",\"mail_port\":\"587\",\"mail_username\":\"\",\"mail_password\":\"\"},\"backup\":{\"auto_backup\":true,\"backup_frequency\":\"daily\",\"backup_retention\":30,\"backup_to_cloud\":false},\"company\":{\"website\":\"\",\"phone\":\"\",\"email\":\"\",\"address\":\"\",\"about\":\"\",\"mission\":\"\",\"vision\":\"\",\"values\":\"\"},\"currency_position\":\"before\"}\";s:13:\"website_pages\";s:359:\"{\"home\":{\"enabled\":true,\"title\":\"Home\",\"slug\":\"\",\"show_in_menu\":true,\"order\":1},\"about\":{\"enabled\":true,\"title\":\"About Us\",\"slug\":\"about\",\"show_in_menu\":true,\"order\":2},\"services\":{\"enabled\":true,\"title\":\"Services\",\"slug\":\"services\",\"show_in_menu\":true,\"order\":3},\"contact\":{\"enabled\":true,\"title\":\"Contact Us\",\"slug\":\"contact\",\"show_in_menu\":true,\"order\":4}}\";s:12:\"social_media\";s:441:\"{\"facebook\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-facebook-fill\",\"name\":\"Facebook\",\"color\":\"#1877F2\",\"order\":1},\"twitter\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-twitter-fill\",\"name\":\"Twitter\",\"color\":\"#1DA1F2\",\"order\":2},\"instagram\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-instagram-fill\",\"name\":\"Instagram\",\"color\":\"#E4405F\",\"order\":3},\"linkedin\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-linkedin-fill\",\"name\":\"LinkedIn\",\"color\":\"#0A66C2\",\"order\":4}}\";s:10:\"created_at\";s:19:\"2026-01-18 10:44:28\";s:10:\"updated_at\";s:19:\"2026-06-26 19:39:10\";}s:11:\"\0*\0original\";a:29:{s:2:\"id\";i:1;s:4:\"name\";s:18:\"Amazonblue Capital\";s:4:\"logo\";s:8:\"logo.svg\";s:9:\"logo_dark\";s:8:\"logo.svg\";s:9:\"logo_icon\";s:8:\"logo.svg\";s:7:\"favicon\";N;s:6:\"slogan\";s:24:\"Your trusted application\";s:8:\"timezone\";s:3:\"UTC\";s:11:\"date_format\";s:5:\"d-m-Y\";s:11:\"time_format\";s:5:\"H:i:s\";s:8:\"currency\";s:3:\"KES\";s:15:\"currency_symbol\";s:3:\"KSh\";s:13:\"primary_color\";s:7:\"#3A57E8\";s:15:\"secondary_color\";s:7:\"#08B1BA\";s:13:\"contact_email\";N;s:13:\"contact_phone\";N;s:7:\"address\";N;s:8:\"location\";s:63:\"{\"country\":\"\",\"city\":\"\",\"name\":\"\",\"latitude\":\"\",\"longitude\":\"\"}\";s:16:\"meta_description\";N;s:13:\"meta_keywords\";N;s:16:\"maintenance_mode\";i:0;s:16:\"pagination_limit\";i:15;s:10:\"custom_css\";N;s:9:\"custom_js\";N;s:8:\"settings\";s:614:\"{\"notifications\":{\"email_notifications\":true,\"push_notifications\":true,\"sms_notifications\":false,\"notification_sound\":true},\"security\":{\"two_factor_auth\":false,\"login_attempts\":5,\"session_timeout\":30,\"password_expiry\":90},\"integrations\":{\"google_analytics\":\"\",\"google_maps_key\":\"\",\"mail_driver\":\"smtp\",\"mail_host\":\"\",\"mail_port\":\"587\",\"mail_username\":\"\",\"mail_password\":\"\"},\"backup\":{\"auto_backup\":true,\"backup_frequency\":\"daily\",\"backup_retention\":30,\"backup_to_cloud\":false},\"company\":{\"website\":\"\",\"phone\":\"\",\"email\":\"\",\"address\":\"\",\"about\":\"\",\"mission\":\"\",\"vision\":\"\",\"values\":\"\"},\"currency_position\":\"before\"}\";s:13:\"website_pages\";s:359:\"{\"home\":{\"enabled\":true,\"title\":\"Home\",\"slug\":\"\",\"show_in_menu\":true,\"order\":1},\"about\":{\"enabled\":true,\"title\":\"About Us\",\"slug\":\"about\",\"show_in_menu\":true,\"order\":2},\"services\":{\"enabled\":true,\"title\":\"Services\",\"slug\":\"services\",\"show_in_menu\":true,\"order\":3},\"contact\":{\"enabled\":true,\"title\":\"Contact Us\",\"slug\":\"contact\",\"show_in_menu\":true,\"order\":4}}\";s:12:\"social_media\";s:441:\"{\"facebook\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-facebook-fill\",\"name\":\"Facebook\",\"color\":\"#1877F2\",\"order\":1},\"twitter\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-twitter-fill\",\"name\":\"Twitter\",\"color\":\"#1DA1F2\",\"order\":2},\"instagram\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-instagram-fill\",\"name\":\"Instagram\",\"color\":\"#E4405F\",\"order\":3},\"linkedin\":{\"enabled\":false,\"url\":\"\",\"icon\":\"ri-linkedin-fill\",\"name\":\"LinkedIn\",\"color\":\"#0A66C2\",\"order\":4}}\";s:10:\"created_at\";s:19:\"2026-01-18 10:44:28\";s:10:\"updated_at\";s:19:\"2026-06-26 19:39:10\";}s:10:\"\0*\0changes\";a:0:{}s:11:\"\0*\0previous\";a:0:{}s:8:\"\0*\0casts\";a:5:{s:16:\"maintenance_mode\";s:7:\"boolean\";s:8:\"settings\";s:5:\"array\";s:13:\"website_pages\";s:5:\"array\";s:12:\"social_media\";s:5:\"array\";s:8:\"location\";s:5:\"array\";}s:17:\"\0*\0classCastCache\";a:0:{}s:21:\"\0*\0attributeCastCache\";a:0:{}s:13:\"\0*\0dateFormat\";N;s:10:\"\0*\0appends\";a:0:{}s:19:\"\0*\0dispatchesEvents\";a:0:{}s:14:\"\0*\0observables\";a:0:{}s:12:\"\0*\0relations\";a:0:{}s:10:\"\0*\0touches\";a:0:{}s:27:\"\0*\0relationAutoloadCallback\";N;s:26:\"\0*\0relationAutoloadContext\";N;s:10:\"timestamps\";b:1;s:13:\"usesUniqueIds\";b:0;s:9:\"\0*\0hidden\";a:0:{}s:10:\"\0*\0visible\";a:0:{}s:11:\"\0*\0fillable\";a:26:{i:0;s:4:\"name\";i:1;s:4:\"logo\";i:2;s:9:\"logo_dark\";i:3;s:9:\"logo_icon\";i:4;s:7:\"favicon\";i:5;s:6:\"slogan\";i:6;s:8:\"timezone\";i:7;s:11:\"date_format\";i:8;s:11:\"time_format\";i:9;s:8:\"currency\";i:10;s:15:\"currency_symbol\";i:11;s:13:\"primary_color\";i:12;s:15:\"secondary_color\";i:13;s:13:\"contact_email\";i:14;s:13:\"contact_phone\";i:15;s:7:\"address\";i:16;s:8:\"location\";i:17;s:16:\"meta_description\";i:18;s:13:\"meta_keywords\";i:19;s:16:\"maintenance_mode\";i:20;s:16:\"pagination_limit\";i:21;s:10:\"custom_css\";i:22;s:9:\"custom_js\";i:23;s:8:\"settings\";i:24;s:13:\"website_pages\";i:25;s:12:\"social_media\";}s:10:\"\0*\0guarded\";a:1:{i:0;s:1:\"*\";}}', 2099576862);
 
 -- --------------------------------------------------------
 
@@ -279,6 +535,204 @@ INSERT INTO `categories` (`id`, `name`, `category_type`, `categoryable_id`, `cre
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `communications`
+--
+
+CREATE TABLE `communications` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED NOT NULL,
+  `communication_type_id` bigint(20) UNSIGNED NOT NULL,
+  `communication_status_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `direction` enum('outbound','inbound') NOT NULL,
+  `recipient` varchar(255) DEFAULT NULL,
+  `recipient_phone` varchar(50) DEFAULT NULL,
+  `recipient_email` varchar(255) DEFAULT NULL,
+  `subject` varchar(255) DEFAULT NULL,
+  `message` text DEFAULT NULL,
+  `provider_response` text DEFAULT NULL,
+  `delivery_attempts` int(11) DEFAULT 1,
+  `sent_at` datetime DEFAULT NULL,
+  `read_at` datetime DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `communication_statuses`
+--
+
+CREATE TABLE `communication_statuses` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `communication_statuses`
+--
+
+INSERT INTO `communication_statuses` (`id`, `name`, `slug`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Sent', 'sent', NULL, 1, NULL, NULL),
+(2, 'Delivered', 'delivered', NULL, 1, NULL, NULL),
+(3, 'Failed', 'failed', NULL, 1, NULL, NULL),
+(4, 'Read', 'read', NULL, 1, NULL, NULL),
+(5, 'Replied', 'replied', NULL, 1, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `communication_types`
+--
+
+CREATE TABLE `communication_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `communication_types`
+--
+
+INSERT INTO `communication_types` (`id`, `name`, `slug`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'SMS', 'sms', 1, 10, NULL, NULL),
+(2, 'Email', 'email', 1, 20, NULL, NULL),
+(3, 'WhatsApp', 'whatsapp', 1, 30, NULL, NULL),
+(4, 'Letter', 'letter', 1, 40, NULL, NULL),
+(5, 'Phone Call', 'phone_call', 1, 50, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `contacts`
+--
+
+CREATE TABLE `contacts` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `contact_type_id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `phone_2` varchar(50) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `relationship_specific` varchar(100) DEFAULT NULL COMMENT 'e.g., Mother, Father, Brother',
+  `is_primary_contact` tinyint(1) DEFAULT 0,
+  `priority` tinyint(4) DEFAULT 1,
+  `notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `updated_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `contact_types`
+--
+
+CREATE TABLE `contact_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `contact_types`
+--
+
+INSERT INTO `contact_types` (`id`, `name`, `slug`, `description`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Parent', 'parent', NULL, 1, 10, NULL, NULL),
+(2, 'Sibling', 'sibling', NULL, 1, 20, NULL, NULL),
+(3, 'Spouse', 'spouse', NULL, 1, 30, NULL, NULL),
+(4, 'Child', 'child', NULL, 1, 40, NULL, NULL),
+(5, 'Relative', 'relative', NULL, 1, 50, NULL, NULL),
+(6, 'Friend', 'friend', NULL, 1, 60, NULL, NULL),
+(7, 'Business Partner', 'business_partner', NULL, 1, 70, NULL, NULL),
+(8, 'Landlord', 'landlord', NULL, 1, 80, NULL, NULL),
+(9, 'Tenant', 'tenant', NULL, 1, 90, NULL, NULL),
+(10, 'Employer', 'employer', NULL, 1, 100, NULL, NULL),
+(11, 'Colleague', 'colleague', NULL, 1, 110, NULL, NULL),
+(12, 'Supervisor', 'supervisor', NULL, 1, 120, NULL, NULL),
+(13, 'Chief', 'chief', NULL, 1, 130, NULL, NULL),
+(14, 'HOA', 'hoa', NULL, 1, 140, NULL, NULL),
+(15, 'Neighbor', 'neighbor', NULL, 1, 150, NULL, NULL),
+(16, 'Other', 'other', NULL, 1, 999, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `court_hearings`
+--
+
+CREATE TABLE `court_hearings` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `legal_proceeding_id` bigint(20) UNSIGNED NOT NULL,
+  `hearing_date` date NOT NULL,
+  `hearing_time` time DEFAULT NULL,
+  `court_room` varchar(100) DEFAULT NULL,
+  `judge_name` varchar(255) DEFAULT NULL,
+  `result` text DEFAULT NULL,
+  `next_hearing_date` date DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `credit_bureau_reports`
+--
+
+CREATE TABLE `credit_bureau_reports` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `bureau_name_id` bigint(20) UNSIGNED NOT NULL,
+  `report_type` enum('initial','updated','dispute','clearance') DEFAULT 'initial',
+  `report_date` date NOT NULL,
+  `report_reference` varchar(100) DEFAULT NULL,
+  `credit_score` int(11) DEFAULT NULL,
+  `credit_rating` varchar(50) DEFAULT NULL,
+  `default_amount` decimal(15,2) DEFAULT NULL,
+  `default_date` date DEFAULT NULL,
+  `settlement_date` date DEFAULT NULL,
+  `settlement_amount` decimal(15,2) DEFAULT NULL,
+  `is_disputed` tinyint(1) DEFAULT 0,
+  `dispute_reason` text DEFAULT NULL,
+  `dispute_resolution` text DEFAULT NULL,
+  `reporting_status` enum('reported','disputed','resolved','cleared') DEFAULT 'reported',
+  `notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Stand-in structure for view `customer_health_scorecard`
 -- (See below for the actual view)
 --
@@ -294,6 +748,67 @@ CREATE TABLE `customer_health_scorecard` (
 ,`health_score` decimal(25,0)
 ,`health_grade` varchar(18)
 ,`is_borrower_active` int(11)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `debt_recovery_cases`
+--
+
+CREATE TABLE `debt_recovery_cases` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `loan_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `case_number` varchar(50) NOT NULL,
+  `total_debt_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `principal_outstanding` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `interest_outstanding` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `penalty_outstanding` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `fees_outstanding` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `default_date` date NOT NULL,
+  `days_in_default` int(11) NOT NULL DEFAULT 0,
+  `status_id` bigint(20) UNSIGNED NOT NULL,
+  `priority_id` bigint(20) UNSIGNED NOT NULL,
+  `assigned_to` bigint(20) UNSIGNED DEFAULT NULL,
+  `last_contact_date` date DEFAULT NULL,
+  `next_action_date` date DEFAULT NULL,
+  `recovery_strategy` text DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `updated_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `debt_recovery_summary`
+-- (See below for the actual view)
+--
+CREATE TABLE `debt_recovery_summary` (
+`case_id` bigint(20) unsigned
+,`case_number` varchar(50)
+,`user_id` bigint(20) unsigned
+,`debtor_name` varchar(255)
+,`debtor_email` varchar(255)
+,`debtor_phone` varchar(255)
+,`total_debt_amount` decimal(15,2)
+,`principal_outstanding` decimal(15,2)
+,`interest_outstanding` decimal(15,2)
+,`penalty_outstanding` decimal(15,2)
+,`fees_outstanding` decimal(15,2)
+,`default_date` date
+,`days_in_default` int(11)
+,`status` varchar(100)
+,`priority` varchar(100)
+,`assigned_to` bigint(20) unsigned
+,`last_contact_date` date
+,`next_action_date` date
+,`total_recovered` decimal(37,2)
+,`total_actions` bigint(21)
 );
 
 -- --------------------------------------------------------
@@ -842,7 +1357,134 @@ INSERT INTO `disbursements` (`id`, `loan_id`, `amount`, `transaction`, `mode`, `
 (525, 474, 10000.00, 'UGD6OAX82C', 'mpesa', '2026-07-13', '2026-07-23', '2026-07-13 08:50:54', '2026-07-13 08:50:54', NULL, 'internal', NULL),
 (526, 475, 37046.40, 'ROLL OVER', 'other', '2026-07-06', '2026-07-16', '2026-07-13 09:03:09', '2026-07-13 09:03:09', NULL, 'internal', NULL),
 (527, 476, 5159.81, 'ROLL OVER', 'other', '2026-07-11', '2026-07-21', '2026-07-13 09:06:24', '2026-07-13 09:06:24', NULL, 'internal', NULL),
-(528, 477, 36000.00, 'ROLL OVER', 'other', '2026-07-14', '2026-07-28', '2026-07-16 06:04:44', '2026-07-16 06:04:44', NULL, 'internal', NULL);
+(528, 477, 36000.00, 'ROLL OVER', 'other', '2026-07-14', '2026-07-28', '2026-07-16 06:04:44', '2026-07-16 06:04:44', NULL, 'internal', NULL),
+(529, 478, 44455.68, 'ROLL OVER', 'other', '2026-07-16', '2026-07-26', '2026-07-17 03:54:07', '2026-07-17 03:54:07', NULL, 'internal', NULL),
+(530, 479, 21980.16, 'ROLL OVER', 'other', '2026-07-26', '2026-07-26', '2026-07-17 07:51:49', '2026-07-17 07:51:49', NULL, 'internal', NULL),
+(531, 480, 32000.00, 'ROLL OVER', 'other', '2026-07-16', '2026-07-26', '2026-07-18 15:13:13', '2026-07-18 15:13:13', NULL, 'internal', NULL),
+(532, 481, 288000.00, 'ROLL OVER', 'other', '2026-07-20', '2026-07-30', '2026-07-20 09:16:47', '2026-07-20 09:16:47', NULL, 'internal', NULL),
+(533, 482, 50000.00, '833201967079', 'bank_transfer', '2026-07-20', '2026-07-30', '2026-07-21 08:28:32', '2026-07-21 08:28:32', NULL, 'internal', NULL),
+(534, 483, 6191.80, 'ROLL OVER', 'other', '2026-07-21', '2026-07-31', '2026-07-22 06:29:01', '2026-07-22 06:29:01', NULL, 'internal', NULL),
+(535, 484, 25000.00, '4921XQHA9734', 'mpesa', '2026-07-24', '2026-07-25', '2026-07-25 12:13:19', '2026-07-25 12:13:19', NULL, 'internal', NULL),
+(536, 482, 10000.00, '715243356247', 'bank_transfer', '2026-07-25', '2026-08-04', '2026-07-25 12:15:25', '2026-07-25 12:15:25', NULL, 'internal', NULL),
+(537, 485, 6200.00, 'ROLL OVER', 'other', '2026-07-25', '2026-08-04', '2026-07-25 12:18:55', '2026-07-25 12:18:55', NULL, 'internal', NULL),
+(538, 487, 38400.00, 'ROLL OVER', 'other', '2026-07-26', '2026-08-05', '2026-07-30 07:05:36', '2026-07-30 07:05:36', NULL, 'internal', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `document_statuses`
+--
+
+CREATE TABLE `document_statuses` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `document_statuses`
+--
+
+INSERT INTO `document_statuses` (`id`, `name`, `slug`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Pending', 'pending', NULL, 1, NULL, NULL),
+(2, 'Verified', 'verified', NULL, 1, NULL, NULL),
+(3, 'Rejected', 'rejected', NULL, 1, NULL, NULL),
+(4, 'Expired', 'expired', NULL, 1, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `document_types`
+--
+
+CREATE TABLE `document_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `requires_verification` tinyint(1) DEFAULT 0,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `document_types`
+--
+
+INSERT INTO `document_types` (`id`, `name`, `slug`, `requires_verification`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Loan Agreement', 'loan_agreement', 1, 1, NULL, NULL),
+(2, 'ID Copy', 'id_copy', 1, 1, NULL, NULL),
+(3, 'Income Proof', 'income_proof', 1, 1, NULL, NULL),
+(4, 'Address Proof', 'address_proof', 1, 1, NULL, NULL),
+(5, 'Letter', 'letter', 0, 1, NULL, NULL),
+(6, 'Court Document', 'court_document', 1, 1, NULL, NULL),
+(7, 'Payment Receipt', 'payment_receipt', 1, 1, NULL, NULL),
+(8, 'Other', 'other', 0, 1, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employments`
+--
+
+CREATE TABLE `employments` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `employer_name` varchar(255) DEFAULT NULL,
+  `employer_address` text DEFAULT NULL,
+  `employer_phone` varchar(50) DEFAULT NULL,
+  `employer_email` varchar(255) DEFAULT NULL,
+  `job_title` varchar(255) DEFAULT NULL,
+  `department` varchar(255) DEFAULT NULL,
+  `supervisor_name` varchar(255) DEFAULT NULL,
+  `supervisor_phone` varchar(50) DEFAULT NULL,
+  `supervisor_email` varchar(255) DEFAULT NULL,
+  `hr_contact_name` varchar(255) DEFAULT NULL,
+  `hr_contact_phone` varchar(50) DEFAULT NULL,
+  `hr_contact_email` varchar(255) DEFAULT NULL,
+  `employment_type_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `is_current` tinyint(1) DEFAULT 1,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employment_types`
+--
+
+CREATE TABLE `employment_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `employment_types`
+--
+
+INSERT INTO `employment_types` (`id`, `name`, `slug`, `description`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Full Time', 'full_time', NULL, 1, 10, NULL, NULL),
+(2, 'Part Time', 'part_time', NULL, 1, 20, NULL, NULL),
+(3, 'Contract', 'contract', NULL, 1, 30, NULL, NULL),
+(4, 'Casual', 'casual', NULL, 1, 40, NULL, NULL),
+(5, 'Self Employed', 'self_employed', NULL, 1, 50, NULL, NULL),
+(6, 'Business Owner', 'business_owner', NULL, 1, 60, NULL, NULL),
+(7, 'Other', 'other', NULL, 1, 999, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -859,6 +1501,65 @@ CREATE TABLE `failed_jobs` (
   `exception` longtext NOT NULL,
   `failed_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `financial_assessments`
+--
+
+CREATE TABLE `financial_assessments` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `assessment_date` date NOT NULL,
+  `monthly_income` decimal(15,2) DEFAULT NULL,
+  `monthly_expenses` decimal(15,2) DEFAULT NULL,
+  `monthly_surplus` decimal(15,2) DEFAULT NULL,
+  `other_obligations` decimal(15,2) DEFAULT NULL,
+  `dependents_count` int(11) DEFAULT 0,
+  `hardship_reason_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `hardship_description` text DEFAULT NULL,
+  `supporting_documents` text DEFAULT NULL,
+  `recommended_plan` text DEFAULT NULL,
+  `assessed_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `is_approved` tinyint(1) DEFAULT 0,
+  `approval_date` date DEFAULT NULL,
+  `approved_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `hardship_reasons`
+--
+
+CREATE TABLE `hardship_reasons` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `hardship_reasons`
+--
+
+INSERT INTO `hardship_reasons` (`id`, `name`, `slug`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Job Loss', 'job_loss', NULL, 1, NULL, NULL),
+(2, 'Medical Emergency', 'medical_emergency', NULL, 1, NULL, NULL),
+(3, 'Business Failure', 'business_failure', NULL, 1, NULL, NULL),
+(4, 'Natural Disaster', 'natural_disaster', NULL, 1, NULL, NULL),
+(5, 'Death in Family', 'death_in_family', NULL, 1, NULL, NULL),
+(6, 'Divorce', 'divorce', NULL, 1, NULL, NULL),
+(7, 'Other', 'other', NULL, 1, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -960,6 +1661,92 @@ CREATE TABLE `job_batches` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `legal_deadlines`
+--
+
+CREATE TABLE `legal_deadlines` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED NOT NULL,
+  `deadline_type` enum('statute_of_limitations','court_filing','hearing','response_due','payment_due','other') NOT NULL,
+  `deadline_date` date NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `extension_date` date DEFAULT NULL,
+  `extension_reason` text DEFAULT NULL,
+  `status` enum('pending','met','extended','missed','waived') DEFAULT 'pending',
+  `notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `legal_proceedings`
+--
+
+CREATE TABLE `legal_proceedings` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED NOT NULL,
+  `proceeding_type_id` bigint(20) UNSIGNED NOT NULL,
+  `filing_date` date NOT NULL,
+  `court_name` varchar(255) DEFAULT NULL,
+  `case_number` varchar(100) DEFAULT NULL,
+  `judge_name` varchar(255) DEFAULT NULL,
+  `plaintiff` varchar(255) DEFAULT NULL,
+  `defendant` varchar(255) DEFAULT NULL,
+  `amount_claimed` decimal(15,2) DEFAULT NULL,
+  `amount_awarded` decimal(15,2) DEFAULT NULL,
+  `judgment_date` date DEFAULT NULL,
+  `status` enum('filed','pending','active','resolved','appealed','dismissed') DEFAULT 'filed',
+  `next_hearing_date` date DEFAULT NULL,
+  `lawyer_name` varchar(255) DEFAULT NULL,
+  `lawyer_contact` varchar(255) DEFAULT NULL,
+  `lawyer_fees` decimal(15,2) DEFAULT NULL,
+  `costs` decimal(15,2) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `legal_proceeding_types`
+--
+
+CREATE TABLE `legal_proceeding_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `legal_proceeding_types`
+--
+
+INSERT INTO `legal_proceeding_types` (`id`, `name`, `slug`, `description`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Demand Letter', 'demand_letter', NULL, 1, 10, NULL, NULL),
+(2, 'Court Filing', 'court_filing', NULL, 1, 20, NULL, NULL),
+(3, 'Judgment', 'judgment', NULL, 1, 30, NULL, NULL),
+(4, 'Writ of Attachment', 'writ_of_attachment', NULL, 1, 40, NULL, NULL),
+(5, 'Garnishment', 'garnishment', NULL, 1, 50, NULL, NULL),
+(6, 'Bankruptcy Notice', 'bankruptcy_notice', NULL, 1, 60, NULL, NULL),
+(7, 'Settlement', 'settlement', NULL, 1, 70, NULL, NULL),
+(8, 'Appeal', 'appeal', NULL, 1, 80, NULL, NULL),
+(9, 'Other', 'other', NULL, 1, 999, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `loans`
 --
 
@@ -973,474 +1760,492 @@ CREATE TABLE `loans` (
   `status` enum('pending','approved','disbursed','rejected','repaid') NOT NULL DEFAULT 'pending',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
   `guarantor_id` bigint(20) UNSIGNED DEFAULT NULL,
   `guarantor_relationship` varchar(255) DEFAULT NULL,
   `loan_officer_id` bigint(20) UNSIGNED DEFAULT NULL,
   `consent` tinyint(1) DEFAULT 0,
   `consent_date` timestamp NULL DEFAULT NULL,
   `reason` text DEFAULT NULL,
-  `due_date` date DEFAULT NULL
+  `due_date` date DEFAULT NULL,
+  `is_non_performing` tinyint(1) DEFAULT 0 COMMENT 'Flag for NPL status',
+  `default_date` date DEFAULT NULL COMMENT 'Date when loan went into default',
+  `days_overdue` int(11) DEFAULT 0 COMMENT 'Number of days overdue',
+  `last_overdue_check` datetime DEFAULT NULL COMMENT 'Last time overdue status was checked',
+  `default_triggered` tinyint(1) DEFAULT 0 COMMENT 'Whether NPL trigger has fired',
+  `calculated_due_date` date DEFAULT NULL COMMENT 'Calculated due date (derived from loan_types)',
+  `npl_trigger_threshold` int(11) DEFAULT 0 COMMENT 'Days overdue when NPL triggered'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `loans`
 --
 
-INSERT INTO `loans` (`id`, `user_id`, `loan_type_id`, `amount`, `borrow_date`, `broker_status`, `status`, `created_at`, `updated_at`, `guarantor_id`, `guarantor_relationship`, `loan_officer_id`, `consent`, `consent_date`, `reason`, `due_date`) VALUES
-(1, 2, 1, 120000.00, '2025-03-07', 1, 'repaid', '2025-04-17 12:12:56', '2025-04-17 12:12:56', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(2, 6, 1, 30000.00, '2025-03-07', 1, 'repaid', '2025-04-17 12:22:35', '2025-04-17 12:22:35', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(3, 6, 1, 50000.00, '2025-03-28', 1, 'repaid', '2025-04-17 12:26:11', '2025-04-17 12:26:11', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(4, 2, 1, 35000.00, '2025-03-31', 1, 'repaid', '2025-04-17 12:42:17', '2025-04-17 12:42:17', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(5, 7, 2, 10000.00, '2025-03-03', 0, 'repaid', '2025-04-17 13:03:34', '2025-04-17 13:03:34', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(6, 7, 2, 13000.00, '2025-04-05', 0, 'repaid', '2025-04-17 13:11:52', '2025-05-06 08:47:42', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(7, 8, 1, 2000.00, '2025-04-10', 0, 'repaid', '2025-04-17 13:18:22', '2025-05-05 19:19:58', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(8, 9, 1, 10000.00, '2025-04-12', 0, 'repaid', '2025-04-17 13:23:26', '2025-04-17 13:23:26', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(9, 9, 1, 15000.00, '2025-04-17', 0, 'repaid', '2025-04-17 13:25:52', '2025-04-17 13:25:52', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(10, 10, 3, 30000.00, '2025-04-16', 0, 'repaid', '2025-04-17 13:27:33', '2025-05-07 14:45:50', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(11, 11, 1, 15000.00, '2025-04-08', 0, 'repaid', '2025-04-17 13:29:39', '2025-04-17 13:29:39', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(12, 14, 1, 27000.00, '2025-04-17', 1, 'repaid', '2025-04-17 14:08:51', '2025-05-06 08:45:23', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(13, 16, 1, 30000.00, '2025-04-13', 1, 'repaid', '2025-04-17 14:33:51', '2025-04-17 14:33:51', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(14, 2, 1, 20000.00, '2025-03-25', 0, 'repaid', '2025-04-20 12:26:24', '2025-04-20 12:26:24', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(15, 18, 1, 50000.00, '2025-03-25', 0, 'repaid', '2025-04-20 12:42:26', '2025-04-20 12:42:26', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(16, 18, 1, 50000.00, '2025-04-01', 1, 'repaid', '2025-04-20 12:50:23', '2025-04-20 12:50:23', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(17, 18, 1, 20000.00, '2025-04-12', 1, 'repaid', '2025-04-20 13:06:04', '2025-04-20 13:06:04', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(18, 2, 1, 35000.00, '2025-03-31', 1, 'repaid', '2025-04-20 13:24:14', '2025-04-20 13:24:14', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(19, 2, 1, 20000.00, '2025-04-07', 0, 'repaid', '2025-04-20 13:45:24', '2025-04-20 13:45:24', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(20, 2, 1, 33000.00, '2025-04-15', 0, 'repaid', '2025-04-20 13:49:21', '2025-04-20 13:49:21', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(21, 2, 1, 42000.00, '2025-04-15', 1, 'repaid', '2025-04-20 13:56:32', '2025-04-20 13:56:32', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(22, 3, 1, 10000.00, '2025-03-03', 1, 'repaid', '2025-04-20 16:19:58', '2025-04-20 16:19:58', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(23, 3, 1, 5000.00, '2025-02-26', 1, 'repaid', '2025-04-20 16:29:18', '2025-04-20 16:29:18', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(24, 15, 2, 5000.00, '2025-03-08', 0, 'repaid', '2025-04-20 16:32:20', '2025-05-05 19:06:36', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(25, 13, 2, 11000.00, '2025-03-10', 0, 'repaid', '2025-04-20 16:33:54', '2025-04-20 16:33:54', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(26, 13, 2, 600.00, '2025-04-21', 0, 'repaid', '2025-04-20 16:38:29', '2025-05-05 19:25:00', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(27, 15, 2, 2000.00, '2025-03-15', 0, 'repaid', '2025-04-20 16:39:13', '2025-05-05 19:14:42', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(28, 3, 1, 50000.00, '2025-04-04', 1, 'repaid', '2025-04-20 17:10:46', '2025-04-20 17:10:46', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(29, 17, 2, 11000.00, '2025-04-04', 0, 'repaid', '2025-04-20 17:11:49', '2025-04-20 17:11:49', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(30, 15, 2, 6000.00, '2025-04-04', 0, 'repaid', '2025-04-20 17:12:15', '2025-05-05 19:20:31', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(31, 19, 1, 50000.00, '2025-04-07', 0, 'repaid', '2025-04-20 17:15:30', '2025-04-20 17:15:30', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(32, 13, 2, 29000.00, '2025-04-04', 0, 'repaid', '2025-04-20 17:18:16', '2025-05-05 19:21:04', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(33, 17, 2, 10000.00, '2025-03-07', 0, 'repaid', '2025-04-20 17:19:04', '2025-04-20 17:19:04', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(34, 20, 2, 9000.00, '2025-03-07', 0, 'repaid', '2025-04-20 17:39:54', '2025-04-20 17:39:54', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(35, 11, 1, 18000.00, '2025-04-18', 0, 'repaid', '2025-04-21 06:17:23', '2025-04-21 06:17:23', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(36, 2, 1, 44000.00, '2025-03-21', 1, 'repaid', '2025-04-21 09:01:00', '2025-04-21 09:01:00', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(37, 9, 1, 5000.00, '2025-04-25', 0, 'repaid', '2025-04-21 10:05:13', '2025-05-05 19:27:40', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(38, 21, 1, 50000.00, '2025-04-24', 0, 'repaid', '2025-04-24 06:57:09', '2025-04-24 06:57:09', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(39, 9, 1, 15000.00, '2025-04-27', 0, 'repaid', '2025-04-27 06:33:31', '2025-05-07 14:48:02', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(40, 15, 2, 15600.00, '2025-05-06', 0, 'repaid', '2025-04-27 07:53:49', '2025-06-06 08:13:05', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(41, 13, 2, 8000.00, '2025-04-27', 0, 'repaid', '2025-04-27 07:55:09', '2025-05-05 19:25:52', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(45, 2, 1, 50000.00, '2025-04-29', 0, 'repaid', '2025-04-29 06:05:48', '2025-05-12 09:03:29', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(46, 21, 1, 50000.00, '2025-05-03', 0, 'repaid', '2025-05-02 19:31:23', '2025-05-15 07:46:09', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(48, 9, 1, 5000.00, '2025-05-05', 0, 'repaid', '2025-05-05 18:02:20', '2025-05-09 17:56:42', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(49, 13, 2, 50000.00, '2025-05-06', 0, 'repaid', '2025-05-05 19:30:08', '2025-06-06 08:12:05', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(50, 16, 1, 100000.00, '2025-05-06', 1, 'repaid', '2025-05-06 08:14:19', '2025-05-16 19:26:14', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(51, 7, 1, 15600.00, '2025-05-04', 0, 'repaid', '2025-05-06 08:48:50', '2025-05-15 07:48:42', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(52, 8, 2, 8000.00, '2025-05-06', 0, 'pending', '2025-05-07 10:46:08', '2025-07-18 08:37:59', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(54, 22, 1, 10000.00, '2025-05-07', 1, 'repaid', '2025-05-07 12:10:55', '2025-05-18 08:10:32', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(55, 9, 1, 15000.00, '2025-05-07', 0, 'repaid', '2025-05-07 14:50:08', '2025-05-08 18:48:43', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(56, 2, 1, 30000.00, '2025-05-07', 1, 'repaid', '2025-05-07 14:53:46', '2025-05-16 12:53:45', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(57, 14, 1, 45000.00, '2025-05-10', 1, 'repaid', '2025-05-10 10:37:30', '2025-05-22 05:24:47', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(59, 2, 1, 78000.00, '2025-05-12', 0, 'repaid', '2025-05-12 09:05:41', '2025-05-20 04:29:27', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(60, 24, 1, 50000.00, '2025-05-14', 1, 'repaid', '2025-05-13 06:50:44', '2025-05-26 16:54:50', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(61, 21, 1, 72000.00, '2025-05-15', 0, 'repaid', '2025-05-15 07:46:55', '2025-05-26 10:30:57', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(64, 7, 2, 18720.00, '2025-05-15', 0, 'repaid', '2025-05-15 07:49:33', '2025-06-16 13:26:11', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(65, 11, 3, 13000.00, '2025-05-14', 0, 'repaid', '2025-05-15 07:57:40', '2025-05-30 15:21:08', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(66, 25, 1, 2500.00, '2025-05-14', 1, 'repaid', '2025-05-15 08:09:40', '2025-05-24 11:58:24', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(68, 22, 1, 10000.00, '2025-05-17', 1, 'repaid', '2025-05-18 08:11:18', '2025-05-31 11:07:01', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(69, 26, 3, 50000.00, '2025-05-19', 0, 'repaid', '2025-05-19 12:46:30', '2025-06-03 19:11:06', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(70, 27, 3, 50000.00, '2025-05-20', 0, 'repaid', '2025-05-20 13:03:31', '2025-06-03 15:42:32', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(71, 28, 1, 15000.00, '2025-05-26', 0, 'repaid', '2025-05-25 18:37:01', '2025-06-06 07:59:54', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(72, 21, 1, 27840.00, '2025-05-26', 0, 'pending', '2025-05-26 10:33:15', '2025-05-26 10:36:03', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(73, 9, 1, 10000.00, '2025-05-24', 0, 'repaid', '2025-05-26 11:51:57', '2025-06-03 08:13:25', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(74, 24, 1, 50000.00, '2025-05-26', 1, 'repaid', '2025-05-26 16:55:48', '2025-06-04 07:57:27', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(75, 17, 7, 30000.00, '2025-05-27', 0, 'repaid', '2025-05-27 06:20:52', '2025-07-01 07:28:21', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(76, 29, 3, 15000.00, '2025-05-27', 0, 'repaid', '2025-05-27 13:48:17', '2025-06-10 09:26:58', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(77, 28, 1, 30000.00, '2025-05-29', 0, 'repaid', '2025-05-29 06:41:34', '2025-06-10 05:06:45', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(78, 2, 4, 100000.00, '2025-05-29', 0, 'repaid', '2025-05-29 12:06:58', '2025-10-21 19:59:01', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(79, 31, 1, 35000.00, '2025-05-29', 0, 'repaid', '2025-05-29 13:49:38', '2025-07-07 21:08:58', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(80, 11, 5, 30000.00, '2025-05-30', 0, 'repaid', '2025-05-30 15:28:35', '2025-07-17 08:18:25', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(82, 28, 5, 30000.00, '2025-05-31', 0, 'repaid', '2025-05-31 09:41:29', '2025-07-10 05:04:16', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(83, 22, 1, 8200.00, '2025-05-29', 1, 'repaid', '2025-05-31 11:16:30', '2025-06-20 07:03:33', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(84, 32, 6, 20000.00, '2025-06-02', 0, 'repaid', '2025-06-02 11:19:18', '2025-06-20 11:25:28', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(85, 16, 1, 100000.00, '2025-06-03', 1, 'repaid', '2025-06-03 07:25:00', '2025-07-10 04:44:16', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(86, 9, 1, 10000.00, '2025-06-03', 0, 'repaid', '2025-06-03 08:12:16', '2025-06-15 05:14:44', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(87, 27, 3, 50000.00, '2025-06-04', 0, 'repaid', '2025-06-03 15:43:14', '2025-06-20 07:06:21', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(88, 28, 1, 28000.00, '2025-06-06', 0, 'repaid', '2025-06-06 08:00:44', '2025-06-18 09:54:17', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(89, 22, 1, 8280.00, '2025-06-08', 1, 'repaid', '2025-06-09 03:41:42', '2025-06-30 08:37:52', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(90, 28, 1, 39600.00, '2025-06-09', 0, 'repaid', '2025-06-10 05:08:08', '2025-06-18 10:01:51', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(91, 33, 1, 15000.00, '2025-06-14', 0, 'repaid', '2025-06-15 05:15:29', '2025-06-25 10:43:35', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(92, 9, 1, 10000.00, '2025-06-13', 0, 'repaid', '2025-06-15 05:15:29', '2025-06-25 10:43:35', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(93, 29, 1, 17000.00, '2025-06-13', 1, 'repaid', '2025-06-15 05:19:36', '2025-06-23 18:10:20', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(94, 34, 3, 5000.00, '2025-06-12', 1, 'repaid', '2025-06-15 13:56:47', '2025-06-27 07:43:09', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(95, 7, 2, 2264.00, '2025-06-16', 0, 'repaid', '2025-06-16 13:29:00', '2025-07-01 09:14:16', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(96, 28, 1, 81120.00, '2025-06-19', 0, 'repaid', '2025-06-18 09:58:47', '2025-07-10 04:52:11', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(97, 27, 2, 50000.00, '2025-06-18', 0, 'repaid', '2025-06-20 07:07:15', '2025-12-23 10:16:48', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(98, 35, 3, 28000.00, '2025-06-20', 0, 'repaid', '2025-06-20 18:32:40', '2025-06-25 08:24:49', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(99, 36, 1, 5000.00, '2025-06-21', 0, 'pending', '2025-06-21 06:22:09', '2025-06-21 06:22:09', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(100, 37, 1, 5000.00, '2025-06-22', 0, 'repaid', '2025-06-23 10:27:04', '2025-07-15 09:11:51', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(101, 33, 1, 10000.00, '2025-06-24', 0, 'repaid', '2025-06-24 06:21:52', '2025-07-15 11:13:08', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(102, 9, 1, 10000.00, '2025-06-24', 0, 'repaid', '2025-06-25 10:44:35', '2025-07-05 05:39:53', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(103, 34, 1, 5000.00, '2025-06-27', 0, 'repaid', '2025-06-27 07:45:19', '2025-07-04 12:07:10', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(104, 9, 1, 5000.00, '2025-06-29', 0, 'repaid', '2025-06-30 07:08:30', '2025-07-10 04:41:22', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(105, 35, 1, 120000.00, '2025-06-30', 0, 'repaid', '2025-06-30 08:23:02', '2025-07-13 16:05:06', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(106, 22, 1, 4732.00, '2025-06-18', 1, 'repaid', '2025-06-30 08:32:22', '2025-06-30 08:35:45', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(107, 17, 7, 30000.00, '2025-06-30', 0, 'repaid', '2025-07-01 07:29:54', '2025-07-30 07:37:35', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(108, 33, 1, 10000.00, '2025-07-05', 0, 'repaid', '2025-07-05 05:38:52', '2025-07-15 10:45:11', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(109, 9, 1, 12000.00, '2025-07-05', 0, 'repaid', '2025-07-05 05:40:47', '2025-07-17 08:15:07', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(110, 29, 1, 10000.00, '2025-07-07', 0, 'repaid', '2025-07-07 08:48:13', '2025-07-17 09:47:16', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(111, 38, 1, 8000.00, '2025-07-07', 0, 'repaid', '2025-07-07 08:51:43', '2025-07-13 16:07:49', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(112, 34, 1, 10000.00, '2025-07-08', 0, 'repaid', '2025-07-08 07:54:40', '2025-07-18 08:31:47', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(113, 32, 3, 10000.00, '2025-07-08', 0, 'repaid', '2025-07-08 16:28:51', '2025-09-03 11:19:19', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(114, 9, 1, 6000.00, '2025-07-10', 0, 'repaid', '2025-07-10 04:42:14', '2025-07-21 18:04:26', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(115, 28, 5, 97344.00, '2025-06-30', 0, 'repaid', '2025-07-10 04:53:20', '2025-08-11 08:04:24', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(116, 28, 5, 39000.00, '2025-07-02', 0, 'repaid', '2025-07-10 05:04:53', '2025-08-12 06:54:31', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(117, 35, 1, 120000.00, '2025-07-11', 0, 'repaid', '2025-07-13 16:06:21', '2025-07-24 03:49:29', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(118, 39, 1, 2000.00, '2025-07-12', 0, 'repaid', '2025-07-13 16:12:10', '2025-07-23 18:12:25', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(119, 40, 1, 1000.00, '2025-07-14', 0, 'repaid', '2025-07-14 11:36:52', '2025-07-17 09:55:32', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(120, 33, 3, 25000.00, '2025-07-15', 0, 'repaid', '2025-07-15 11:04:15', '2025-08-06 11:00:34', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(121, 41, 3, 70000.00, '2025-07-15', 0, 'repaid', '2025-07-15 11:06:01', '2025-07-30 04:28:10', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(122, 9, 1, 14400.00, '2025-07-15', 0, 'repaid', '2025-07-17 08:16:16', '2025-07-27 08:59:16', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(123, 11, 3, 42900.00, '2025-06-30', 0, 'repaid', '2025-07-17 08:21:14', '2025-07-17 08:24:56', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(124, 11, 3, 56628.00, '2025-07-14', 0, 'repaid', '2025-07-17 08:26:55', '2025-08-07 18:46:49', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(125, 29, 1, 10000.00, '2025-07-17', 0, 'repaid', '2025-07-17 09:51:35', '2025-07-28 14:07:40', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(126, 40, 1, 5000.00, '2025-07-16', 0, 'repaid', '2025-07-17 09:56:15', '2025-08-06 05:30:36', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(127, 42, 1, 20000.00, '2025-07-17', 0, 'repaid', '2025-07-17 10:55:06', '2025-07-30 14:20:12', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(128, 34, 1, 10000.00, '2025-07-18', 0, 'repaid', '2025-07-18 08:33:17', '2025-07-30 15:33:27', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(129, 9, 1, 7200.00, '2025-07-21', 0, 'repaid', '2025-07-21 06:44:38', '2025-07-31 06:17:42', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(130, 9, 1, 17280.00, '2025-07-25', 0, 'repaid', '2025-07-27 09:00:07', '2025-08-05 08:10:54', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(131, 38, 1, 4000.00, '2025-07-20', 0, 'repaid', '2025-07-28 14:10:31', '2025-07-28 14:12:00', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(132, 43, 1, 50000.00, '2025-07-29', 0, 'pending', '2025-07-29 16:16:57', '2025-07-30 08:12:18', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(134, 17, 7, 30000.00, '2025-07-30', 0, 'repaid', '2025-07-30 07:39:09', '2025-09-01 18:26:23', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(135, 42, 1, 2400.00, '2025-07-29', 0, 'repaid', '2025-07-30 14:21:37', '2025-08-15 12:23:49', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(136, 34, 1, 12000.00, '2025-07-28', 0, 'repaid', '2025-07-30 15:34:39', '2025-08-07 17:08:07', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(137, 31, 1, 37500.00, '2025-07-30', 0, 'repaid', '2025-07-31 08:43:45', '2025-08-20 07:31:15', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(138, 9, 2, 45000.00, '2025-08-01', 0, 'repaid', '2025-08-01 06:49:04', '2025-09-03 11:13:11', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(139, 15, 7, 30000.00, '2025-08-01', 0, 'repaid', '2025-08-01 10:17:34', '2025-09-02 04:32:37', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(140, 39, 1, 3000.00, '2025-08-02', 0, 'repaid', '2025-08-02 16:04:03', '2025-08-12 18:20:30', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(141, 9, 1, 6000.00, '2025-08-04', 0, 'repaid', '2025-08-05 08:11:38', '2025-08-15 05:33:31', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(142, 40, 1, 3000.00, '2025-07-27', 0, 'repaid', '2025-08-06 05:42:30', '2025-08-14 10:08:00', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(143, 33, 3, 30000.00, '2025-07-30', 0, 'repaid', '2025-08-06 11:01:44', '2025-09-01 18:29:30', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(144, 45, 8, 300000.00, '2025-08-06', 0, 'repaid', '2025-08-06 11:26:02', '2025-08-27 10:40:44', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(145, 7, 2, 3000.00, '2025-08-06', 0, 'repaid', '2025-08-07 03:41:48', '2025-09-08 10:26:04', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(146, 34, 1, 16400.00, '2025-08-08', 0, 'repaid', '2025-08-07 17:08:54', '2025-08-20 07:29:27', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(147, 11, 3, 67953.60, '2025-07-29', 0, 'repaid', '2025-08-07 18:47:45', '2025-08-12 06:51:32', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(148, 29, 1, 15000.00, '2025-08-09', 0, 'repaid', '2025-08-08 10:40:52', '2025-08-21 09:20:35', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(149, 38, 1, 10000.00, '2025-08-09', 0, 'repaid', '2025-08-09 10:25:48', '2025-08-20 10:21:32', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(150, 28, 2, 126547.20, '2025-07-31', 0, 'pending', '2025-08-11 08:06:15', '2025-09-17 07:25:50', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(151, 11, 3, 66545.00, '2025-08-12', 0, 'repaid', '2025-08-12 06:52:11', '2026-03-14 19:58:21', 13, 'Colleague', 49, 0, NULL, NULL, NULL),
-(152, 28, 5, 50700.00, '2025-08-03', 0, 'repaid', '2025-08-12 06:55:08', '2025-09-08 16:38:16', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(156, 39, 1, 10000.00, '2025-08-22', 0, 'repaid', '2025-08-13 04:11:07', '2025-09-08 15:30:31', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(158, 40, 1, 1600.00, '2025-08-06', 0, 'repaid', '2025-08-14 10:09:55', '2025-08-20 06:37:25', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(159, 9, 1, 6000.00, '2025-08-15', 0, 'repaid', '2025-08-15 05:34:14', '2025-08-28 15:08:21', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(160, 48, 1, 5000.00, '2025-08-19', 0, 'pending', '2025-08-19 15:00:21', '2025-08-19 15:00:21', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(161, 45, 8, 50000.00, '2025-08-15', 0, 'repaid', '2025-08-20 05:59:03', '2025-08-27 10:41:08', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(162, 40, 1, 1920.00, '2025-08-17', 0, 'repaid', '2025-08-20 06:38:06', '2025-08-23 06:29:55', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(163, 34, 1, 19680.00, '2025-08-19', 0, 'repaid', '2025-08-20 07:28:25', '2025-09-08 15:36:07', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(164, 29, 1, 18000.00, '2025-08-20', 0, 'repaid', '2025-08-21 09:21:11', '2025-09-04 07:02:54', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(165, 2, 1, 15000.00, '2025-08-22', 0, 'repaid', '2025-08-22 12:56:44', '2025-09-12 13:47:09', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(166, 9, 1, 7200.00, '2025-08-25', 0, 'repaid', '2025-08-28 15:10:28', '2025-09-04 07:38:16', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(167, 35, 1, 50000.00, '2025-08-28', 0, 'repaid', '2025-08-28 15:55:30', '2025-09-08 15:21:55', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(168, 17, 7, 30000.00, '2025-08-30', 0, 'repaid', '2025-09-01 18:27:10', '2025-10-01 07:15:33', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(169, 33, 3, 42000.00, '2025-08-14', 0, 'repaid', '2025-09-01 18:30:13', '2025-09-08 16:34:13', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(170, 15, 7, 30000.00, '2025-09-01', 0, 'repaid', '2025-09-02 04:31:23', '2025-10-01 07:23:06', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(171, 9, 2, 53640.00, '2025-09-02', 0, 'repaid', '2025-09-03 11:14:06', '2025-10-06 08:05:27', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(172, 29, 1, 18000.00, '2025-08-31', 0, 'repaid', '2025-09-04 07:03:32', '2025-09-11 17:51:22', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(173, 9, 1, 7200.00, '2025-09-05', 0, 'repaid', '2025-09-04 07:38:53', '2025-09-16 05:53:59', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(174, 48, 1, 15000.00, '2025-09-08', 0, 'repaid', '2025-09-08 11:04:54', '2025-09-10 07:22:24', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(175, 39, 1, 12000.00, '2025-09-02', 0, 'repaid', '2025-09-08 15:31:29', '2025-09-13 09:18:26', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(176, 34, 1, 23616.00, '2025-08-30', 0, 'repaid', '2025-09-08 15:38:24', '2025-09-10 02:49:32', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(177, 33, 3, 50600.00, '2025-08-29', 0, 'disbursed', '2025-09-08 16:35:25', '2025-09-08 16:35:25', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(178, 28, 5, 65910.00, '2025-09-04', 0, 'repaid', '2025-09-08 16:39:40', '2025-10-14 06:35:35', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(179, 34, 1, 28340.00, '2025-09-10', 0, 'repaid', '2025-09-10 02:50:23', '2025-09-23 03:52:29', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(180, 50, 9, 50000.00, '2025-09-12', 0, 'repaid', '2025-09-10 11:18:10', '2025-12-06 08:42:59', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(181, 41, 3, 40000.00, '2025-09-10', 0, 'repaid', '2025-09-11 10:22:55', '2025-09-25 14:52:00', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(182, 29, 1, 21600.00, '2025-09-11', 0, 'repaid', '2025-09-11 17:52:29', '2025-09-25 04:13:52', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(183, 2, 1, 18000.00, '2025-09-02', 0, 'repaid', '2025-09-12 13:48:39', '2025-09-14 11:07:03', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(184, 39, 1, 10000.00, '2025-09-13', 0, 'repaid', '2025-09-13 09:15:34', '2025-10-03 06:52:15', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(185, 2, 1, 21600.00, '2025-09-13', 0, 'repaid', '2025-09-14 11:07:33', '2025-09-25 10:29:35', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(186, 51, 10, 250000.00, '2025-09-13', 0, 'repaid', '2025-09-15 06:47:07', '2025-12-12 06:37:37', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(187, 35, 1, 40000.00, '2025-09-15', 0, 'repaid', '2025-09-15 08:44:32', '2025-09-25 14:53:31', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(188, 7, 2, 1000.00, '2025-09-08', 0, 'repaid', '2025-09-16 09:27:55', '2025-10-13 11:15:17', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(189, 45, 8, 136000.00, '2025-09-19', 0, 'disbursed', '2025-09-19 08:19:34', '2025-10-09 10:03:41', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(190, 31, 1, 10000.00, '2025-09-21', 0, 'repaid', '2025-09-22 07:03:35', '2025-10-01 07:10:35', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(191, 34, 1, 34008.00, '2025-09-21', 0, 'repaid', '2025-09-23 03:53:51', '2025-10-14 07:41:22', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(192, 35, 1, 40000.00, '2025-09-26', 0, 'repaid', '2025-09-25 14:54:12', '2025-10-05 00:38:40', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(193, 45, 8, 178000.00, '2025-09-29', 1, 'disbursed', '2025-09-29 11:22:47', '2025-10-23 13:12:33', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(194, 50, 1, 10000.00, '2025-09-27', 0, 'repaid', '2025-09-29 11:24:57', '2025-10-06 08:12:10', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(195, 31, 1, 12000.00, '2025-10-02', 0, 'repaid', '2025-10-01 07:11:11', '2025-10-31 07:55:12', NULL, NULL, 1, 1, '2025-10-02 21:01:08', NULL, NULL),
-(196, 17, 7, 17000.00, '2025-10-01', 0, 'repaid', '2025-10-01 07:22:02', '2025-11-03 09:24:16', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(197, 15, 7, 23000.00, '2025-10-02', 0, 'repaid', '2025-10-01 07:23:40', '2025-10-27 09:48:40', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(198, 52, 3, 50000.00, '2025-10-01', 0, 'repaid', '2025-10-01 09:12:17', '2025-10-13 12:39:28', NULL, NULL, 1, 1, '2025-10-01 21:00:06', NULL, NULL),
-(199, 39, 1, 12000.00, '2025-09-24', 0, 'repaid', '2025-10-03 06:52:56', '2025-10-03 06:54:09', NULL, NULL, 1, 1, '2025-09-24 21:00:00', NULL, NULL),
-(200, 39, 1, 14400.00, '2025-10-04', 0, 'disbursed', '2025-10-03 06:55:07', '2025-10-03 06:55:07', NULL, NULL, 1, 1, '2025-09-25 20:55:03', NULL, NULL),
-(201, 53, 1, 5000.00, '2025-10-03', 0, 'repaid', '2025-10-03 07:37:33', '2025-10-19 07:33:41', NULL, NULL, 49, 1, '2025-10-14 20:56:47', NULL, NULL),
-(202, 2, 1, 10000.00, '2025-10-05', 0, 'repaid', '2025-10-06 07:55:16', '2025-10-09 14:59:08', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(203, 9, 2, 54368.00, '2025-10-02', 0, 'repaid', '2025-10-06 08:10:06', '2025-11-03 14:32:18', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(204, 50, 1, 15000.00, '2025-10-06', 0, 'repaid', '2025-10-06 09:02:10', '2025-10-15 04:06:09', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(205, 54, 1, 50000.00, '2025-10-08', 0, 'repaid', '2025-10-08 06:23:57', '2025-10-22 09:33:43', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(206, 7, 2, 1200.00, '2025-10-08', 0, 'repaid', '2025-10-13 11:16:33', '2025-10-25 08:57:48', NULL, NULL, NULL, 0, NULL, NULL, NULL),
-(207, 41, 3, 30000.00, '2025-10-13', 0, 'repaid', '2025-10-13 15:46:13', '2025-10-24 09:01:05', 1, NULL, 15, 0, NULL, 'emergency', NULL),
-(208, 28, 12, 55835.00, '2025-09-30', 0, 'disbursed', '2025-10-14 06:40:13', '2025-11-26 04:15:53', NULL, NULL, 49, 0, NULL, NULL, NULL),
-(209, 34, 1, 30809.60, '2025-10-01', 0, 'repaid', '2025-10-14 07:42:25', '2025-10-14 07:44:21', NULL, NULL, 49, 1, '2025-10-10 20:55:29', NULL, NULL),
-(210, 34, 1, 36972.00, '2025-10-11', 0, 'disbursed', '2025-10-14 07:45:38', '2025-10-14 07:49:06', 1, 'Friend', 49, 1, '2025-10-14 20:51:26', NULL, NULL),
-(211, 50, 1, 20000.00, '2025-10-15', 0, 'repaid', '2025-10-15 04:07:39', '2025-10-26 17:57:02', 13, 'Friend', 49, 1, '2025-10-15 04:07:39', 'Emergency loan for 10 days', NULL),
-(212, 21, 1, 100000.00, '2025-10-15', 0, 'repaid', '2025-10-15 11:58:47', '2025-10-28 09:13:54', 13, 'Collegue', NULL, 0, NULL, 'Outstanding bill', NULL),
-(213, 29, 1, 10000.00, '2025-10-16', 0, 'repaid', '2025-10-16 16:28:33', '2025-10-27 04:57:35', NULL, 'Colleague', NULL, 0, NULL, 'Facilitation', NULL),
-(214, 54, 1, 72000.00, '2025-10-21', 0, 'repaid', '2025-10-22 09:36:22', '2025-11-04 03:46:11', 13, 'Friend', 49, 1, '2025-10-22 09:36:22', 'roll over for the previous amount paid', NULL),
-(215, 55, 1, 10000.00, '2025-10-23', 0, 'repaid', '2025-10-23 05:43:05', '2025-11-07 09:40:52', 13, 'Brother', 49, 1, '2025-10-23 05:43:05', 'Hospital Emergency', NULL),
-(216, 56, 1, 30000.00, '2025-10-24', 0, 'repaid', '2025-10-24 06:01:04', '2025-11-17 09:29:27', 13, 'Friend', 49, 0, '2025-10-24 09:20:06', 'Personal Emergency', NULL),
-(217, 57, 1, 50000.00, '2025-10-31', 0, 'disbursed', '2025-10-24 13:16:46', '2025-10-31 08:29:38', 2, 'Friend', 49, 1, '2025-10-31 14:35:59', 'Offsetting bills.', NULL),
-(218, 53, 3, 5000.00, '2025-10-25', 0, 'pending', '2025-10-25 04:48:26', '2025-10-25 04:48:26', NULL, NULL, NULL, 1, '2025-10-25 04:48:26', 'I need more capital to grow my business profit margins right now it\'s doing okay but if possible if I get some funds the margins will increase', NULL),
-(219, 53, 1, 3700.00, '2025-10-27', 0, 'repaid', '2025-10-25 06:26:04', '2025-11-07 09:58:31', NULL, NULL, NULL, 0, NULL, 'I need some more capital foe my business', NULL),
-(220, 31, 1, 100000.00, '2025-10-24', 0, 'repaid', '2025-10-25 09:01:45', '2025-10-31 07:56:43', 13, 'Neighbour', 15, 0, NULL, 'Very much needed emergency and sorting KES 100,000 in a day', NULL),
-(221, 15, 7, 115300.00, '2025-10-27', 0, 'repaid', '2025-10-27 09:50:27', '2025-11-28 18:28:24', 13, 'Brother', 49, 0, NULL, 'school fees payment', NULL),
-(222, 50, 1, 25000.00, '2025-10-27', 0, 'repaid', '2025-10-27 10:20:21', '2025-11-07 09:45:53', 13, 'Friend', NULL, 0, NULL, 'For purchase of good for the farm', NULL),
-(223, 59, 1, 5000.00, '2025-10-27', 0, 'pending', '2025-10-27 15:24:52', '2025-10-27 15:24:52', NULL, NULL, NULL, 1, '2025-10-27 15:24:52', 'I need to add some cash to support my business', NULL),
-(224, 29, 1, 10000.00, '2025-10-27', 0, 'repaid', '2025-10-29 07:11:51', '2025-11-08 08:09:56', 13, NULL, NULL, 0, NULL, 'Emergency loan', NULL),
-(225, 21, 5, 100000.00, '2025-10-29', 0, 'repaid', '2025-10-29 12:42:31', '2025-12-08 05:28:17', NULL, NULL, NULL, 0, NULL, 'emergency bailout', NULL),
-(226, 17, 10, 18700.00, '2025-11-02', 0, 'repaid', '2025-11-03 09:25:31', '2026-02-19 10:10:11', 13, 'Son', 49, 0, NULL, 'roll over from previous loan', NULL),
-(227, 2, 1, 10000.00, '2025-11-04', 0, 'repaid', '2025-11-05 13:26:50', '2025-11-19 05:17:04', 13, 'Friend', 15, 1, '2025-11-05 13:26:50', 'emergency facility', NULL),
-(228, 55, 1, 10000.00, '2025-11-03', 0, 'repaid', '2025-11-07 09:42:16', '2025-11-17 09:40:58', 13, 'Friend', 49, 1, '2025-11-07 09:42:16', 'Roll over from previous loan', NULL),
-(229, 50, 1, 25000.00, '2025-11-07', 0, 'repaid', '2025-11-07 09:47:34', '2025-11-17 18:48:33', 13, 'Friend', 15, 1, '2025-11-07 09:47:34', 'Roll over for previous?', NULL),
-(230, 53, 1, 3000.00, '2025-11-07', 0, 'repaid', '2025-11-07 09:59:28', '2025-11-19 09:24:28', NULL, 'Friend', 15, 1, '2025-11-07 09:59:28', 'roll over from previous loan', NULL),
-(231, 29, 1, 12000.00, '2025-11-06', 0, 'repaid', '2025-11-08 08:11:10', '2025-11-18 05:02:28', 15, 'Work Colleague', 1, 1, '2025-11-08 08:11:10', 'roll over from the previous loan', NULL),
-(232, 48, 1, 20000.00, '2025-11-10', 0, 'repaid', '2025-11-10 15:18:48', '2025-11-25 07:02:36', 13, 'Friend', 49, 1, '2025-11-10 15:18:48', 'emergency loan', NULL),
-(233, 9, 2, 35241.60, '2025-11-03', 0, 'repaid', '2025-11-10 15:20:47', '2025-12-06 08:56:13', NULL, NULL, 1, 0, NULL, 'monthly roll over', NULL),
-(234, 54, 1, 66000.00, '2025-11-01', 0, 'repaid', '2025-11-10 15:23:50', '2025-11-13 17:52:10', NULL, NULL, NULL, 1, '2025-11-10 15:23:50', 'emergency loan roll over', NULL),
-(235, 54, 1, 79200.00, '2025-11-10', 0, 'repaid', '2025-11-13 17:53:31', '2025-11-25 10:27:52', NULL, NULL, 49, 0, NULL, 'Emergency roll over', NULL),
-(236, 56, 1, 36000.00, '2025-11-03', 0, 'repaid', '2025-11-17 09:31:07', '2025-11-17 09:32:35', 13, 'Friend', 49, 1, '2025-11-17 09:31:07', 'rolled over 10 days loan', NULL),
-(237, 56, 1, 43200.00, '2025-11-13', 0, 'repaid', '2025-11-17 09:33:56', '2025-11-29 14:18:03', 13, 'Friend', 49, 1, '2025-11-17 09:33:56', 'rolled over 10 days loan', NULL),
-(238, 55, 1, 12000.00, '2025-11-13', 0, 'repaid', '2025-11-17 09:42:06', '2025-11-26 19:33:06', 13, 'Friend', 49, 1, '2025-11-17 09:42:06', 'Emergency loan roll over', NULL),
-(239, 50, 1, 25000.00, '2025-11-18', 0, 'repaid', '2025-11-17 18:50:45', '2025-11-28 18:25:12', 13, 'Friend', 49, 1, '2025-11-17 18:50:45', 'roll over of previous loan', NULL),
-(240, 29, 1, 14400.00, '2025-11-16', 0, 'repaid', '2025-11-18 05:04:27', '2025-11-28 09:11:58', NULL, 'Friend', 1, 0, NULL, 'roll over of previous loan', NULL),
-(241, 49, 2, 10000.00, '2025-11-18', 0, 'repaid', '2025-11-19 05:09:39', '2026-01-09 07:06:03', 13, 'Brother', 15, 0, NULL, 'Payment for Good Conduct and NTSA', NULL),
-(242, 41, 3, 30000.00, '2025-11-18', 0, 'repaid', '2025-11-19 05:21:43', '2025-11-25 07:02:02', NULL, NULL, 1, 1, '2025-11-19 05:21:43', 'emergency loan', NULL),
-(243, 53, 1, 2700.00, '2025-11-17', 0, 'repaid', '2025-11-19 09:25:49', '2025-12-03 04:46:46', NULL, NULL, 49, 0, NULL, 'Emergency roll over', NULL),
-(244, 51, 2, 600000.00, '2025-11-22', 0, 'repaid', '2025-11-22 19:26:47', '2025-12-28 09:46:29', NULL, NULL, 1, 1, '2025-11-22 19:26:47', 'Affordable Housing Marsabit logistics', NULL),
-(245, 52, 1, 20000.00, '2025-11-22', 0, 'repaid', '2025-11-22 19:28:34', '2025-11-28 07:47:35', NULL, NULL, 1, 1, '2025-11-22 19:28:34', 'Emergency loan for a friend', NULL),
-(246, 2, 1, 20000.00, '2025-11-21', 0, 'repaid', '2025-11-22 19:33:43', '2025-12-01 19:12:08', 13, 'Friend', 15, 0, NULL, 'steph\'s birthday party', NULL),
-(247, 54, 1, 95040.00, '2025-11-20', 0, 'repaid', '2025-11-25 10:28:41', '2025-12-03 04:31:52', NULL, NULL, 1, 1, '2025-11-25 10:28:41', 'ROLLED over from previous loan', NULL),
-(248, 55, 1, 14400.00, '2025-11-23', 0, 'repaid', '2025-11-26 19:33:56', '2025-12-09 06:24:58', NULL, NULL, 1, 1, '2025-11-26 19:33:56', 'EMERGENCY ROLL OVER', NULL),
-(249, 50, 1, 25000.00, '2025-11-28', 0, 'repaid', '2025-11-28 18:26:26', '2025-12-09 06:22:13', NULL, NULL, 1, 1, '2025-11-28 18:26:26', 'Emergency roll over', NULL),
-(250, 15, 15, 126830.00, '2025-11-27', 0, 'repaid', '2025-11-28 18:29:57', '2026-03-20 18:22:22', NULL, NULL, 1, 0, NULL, 'emergency roll over', NULL),
-(251, 56, 1, 43840.00, '2025-11-23', 0, 'repaid', '2025-11-29 14:19:17', '2025-12-09 06:18:14', NULL, NULL, 49, 1, '2025-11-29 14:19:17', 'emergency roll over', NULL),
-(252, 2, 1, 20000.00, '2025-12-01', 0, 'repaid', '2025-12-01 19:12:52', '2025-12-23 07:31:48', NULL, NULL, 1, 1, '2025-12-01 19:12:52', 'Rolled over from previous loan', NULL),
-(253, 54, 1, 114048.00, '2025-11-30', 0, 'repaid', '2025-12-03 04:32:39', '2026-05-29 08:06:53', 1, 'FRIEND', 49, 1, '2025-12-03 04:32:39', 'Emergency roll over', NULL),
-(254, 26, 2, 100000.00, '2025-11-24', 0, 'repaid', '2025-12-03 04:43:37', '2025-12-26 08:52:13', NULL, NULL, 15, 1, '2025-12-03 04:43:37', 'emergency job use', NULL),
-(255, 53, 1, 2680.00, '2025-11-27', 0, 'repaid', '2025-12-03 04:47:40', '2025-12-15 06:11:10', NULL, NULL, NULL, 1, '2025-12-03 04:47:40', 'emergency rolled over', NULL),
-(256, 50, 13, 50000.00, '2025-12-06', 0, 'repaid', '2025-12-06 08:45:46', '2026-03-06 12:56:45', NULL, NULL, 1, 1, '2025-12-06 08:45:46', 'repair of greenhouse in isinya', NULL),
-(257, 9, 2, 42290.00, '2025-12-03', 0, 'repaid', '2025-12-06 08:54:39', '2026-01-15 16:40:05', NULL, NULL, NULL, 1, '2025-12-06 08:54:39', 'roll over from previous loan', NULL),
-(258, 21, 5, 130000.00, '2025-11-29', 0, 'repaid', '2025-12-08 05:29:12', '2026-01-12 13:25:25', NULL, NULL, 1, 1, '2025-12-08 05:29:12', 'emergency roll over loan facility', NULL),
-(259, 56, 1, 37608.00, '2025-12-03', 0, 'repaid', '2025-12-09 06:18:55', '2025-12-26 09:01:17', NULL, NULL, 1, 1, '2025-12-09 06:18:55', 'previous loan roll over', NULL),
-(260, 50, 1, 25000.00, '2025-12-09', 0, 'repaid', '2025-12-09 06:22:55', '2025-12-23 07:29:57', NULL, NULL, 1, 1, '2025-12-09 06:22:55', 'roll over from previous loan', NULL),
-(261, 55, 1, 8780.00, '2025-12-03', 0, 'repaid', '2025-12-09 06:26:57', '2025-12-26 08:57:12', NULL, NULL, 1, 1, '2025-12-09 06:26:57', 'rolled over', NULL),
-(262, 26, 2, 100000.00, '2025-12-28', 0, 'repaid', '2025-12-26 08:53:48', '2026-02-26 17:58:06', 13, 'Colleague', 1, 0, NULL, 'emergency loan roll over', NULL),
-(263, 55, 1, 10536.00, '2025-12-13', 0, 'repaid', '2025-12-26 08:58:13', '2025-12-26 08:59:13', NULL, NULL, 1, 1, '2025-12-26 08:58:13', 'rolled over loan', NULL),
-(264, 55, 1, 12643.20, '2025-12-23', 0, 'repaid', '2025-12-26 09:00:07', '2026-01-08 14:16:05', NULL, NULL, 1, 0, NULL, 'rolled over loan', NULL),
-(265, 56, 1, 45129.60, '2025-12-13', 0, 'repaid', '2025-12-26 09:03:12', '2025-12-26 09:10:15', NULL, NULL, NULL, 0, NULL, 'rolled over facility', NULL),
-(266, 56, 1, 54155.50, '2025-12-23', 0, 'pending', '2025-12-26 09:05:38', '2026-04-20 08:15:32', NULL, NULL, 1, 0, NULL, 'rolled over facility', NULL),
-(267, 62, 1, 5000.00, '2025-12-22', 0, 'repaid', '2025-12-26 18:05:43', '2025-12-26 18:09:31', NULL, NULL, 15, 1, '2025-12-26 18:05:43', 'emergency facility for salary', NULL),
-(268, 62, 1, 5000.00, '2025-12-26', 0, 'repaid', '2025-12-26 18:06:44', '2026-01-06 09:23:35', NULL, NULL, 15, 1, '2025-12-26 18:06:44', 'emergency facility for salary', NULL),
-(269, 51, 2, 720000.00, '2025-12-22', 0, 'repaid', '2025-12-28 09:47:55', '2026-02-01 19:37:16', NULL, NULL, 1, 0, NULL, 'Yes... let\'s roll over the loan. Atalipwa 20% at end of Jan.', NULL),
-(270, 41, 3, 80000.00, '2025-12-29', 0, 'repaid', '2025-12-31 04:36:18', '2026-01-04 09:31:39', NULL, NULL, 1, 1, '2025-12-31 04:36:18', 'for business emergency', NULL),
-(271, 53, 3, 5000.00, '2026-01-02', 0, 'pending', '2026-01-02 06:54:02', '2026-01-02 06:54:02', 13, 'Friend', NULL, 1, '2026-01-02 06:54:02', 'Added capital for my business', NULL),
-(272, 2, 1, 20000.00, '2025-12-26', 0, 'repaid', '2026-01-05 01:59:34', '2026-01-05 02:00:37', NULL, NULL, 15, 1, '2026-01-05 01:59:34', 'Emergency facility', NULL),
-(273, 55, 1, 15171.84, '2026-01-02', 0, 'repaid', '2026-01-08 14:13:15', '2026-01-08 14:15:42', NULL, NULL, 1, 1, '2026-01-08 14:13:15', 'rolled over', NULL),
-(274, 52, 1, 40000.00, '2026-01-09', 0, 'repaid', '2026-01-09 07:01:46', '2026-01-20 08:03:10', NULL, NULL, 1, 1, '2026-01-09 07:01:46', 'emergency loan', NULL),
-(275, 2, 2, 100000.00, '2026-01-09', 0, 'repaid', '2026-01-12 06:00:36', '2026-02-09 13:39:03', NULL, NULL, 15, 1, '2026-01-12 06:00:36', 'emergency loan for the month', NULL),
-(276, 41, 1, 50000.00, '2026-01-09', 0, 'repaid', '2026-01-12 06:04:19', '2026-01-15 16:39:17', NULL, NULL, 1, 1, '2026-01-12 06:04:19', 'emergency loan 5-10 days', NULL),
-(277, 48, 1, 35000.00, '2026-01-12', 0, 'repaid', '2026-01-12 07:00:44', '2026-01-20 08:02:39', NULL, NULL, 1, 1, '2026-01-12 07:00:44', 'china orders', NULL),
-(278, 13, 10, 100000.00, '2025-12-22', 0, 'repaid', '2026-01-12 07:10:34', '2026-02-09 13:44:54', NULL, NULL, NULL, 0, NULL, 'emergency loan', NULL),
-(279, 21, 5, 169000.00, '2025-12-31', 0, 'repaid', '2026-01-12 13:27:03', '2026-02-18 05:26:27', NULL, NULL, NULL, 0, NULL, 'Emergency roll over', NULL),
-(280, 9, 2, 50748.00, '2026-01-03', 0, 'repaid', '2026-01-15 16:41:01', '2026-02-18 05:34:39', NULL, NULL, 1, 1, '2026-01-15 16:41:01', 'rolled over', NULL),
-(281, 38, 1, 6000.00, '2026-01-16', 0, 'repaid', '2026-01-16 13:43:08', '2026-01-22 07:32:02', NULL, NULL, 1, 1, '2026-01-16 13:43:08', 'emergency loan', NULL),
-(282, 65, 1, 250000.00, '2026-01-21', 0, 'repaid', '2026-01-21 14:23:34', '2026-02-03 14:41:38', 13, 'Friend', 15, 1, '2026-01-21 10:52:47', 'Emergency contact', NULL),
-(283, 62, 1, 8000.00, '2026-01-22', 0, 'repaid', '2026-01-27 15:13:33', '2026-02-11 10:01:29', NULL, NULL, 15, 1, '2026-01-27 15:13:33', 'emergency facility', NULL),
-(285, 2, 14, 30000.00, '2026-01-26', 0, 'repaid', '2026-01-29 08:25:29', '2026-01-29 08:26:42', NULL, NULL, 15, 1, '2026-01-29 08:25:29', 'emergency loan 1 day', NULL),
-(286, 2, 1, 8000.00, '2026-01-29', 0, 'repaid', '2026-01-29 08:27:58', '2026-02-09 13:38:21', NULL, NULL, 15, 0, NULL, 'Emergency loan', NULL),
-(287, 26, 2, 100000.00, '2026-01-26', 0, 'repaid', '2026-01-29 10:08:54', '2026-02-26 17:58:54', NULL, NULL, 15, 0, NULL, 'roll over emergency', NULL),
-(288, 51, 2, 364000.00, '2026-01-22', 0, 'repaid', '2026-02-01 19:38:18', '2026-03-08 13:55:57', NULL, NULL, NULL, 0, NULL, 'rolled over facility', NULL),
-(289, 65, 1, 300000.00, '2026-01-31', 0, 'repaid', '2026-02-03 14:42:30', '2026-02-17 13:46:53', NULL, NULL, 15, 1, '2026-02-03 14:42:30', 'Roll over loan', NULL),
-(290, 3, 14, 100000.00, '2026-02-05', 0, 'repaid', '2026-02-09 13:30:31', '2026-02-09 13:36:43', 13, 'Friend', 15, 0, NULL, 'emergency brokered loan', NULL),
-(291, 2, 5, 65560.00, '2026-02-09', 0, 'repaid', '2026-02-09 13:40:18', '2026-03-12 11:18:49', NULL, NULL, NULL, 0, NULL, 'ROLLED over 1 more month', NULL),
-(292, 52, 1, 100000.00, '2026-02-08', 0, 'repaid', '2026-02-09 13:42:05', '2026-02-21 21:12:59', NULL, NULL, NULL, 0, NULL, 'Emergency loan', NULL),
-(293, 13, 15, 252000.00, '2026-02-05', 0, 'repaid', '2026-02-09 13:46:57', '2026-05-05 17:14:33', NULL, NULL, NULL, 0, NULL, 'New house rent 252000 - 75000 stipend', NULL),
-(299, 13, 15, 50000.00, '2026-06-09', 0, 'disbursed', '2026-02-09 17:39:49', '2026-06-14 03:10:37', NULL, NULL, NULL, 0, NULL, '65789 fghjkjlk hjklk', NULL),
-(300, 13, 2, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:47:21', '2026-02-09 17:47:21', NULL, NULL, NULL, 1, '2026-02-09 17:47:21', '65789 fghjkjlk hjklk', NULL),
-(301, 13, 2, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:47:52', '2026-02-09 17:47:52', NULL, NULL, NULL, 1, '2026-02-09 17:47:52', '65789 fghjkjlk hjklk', NULL),
-(302, 13, 1, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:49:25', '2026-02-09 17:49:25', NULL, NULL, NULL, 1, '2026-02-09 17:49:25', 'iojhgkjbnn ifhiloj;l', NULL),
-(303, 13, 1, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:54:40', '2026-02-09 17:54:40', NULL, NULL, NULL, 1, '2026-02-09 17:54:39', 'iojhgkjbnn ifhiloj;l', NULL),
-(304, 13, 1, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 18:06:23', '2026-02-09 18:06:23', NULL, NULL, NULL, 1, '2026-02-09 18:06:23', 'iuytgkjvn jk', NULL),
-(307, 3, 1, 150000.00, '2026-02-11', 0, 'repaid', '2026-02-11 16:36:36', '2026-02-24 15:56:27', NULL, NULL, NULL, 1, '2026-02-11 16:36:36', 'brokered loans', NULL),
-(308, 50, 2, 15000.00, '2026-02-16', 0, 'repaid', '2026-02-17 13:40:07', '2026-04-08 05:54:18', NULL, NULL, NULL, 1, '2026-02-17 13:40:07', 'emergency loan', NULL),
-(309, 3, 1, 12000.00, '2026-02-13', 0, 'repaid', '2026-02-17 13:45:43', '2026-02-24 15:57:31', NULL, NULL, NULL, 1, '2026-02-17 13:45:43', 'emergency client lan', NULL),
-(310, 65, 1, 360000.00, '2026-02-10', 0, 'repaid', '2026-02-17 13:47:39', '2026-03-06 12:59:17', NULL, NULL, NULL, 1, '2026-02-17 13:47:39', 'rolled over loan', NULL),
-(311, 21, 5, 219700.00, '2026-01-31', 0, 'repaid', '2026-02-18 05:27:29', '2026-03-04 06:05:40', NULL, NULL, 1, 1, '2026-02-18 05:27:29', 'rolled over loan', NULL),
-(312, 9, 2, 60897.60, '2026-02-18', 0, 'repaid', '2026-02-18 05:35:31', '2026-04-02 05:16:16', NULL, NULL, 1, 1, '2026-02-18 05:35:31', 'rolled over again', NULL),
-(313, 67, 1, 5000.00, '2026-02-18', 0, 'repaid', '2026-02-18 09:00:21', '2026-02-27 17:05:12', NULL, NULL, 15, 1, '2026-02-18 09:00:21', 'emergency loan', NULL),
-(314, 68, 1, 30000.00, '2026-02-16', 0, 'repaid', '2026-02-19 09:20:01', '2026-02-26 17:20:28', 48, 'Friend', 1, 1, '2026-02-19 09:20:01', 'emergency loan', NULL),
-(315, 31, 1, 50000.00, '2026-02-09', 0, 'repaid', '2026-02-19 09:39:32', '2026-02-19 09:40:36', NULL, NULL, 1, 0, NULL, 'emergency loan', NULL),
-(316, 31, 1, 160000.00, '2026-02-18', 0, 'repaid', '2026-02-19 09:41:38', '2026-02-27 19:31:32', NULL, NULL, 1, 0, NULL, 'emergency funds 70k + roll over 30k', NULL),
-(317, 41, 2, 100000.00, '2026-02-19', 0, 'repaid', '2026-02-19 10:01:24', '2026-02-28 10:22:28', NULL, NULL, 1, 0, NULL, 'Hey uko poa? Please Top me up 100k in my back  account to be paid back next week. I need to pay suppliers asap', NULL),
-(318, 69, 1, 4000.00, '2026-02-19', 0, 'repaid', '2026-02-19 10:06:48', '2026-03-25 11:38:15', NULL, NULL, 1, 0, NULL, 'emergency loan', NULL),
-(319, 52, 1, 40000.00, '2026-02-20', 0, 'repaid', '2026-02-21 21:14:12', '2026-02-26 06:41:37', NULL, NULL, 1, 1, '2026-02-21 21:14:12', 'roll over loan', NULL),
-(320, 70, 1, 2000.00, '2026-02-18', 0, 'repaid', '2026-02-23 14:09:11', '2026-03-14 19:48:28', NULL, NULL, 1, 1, '2026-02-23 14:09:11', '1000 + 1000 due on 28th Feb', NULL),
-(321, 3, 14, 181248.00, '2026-02-22', 0, 'repaid', '2026-02-24 16:04:45', '2026-03-03 06:40:19', NULL, NULL, 1, 1, '2026-02-24 16:04:45', 'Rolled over', NULL),
-(322, 26, 2, 100000.00, '2026-02-26', 0, 'repaid', '2026-02-26 18:00:03', '2026-04-02 04:49:56', NULL, NULL, 15, 1, '2026-02-26 18:00:03', 'roll over and to be paid in 4 tranches', NULL),
-(323, 31, 1, 192000.00, '2026-02-28', 0, 'repaid', '2026-02-27 19:33:49', '2026-03-06 12:56:13', NULL, NULL, 15, 1, '2026-02-27 19:33:49', 'rolled over loan', NULL),
-(324, 3, 3, 150000.00, '2026-02-27', 0, 'repaid', '2026-03-03 06:42:10', '2026-03-14 19:49:56', NULL, NULL, 1, 1, '2026-03-03 06:42:10', 'rolled over loan', NULL),
-(325, 21, 2, 285610.00, '2026-03-03', 0, 'repaid', '2026-03-04 06:06:40', '2026-04-13 16:42:26', NULL, NULL, 1, 1, '2026-03-04 06:06:40', 'rolled over', NULL),
-(326, 62, 1, 3500.00, '2026-03-04', 0, 'repaid', '2026-03-04 07:39:24', '2026-04-04 11:05:46', NULL, NULL, 1, 1, '2026-03-04 07:39:24', 'emergency loan', NULL),
-(327, 29, 1, 15000.00, '2026-03-03', 0, 'repaid', '2026-03-04 07:48:59', '2026-03-14 19:53:12', NULL, NULL, 1, 1, '2026-03-04 07:48:59', 'emergency lon', NULL),
-(328, 53, 1, 3000.00, '2026-03-06', 0, 'repaid', '2026-03-06 10:13:12', '2026-03-12 11:24:05', NULL, NULL, 1, 1, '2026-03-06 10:13:12', 'emergency loan', NULL),
-(329, 50, 3, 55000.00, '2026-03-06', 0, 'repaid', '2026-03-06 12:57:32', '2026-04-15 10:24:29', NULL, NULL, 1, 1, '2026-03-06 12:57:32', 'rolled over for ramadhan', NULL),
-(330, 65, 1, 432000.00, '2026-02-20', 0, 'repaid', '2026-03-06 13:02:18', '2026-03-06 13:03:28', NULL, NULL, 15, 1, '2026-03-06 13:02:18', 'rolled over due to non-payment', NULL),
-(331, 65, 1, 518400.00, '2026-03-02', 0, 'disbursed', '2026-03-06 13:04:24', '2026-03-06 13:04:24', NULL, NULL, 1, 1, '2026-03-06 13:04:24', 'rolled over due to lying and non-payment', NULL),
-(332, 68, 1, 20000.00, '2026-03-08', 0, 'repaid', '2026-03-08 13:57:33', '2026-03-19 05:17:03', NULL, NULL, 1, 1, '2026-03-08 13:57:33', 'FOR a phone', NULL),
-(333, 48, 1, 15000.00, '2026-03-08', 0, 'repaid', '2026-03-08 13:59:09', '2026-03-19 05:16:34', NULL, NULL, 1, 1, '2026-03-08 13:59:09', 'emergency float', NULL),
-(334, 71, 14, 50000.00, '2026-03-07', 0, 'repaid', '2026-03-08 14:01:06', '2026-03-12 11:17:58', NULL, NULL, 1, 1, '2026-03-08 14:01:06', 'emergency loan facility for 5 days', NULL),
-(335, 2, 5, 85228.00, '2026-03-09', 0, 'repaid', '2026-03-12 11:21:50', '2026-04-17 18:16:19', NULL, NULL, 15, 1, '2026-03-12 11:21:50', 'rolled over facility', NULL),
-(336, 53, 1, 2000.00, '2026-03-12', 0, 'repaid', '2026-03-13 08:14:46', '2026-03-18 16:36:16', NULL, NULL, 1, 1, '2026-03-13 08:14:46', 'emergency loan', NULL),
-(337, 41, 1, 50000.00, '2026-03-15', 0, 'repaid', '2026-03-14 19:46:05', '2026-03-26 20:58:07', NULL, NULL, 1, 0, NULL, 'emergency loan', NULL),
-(338, 29, 1, 18000.00, '2026-03-13', 0, 'repaid', '2026-03-14 19:54:06', '2026-03-24 14:35:05', NULL, NULL, 1, 1, '2026-03-14 19:54:06', 'rolled over loan', NULL),
-(339, 11, 1, 37500.00, '2026-03-13', 0, 'repaid', '2026-03-14 20:02:29', '2026-03-24 19:28:31', NULL, NULL, 1, 0, NULL, 'emergency loan', NULL),
-(340, 62, 1, 6000.00, '2026-02-20', 0, 'repaid', '2026-03-15 18:43:08', '2026-03-15 18:47:02', NULL, NULL, 1, 1, '2026-03-15 18:43:08', 'emergency loan', NULL),
-(341, 62, 1, 7200.00, '2026-03-02', 0, 'repaid', '2026-03-15 18:47:37', '2026-03-15 18:48:37', NULL, NULL, 1, 1, '2026-03-15 18:47:37', 'rolled over loan', NULL),
-(342, 62, 1, 8640.00, '2026-03-12', 0, 'repaid', '2026-03-15 18:49:24', '2026-04-04 11:10:34', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
-(343, 72, 1, 10000.00, '2026-03-16', 0, 'repaid', '2026-03-16 15:15:01', '2026-03-26 20:56:19', NULL, NULL, 1, 1, '2026-03-16 15:15:01', 'emergency loan', NULL),
-(344, 53, 1, 5000.00, '2026-03-18', 0, 'repaid', '2026-03-19 05:18:26', '2026-03-29 16:42:41', NULL, NULL, 1, 1, '2026-03-19 05:18:26', 'Bank to M-PESA transfer of KES 5,000.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 3816TGLK5577. M-PESA Ref ID: UCI6B9O9OT\r\n\r\nTsuma 10 days 20% due March 28th', NULL),
-(345, 2, 1, 30000.00, '2026-03-18', 0, 'repaid', '2026-03-19 07:14:22', '2026-04-02 05:07:20', NULL, NULL, 15, 1, '2026-03-19 07:14:22', 'UCH9X9PH8Y Confirmed. Ksh30,000.00 sent to Edward  Kipsanai 0710920629 on 17/3/26 at 2:10 PM.', NULL),
-(346, 48, 1, 5000.00, '2026-03-19', 0, 'repaid', '2026-03-20 15:14:52', '2026-03-26 06:04:45', NULL, NULL, 1, 0, NULL, 'emergency loan', NULL),
-(347, 31, 1, 50000.00, '2026-02-28', 0, 'repaid', '2026-03-20 15:21:35', '2026-07-13 08:54:27', NULL, NULL, 1, 1, '2026-03-20 15:21:35', 'Kengen are paying me today we have nothing however next week it’s done plus the interest I always pay when I’m stuck it’s just a payment issue. So now $34K being paid on Wednesday I will sort you. I have just said Wednesday coz of any issues one thing you see I pay I cannot default on 50K plus interest. I humbly ask you work with me I cannot default share all documentation for the same you see I can put you in my account. Chief I’m humble and asking kindly give me to then funds are being disbursed however I don’t have anything with banks on disbursing your chums is guaranteed next week those funds are paying my rent and my everything $34K is good money', NULL),
-(349, 15, 15, 114439.80, '2026-02-27', 0, 'repaid', '2026-03-20 18:24:30', '2026-05-28 06:26:49', NULL, NULL, 1, 1, '2026-03-20 18:24:30', 'rolled over loan', NULL),
-(350, 50, 1, 8000.00, '2026-03-24', 0, 'repaid', '2026-03-25 07:28:16', '2026-04-02 05:09:52', NULL, NULL, 1, 1, '2026-03-25 07:28:16', 'Bank to M-PESA transfer of KES 8,000.00 to 254721544928 - Mohamed Abdirahim Abdi successfully processed. Transaction Ref ID: 3864TTHG3204. M-PESA Ref ID: UCOGCABJKN\r\n\r\n10 days at 20% facility to be paid earliest before 10 days as KES 9,600', NULL),
-(351, 68, 1, 10000.00, '2026-03-25', 0, 'repaid', '2026-03-25 07:30:42', '2026-04-05 09:21:56', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 10,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 3872ZVOL8239. M-PESA Ref ID: UCPBMAL8MF\r\n\r\n10 days 20% payable on 3rd April', NULL),
-(352, 7, 2, 1500.00, '2026-03-25', 0, 'repaid', '2026-03-25 07:54:35', '2026-05-01 15:48:02', NULL, NULL, 1, 0, NULL, 'UCP6OABVYQ Confirmed. KSH. 1,500 sent to Keneth Owino,  via MySafaricom App on 25-03-2026 11:15.', NULL),
-(353, 72, 1, 10000.00, '2026-03-26', 0, 'repaid', '2026-03-26 20:57:06', '2026-04-05 15:42:55', NULL, NULL, 1, 1, '2026-03-26 20:57:06', 'rolled over loan for 5 days', NULL);
-INSERT INTO `loans` (`id`, `user_id`, `loan_type_id`, `amount`, `borrow_date`, `broker_status`, `status`, `created_at`, `updated_at`, `guarantor_id`, `guarantor_relationship`, `loan_officer_id`, `consent`, `consent_date`, `reason`, `due_date`) VALUES
-(354, 29, 1, 20000.00, '2026-03-26', 0, 'repaid', '2026-03-27 08:35:47', '2026-04-08 06:05:43', NULL, NULL, 1, 1, '2026-03-27 08:35:47', 'Bank to M-PESA transfer of KES 20,000.00 to 254721655906 - OTIENO NIGEL successfully processed. Transaction Ref ID: 3883JNTY9707. M-PESA Ref ID: UCQKBAE0DG', NULL),
-(355, 53, 1, 1000.00, '2026-03-27', 0, 'repaid', '2026-03-29 16:48:58', '2026-04-08 06:09:41', NULL, NULL, 1, 1, '2026-03-29 16:48:58', 'UCR6OAKFLQ Confirmed. KSH. 1,000 sent to EMMANUEL TSUMA,  via MySafaricom App on 27-03-2026 14:35.', NULL),
-(356, 67, 1, 5000.00, '2026-03-28', 0, 'repaid', '2026-03-29 16:50:57', '2026-04-13 16:38:31', NULL, NULL, 1, 1, '2026-03-29 16:50:57', 'Bank to M-PESA transfer of KES 5,000.00 to 254700742394 - MICHAEL NZUKA MUSYIMI successfully processed. Transaction Ref ID: 3902DEVE0397. M-PESA Ref ID: UCSOIB1OMC', NULL),
-(357, 68, 1, 45000.00, '2026-03-30', 0, 'repaid', '2026-03-29 16:54:56', '2026-04-14 06:39:52', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 45,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 3907OPGV8266. M-PESA Ref ID: UCTBMB1ZDN', NULL),
-(358, 31, 1, 10000.00, '2026-03-27', 0, 'repaid', '2026-03-29 17:14:25', '2026-07-13 08:52:30', NULL, NULL, 1, 0, NULL, 'Dear DENNIS, MPESA transfer of KES 10000 to LEON MUSAU-254720747652 at 27-03-2026 10:05 PM was successful.MPESA Ref:UCR4AB9NS5.\r\n\r\nRepayable on Monday as KES 12000', NULL),
-(359, 58, 14, 10000.00, '2026-04-01', 0, 'repaid', '2026-04-02 04:47:36', '2026-04-04 11:13:51', NULL, NULL, 1, 1, '2026-04-02 04:47:36', 'Bank to M-PESA transfer of KES 10,000.00 to 254722778298 - VIVIAN NEKESA SIMIYU successfully processed. Transaction Ref ID: 3936JYNW2747. M-PESA Ref ID: UD132BBR99', NULL),
-(360, 26, 2, 100000.00, '2026-03-26', 0, 'repaid', '2026-04-02 04:57:05', '2026-05-15 07:24:07', NULL, NULL, 15, 1, '2026-04-02 04:57:05', 'rolled over loan', NULL),
-(361, 53, 1, 3200.00, '2026-03-31', 0, 'repaid', '2026-04-02 04:59:02', '2026-04-13 16:27:29', NULL, NULL, 1, 1, '2026-04-02 04:59:02', 'Bank to M-PESA transfer of KES 3,200.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 3926CFQD3972. M-PESA Ref ID: UCV6BB0M8H\r\n\r\nDue in 10 days 20%', NULL),
-(362, 11, 1, 5000.00, '2026-03-31', 0, 'repaid', '2026-04-02 05:01:37', '2026-04-13 16:22:56', NULL, NULL, 1, 1, '2026-04-02 05:01:37', 'Bank to M-PESA transfer of KES 5,000.00 to 254724606690 - SHADRACK CHERUIYOT successfully processed. Transaction Ref ID: 3936VBGY2825. M-PESA Ref ID: UD1HDBDUSY', NULL),
-(363, 2, 1, 25000.00, '2026-03-30', 0, 'repaid', '2026-04-02 05:08:26', '2026-04-17 18:13:28', NULL, NULL, 15, 1, '2026-04-02 05:08:26', 'UCU9XB5HFB Confirmed. Ksh25,000.00 sent to Edward  Kipsanai 0710920629 on 30/3/26 at 6:35 PM.', NULL),
-(364, 9, 2, 73077.12, '2026-03-18', 0, 'repaid', '2026-04-02 05:17:32', '2026-05-15 07:32:36', NULL, NULL, 1, 0, NULL, 'rolled over facility because of an office scandal and no payment for a month', NULL),
-(365, 48, 1, 25000.00, '2026-04-04', 0, 'repaid', '2026-04-04 10:58:42', '2026-04-18 18:09:11', NULL, NULL, 1, 1, '2026-04-04 10:58:42', 'Bank to M-PESA transfer of KES 25,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 3960XHRB9386. M-PESA Ref ID: UD4ALBIZKO\r\n\r\nDue in 10 days at 20% interest \r\n\r\nPayable on or before 14/4/2026 KES 30,000', NULL),
-(366, 62, 1, 4200.00, '2026-03-14', 0, 'repaid', '2026-04-04 11:06:48', '2026-04-04 11:07:35', NULL, NULL, 1, 1, '2026-04-04 11:06:48', 'rolled over', NULL),
-(367, 62, 1, 5040.00, '2026-03-24', 0, 'repaid', '2026-04-04 11:08:07', '2026-04-13 17:18:59', NULL, NULL, 1, 1, '2026-04-04 11:08:07', 'rolled over', NULL),
-(368, 62, 1, 10368.00, '2026-03-21', 0, 'repaid', '2026-04-04 11:10:14', '2026-04-13 17:17:21', NULL, NULL, 1, 1, '2026-04-04 11:10:14', 'rolled over', NULL),
-(369, 72, 1, 10000.00, '2026-04-05', 0, 'repaid', '2026-04-05 15:43:36', '2026-04-16 15:07:20', 68, NULL, 1, 1, '2026-04-05 15:43:36', 'rolled over loan', NULL),
-(370, 29, 1, 24000.00, '2026-04-05', 0, 'repaid', '2026-04-08 06:06:39', '2026-04-16 15:00:18', NULL, NULL, 1, 1, '2026-04-08 06:06:39', '[21:48, 07/04/2026] Dennis Kibet: We will have to roll over\r\n[22:41, 07/04/2026] Nigel Cecil Otieno Loans Client: Niaje, nikama itabidi', NULL),
-(371, 53, 1, 1500.00, '2026-04-08', 0, 'repaid', '2026-04-08 06:12:05', '2026-04-20 07:41:07', NULL, NULL, 1, 1, '2026-04-08 06:12:05', 'Bank to M-PESA transfer of KES 1,500.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 3993UINQ7428. M-PESA Ref ID: UD86BBWAX7', NULL),
-(372, 11, 1, 5000.00, '2026-04-10', 0, 'repaid', '2026-04-13 16:24:48', '2026-04-21 04:04:50', NULL, NULL, 1, 0, NULL, 'roll over for the next 10 days', NULL),
-(373, 53, 1, 3040.00, '2026-04-10', 0, 'repaid', '2026-04-13 16:30:11', '2026-04-22 06:42:33', NULL, NULL, 1, 1, '2026-04-13 16:30:11', 'rolled over for the next 10 days', NULL),
-(374, 21, 2, 342732.00, '2026-04-03', 0, 'repaid', '2026-04-13 16:43:27', '2026-05-08 07:19:00', NULL, NULL, 1, 1, '2026-04-13 16:43:27', 'rolled over facility', NULL),
-(375, 62, 1, 18489.00, '2026-03-31', 0, 'repaid', '2026-04-13 17:18:24', '2026-04-13 17:23:12', NULL, NULL, 1, 0, NULL, 'roll over facility', NULL),
-(376, 62, 1, 22186.80, '2026-04-10', 0, 'repaid', '2026-04-13 17:24:58', '2026-04-22 06:40:46', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
-(377, 64, 1, 10000.00, '2026-04-15', 0, 'repaid', '2026-04-15 10:11:31', '2026-04-27 04:58:17', NULL, NULL, 1, 1, '2026-04-15 10:11:31', 'UDFAI12TXH Confirmed. You have received Ksh10,000.00 from IM BANK LIMITED- APP on 15/4/26 at 2:35 PM. New M-PESA balance is Ksh10,392.57. Buy goods with M-PESA.', NULL),
-(378, 67, 1, 7500.00, '2026-04-14', 0, 'repaid', '2026-04-15 10:20:49', '2026-04-23 06:21:46', NULL, NULL, 1, 1, '2026-04-15 10:20:49', 'Bank to M-PESA transfer of KES 7,500.00 to 254700742394 - MICHAEL NZUKA MUSYIMI successfully processed. Transaction Ref ID: 4049LFRF6379. M-PESA Ref ID: UDEOI142NU', NULL),
-(379, 68, 1, 10000.00, '2026-04-15', 0, 'repaid', '2026-04-15 10:22:37', '2026-05-01 15:29:23', 48, 'Friend', 1, 1, '2026-04-15 10:22:37', 'Bank to M-PESA transfer of KES 10,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 4055ZDCU6256. M-PESA Ref ID: UDFBM13SLE', NULL),
-(380, 50, 13, 66000.00, '2026-03-20', 0, 'repaid', '2026-04-15 10:25:47', '2026-07-01 11:48:50', NULL, NULL, 1, 0, NULL, 'roll over facility for 3 months', NULL),
-(381, 72, 1, 10000.00, '2026-04-15', 0, 'repaid', '2026-04-16 15:08:27', '2026-05-01 15:32:46', 68, 'Friend', 1, 1, '2026-04-16 15:08:27', 'rolled over loan', NULL),
-(382, 2, 1, 30000.00, '2026-04-09', 0, 'repaid', '2026-04-17 18:14:40', '2026-04-22 07:01:57', NULL, NULL, 15, 1, '2026-04-17 18:14:40', 'rolled over facility', NULL),
-(383, 2, 5, 110796.40, '2026-04-09', 0, 'repaid', '2026-04-17 18:17:37', '2026-05-15 08:01:56', NULL, NULL, 15, 0, NULL, 'Rolled over', NULL),
-(384, 11, 1, 6000.00, '2026-04-20', 0, 'repaid', '2026-04-21 04:05:45', '2026-05-01 15:16:21', NULL, NULL, 1, 1, '2026-04-21 04:05:45', '[09:03, 21/04/2026] Dennis Kibet: We roll over?\r\n[09:04, 21/04/2026] Shady Kip Cheruiyot eCitizen: Yew sir, currently it\'s bad\r\n[09:04, 21/04/2026] Dennis Kibet: Sawa chief, you will sort when paid', NULL),
-(385, 68, 1, 20000.00, '2026-04-20', 0, 'repaid', '2026-04-22 06:45:45', '2026-05-05 09:45:49', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 15,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 4102UYKB3384. M-PESA Ref ID: UDKBM1Q6KM\r\n\r\nPayable 30/4/2016 as KES 18,000', NULL),
-(386, 70, 1, 1000.00, '2026-04-22', 0, 'repaid', '2026-04-22 07:00:21', '2026-05-08 09:42:20', NULL, NULL, 1, 1, '2026-04-22 07:00:21', 'Bank to M-PESA transfer of KES 1,000.00 to 0725408209 - nigel kimutai yegon successfully processed. Transaction Ref ID: 4114DTIN9494. M-PESA Ref ID: UDMIT1JYA4 \r\n\r\n10 DAYS 20% INTEREST FACILITY \r\nPayable on or before 1st May as KES 1200', NULL),
-(387, 2, 1, 10000.00, '2026-04-22', 0, 'repaid', '2026-04-23 05:54:09', '2026-05-05 10:25:03', NULL, NULL, 15, 1, '2026-04-23 05:54:09', 'UDM9X1UI8J Confirmed. Ksh10,000.00 sent to Edward  Kipsanai 0710920629 on 22/4/26 at 12:57 PM.', NULL),
-(388, 58, 1, 10000.00, '2026-04-23', 0, 'repaid', '2026-04-23 06:52:30', '2026-05-06 15:22:06', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 10,000.00 to 254722778298 - VIVIAN NEKESA SIMIYU successfully processed. Transaction Ref ID: 4124CXRR4189. M-PESA Ref ID: UDN321V2ZZ\r\n\r\n5 days 11k', NULL),
-(389, 53, 1, 5000.00, '2026-04-23', 0, 'repaid', '2026-04-26 06:43:02', '2026-05-05 10:15:28', NULL, NULL, 1, 1, '2026-04-26 06:43:02', 'Bank to M-PESA transfer of KES 3,300.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4125JYFE4889. M-PESA Ref ID: UDN6B1PHVO\r\n\r\nPayable 3rd May 2026 as KES 3,960\r\n\r\nBank to M-PESA transfer of KES 1,700.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4127SODY1166. M-PESA Ref ID: UDN6B1RC19\r\n\r\n5k total', NULL),
-(390, 64, 1, 3000.00, '2026-04-25', 0, 'repaid', '2026-04-27 05:00:23', '2026-05-07 06:39:33', NULL, NULL, 1, 0, NULL, '[18:36, 26/04/2026] Judy Kerebi: Hi\r\n[18:36, 26/04/2026] Dennis Kibet: Umemanage?\r\n[18:36, 26/04/2026] Judy Kerebi: Just roll it over\r\n[18:36, 26/04/2026] Judy Kerebi: Umemanage?\r\nNaaah', NULL),
-(391, 11, 1, 7200.00, '2026-04-30', 0, 'repaid', '2026-05-01 15:17:21', '2026-05-15 07:26:27', NULL, NULL, 1, 1, '2026-05-01 15:17:21', '[16:08, 30/04/2026] Dennis Kibet: Hey\r\n[16:08, 30/04/2026] Dennis Kibet: 7,200 due today\r\n[05:20, 01/05/2026] Shady Kip Cheruiyot eCitizen: Is it possible we roll over once again things are not good from my side, hii nikutafutie hiyo interest ya juu', NULL),
-(392, 68, 1, 5400.00, '2026-04-27', 0, 'repaid', '2026-05-01 15:31:20', '2026-05-08 07:16:16', NULL, NULL, 1, 1, '2026-05-01 15:31:20', 'rolled over', NULL),
-(393, 7, 2, 1800.00, '2026-04-25', 0, 'repaid', '2026-05-01 15:52:39', '2026-05-27 06:14:03', NULL, NULL, 15, 0, NULL, 'rolled over', NULL),
-(394, 58, 1, 5000.00, '2026-04-25', 0, 'repaid', '2026-05-02 13:21:26', '2026-05-05 09:42:20', NULL, NULL, 1, 1, '2026-05-02 13:21:26', 'Please NEVER share your PIN, PASSWORD, any codes or CARD details with ANYONE! not even people who may claim to be bank staff. Ref:ABFFAF765026: Dear DENNIS, MPESA transfer of KES 5000 to SAMMY MWASHIGHADI MWAMBURI-0112952244 at 25-04-2026 01:39 PM was successful.MPESA Ref:UDP5B28S4C', NULL),
-(395, 29, 3, 35000.00, '2026-05-02', 0, 'repaid', '2026-05-02 14:43:56', '2026-05-19 10:19:50', NULL, NULL, 1, 1, '2026-05-02 14:43:56', 'Bank to M-PESA transfer of KES 35,000.00 to 254721655906 - OTIENO NIGEL successfully processed. Transaction Ref ID: 4204OKRD2406. M-PESA Ref ID: UE2KB2NLQH\r\n\r\n14 days 20% to be paid on or befofr 16th May 2026 as KES 42,000', NULL),
-(396, 73, 3, 50000.00, '2026-05-02', 0, 'repaid', '2026-05-05 10:06:22', '2026-05-16 17:32:07', 52, 'Friend', 1, 0, NULL, 'Bank to M-PESA transfer of KES 50,000.00 to 254705254257 - MARION CLARE CHEROP successfully processed. Transaction Ref ID: 4204WKPF2468. M-PESA Ref ID: UE28O30YKZ\r\n\r\nI Anita Nanyokie ID No 37489362 Pledge 50000 loan to be paid in 2 weeks and failure to pay will attract a 10% penalty daily until the facility is settled and should the facility go bad, recovery measures at your own cost will take effect', NULL),
-(397, 53, 1, 3000.00, '2026-05-04', 0, 'repaid', '2026-05-05 10:16:53', '2026-05-16 17:34:12', NULL, NULL, 1, 1, '2026-05-05 10:16:53', 'Bank to M-PESA transfer of KES 3,000.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4221LRVG6821. M-PESA Ref ID: UE46B2ZWG1', NULL),
-(398, 53, 3, 7000.00, '2026-05-04', 0, 'repaid', '2026-05-05 10:19:13', '2026-05-19 10:12:48', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 6,000.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4223GMLX1416. M-PESA Ref ID: UE46B30ZNW\r\n\r\n2nd facility for 14 days', NULL),
-(399, 2, 16, 25000.00, '2026-05-04', 0, 'repaid', '2026-05-05 10:32:45', '2026-05-15 07:53:56', NULL, NULL, 15, 0, NULL, 'UE49X38M5M Confirmed. Ksh25,000.00 sent to Edward  Kipsanai 0710920629 on 4/5/26 at 11:17 AM.', NULL),
-(400, 64, 1, 3600.00, '2026-05-06', 0, 'repaid', '2026-05-07 06:40:23', '2026-05-19 10:06:10', NULL, NULL, 1, 1, '2026-05-07 06:40:23', 'rolled over facility', NULL),
-(401, 52, 1, 75000.00, '2026-05-07', 0, 'repaid', '2026-05-08 07:17:31', '2026-05-20 06:47:52', NULL, NULL, 1, 1, '2026-05-08 07:17:31', 'Bank to M-PESA transfer of KES 75,000.00 to 254705254257 - MARION CLARE CHEROP successfully processed. Transaction Ref ID: 4247ZUJJ2691. M-PESA Ref ID: UE78O3LYYG\r\n\r\nFacility for 10 days 20% due on 17th May 2026', NULL),
-(402, 21, 2, 411278.40, '2026-05-03', 0, 'repaid', '2026-05-08 07:20:14', '2026-06-08 09:36:53', NULL, NULL, 1, 0, NULL, 'rolled over awaiting cash', NULL),
-(403, 70, 1, 1200.00, '2026-05-02', 0, 'repaid', '2026-05-08 09:43:02', '2026-05-15 07:50:18', NULL, NULL, 1, 1, '2026-05-08 09:43:02', 'rolled over facility', NULL),
-(404, 26, 2, 120000.00, '2026-04-26', 0, 'repaid', '2026-05-15 07:25:06', '2026-06-03 10:16:14', NULL, NULL, 15, 0, NULL, 'inactivity so we rolled over', NULL),
-(405, 11, 1, 8640.00, '2026-05-10', 0, 'repaid', '2026-05-15 07:31:18', '2026-05-16 17:52:20', NULL, NULL, 1, 1, '2026-05-15 07:31:18', 'rolled over', NULL),
-(406, 9, 2, 87692.54, '2026-04-18', 0, 'repaid', '2026-05-15 07:40:27', '2026-05-19 10:19:17', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
-(407, 70, 1, 1440.00, '2026-05-12', 0, 'repaid', '2026-05-15 07:51:01', '2026-05-27 05:55:08', NULL, NULL, 1, 1, '2026-05-15 07:51:01', 'rolled over', NULL),
-(408, 2, 1, 71250.00, '2026-05-11', 0, 'repaid', '2026-05-15 07:54:36', '2026-05-27 06:09:01', NULL, NULL, 15, 0, NULL, 'rolled over', NULL),
-(409, 2, 5, 144035.32, '2026-05-09', 0, 'repaid', '2026-05-15 08:01:30', '2026-06-14 03:21:19', NULL, NULL, 15, 0, NULL, 'rolled over', NULL),
-(410, 62, 1, 15000.00, '2026-05-14', 0, 'repaid', '2026-05-15 08:12:49', '2026-05-27 06:01:50', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 15,000.00 to 254799388138 - DOUGLAS IMBOYWA LUTOMIA successfully processed. Transaction Ref ID: 4305WBTS8934. M-PESA Ref ID: UEE1U49IYE\r\n\r\n10 days 20% Facility for 20 days payable on 3rd June 2025', NULL),
-(411, 75, 3, 100000.00, '2026-05-11', 0, 'repaid', '2026-05-15 08:15:58', '2026-05-25 06:26:23', NULL, NULL, 1, 0, NULL, 'Pesalink transfer of KES 100,000.00 to A/c 01116367542800-Dennis O Zereta on 11/05/2026 11:26 processed successfully.\r\nTransaction Ref ID:828122140763', NULL),
-(412, 74, 17, 35000.00, '2026-05-15', 0, 'repaid', '2026-05-15 08:21:42', '2026-06-08 09:34:38', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 35,000.00 to 254728688805 - Diana Jerotich successfully processed. Transaction Ref ID: 4279YIQS7240. M-PESA Ref ID: UEBFR3O053', NULL),
-(413, 3, 1, 25000.00, '2026-05-11', 0, 'repaid', '2026-05-15 08:46:29', '2026-05-21 07:40:46', NULL, NULL, 1, 1, '2026-05-15 08:46:28', 'Pesalink transfer of KES 25,000.00 to A/c 0780283328011-Isiro Agencies on 11/05/2026 20:13 processed successfully.\r\nTransaction Ref ID:297966502215\r\n\r\n10 days facility 20% interest 60% broker fees on interest. Payable on 21st May 2026', NULL),
-(414, 3, 3, 30000.00, '2026-05-13', 1, 'repaid', '2026-05-15 08:48:02', '2026-05-28 03:43:05', NULL, NULL, 1, 0, NULL, 'Pesalink transfer of KES 30,000.00 to A/c 0780283328011-Isiro Agencies on 13/05/2026 16:12 processed successfully.\r\nTransaction Ref ID:388220519542\r\n\r\nFacility for 14 days 20% interest 60% broker fees on interest. Total payable on 27th May 2026 KES 33,600.00', NULL),
-(415, 3, 1, 10000.00, '2026-05-14', 0, 'repaid', '2026-05-15 08:49:42', '2026-05-25 07:41:23', NULL, NULL, 1, 1, '2026-05-15 08:49:42', 'Pesalink transfer of KES 10,000.00 to A/c 0780283328011-Isiro Agencies on 14/05/2026 21:12 processed successfully.\r\nTransaction Ref ID:643458978305\r\n\r\nFacility for 10 days 20% interest 60% broker fees on interest. Total payable on 24th May 2026 KES 11,200.00', NULL),
-(416, 53, 1, 1860.00, '2026-05-15', 0, 'repaid', '2026-05-16 17:36:50', '2026-05-25 06:28:13', NULL, NULL, 1, 1, '2026-05-16 17:36:50', 'Niaje denno imekua ngumu kiasi tunaeza fanya rollover ndo nilipe yote this week ju payment yangu itaingia in-between hii wiki ndo nikue safe na penalties', NULL),
-(417, 64, 1, 4320.00, '2026-05-16', 0, 'repaid', '2026-05-19 10:07:05', '2026-05-27 05:44:50', NULL, NULL, 1, 1, '2026-05-19 10:07:05', 'ROLLED Over facility', NULL),
-(418, 73, 1, 30000.00, '2026-05-17', 0, 'repaid', '2026-05-19 10:11:55', '2026-06-03 07:45:58', NULL, NULL, 1, 1, '2026-05-19 10:11:55', 'Bank to M-PESA transfer of KES 30,000.00 to 0708530169 - ANITA SOINA NANYOKIE successfully processed. Transaction Ref ID: 4333KMXG4064. M-PESA Ref ID: UEHC14TQ1T', NULL),
-(419, 53, 1, 10000.00, '2026-05-17', 0, 'repaid', '2026-05-19 10:14:47', '2026-06-03 07:25:36', NULL, NULL, 1, 0, NULL, 'ROLLED OVER', NULL),
-(420, 9, 1, 105231.05, '2026-05-18', 0, 'repaid', '2026-05-19 10:19:03', '2026-06-03 07:52:08', NULL, NULL, 1, 1, '2026-05-19 10:19:03', 'ROLLED OVER', NULL),
-(421, 29, 1, 22000.00, '2026-05-16', 0, 'repaid', '2026-05-19 10:20:37', '2026-05-27 08:47:42', NULL, NULL, 1, 0, NULL, 'ROLLED OVER', NULL),
-(422, 52, 1, 90000.00, '2026-05-16', 0, 'repaid', '2026-05-20 07:00:14', '2026-07-16 07:10:40', NULL, NULL, 1, 1, '2026-05-20 07:00:14', 'ROLLED OVER', NULL),
-(423, 48, 1, 3000.00, '2026-05-21', 0, 'repaid', '2026-05-21 09:26:34', '2026-06-03 07:41:09', NULL, NULL, 1, 1, '2026-05-21 09:26:34', 'Bank to M-PESA transfer of KES 3,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 4365WIYG0039. M-PESA Ref ID: UELAL4X9AF\r\n\r\n10 days 20% and 10% daily penalties on outstanding amount after due date of 31st May 2026.\r\n\r\nPayable KES 3,600', NULL),
-(424, 64, 1, 5184.00, '2026-05-26', 0, 'repaid', '2026-05-27 05:53:43', '2026-06-08 07:37:29', NULL, NULL, 1, 1, '2026-05-27 05:53:43', 'Good morning, Kibet....Kindly  roll it over', NULL),
-(425, 70, 1, 1728.00, '2026-05-22', 0, 'repaid', '2026-05-27 05:55:48', '2026-06-03 09:59:59', NULL, NULL, 1, 1, '2026-05-27 05:55:48', 'Rolled over', NULL),
-(426, 62, 1, 18000.00, '2026-05-24', 0, 'repaid', '2026-05-27 06:02:32', '2026-06-09 07:09:43', NULL, NULL, 1, 1, '2026-05-27 06:02:32', 'rolled over', NULL),
-(427, 2, 1, 85500.00, '2026-05-21', 0, 'repaid', '2026-05-27 06:10:07', '2026-06-03 07:33:23', NULL, NULL, 1, 1, '2026-05-27 06:10:07', 'rolled over', NULL),
-(428, 7, 2, 2160.00, '2026-05-25', 0, 'repaid', '2026-05-27 06:14:46', '2026-07-04 17:05:39', NULL, NULL, 1, 0, NULL, 'Rolled over', NULL),
-(429, 15, 15, 130306.20, '2026-05-27', 0, 'disbursed', '2026-05-28 06:27:50', '2026-06-14 03:13:17', NULL, NULL, NULL, 0, NULL, 'rolled over', NULL),
-(430, 11, 1, 9000.00, '2026-05-27', 0, 'repaid', '2026-05-28 19:41:49', '2026-06-08 07:28:14', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 3,000.00 to 254724606690 - SHADRACK CHERUIYOT successfully processed. Transaction Ref ID: 4427RILA2427. M-PESA Ref ID: UESHD5YGSA\r\n\r\nDue 7th June 2026 as KES 3,600', NULL),
-(431, 53, 1, 3000.00, '2026-05-27', 0, 'repaid', '2026-06-03 07:26:48', '2026-06-07 09:44:17', NULL, NULL, 1, 1, '2026-06-03 07:26:48', 'Rolled over + 1500 loan\r\nBank to M-PESA transfer of KES 1,500.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4438AIME0767. M-PESA Ref ID: UET6B5TQ81', NULL),
-(432, 2, 1, 102600.00, '2026-05-31', 0, 'repaid', '2026-06-03 07:34:05', '2026-06-14 03:19:48', NULL, NULL, 15, 0, NULL, 'rolled over', NULL),
-(433, 48, 1, 14000.00, '2026-05-30', 0, 'repaid', '2026-06-03 07:42:35', '2026-06-09 07:09:12', NULL, NULL, 1, 1, '2026-06-03 07:42:35', 'Bank to M-PESA transfer of KES 14,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 4443MMKK9478. M-PESA Ref ID: UEUAL5ZRUE\r\n\r\nDue in 10 days at 20% interest 16,800 payable on or before 9th June 2026', NULL),
-(434, 73, 1, 21000.00, '2026-05-27', 0, 'repaid', '2026-06-03 07:47:32', '2026-06-08 07:30:31', NULL, NULL, 1, 1, '2026-06-03 07:47:32', 'rolled over', NULL),
-(435, 70, 1, 2073.60, '2026-06-01', 0, 'repaid', '2026-06-03 10:01:23', '2026-06-14 03:25:59', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
-(436, 26, 2, 124000.00, '2026-05-26', 0, 'disbursed', '2026-06-03 10:16:03', '2026-06-03 10:16:03', NULL, NULL, 15, 1, '2026-06-03 10:16:03', 'ROLLED OVER', NULL),
-(437, 53, 1, 10600.00, '2026-06-06', 0, 'repaid', '2026-06-07 09:46:02', '2026-06-18 11:10:14', NULL, NULL, 1, 1, '2026-06-07 09:46:02', '[14:45, 07/06/2026] Dennis Kibet: Bank to M-PESA transfer of KES 10,000.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4505TVIV3259. M-PESA Ref ID: UF66B6QSCC\r\n[14:45, 07/06/2026] Dennis Kibet: 10 days 20% interest due 16/06/2026\r\n[14:45, 07/06/2026] Dennis Kibet: 600 haujaweka\r\n[14:45, 07/06/2026] Dennis Kibet: Nimeweka kwa 10k', NULL),
-(438, 11, 1, 13800.00, '2026-06-06', 0, 'repaid', '2026-06-08 07:28:55', '2026-06-17 06:55:15', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
-(439, 73, 1, 17200.00, '2026-06-06', 0, 'repaid', '2026-06-08 07:31:15', '2026-06-17 06:48:16', NULL, NULL, 1, 1, '2026-06-08 07:31:15', 'rolled over', NULL),
-(440, 64, 1, 6220.80, '2026-06-05', 0, 'repaid', '2026-06-08 07:38:23', '2026-06-16 02:33:43', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
-(441, 74, 17, 42000.00, '2026-06-05', 0, 'repaid', '2026-06-08 09:35:18', '2026-07-01 11:43:35', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
-(442, 21, 2, 493534.10, '2026-06-03', 0, 'repaid', '2026-06-08 09:37:33', '2026-07-03 12:35:07', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
-(443, 62, 1, 21600.00, '2026-06-03', 0, 'repaid', '2026-06-09 07:10:24', '2026-06-14 03:14:51', NULL, NULL, 1, 1, '2026-06-09 07:10:24', 'rolled over', NULL),
-(444, 62, 1, 25920.00, '2026-06-13', 0, 'repaid', '2026-06-14 03:15:53', '2026-06-23 11:20:34', NULL, NULL, 1, 1, '2026-06-14 03:15:53', 'roll over loan', NULL),
-(445, 2, 1, 310365.92, '2026-06-10', 0, 'disbursed', '2026-06-14 03:21:06', '2026-06-14 03:21:06', NULL, NULL, 15, 1, '2026-06-14 03:21:06', 'roll over to clear once', NULL),
-(446, 70, 1, 2488.32, '2026-06-11', 0, 'repaid', '2026-06-14 03:26:46', '2026-06-25 08:39:35', NULL, NULL, 1, 1, '2026-06-14 03:26:46', 'ROLLED OVER', NULL),
-(447, 64, 1, 7465.00, '2026-06-15', 0, 'repaid', '2026-06-16 02:34:54', '2026-07-04 16:36:50', NULL, NULL, 1, 1, '2026-06-16 02:34:54', 'rolled over loan', NULL),
-(448, 11, 1, 16560.00, '2026-06-16', 0, 'repaid', '2026-06-17 06:57:31', '2026-06-29 04:41:37', NULL, NULL, 1, 0, NULL, '[11:15, 17/06/2026] Shady Kip Cheruiyot eCitizen: fayiaa, hatukupata dhoo unaeza roll over , kindly\r\n[11:54, 17/06/2026] Dennis Kibet: fayiaa, hatukupata dhoo unaeza roll over , kindly\r\nSawa', NULL),
-(449, 53, 1, 12720.00, '2026-06-16', 0, 'repaid', '2026-06-18 11:11:03', '2026-07-01 11:39:26', NULL, NULL, 1, 1, '2026-06-18 11:11:03', 'roll over loan', NULL),
-(450, 76, 1, 40000.00, '2026-06-20', 0, 'disbursed', '2026-06-20 11:10:25', '2026-06-21 09:15:45', NULL, NULL, 1, 0, NULL, 'new loan facility', NULL),
-(451, 48, 1, 10000.00, '2026-06-10', 0, 'repaid', '2026-06-21 09:19:31', '2026-06-21 09:20:24', NULL, NULL, 1, 1, '2026-06-21 09:19:31', 'Bank to M-PESA transfer of KES 10,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 4540EMLQ4038. M-PESA Ref ID: UFAAL79NHH', NULL),
-(452, 70, 1, 2986.00, '2026-06-21', 0, 'repaid', '2026-06-25 08:40:23', '2026-07-04 16:32:31', NULL, NULL, 1, 1, '2026-06-25 08:40:23', 'ROLLED OVER', NULL),
-(453, 48, 1, 10000.00, '2026-06-24', 0, 'repaid', '2026-06-25 08:42:18', '2026-07-04 16:31:24', NULL, NULL, 1, 1, '2026-06-25 08:42:18', 'UFO6O8SPHT Confirmed. KSH. 10,000 sent to Sharon Chemurgor,  via MySafaricom App on 24-06-2026 18:22. \r\n\r\n10 days 20% interest', NULL),
-(454, 3, 1, 50000.00, '2026-06-23', 0, 'repaid', '2026-06-25 08:43:53', '2026-06-30 15:04:43', NULL, NULL, 1, 1, '2026-06-25 08:43:53', 'Pesalink transfer of KES 50,000.00 to EQUITY BANK A/c 0780283328011 on 23/06/2026 09:39 processed successfully. Transaction Ref ID: 241310635800.\r\n\r\n10 days', NULL),
-(455, 3, 17, 10000.00, '2026-06-22', 0, 'repaid', '2026-06-25 08:45:31', '2026-07-15 08:01:40', NULL, NULL, 1, 1, '2026-06-25 08:45:31', 'Bank to M-PESA transfer of KES 10,000.00 to 254727459357 - FRANCIS MUKHWANA OKWARA successfully processed. Transaction Ref ID: 4643QUOS5381. M-PESA Ref ID: UFMD88NRVB\r\n\r\n3 weeks', NULL),
-(456, 9, 2, 126277.30, '2026-05-18', 0, 'repaid', '2026-06-25 08:59:56', '2026-07-01 11:51:53', NULL, NULL, 1, 0, NULL, 'rolled over', NULL),
-(457, 11, 1, 30872.00, '2026-06-26', 0, 'repaid', '2026-06-29 04:43:16', '2026-07-13 09:01:49', NULL, NULL, 1, 0, NULL, 'ROLL OVER + Bank to M-PESA transfer of KES 5,000.00 to 254724606690 - SHADRACK CHERUIYOT successfully processed. Transaction Ref ID: 4680UJKH0648. M-PESA Ref ID: UFQHD9E6GZ', NULL),
-(458, 3, 1, 200000.00, '2026-06-30', 0, 'repaid', '2026-06-30 15:04:06', '2026-07-10 08:35:03', NULL, NULL, 1, 1, '2026-06-30 15:04:06', 'emergency assistance', NULL),
-(459, 53, 1, 15264.00, '2026-06-26', 0, 'repaid', '2026-07-01 11:41:33', '2026-07-10 08:42:22', NULL, NULL, 1, 1, '2026-07-01 11:41:33', 'ROLLED OVER', NULL),
-(460, 74, 17, 21400.00, '2026-06-26', 0, 'disbursed', '2026-07-01 11:44:17', '2026-07-16 06:28:16', NULL, NULL, 1, 0, NULL, 'ROLLED OVER', NULL),
-(461, 50, 13, 85600.00, '2026-06-20', 0, 'disbursed', '2026-07-01 11:49:51', '2026-07-01 11:49:51', NULL, NULL, 1, 1, '2026-07-01 11:49:51', 'ROLLED OVER', NULL),
-(462, 9, 2, 151532.80, '2026-06-18', 0, 'disbursed', '2026-07-01 11:52:50', '2026-07-01 11:52:50', NULL, NULL, 1, 1, '2026-07-01 11:52:50', 'ROLLED OVER', NULL),
-(463, 21, 2, 592240.92, '2026-07-03', 0, 'disbursed', '2026-07-03 12:35:47', '2026-07-03 12:35:47', NULL, NULL, 1, 1, '2026-07-03 12:35:47', 'ROLLED OVER', NULL),
-(464, 70, 1, 3583.20, '2026-07-01', 0, 'repaid', '2026-07-04 16:33:20', '2026-07-13 09:04:42', NULL, NULL, 1, 1, '2026-07-04 16:33:20', 'ROLLED OVER', NULL),
-(465, 64, 2, 8958.00, '2026-06-25', 0, 'disbursed', '2026-07-04 16:37:27', '2026-07-16 06:44:36', NULL, NULL, 1, 0, NULL, 'ROLLED OVER', NULL),
-(466, 84, 1, 20000.00, '2026-06-26', 0, 'repaid', '2026-07-04 16:41:09', '2026-07-04 16:43:46', NULL, NULL, 1, 1, '2026-07-04 16:41:09', 'Bank to M-PESA transfer of KES 20,000.00 to 0722559067 - BRIAN KIPLAGAT TANUI successfully processed. Transaction Ref ID: 4686EOJL2669. M-PESA Ref ID: UFRLJ9N1YY', NULL),
-(467, 48, 1, 30000.00, '2026-07-04', 0, 'repaid', '2026-07-04 16:45:52', '2026-07-16 06:03:25', NULL, NULL, 1, 1, '2026-07-04 16:45:52', 'Bank to M-PESA transfer of KES 30,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 4747XQNR1529. M-PESA Ref ID: UG4ALA02O5', NULL),
-(468, 3, 3, 100000.00, '2026-07-04', 0, 'disbursed', '2026-07-04 16:47:45', '2026-07-04 16:48:21', NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 100,000.00 to 254703731558 - MAKOKO NASENYA ANJELA successfully processed. Transaction Ref ID: 4746FPNN3173. M-PESA Ref ID: UG40NAAR1R', NULL),
-(469, 3, 1, 60000.00, '2026-07-04', 0, 'repaid', '2026-07-04 16:50:11', '2026-07-15 12:47:44', NULL, NULL, 1, 1, '2026-07-04 16:50:11', 'Pesalink transfer of KES 10,000.00 to EQUITY BANK A/c 0780283328011 on 04/07/2026 11:06 processed successfully. Transaction Ref ID: 718191439198.\r\n\r\nPesalink transfer of KES 50,000.00 to EQUITY BANK A/c 0780283328011 on 04/07/2026 11:05 processed successfully. Transaction Ref ID: 025301778612.\r\n\r\nFacility 10 days 12% interest \r\n\r\nPayable KES 67,200 on 14th July', NULL),
-(470, 7, 2, 2592.00, '2026-06-25', 0, 'disbursed', '2026-07-04 17:06:38', '2026-07-04 17:06:38', NULL, NULL, 1, 1, '2026-07-04 17:06:38', 'ROLLED OVER', NULL),
-(471, 51, 1, 60000.00, '2026-07-06', 0, 'disbursed', '2026-07-06 18:05:28', '2026-07-06 18:05:28', NULL, NULL, 1, 1, '2026-07-06 18:05:28', 'Bank to M-PESA transfer of KES 60,000.00 to 254726471918 - KELVIN ROTICH successfully processed. Transaction Ref ID: 4766RIOG0469. M-PESA Ref ID: UG63XAM1SV\r\n\r\n10 days facility 20% payable on 16th July 2026 as KES 72,000', NULL),
-(472, 3, 1, 240000.00, '2026-07-10', 0, 'disbursed', '2026-07-10 08:35:53', '2026-07-10 08:35:53', NULL, NULL, 1, 1, '2026-07-10 08:35:53', 'ROLLED OVER FACILITY', NULL),
-(473, 53, 1, 18316.80, '2026-07-06', 0, 'disbursed', '2026-07-10 08:43:09', '2026-07-10 08:43:09', NULL, NULL, 1, 1, '2026-07-10 08:43:09', 'ROLLED OVER FACILITY', NULL),
-(474, 73, 1, 10000.00, '2026-07-13', 0, 'disbursed', '2026-07-13 08:49:25', '2026-07-13 08:49:25', NULL, NULL, 1, 1, '2026-07-13 08:49:25', 'UGD6OAX82C Confirmed. KSH. 10,000 sent to ANITA NANYOKIE,  via MySafaricom App on 13-07-2026 13:35.', NULL),
-(475, 11, 1, 37046.40, '2026-07-06', 0, 'disbursed', '2026-07-13 09:02:34', '2026-07-13 09:02:34', NULL, NULL, 1, 1, '2026-07-13 09:02:34', 'ROLLED OVER', NULL),
-(476, 70, 1, 5159.81, '2026-07-11', 0, 'disbursed', '2026-07-13 09:05:16', '2026-07-13 09:05:16', NULL, NULL, 1, 1, '2026-07-13 09:05:16', 'ROLLED OVER', NULL),
-(477, 48, 3, 36000.00, '2026-07-14', 0, 'disbursed', '2026-07-16 06:04:14', '2026-07-16 06:04:14', NULL, NULL, 1, 1, '2026-07-16 06:04:14', 'ROLLED OVER', NULL);
+INSERT INTO `loans` (`id`, `user_id`, `loan_type_id`, `amount`, `borrow_date`, `broker_status`, `status`, `created_at`, `updated_at`, `deleted_at`, `guarantor_id`, `guarantor_relationship`, `loan_officer_id`, `consent`, `consent_date`, `reason`, `due_date`, `is_non_performing`, `default_date`, `days_overdue`, `last_overdue_check`, `default_triggered`, `calculated_due_date`, `npl_trigger_threshold`) VALUES
+(1, 2, 1, 120000.00, '2025-03-07', 1, 'repaid', '2025-04-17 12:12:56', '2025-04-17 12:12:56', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(2, 6, 1, 30000.00, '2025-03-07', 1, 'repaid', '2025-04-17 12:22:35', '2025-04-17 12:22:35', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(3, 6, 1, 50000.00, '2025-03-28', 1, 'repaid', '2025-04-17 12:26:11', '2025-04-17 12:26:11', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(4, 2, 1, 35000.00, '2025-03-31', 1, 'repaid', '2025-04-17 12:42:17', '2025-04-17 12:42:17', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(5, 7, 2, 10000.00, '2025-03-03', 0, 'repaid', '2025-04-17 13:03:34', '2025-04-17 13:03:34', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(6, 7, 2, 13000.00, '2025-04-05', 0, 'repaid', '2025-04-17 13:11:52', '2025-05-06 08:47:42', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(7, 8, 1, 2000.00, '2025-04-10', 0, 'repaid', '2025-04-17 13:18:22', '2025-05-05 19:19:58', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(8, 9, 1, 10000.00, '2025-04-12', 0, 'repaid', '2025-04-17 13:23:26', '2025-04-17 13:23:26', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(9, 9, 1, 15000.00, '2025-04-17', 0, 'repaid', '2025-04-17 13:25:52', '2025-04-17 13:25:52', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(10, 10, 3, 30000.00, '2025-04-16', 0, 'repaid', '2025-04-17 13:27:33', '2025-05-07 14:45:50', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(11, 11, 1, 15000.00, '2025-04-08', 0, 'repaid', '2025-04-17 13:29:39', '2025-04-17 13:29:39', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(12, 14, 1, 27000.00, '2025-04-17', 1, 'repaid', '2025-04-17 14:08:51', '2025-05-06 08:45:23', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(13, 16, 1, 30000.00, '2025-04-13', 1, 'repaid', '2025-04-17 14:33:51', '2025-04-17 14:33:51', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(14, 2, 1, 20000.00, '2025-03-25', 0, 'repaid', '2025-04-20 12:26:24', '2025-04-20 12:26:24', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(15, 18, 1, 50000.00, '2025-03-25', 0, 'repaid', '2025-04-20 12:42:26', '2025-04-20 12:42:26', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(16, 18, 1, 50000.00, '2025-04-01', 1, 'repaid', '2025-04-20 12:50:23', '2025-04-20 12:50:23', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(17, 18, 1, 20000.00, '2025-04-12', 1, 'repaid', '2025-04-20 13:06:04', '2025-04-20 13:06:04', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(18, 2, 1, 35000.00, '2025-03-31', 1, 'repaid', '2025-04-20 13:24:14', '2025-04-20 13:24:14', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(19, 2, 1, 20000.00, '2025-04-07', 0, 'repaid', '2025-04-20 13:45:24', '2025-04-20 13:45:24', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(20, 2, 1, 33000.00, '2025-04-15', 0, 'repaid', '2025-04-20 13:49:21', '2025-04-20 13:49:21', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(21, 2, 1, 42000.00, '2025-04-15', 1, 'repaid', '2025-04-20 13:56:32', '2025-04-20 13:56:32', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(22, 3, 1, 10000.00, '2025-03-03', 1, 'repaid', '2025-04-20 16:19:58', '2025-04-20 16:19:58', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(23, 3, 1, 5000.00, '2025-02-26', 1, 'repaid', '2025-04-20 16:29:18', '2025-04-20 16:29:18', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(24, 15, 2, 5000.00, '2025-03-08', 0, 'repaid', '2025-04-20 16:32:20', '2025-05-05 19:06:36', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(25, 13, 2, 11000.00, '2025-03-10', 0, 'repaid', '2025-04-20 16:33:54', '2025-04-20 16:33:54', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(26, 13, 2, 600.00, '2025-04-21', 0, 'repaid', '2025-04-20 16:38:29', '2025-05-05 19:25:00', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(27, 15, 2, 2000.00, '2025-03-15', 0, 'repaid', '2025-04-20 16:39:13', '2025-05-05 19:14:42', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(28, 3, 1, 50000.00, '2025-04-04', 1, 'repaid', '2025-04-20 17:10:46', '2025-04-20 17:10:46', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(29, 17, 2, 11000.00, '2025-04-04', 0, 'repaid', '2025-04-20 17:11:49', '2025-04-20 17:11:49', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(30, 15, 2, 6000.00, '2025-04-04', 0, 'repaid', '2025-04-20 17:12:15', '2025-05-05 19:20:31', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(31, 19, 1, 50000.00, '2025-04-07', 0, 'repaid', '2025-04-20 17:15:30', '2025-04-20 17:15:30', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(32, 13, 2, 29000.00, '2025-04-04', 0, 'repaid', '2025-04-20 17:18:16', '2025-05-05 19:21:04', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(33, 17, 2, 10000.00, '2025-03-07', 0, 'repaid', '2025-04-20 17:19:04', '2025-04-20 17:19:04', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(34, 20, 2, 9000.00, '2025-03-07', 0, 'repaid', '2025-04-20 17:39:54', '2025-04-20 17:39:54', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(35, 11, 1, 18000.00, '2025-04-18', 0, 'repaid', '2025-04-21 06:17:23', '2025-04-21 06:17:23', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(36, 2, 1, 44000.00, '2025-03-21', 1, 'repaid', '2025-04-21 09:01:00', '2025-04-21 09:01:00', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(37, 9, 1, 5000.00, '2025-04-25', 0, 'repaid', '2025-04-21 10:05:13', '2025-05-05 19:27:40', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(38, 21, 1, 50000.00, '2025-04-24', 0, 'repaid', '2025-04-24 06:57:09', '2025-04-24 06:57:09', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(39, 9, 1, 15000.00, '2025-04-27', 0, 'repaid', '2025-04-27 06:33:31', '2025-05-07 14:48:02', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(40, 15, 2, 15600.00, '2025-05-06', 0, 'repaid', '2025-04-27 07:53:49', '2025-06-06 08:13:05', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(41, 13, 2, 8000.00, '2025-04-27', 0, 'repaid', '2025-04-27 07:55:09', '2025-05-05 19:25:52', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(45, 2, 1, 50000.00, '2025-04-29', 0, 'repaid', '2025-04-29 06:05:48', '2025-05-12 09:03:29', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(46, 21, 1, 50000.00, '2025-05-03', 0, 'repaid', '2025-05-02 19:31:23', '2025-05-15 07:46:09', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(48, 9, 1, 5000.00, '2025-05-05', 0, 'repaid', '2025-05-05 18:02:20', '2025-05-09 17:56:42', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(49, 13, 2, 50000.00, '2025-05-06', 0, 'repaid', '2025-05-05 19:30:08', '2025-06-06 08:12:05', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(50, 16, 1, 100000.00, '2025-05-06', 1, 'repaid', '2025-05-06 08:14:19', '2025-05-16 19:26:14', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(51, 7, 1, 15600.00, '2025-05-04', 0, 'repaid', '2025-05-06 08:48:50', '2025-05-15 07:48:42', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(52, 8, 2, 8000.00, '2025-05-06', 0, 'pending', '2025-05-07 10:46:08', '2025-07-18 08:37:59', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(54, 22, 1, 10000.00, '2025-05-07', 1, 'repaid', '2025-05-07 12:10:55', '2025-05-18 08:10:32', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(55, 9, 1, 15000.00, '2025-05-07', 0, 'repaid', '2025-05-07 14:50:08', '2025-05-08 18:48:43', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(56, 2, 1, 30000.00, '2025-05-07', 1, 'repaid', '2025-05-07 14:53:46', '2025-05-16 12:53:45', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(57, 14, 1, 45000.00, '2025-05-10', 1, 'repaid', '2025-05-10 10:37:30', '2025-05-22 05:24:47', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(59, 2, 1, 78000.00, '2025-05-12', 0, 'repaid', '2025-05-12 09:05:41', '2025-05-20 04:29:27', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(60, 24, 1, 50000.00, '2025-05-14', 1, 'repaid', '2025-05-13 06:50:44', '2025-05-26 16:54:50', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(61, 21, 1, 72000.00, '2025-05-15', 0, 'repaid', '2025-05-15 07:46:55', '2025-05-26 10:30:57', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(64, 7, 2, 18720.00, '2025-05-15', 0, 'repaid', '2025-05-15 07:49:33', '2025-06-16 13:26:11', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(65, 11, 3, 13000.00, '2025-05-14', 0, 'repaid', '2025-05-15 07:57:40', '2025-05-30 15:21:08', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(66, 25, 1, 2500.00, '2025-05-14', 1, 'repaid', '2025-05-15 08:09:40', '2025-05-24 11:58:24', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(68, 22, 1, 10000.00, '2025-05-17', 1, 'repaid', '2025-05-18 08:11:18', '2025-05-31 11:07:01', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(69, 26, 3, 50000.00, '2025-05-19', 0, 'repaid', '2025-05-19 12:46:30', '2025-06-03 19:11:06', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(70, 27, 3, 50000.00, '2025-05-20', 0, 'repaid', '2025-05-20 13:03:31', '2025-06-03 15:42:32', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(71, 28, 1, 15000.00, '2025-05-26', 0, 'repaid', '2025-05-25 18:37:01', '2025-06-06 07:59:54', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(72, 21, 1, 27840.00, '2025-05-26', 0, 'pending', '2025-05-26 10:33:15', '2025-05-26 10:36:03', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(73, 9, 1, 10000.00, '2025-05-24', 0, 'repaid', '2025-05-26 11:51:57', '2025-06-03 08:13:25', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(74, 24, 1, 50000.00, '2025-05-26', 1, 'repaid', '2025-05-26 16:55:48', '2025-06-04 07:57:27', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(75, 17, 7, 30000.00, '2025-05-27', 0, 'repaid', '2025-05-27 06:20:52', '2025-07-01 07:28:21', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(76, 29, 3, 15000.00, '2025-05-27', 0, 'repaid', '2025-05-27 13:48:17', '2025-06-10 09:26:58', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(77, 28, 1, 30000.00, '2025-05-29', 0, 'repaid', '2025-05-29 06:41:34', '2025-06-10 05:06:45', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(78, 2, 4, 100000.00, '2025-05-29', 0, 'repaid', '2025-05-29 12:06:58', '2025-10-21 19:59:01', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(79, 31, 1, 35000.00, '2025-05-29', 0, 'repaid', '2025-05-29 13:49:38', '2025-07-07 21:08:58', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(80, 11, 5, 30000.00, '2025-05-30', 0, 'repaid', '2025-05-30 15:28:35', '2025-07-17 08:18:25', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(82, 28, 5, 30000.00, '2025-05-31', 0, 'repaid', '2025-05-31 09:41:29', '2025-07-10 05:04:16', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(83, 22, 1, 8200.00, '2025-05-29', 1, 'repaid', '2025-05-31 11:16:30', '2025-06-20 07:03:33', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(84, 32, 6, 20000.00, '2025-06-02', 0, 'repaid', '2025-06-02 11:19:18', '2025-06-20 11:25:28', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(85, 16, 1, 100000.00, '2025-06-03', 1, 'repaid', '2025-06-03 07:25:00', '2025-07-10 04:44:16', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(86, 9, 1, 10000.00, '2025-06-03', 0, 'repaid', '2025-06-03 08:12:16', '2025-06-15 05:14:44', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(87, 27, 3, 50000.00, '2025-06-04', 0, 'repaid', '2025-06-03 15:43:14', '2025-06-20 07:06:21', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(88, 28, 1, 28000.00, '2025-06-06', 0, 'repaid', '2025-06-06 08:00:44', '2025-06-18 09:54:17', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(89, 22, 1, 8280.00, '2025-06-08', 1, 'repaid', '2025-06-09 03:41:42', '2025-06-30 08:37:52', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(90, 28, 1, 39600.00, '2025-06-09', 0, 'repaid', '2025-06-10 05:08:08', '2025-06-18 10:01:51', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(91, 33, 1, 15000.00, '2025-06-14', 0, 'repaid', '2025-06-15 05:15:29', '2025-06-25 10:43:35', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(92, 9, 1, 10000.00, '2025-06-13', 0, 'repaid', '2025-06-15 05:15:29', '2025-06-25 10:43:35', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(93, 29, 1, 17000.00, '2025-06-13', 1, 'repaid', '2025-06-15 05:19:36', '2025-06-23 18:10:20', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(94, 34, 3, 5000.00, '2025-06-12', 1, 'repaid', '2025-06-15 13:56:47', '2025-06-27 07:43:09', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(95, 7, 2, 2264.00, '2025-06-16', 0, 'repaid', '2025-06-16 13:29:00', '2025-07-01 09:14:16', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(96, 28, 1, 81120.00, '2025-06-19', 0, 'repaid', '2025-06-18 09:58:47', '2025-07-10 04:52:11', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(97, 27, 2, 50000.00, '2025-06-18', 0, 'repaid', '2025-06-20 07:07:15', '2025-12-23 10:16:48', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(98, 35, 3, 28000.00, '2025-06-20', 0, 'repaid', '2025-06-20 18:32:40', '2025-06-25 08:24:49', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(99, 36, 1, 5000.00, '2025-06-21', 0, 'pending', '2025-06-21 06:22:09', '2025-06-21 06:22:09', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(100, 37, 1, 5000.00, '2025-06-22', 0, 'repaid', '2025-06-23 10:27:04', '2025-07-15 09:11:51', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(101, 33, 1, 10000.00, '2025-06-24', 0, 'repaid', '2025-06-24 06:21:52', '2025-07-15 11:13:08', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(102, 9, 1, 10000.00, '2025-06-24', 0, 'repaid', '2025-06-25 10:44:35', '2025-07-05 05:39:53', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(103, 34, 1, 5000.00, '2025-06-27', 0, 'repaid', '2025-06-27 07:45:19', '2025-07-04 12:07:10', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(104, 9, 1, 5000.00, '2025-06-29', 0, 'repaid', '2025-06-30 07:08:30', '2025-07-10 04:41:22', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(105, 35, 1, 120000.00, '2025-06-30', 0, 'repaid', '2025-06-30 08:23:02', '2025-07-13 16:05:06', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(106, 22, 1, 4732.00, '2025-06-18', 1, 'repaid', '2025-06-30 08:32:22', '2025-06-30 08:35:45', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(107, 17, 7, 30000.00, '2025-06-30', 0, 'repaid', '2025-07-01 07:29:54', '2025-07-30 07:37:35', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(108, 33, 1, 10000.00, '2025-07-05', 0, 'repaid', '2025-07-05 05:38:52', '2025-07-15 10:45:11', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(109, 9, 1, 12000.00, '2025-07-05', 0, 'repaid', '2025-07-05 05:40:47', '2025-07-17 08:15:07', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(110, 29, 1, 10000.00, '2025-07-07', 0, 'repaid', '2025-07-07 08:48:13', '2025-07-17 09:47:16', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(111, 38, 1, 8000.00, '2025-07-07', 0, 'repaid', '2025-07-07 08:51:43', '2025-07-13 16:07:49', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(112, 34, 1, 10000.00, '2025-07-08', 0, 'repaid', '2025-07-08 07:54:40', '2025-07-18 08:31:47', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(113, 32, 3, 10000.00, '2025-07-08', 0, 'repaid', '2025-07-08 16:28:51', '2025-09-03 11:19:19', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(114, 9, 1, 6000.00, '2025-07-10', 0, 'repaid', '2025-07-10 04:42:14', '2025-07-21 18:04:26', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(115, 28, 5, 97344.00, '2025-06-30', 0, 'repaid', '2025-07-10 04:53:20', '2025-08-11 08:04:24', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(116, 28, 5, 39000.00, '2025-07-02', 0, 'repaid', '2025-07-10 05:04:53', '2025-08-12 06:54:31', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(117, 35, 1, 120000.00, '2025-07-11', 0, 'repaid', '2025-07-13 16:06:21', '2025-07-24 03:49:29', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(118, 39, 1, 2000.00, '2025-07-12', 0, 'repaid', '2025-07-13 16:12:10', '2025-07-23 18:12:25', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(119, 40, 1, 1000.00, '2025-07-14', 0, 'repaid', '2025-07-14 11:36:52', '2025-07-17 09:55:32', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(120, 33, 3, 25000.00, '2025-07-15', 0, 'repaid', '2025-07-15 11:04:15', '2025-08-06 11:00:34', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(121, 41, 3, 70000.00, '2025-07-15', 0, 'repaid', '2025-07-15 11:06:01', '2025-07-30 04:28:10', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(122, 9, 1, 14400.00, '2025-07-15', 0, 'repaid', '2025-07-17 08:16:16', '2025-07-27 08:59:16', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(123, 11, 3, 42900.00, '2025-06-30', 0, 'repaid', '2025-07-17 08:21:14', '2025-07-17 08:24:56', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(124, 11, 3, 56628.00, '2025-07-14', 0, 'repaid', '2025-07-17 08:26:55', '2025-08-07 18:46:49', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(125, 29, 1, 10000.00, '2025-07-17', 0, 'repaid', '2025-07-17 09:51:35', '2025-07-28 14:07:40', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(126, 40, 1, 5000.00, '2025-07-16', 0, 'repaid', '2025-07-17 09:56:15', '2025-08-06 05:30:36', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(127, 42, 1, 20000.00, '2025-07-17', 0, 'repaid', '2025-07-17 10:55:06', '2025-07-30 14:20:12', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(128, 34, 1, 10000.00, '2025-07-18', 0, 'repaid', '2025-07-18 08:33:17', '2025-07-30 15:33:27', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(129, 9, 1, 7200.00, '2025-07-21', 0, 'repaid', '2025-07-21 06:44:38', '2025-07-31 06:17:42', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(130, 9, 1, 17280.00, '2025-07-25', 0, 'repaid', '2025-07-27 09:00:07', '2025-08-05 08:10:54', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(131, 38, 1, 4000.00, '2025-07-20', 0, 'repaid', '2025-07-28 14:10:31', '2025-07-28 14:12:00', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(132, 43, 1, 50000.00, '2025-07-29', 0, 'pending', '2025-07-29 16:16:57', '2025-07-30 08:12:18', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(134, 17, 7, 30000.00, '2025-07-30', 0, 'repaid', '2025-07-30 07:39:09', '2025-09-01 18:26:23', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(135, 42, 1, 2400.00, '2025-07-29', 0, 'repaid', '2025-07-30 14:21:37', '2025-08-15 12:23:49', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(136, 34, 1, 12000.00, '2025-07-28', 0, 'repaid', '2025-07-30 15:34:39', '2025-08-07 17:08:07', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(137, 31, 1, 37500.00, '2025-07-30', 0, 'repaid', '2025-07-31 08:43:45', '2025-08-20 07:31:15', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(138, 9, 2, 45000.00, '2025-08-01', 0, 'repaid', '2025-08-01 06:49:04', '2025-09-03 11:13:11', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(139, 15, 7, 30000.00, '2025-08-01', 0, 'repaid', '2025-08-01 10:17:34', '2025-09-02 04:32:37', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(140, 39, 1, 3000.00, '2025-08-02', 0, 'repaid', '2025-08-02 16:04:03', '2025-08-12 18:20:30', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(141, 9, 1, 6000.00, '2025-08-04', 0, 'repaid', '2025-08-05 08:11:38', '2025-08-15 05:33:31', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(142, 40, 1, 3000.00, '2025-07-27', 0, 'repaid', '2025-08-06 05:42:30', '2025-08-14 10:08:00', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(143, 33, 3, 30000.00, '2025-07-30', 0, 'repaid', '2025-08-06 11:01:44', '2025-09-01 18:29:30', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(144, 45, 8, 300000.00, '2025-08-06', 0, 'repaid', '2025-08-06 11:26:02', '2025-08-27 10:40:44', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(145, 7, 2, 3000.00, '2025-08-06', 0, 'repaid', '2025-08-07 03:41:48', '2025-09-08 10:26:04', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(146, 34, 1, 16400.00, '2025-08-08', 0, 'repaid', '2025-08-07 17:08:54', '2025-08-20 07:29:27', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(147, 11, 3, 67953.60, '2025-07-29', 0, 'repaid', '2025-08-07 18:47:45', '2025-08-12 06:51:32', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(148, 29, 1, 15000.00, '2025-08-09', 0, 'repaid', '2025-08-08 10:40:52', '2025-08-21 09:20:35', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(149, 38, 1, 10000.00, '2025-08-09', 0, 'repaid', '2025-08-09 10:25:48', '2025-08-20 10:21:32', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(150, 28, 2, 126547.20, '2025-07-31', 0, 'pending', '2025-08-11 08:06:15', '2025-09-17 07:25:50', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(151, 11, 3, 66545.00, '2025-08-12', 0, 'repaid', '2025-08-12 06:52:11', '2026-03-14 19:58:21', NULL, 13, 'Colleague', 49, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(152, 28, 5, 50700.00, '2025-08-03', 0, 'repaid', '2025-08-12 06:55:08', '2025-09-08 16:38:16', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(156, 39, 1, 10000.00, '2025-08-22', 0, 'repaid', '2025-08-13 04:11:07', '2025-09-08 15:30:31', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(158, 40, 1, 1600.00, '2025-08-06', 0, 'repaid', '2025-08-14 10:09:55', '2025-08-20 06:37:25', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(159, 9, 1, 6000.00, '2025-08-15', 0, 'repaid', '2025-08-15 05:34:14', '2025-08-28 15:08:21', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(160, 48, 1, 5000.00, '2025-08-19', 0, 'pending', '2025-08-19 15:00:21', '2025-08-19 15:00:21', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(161, 45, 8, 50000.00, '2025-08-15', 0, 'repaid', '2025-08-20 05:59:03', '2025-08-27 10:41:08', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(162, 40, 1, 1920.00, '2025-08-17', 0, 'repaid', '2025-08-20 06:38:06', '2025-08-23 06:29:55', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(163, 34, 1, 19680.00, '2025-08-19', 0, 'repaid', '2025-08-20 07:28:25', '2025-09-08 15:36:07', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(164, 29, 1, 18000.00, '2025-08-20', 0, 'repaid', '2025-08-21 09:21:11', '2025-09-04 07:02:54', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(165, 2, 1, 15000.00, '2025-08-22', 0, 'repaid', '2025-08-22 12:56:44', '2025-09-12 13:47:09', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(166, 9, 1, 7200.00, '2025-08-25', 0, 'repaid', '2025-08-28 15:10:28', '2025-09-04 07:38:16', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(167, 35, 1, 50000.00, '2025-08-28', 0, 'repaid', '2025-08-28 15:55:30', '2025-09-08 15:21:55', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(168, 17, 7, 30000.00, '2025-08-30', 0, 'repaid', '2025-09-01 18:27:10', '2025-10-01 07:15:33', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(169, 33, 3, 42000.00, '2025-08-14', 0, 'repaid', '2025-09-01 18:30:13', '2025-09-08 16:34:13', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(170, 15, 7, 30000.00, '2025-09-01', 0, 'repaid', '2025-09-02 04:31:23', '2025-10-01 07:23:06', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(171, 9, 2, 53640.00, '2025-09-02', 0, 'repaid', '2025-09-03 11:14:06', '2025-10-06 08:05:27', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(172, 29, 1, 18000.00, '2025-08-31', 0, 'repaid', '2025-09-04 07:03:32', '2025-09-11 17:51:22', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(173, 9, 1, 7200.00, '2025-09-05', 0, 'repaid', '2025-09-04 07:38:53', '2025-09-16 05:53:59', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(174, 48, 1, 15000.00, '2025-09-08', 0, 'repaid', '2025-09-08 11:04:54', '2025-09-10 07:22:24', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(175, 39, 1, 12000.00, '2025-09-02', 0, 'repaid', '2025-09-08 15:31:29', '2025-09-13 09:18:26', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(176, 34, 1, 23616.00, '2025-08-30', 0, 'repaid', '2025-09-08 15:38:24', '2025-09-10 02:49:32', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(177, 33, 3, 50600.00, '2025-08-29', 0, 'disbursed', '2025-09-08 16:35:25', '2025-09-08 16:35:25', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(178, 28, 5, 65910.00, '2025-09-04', 0, 'repaid', '2025-09-08 16:39:40', '2025-10-14 06:35:35', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(179, 34, 1, 28340.00, '2025-09-10', 0, 'repaid', '2025-09-10 02:50:23', '2025-09-23 03:52:29', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(180, 50, 9, 50000.00, '2025-09-12', 0, 'repaid', '2025-09-10 11:18:10', '2025-12-06 08:42:59', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(181, 41, 3, 40000.00, '2025-09-10', 0, 'repaid', '2025-09-11 10:22:55', '2025-09-25 14:52:00', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(182, 29, 1, 21600.00, '2025-09-11', 0, 'repaid', '2025-09-11 17:52:29', '2025-09-25 04:13:52', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(183, 2, 1, 18000.00, '2025-09-02', 0, 'repaid', '2025-09-12 13:48:39', '2025-09-14 11:07:03', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(184, 39, 1, 10000.00, '2025-09-13', 0, 'repaid', '2025-09-13 09:15:34', '2025-10-03 06:52:15', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(185, 2, 1, 21600.00, '2025-09-13', 0, 'repaid', '2025-09-14 11:07:33', '2025-09-25 10:29:35', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(186, 51, 10, 250000.00, '2025-09-13', 0, 'repaid', '2025-09-15 06:47:07', '2025-12-12 06:37:37', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(187, 35, 1, 40000.00, '2025-09-15', 0, 'repaid', '2025-09-15 08:44:32', '2025-09-25 14:53:31', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(188, 7, 2, 1000.00, '2025-09-08', 0, 'repaid', '2025-09-16 09:27:55', '2025-10-13 11:15:17', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(189, 45, 8, 136000.00, '2025-09-19', 0, 'disbursed', '2025-09-19 08:19:34', '2025-10-09 10:03:41', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(190, 31, 1, 10000.00, '2025-09-21', 0, 'repaid', '2025-09-22 07:03:35', '2025-10-01 07:10:35', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(191, 34, 1, 34008.00, '2025-09-21', 0, 'repaid', '2025-09-23 03:53:51', '2025-10-14 07:41:22', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(192, 35, 1, 40000.00, '2025-09-26', 0, 'repaid', '2025-09-25 14:54:12', '2025-10-05 00:38:40', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(193, 45, 8, 178000.00, '2025-09-29', 1, 'disbursed', '2025-09-29 11:22:47', '2025-10-23 13:12:33', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(194, 50, 1, 10000.00, '2025-09-27', 0, 'repaid', '2025-09-29 11:24:57', '2025-10-06 08:12:10', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(195, 31, 1, 12000.00, '2025-10-02', 0, 'repaid', '2025-10-01 07:11:11', '2025-10-31 07:55:12', NULL, NULL, NULL, 1, 1, '2025-10-02 21:01:08', NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(196, 17, 7, 17000.00, '2025-10-01', 0, 'repaid', '2025-10-01 07:22:02', '2025-11-03 09:24:16', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(197, 15, 7, 23000.00, '2025-10-02', 0, 'repaid', '2025-10-01 07:23:40', '2025-10-27 09:48:40', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(198, 52, 3, 50000.00, '2025-10-01', 0, 'repaid', '2025-10-01 09:12:17', '2025-10-13 12:39:28', NULL, NULL, NULL, 1, 1, '2025-10-01 21:00:06', NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(199, 39, 1, 12000.00, '2025-09-24', 0, 'repaid', '2025-10-03 06:52:56', '2025-10-03 06:54:09', NULL, NULL, NULL, 1, 1, '2025-09-24 21:00:00', NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(200, 39, 1, 14400.00, '2025-10-04', 0, 'disbursed', '2025-10-03 06:55:07', '2025-10-03 06:55:07', NULL, NULL, NULL, 1, 1, '2025-09-25 20:55:03', NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(201, 53, 1, 5000.00, '2025-10-03', 0, 'repaid', '2025-10-03 07:37:33', '2025-10-19 07:33:41', NULL, NULL, NULL, 49, 1, '2025-10-14 20:56:47', NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(202, 2, 1, 10000.00, '2025-10-05', 0, 'repaid', '2025-10-06 07:55:16', '2025-10-09 14:59:08', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(203, 9, 2, 54368.00, '2025-10-02', 0, 'repaid', '2025-10-06 08:10:06', '2025-11-03 14:32:18', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(204, 50, 1, 15000.00, '2025-10-06', 0, 'repaid', '2025-10-06 09:02:10', '2025-10-15 04:06:09', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(205, 54, 1, 50000.00, '2025-10-08', 0, 'repaid', '2025-10-08 06:23:57', '2025-10-22 09:33:43', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(206, 7, 2, 1200.00, '2025-10-08', 0, 'repaid', '2025-10-13 11:16:33', '2025-10-25 08:57:48', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(207, 41, 3, 30000.00, '2025-10-13', 0, 'repaid', '2025-10-13 15:46:13', '2025-10-24 09:01:05', NULL, 1, NULL, 15, 0, NULL, 'emergency', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(208, 28, 12, 55835.00, '2025-09-30', 0, 'disbursed', '2025-10-14 06:40:13', '2025-11-26 04:15:53', NULL, NULL, NULL, 49, 0, NULL, NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(209, 34, 1, 30809.60, '2025-10-01', 0, 'repaid', '2025-10-14 07:42:25', '2025-10-14 07:44:21', NULL, NULL, NULL, 49, 1, '2025-10-10 20:55:29', NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(210, 34, 1, 36972.00, '2025-10-11', 0, 'disbursed', '2025-10-14 07:45:38', '2025-10-14 07:49:06', NULL, 1, 'Friend', 49, 1, '2025-10-14 20:51:26', NULL, NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(211, 50, 1, 20000.00, '2025-10-15', 0, 'repaid', '2025-10-15 04:07:39', '2025-10-26 17:57:02', NULL, 13, 'Friend', 49, 1, '2025-10-15 04:07:39', 'Emergency loan for 10 days', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(212, 21, 1, 100000.00, '2025-10-15', 0, 'repaid', '2025-10-15 11:58:47', '2025-10-28 09:13:54', NULL, 13, 'Collegue', NULL, 0, NULL, 'Outstanding bill', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(213, 29, 1, 10000.00, '2025-10-16', 0, 'repaid', '2025-10-16 16:28:33', '2025-10-27 04:57:35', NULL, NULL, 'Colleague', NULL, 0, NULL, 'Facilitation', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(214, 54, 1, 72000.00, '2025-10-21', 0, 'repaid', '2025-10-22 09:36:22', '2025-11-04 03:46:11', NULL, 13, 'Friend', 49, 1, '2025-10-22 09:36:22', 'roll over for the previous amount paid', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(215, 55, 1, 10000.00, '2025-10-23', 0, 'repaid', '2025-10-23 05:43:05', '2025-11-07 09:40:52', NULL, 13, 'Brother', 49, 1, '2025-10-23 05:43:05', 'Hospital Emergency', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(216, 56, 1, 30000.00, '2025-10-24', 0, 'repaid', '2025-10-24 06:01:04', '2025-11-17 09:29:27', NULL, 13, 'Friend', 49, 0, '2025-10-24 09:20:06', 'Personal Emergency', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(217, 57, 1, 50000.00, '2025-10-31', 0, 'disbursed', '2025-10-24 13:16:46', '2025-10-31 08:29:38', NULL, 2, 'Friend', 49, 1, '2025-10-31 14:35:59', 'Offsetting bills.', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(218, 53, 3, 5000.00, '2025-10-25', 0, 'pending', '2025-10-25 04:48:26', '2025-10-25 04:48:26', NULL, NULL, NULL, NULL, 1, '2025-10-25 04:48:26', 'I need more capital to grow my business profit margins right now it\'s doing okay but if possible if I get some funds the margins will increase', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(219, 53, 1, 3700.00, '2025-10-27', 0, 'repaid', '2025-10-25 06:26:04', '2025-11-07 09:58:31', NULL, NULL, NULL, NULL, 0, NULL, 'I need some more capital foe my business', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(220, 31, 1, 100000.00, '2025-10-24', 0, 'repaid', '2025-10-25 09:01:45', '2025-10-31 07:56:43', NULL, 13, 'Neighbour', 15, 0, NULL, 'Very much needed emergency and sorting KES 100,000 in a day', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(221, 15, 7, 115300.00, '2025-10-27', 0, 'repaid', '2025-10-27 09:50:27', '2025-11-28 18:28:24', NULL, 13, 'Brother', 49, 0, NULL, 'school fees payment', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(222, 50, 1, 25000.00, '2025-10-27', 0, 'repaid', '2025-10-27 10:20:21', '2025-11-07 09:45:53', NULL, 13, 'Friend', NULL, 0, NULL, 'For purchase of good for the farm', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(223, 59, 1, 5000.00, '2025-10-27', 0, 'pending', '2025-10-27 15:24:52', '2025-10-27 15:24:52', NULL, NULL, NULL, NULL, 1, '2025-10-27 15:24:52', 'I need to add some cash to support my business', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(224, 29, 1, 10000.00, '2025-10-27', 0, 'repaid', '2025-10-29 07:11:51', '2025-11-08 08:09:56', NULL, 13, NULL, NULL, 0, NULL, 'Emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(225, 21, 5, 100000.00, '2025-10-29', 0, 'repaid', '2025-10-29 12:42:31', '2025-12-08 05:28:17', NULL, NULL, NULL, NULL, 0, NULL, 'emergency bailout', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(226, 17, 10, 18700.00, '2025-11-02', 0, 'repaid', '2025-11-03 09:25:31', '2026-02-19 10:10:11', NULL, 13, 'Son', 49, 0, NULL, 'roll over from previous loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(227, 2, 1, 10000.00, '2025-11-04', 0, 'repaid', '2025-11-05 13:26:50', '2025-11-19 05:17:04', NULL, 13, 'Friend', 15, 1, '2025-11-05 13:26:50', 'emergency facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(228, 55, 1, 10000.00, '2025-11-03', 0, 'repaid', '2025-11-07 09:42:16', '2025-11-17 09:40:58', NULL, 13, 'Friend', 49, 1, '2025-11-07 09:42:16', 'Roll over from previous loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(229, 50, 1, 25000.00, '2025-11-07', 0, 'repaid', '2025-11-07 09:47:34', '2025-11-17 18:48:33', NULL, 13, 'Friend', 15, 1, '2025-11-07 09:47:34', 'Roll over for previous?', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(230, 53, 1, 3000.00, '2025-11-07', 0, 'repaid', '2025-11-07 09:59:28', '2025-11-19 09:24:28', NULL, NULL, 'Friend', 15, 1, '2025-11-07 09:59:28', 'roll over from previous loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(231, 29, 1, 12000.00, '2025-11-06', 0, 'repaid', '2025-11-08 08:11:10', '2025-11-18 05:02:28', NULL, 15, 'Work Colleague', 1, 1, '2025-11-08 08:11:10', 'roll over from the previous loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(232, 48, 1, 20000.00, '2025-11-10', 0, 'repaid', '2025-11-10 15:18:48', '2025-11-25 07:02:36', NULL, 13, 'Friend', 49, 1, '2025-11-10 15:18:48', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(233, 9, 2, 35241.60, '2025-11-03', 0, 'repaid', '2025-11-10 15:20:47', '2025-12-06 08:56:13', NULL, NULL, NULL, 1, 0, NULL, 'monthly roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(234, 54, 1, 66000.00, '2025-11-01', 0, 'repaid', '2025-11-10 15:23:50', '2025-11-13 17:52:10', NULL, NULL, NULL, NULL, 1, '2025-11-10 15:23:50', 'emergency loan roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(235, 54, 1, 79200.00, '2025-11-10', 0, 'repaid', '2025-11-13 17:53:31', '2025-11-25 10:27:52', NULL, NULL, NULL, 49, 0, NULL, 'Emergency roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(236, 56, 1, 36000.00, '2025-11-03', 0, 'repaid', '2025-11-17 09:31:07', '2025-11-17 09:32:35', NULL, 13, 'Friend', 49, 1, '2025-11-17 09:31:07', 'rolled over 10 days loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(237, 56, 1, 43200.00, '2025-11-13', 0, 'repaid', '2025-11-17 09:33:56', '2025-11-29 14:18:03', NULL, 13, 'Friend', 49, 1, '2025-11-17 09:33:56', 'rolled over 10 days loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(238, 55, 1, 12000.00, '2025-11-13', 0, 'repaid', '2025-11-17 09:42:06', '2025-11-26 19:33:06', NULL, 13, 'Friend', 49, 1, '2025-11-17 09:42:06', 'Emergency loan roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(239, 50, 1, 25000.00, '2025-11-18', 0, 'repaid', '2025-11-17 18:50:45', '2025-11-28 18:25:12', NULL, 13, 'Friend', 49, 1, '2025-11-17 18:50:45', 'roll over of previous loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(240, 29, 1, 14400.00, '2025-11-16', 0, 'repaid', '2025-11-18 05:04:27', '2025-11-28 09:11:58', NULL, NULL, 'Friend', 1, 0, NULL, 'roll over of previous loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(241, 49, 2, 10000.00, '2025-11-18', 0, 'repaid', '2025-11-19 05:09:39', '2026-01-09 07:06:03', NULL, 13, 'Brother', 15, 0, NULL, 'Payment for Good Conduct and NTSA', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(242, 41, 3, 30000.00, '2025-11-18', 0, 'repaid', '2025-11-19 05:21:43', '2025-11-25 07:02:02', NULL, NULL, NULL, 1, 1, '2025-11-19 05:21:43', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(243, 53, 1, 2700.00, '2025-11-17', 0, 'repaid', '2025-11-19 09:25:49', '2025-12-03 04:46:46', NULL, NULL, NULL, 49, 0, NULL, 'Emergency roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(244, 51, 2, 600000.00, '2025-11-22', 0, 'repaid', '2025-11-22 19:26:47', '2025-12-28 09:46:29', NULL, NULL, NULL, 1, 1, '2025-11-22 19:26:47', 'Affordable Housing Marsabit logistics', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(245, 52, 1, 20000.00, '2025-11-22', 0, 'repaid', '2025-11-22 19:28:34', '2025-11-28 07:47:35', NULL, NULL, NULL, 1, 1, '2025-11-22 19:28:34', 'Emergency loan for a friend', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(246, 2, 1, 20000.00, '2025-11-21', 0, 'repaid', '2025-11-22 19:33:43', '2025-12-01 19:12:08', NULL, 13, 'Friend', 15, 0, NULL, 'steph\'s birthday party', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(247, 54, 1, 95040.00, '2025-11-20', 0, 'repaid', '2025-11-25 10:28:41', '2025-12-03 04:31:52', NULL, NULL, NULL, 1, 1, '2025-11-25 10:28:41', 'ROLLED over from previous loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(248, 55, 1, 14400.00, '2025-11-23', 0, 'repaid', '2025-11-26 19:33:56', '2025-12-09 06:24:58', NULL, NULL, NULL, 1, 1, '2025-11-26 19:33:56', 'EMERGENCY ROLL OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(249, 50, 1, 25000.00, '2025-11-28', 0, 'repaid', '2025-11-28 18:26:26', '2025-12-09 06:22:13', NULL, NULL, NULL, 1, 1, '2025-11-28 18:26:26', 'Emergency roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(250, 15, 15, 126830.00, '2025-11-27', 0, 'repaid', '2025-11-28 18:29:57', '2026-03-20 18:22:22', NULL, NULL, NULL, 1, 0, NULL, 'emergency roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(251, 56, 1, 43840.00, '2025-11-23', 0, 'repaid', '2025-11-29 14:19:17', '2025-12-09 06:18:14', NULL, NULL, NULL, 49, 1, '2025-11-29 14:19:17', 'emergency roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(252, 2, 1, 20000.00, '2025-12-01', 0, 'repaid', '2025-12-01 19:12:52', '2025-12-23 07:31:48', NULL, NULL, NULL, 1, 1, '2025-12-01 19:12:52', 'Rolled over from previous loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(253, 54, 1, 114048.00, '2025-11-30', 0, 'repaid', '2025-12-03 04:32:39', '2026-05-29 08:06:53', NULL, 1, 'FRIEND', 49, 1, '2025-12-03 04:32:39', 'Emergency roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(254, 26, 2, 100000.00, '2025-11-24', 0, 'repaid', '2025-12-03 04:43:37', '2025-12-26 08:52:13', NULL, NULL, NULL, 15, 1, '2025-12-03 04:43:37', 'emergency job use', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(255, 53, 1, 2680.00, '2025-11-27', 0, 'repaid', '2025-12-03 04:47:40', '2025-12-15 06:11:10', NULL, NULL, NULL, NULL, 1, '2025-12-03 04:47:40', 'emergency rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(256, 50, 13, 50000.00, '2025-12-06', 0, 'repaid', '2025-12-06 08:45:46', '2026-03-06 12:56:45', NULL, NULL, NULL, 1, 1, '2025-12-06 08:45:46', 'repair of greenhouse in isinya', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(257, 9, 2, 42290.00, '2025-12-03', 0, 'repaid', '2025-12-06 08:54:39', '2026-01-15 16:40:05', NULL, NULL, NULL, NULL, 1, '2025-12-06 08:54:39', 'roll over from previous loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(258, 21, 5, 130000.00, '2025-11-29', 0, 'repaid', '2025-12-08 05:29:12', '2026-01-12 13:25:25', NULL, NULL, NULL, 1, 1, '2025-12-08 05:29:12', 'emergency roll over loan facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(259, 56, 1, 37608.00, '2025-12-03', 0, 'repaid', '2025-12-09 06:18:55', '2025-12-26 09:01:17', NULL, NULL, NULL, 1, 1, '2025-12-09 06:18:55', 'previous loan roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(260, 50, 1, 25000.00, '2025-12-09', 0, 'repaid', '2025-12-09 06:22:55', '2025-12-23 07:29:57', NULL, NULL, NULL, 1, 1, '2025-12-09 06:22:55', 'roll over from previous loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(261, 55, 1, 8780.00, '2025-12-03', 0, 'repaid', '2025-12-09 06:26:57', '2025-12-26 08:57:12', NULL, NULL, NULL, 1, 1, '2025-12-09 06:26:57', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(262, 26, 2, 100000.00, '2025-12-28', 0, 'repaid', '2025-12-26 08:53:48', '2026-02-26 17:58:06', NULL, 13, 'Colleague', 1, 0, NULL, 'emergency loan roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(263, 55, 1, 10536.00, '2025-12-13', 0, 'repaid', '2025-12-26 08:58:13', '2025-12-26 08:59:13', NULL, NULL, NULL, 1, 1, '2025-12-26 08:58:13', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(264, 55, 1, 12643.20, '2025-12-23', 0, 'repaid', '2025-12-26 09:00:07', '2026-01-08 14:16:05', NULL, NULL, NULL, 1, 0, NULL, 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(265, 56, 1, 45129.60, '2025-12-13', 0, 'repaid', '2025-12-26 09:03:12', '2025-12-26 09:10:15', NULL, NULL, NULL, NULL, 0, NULL, 'rolled over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(266, 56, 1, 54155.50, '2025-12-23', 0, 'pending', '2025-12-26 09:05:38', '2026-04-20 08:15:32', NULL, NULL, NULL, 1, 0, NULL, 'rolled over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(267, 62, 1, 5000.00, '2025-12-22', 0, 'repaid', '2025-12-26 18:05:43', '2025-12-26 18:09:31', NULL, NULL, NULL, 15, 1, '2025-12-26 18:05:43', 'emergency facility for salary', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(268, 62, 1, 5000.00, '2025-12-26', 0, 'repaid', '2025-12-26 18:06:44', '2026-01-06 09:23:35', NULL, NULL, NULL, 15, 1, '2025-12-26 18:06:44', 'emergency facility for salary', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(269, 51, 2, 720000.00, '2025-12-22', 0, 'repaid', '2025-12-28 09:47:55', '2026-02-01 19:37:16', NULL, NULL, NULL, 1, 0, NULL, 'Yes... let\'s roll over the loan. Atalipwa 20% at end of Jan.', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(270, 41, 3, 80000.00, '2025-12-29', 0, 'repaid', '2025-12-31 04:36:18', '2026-01-04 09:31:39', NULL, NULL, NULL, 1, 1, '2025-12-31 04:36:18', 'for business emergency', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(271, 53, 2, 6000.00, '2026-01-06', 0, 'pending', '2026-01-02 06:54:02', '2026-07-28 10:03:23', NULL, 13, 'Friend', NULL, 0, NULL, 'Added capital for my business', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(272, 2, 1, 20000.00, '2025-12-26', 0, 'repaid', '2026-01-05 01:59:34', '2026-01-05 02:00:37', NULL, NULL, NULL, 15, 1, '2026-01-05 01:59:34', 'Emergency facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(273, 55, 1, 15171.84, '2026-01-02', 0, 'repaid', '2026-01-08 14:13:15', '2026-01-08 14:15:42', NULL, NULL, NULL, 1, 1, '2026-01-08 14:13:15', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(274, 52, 1, 40000.00, '2026-01-09', 0, 'repaid', '2026-01-09 07:01:46', '2026-01-20 08:03:10', NULL, NULL, NULL, 1, 1, '2026-01-09 07:01:46', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(275, 2, 2, 100000.00, '2026-01-09', 0, 'repaid', '2026-01-12 06:00:36', '2026-02-09 13:39:03', NULL, NULL, NULL, 15, 1, '2026-01-12 06:00:36', 'emergency loan for the month', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(276, 41, 1, 50000.00, '2026-01-09', 0, 'repaid', '2026-01-12 06:04:19', '2026-01-15 16:39:17', NULL, NULL, NULL, 1, 1, '2026-01-12 06:04:19', 'emergency loan 5-10 days', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(277, 48, 1, 35000.00, '2026-01-12', 0, 'repaid', '2026-01-12 07:00:44', '2026-01-20 08:02:39', NULL, NULL, NULL, 1, 1, '2026-01-12 07:00:44', 'china orders', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(278, 13, 10, 100000.00, '2025-12-22', 0, 'repaid', '2026-01-12 07:10:34', '2026-02-09 13:44:54', NULL, NULL, NULL, NULL, 0, NULL, 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(279, 21, 5, 169000.00, '2025-12-31', 0, 'repaid', '2026-01-12 13:27:03', '2026-02-18 05:26:27', NULL, NULL, NULL, NULL, 0, NULL, 'Emergency roll over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(280, 9, 2, 50748.00, '2026-01-03', 0, 'repaid', '2026-01-15 16:41:01', '2026-02-18 05:34:39', NULL, NULL, NULL, 1, 1, '2026-01-15 16:41:01', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(281, 38, 1, 6000.00, '2026-01-16', 0, 'repaid', '2026-01-16 13:43:08', '2026-01-22 07:32:02', NULL, NULL, NULL, 1, 1, '2026-01-16 13:43:08', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(282, 65, 1, 250000.00, '2026-01-21', 0, 'repaid', '2026-01-21 14:23:34', '2026-02-03 14:41:38', NULL, 13, 'Friend', 15, 1, '2026-01-21 10:52:47', 'Emergency contact', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(283, 62, 1, 8000.00, '2026-01-22', 0, 'repaid', '2026-01-27 15:13:33', '2026-02-11 10:01:29', NULL, NULL, NULL, 15, 1, '2026-01-27 15:13:33', 'emergency facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(285, 2, 14, 30000.00, '2026-01-26', 0, 'repaid', '2026-01-29 08:25:29', '2026-01-29 08:26:42', NULL, NULL, NULL, 15, 1, '2026-01-29 08:25:29', 'emergency loan 1 day', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(286, 2, 1, 8000.00, '2026-01-29', 0, 'repaid', '2026-01-29 08:27:58', '2026-02-09 13:38:21', NULL, NULL, NULL, 15, 0, NULL, 'Emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(287, 26, 2, 100000.00, '2026-01-26', 0, 'repaid', '2026-01-29 10:08:54', '2026-02-26 17:58:54', NULL, NULL, NULL, 15, 0, NULL, 'roll over emergency', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(288, 51, 2, 364000.00, '2026-01-22', 0, 'repaid', '2026-02-01 19:38:18', '2026-03-08 13:55:57', NULL, NULL, NULL, NULL, 0, NULL, 'rolled over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(289, 65, 1, 300000.00, '2026-01-31', 0, 'repaid', '2026-02-03 14:42:30', '2026-02-17 13:46:53', NULL, NULL, NULL, 15, 1, '2026-02-03 14:42:30', 'Roll over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(290, 3, 14, 100000.00, '2026-02-05', 0, 'repaid', '2026-02-09 13:30:31', '2026-02-09 13:36:43', NULL, 13, 'Friend', 15, 0, NULL, 'emergency brokered loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(291, 2, 5, 65560.00, '2026-02-09', 0, 'repaid', '2026-02-09 13:40:18', '2026-03-12 11:18:49', NULL, NULL, NULL, NULL, 0, NULL, 'ROLLED over 1 more month', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(292, 52, 1, 100000.00, '2026-02-08', 0, 'repaid', '2026-02-09 13:42:05', '2026-02-21 21:12:59', NULL, NULL, NULL, NULL, 0, NULL, 'Emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0);
+INSERT INTO `loans` (`id`, `user_id`, `loan_type_id`, `amount`, `borrow_date`, `broker_status`, `status`, `created_at`, `updated_at`, `deleted_at`, `guarantor_id`, `guarantor_relationship`, `loan_officer_id`, `consent`, `consent_date`, `reason`, `due_date`, `is_non_performing`, `default_date`, `days_overdue`, `last_overdue_check`, `default_triggered`, `calculated_due_date`, `npl_trigger_threshold`) VALUES
+(293, 13, 15, 252000.00, '2026-02-05', 0, 'repaid', '2026-02-09 13:46:57', '2026-05-05 17:14:33', NULL, NULL, NULL, NULL, 0, NULL, 'New house rent 252000 - 75000 stipend', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(299, 13, 15, 50000.00, '2026-06-09', 0, 'disbursed', '2026-02-09 17:39:49', '2026-06-14 03:10:37', NULL, NULL, NULL, NULL, 0, NULL, '65789 fghjkjlk hjklk', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(300, 13, 2, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:47:21', '2026-02-09 17:47:21', NULL, NULL, NULL, NULL, 1, '2026-02-09 17:47:21', '65789 fghjkjlk hjklk', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(301, 13, 2, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:47:52', '2026-02-09 17:47:52', NULL, NULL, NULL, NULL, 1, '2026-02-09 17:47:52', '65789 fghjkjlk hjklk', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(302, 13, 1, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:49:25', '2026-02-09 17:49:25', NULL, NULL, NULL, NULL, 1, '2026-02-09 17:49:25', 'iojhgkjbnn ifhiloj;l', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(303, 13, 1, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 17:54:40', '2026-02-09 17:54:40', NULL, NULL, NULL, NULL, 1, '2026-02-09 17:54:39', 'iojhgkjbnn ifhiloj;l', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(304, 13, 1, 1.00, '2026-02-09', 0, 'pending', '2026-02-09 18:06:23', '2026-02-09 18:06:23', NULL, NULL, NULL, NULL, 1, '2026-02-09 18:06:23', 'iuytgkjvn jk', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(307, 3, 1, 150000.00, '2026-02-11', 0, 'repaid', '2026-02-11 16:36:36', '2026-02-24 15:56:27', NULL, NULL, NULL, NULL, 1, '2026-02-11 16:36:36', 'brokered loans', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(308, 50, 2, 15000.00, '2026-02-16', 0, 'repaid', '2026-02-17 13:40:07', '2026-04-08 05:54:18', NULL, NULL, NULL, NULL, 1, '2026-02-17 13:40:07', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(309, 3, 1, 12000.00, '2026-02-13', 0, 'repaid', '2026-02-17 13:45:43', '2026-02-24 15:57:31', NULL, NULL, NULL, NULL, 1, '2026-02-17 13:45:43', 'emergency client lan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(310, 65, 1, 360000.00, '2026-02-10', 0, 'repaid', '2026-02-17 13:47:39', '2026-03-06 12:59:17', NULL, NULL, NULL, NULL, 1, '2026-02-17 13:47:39', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(311, 21, 5, 219700.00, '2026-01-31', 0, 'repaid', '2026-02-18 05:27:29', '2026-03-04 06:05:40', NULL, NULL, NULL, 1, 1, '2026-02-18 05:27:29', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(312, 9, 2, 60897.60, '2026-02-18', 0, 'repaid', '2026-02-18 05:35:31', '2026-04-02 05:16:16', NULL, NULL, NULL, 1, 1, '2026-02-18 05:35:31', 'rolled over again', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(313, 67, 1, 5000.00, '2026-02-18', 0, 'repaid', '2026-02-18 09:00:21', '2026-02-27 17:05:12', NULL, NULL, NULL, 15, 1, '2026-02-18 09:00:21', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(314, 68, 1, 30000.00, '2026-02-16', 0, 'repaid', '2026-02-19 09:20:01', '2026-02-26 17:20:28', NULL, 48, 'Friend', 1, 1, '2026-02-19 09:20:01', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(315, 31, 1, 50000.00, '2026-02-09', 0, 'repaid', '2026-02-19 09:39:32', '2026-02-19 09:40:36', NULL, NULL, NULL, 1, 0, NULL, 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(316, 31, 1, 160000.00, '2026-02-18', 0, 'repaid', '2026-02-19 09:41:38', '2026-02-27 19:31:32', NULL, NULL, NULL, 1, 0, NULL, 'emergency funds 70k + roll over 30k', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(317, 41, 2, 100000.00, '2026-02-19', 0, 'repaid', '2026-02-19 10:01:24', '2026-02-28 10:22:28', NULL, NULL, NULL, 1, 0, NULL, 'Hey uko poa? Please Top me up 100k in my back  account to be paid back next week. I need to pay suppliers asap', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(318, 69, 1, 4000.00, '2026-02-19', 0, 'repaid', '2026-02-19 10:06:48', '2026-03-25 11:38:15', NULL, NULL, NULL, 1, 0, NULL, 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(319, 52, 1, 40000.00, '2026-02-20', 0, 'repaid', '2026-02-21 21:14:12', '2026-02-26 06:41:37', NULL, NULL, NULL, 1, 1, '2026-02-21 21:14:12', 'roll over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(320, 70, 1, 2000.00, '2026-02-18', 0, 'repaid', '2026-02-23 14:09:11', '2026-03-14 19:48:28', NULL, NULL, NULL, 1, 1, '2026-02-23 14:09:11', '1000 + 1000 due on 28th Feb', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(321, 3, 14, 181248.00, '2026-02-22', 0, 'repaid', '2026-02-24 16:04:45', '2026-03-03 06:40:19', NULL, NULL, NULL, 1, 1, '2026-02-24 16:04:45', 'Rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(322, 26, 2, 100000.00, '2026-02-26', 0, 'repaid', '2026-02-26 18:00:03', '2026-04-02 04:49:56', NULL, NULL, NULL, 15, 1, '2026-02-26 18:00:03', 'roll over and to be paid in 4 tranches', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(323, 31, 1, 192000.00, '2026-02-28', 0, 'repaid', '2026-02-27 19:33:49', '2026-03-06 12:56:13', NULL, NULL, NULL, 15, 1, '2026-02-27 19:33:49', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(324, 3, 3, 150000.00, '2026-02-27', 0, 'repaid', '2026-03-03 06:42:10', '2026-03-14 19:49:56', NULL, NULL, NULL, 1, 1, '2026-03-03 06:42:10', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(325, 21, 2, 285610.00, '2026-03-03', 0, 'repaid', '2026-03-04 06:06:40', '2026-04-13 16:42:26', NULL, NULL, NULL, 1, 1, '2026-03-04 06:06:40', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(326, 62, 1, 3500.00, '2026-03-04', 0, 'repaid', '2026-03-04 07:39:24', '2026-04-04 11:05:46', NULL, NULL, NULL, 1, 1, '2026-03-04 07:39:24', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(327, 29, 1, 15000.00, '2026-03-03', 0, 'repaid', '2026-03-04 07:48:59', '2026-03-14 19:53:12', NULL, NULL, NULL, 1, 1, '2026-03-04 07:48:59', 'emergency lon', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(328, 53, 1, 3000.00, '2026-03-06', 0, 'repaid', '2026-03-06 10:13:12', '2026-03-12 11:24:05', NULL, NULL, NULL, 1, 1, '2026-03-06 10:13:12', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(329, 50, 3, 55000.00, '2026-03-06', 0, 'repaid', '2026-03-06 12:57:32', '2026-04-15 10:24:29', NULL, NULL, NULL, 1, 1, '2026-03-06 12:57:32', 'rolled over for ramadhan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(330, 65, 1, 432000.00, '2026-02-20', 0, 'repaid', '2026-03-06 13:02:18', '2026-03-06 13:03:28', NULL, NULL, NULL, 15, 1, '2026-03-06 13:02:18', 'rolled over due to non-payment', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(331, 65, 1, 518400.00, '2026-03-02', 0, 'disbursed', '2026-03-06 13:04:24', '2026-03-06 13:04:24', NULL, NULL, NULL, 1, 1, '2026-03-06 13:04:24', 'rolled over due to lying and non-payment', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(332, 68, 1, 20000.00, '2026-03-08', 0, 'repaid', '2026-03-08 13:57:33', '2026-03-19 05:17:03', NULL, NULL, NULL, 1, 1, '2026-03-08 13:57:33', 'FOR a phone', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(333, 48, 1, 15000.00, '2026-03-08', 0, 'repaid', '2026-03-08 13:59:09', '2026-03-19 05:16:34', NULL, NULL, NULL, 1, 1, '2026-03-08 13:59:09', 'emergency float', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(334, 71, 14, 50000.00, '2026-03-07', 0, 'repaid', '2026-03-08 14:01:06', '2026-03-12 11:17:58', NULL, NULL, NULL, 1, 1, '2026-03-08 14:01:06', 'emergency loan facility for 5 days', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(335, 2, 5, 85228.00, '2026-03-09', 0, 'repaid', '2026-03-12 11:21:50', '2026-04-17 18:16:19', NULL, NULL, NULL, 15, 1, '2026-03-12 11:21:50', 'rolled over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(336, 53, 1, 2000.00, '2026-03-12', 0, 'repaid', '2026-03-13 08:14:46', '2026-03-18 16:36:16', NULL, NULL, NULL, 1, 1, '2026-03-13 08:14:46', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(337, 41, 1, 50000.00, '2026-03-15', 0, 'repaid', '2026-03-14 19:46:05', '2026-03-26 20:58:07', NULL, NULL, NULL, 1, 0, NULL, 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(338, 29, 1, 18000.00, '2026-03-13', 0, 'repaid', '2026-03-14 19:54:06', '2026-03-24 14:35:05', NULL, NULL, NULL, 1, 1, '2026-03-14 19:54:06', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(339, 11, 1, 37500.00, '2026-03-13', 0, 'repaid', '2026-03-14 20:02:29', '2026-03-24 19:28:31', NULL, NULL, NULL, 1, 0, NULL, 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(340, 62, 1, 6000.00, '2026-02-20', 0, 'repaid', '2026-03-15 18:43:08', '2026-03-15 18:47:02', NULL, NULL, NULL, 1, 1, '2026-03-15 18:43:08', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(341, 62, 1, 7200.00, '2026-03-02', 0, 'repaid', '2026-03-15 18:47:37', '2026-03-15 18:48:37', NULL, NULL, NULL, 1, 1, '2026-03-15 18:47:37', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(342, 62, 1, 8640.00, '2026-03-12', 0, 'repaid', '2026-03-15 18:49:24', '2026-04-04 11:10:34', NULL, NULL, NULL, 1, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(343, 72, 1, 10000.00, '2026-03-16', 0, 'repaid', '2026-03-16 15:15:01', '2026-03-26 20:56:19', NULL, NULL, NULL, 1, 1, '2026-03-16 15:15:01', 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(344, 53, 1, 5000.00, '2026-03-18', 0, 'repaid', '2026-03-19 05:18:26', '2026-03-29 16:42:41', NULL, NULL, NULL, 1, 1, '2026-03-19 05:18:26', 'Bank to M-PESA transfer of KES 5,000.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 3816TGLK5577. M-PESA Ref ID: UCI6B9O9OT\r\n\r\nTsuma 10 days 20% due March 28th', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(345, 2, 1, 30000.00, '2026-03-18', 0, 'repaid', '2026-03-19 07:14:22', '2026-04-02 05:07:20', NULL, NULL, NULL, 15, 1, '2026-03-19 07:14:22', 'UCH9X9PH8Y Confirmed. Ksh30,000.00 sent to Edward  Kipsanai 0710920629 on 17/3/26 at 2:10 PM.', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(346, 48, 1, 5000.00, '2026-03-19', 0, 'repaid', '2026-03-20 15:14:52', '2026-03-26 06:04:45', NULL, NULL, NULL, 1, 0, NULL, 'emergency loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(347, 31, 1, 50000.00, '2026-02-28', 0, 'repaid', '2026-03-20 15:21:35', '2026-07-13 08:54:27', NULL, NULL, NULL, 1, 1, '2026-03-20 15:21:35', 'Kengen are paying me today we have nothing however next week it’s done plus the interest I always pay when I’m stuck it’s just a payment issue. So now $34K being paid on Wednesday I will sort you. I have just said Wednesday coz of any issues one thing you see I pay I cannot default on 50K plus interest. I humbly ask you work with me I cannot default share all documentation for the same you see I can put you in my account. Chief I’m humble and asking kindly give me to then funds are being disbursed however I don’t have anything with banks on disbursing your chums is guaranteed next week those funds are paying my rent and my everything $34K is good money', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(349, 15, 15, 114439.80, '2026-02-27', 0, 'repaid', '2026-03-20 18:24:30', '2026-05-28 06:26:49', NULL, NULL, NULL, 1, 1, '2026-03-20 18:24:30', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(350, 50, 1, 8000.00, '2026-03-24', 0, 'repaid', '2026-03-25 07:28:16', '2026-04-02 05:09:52', NULL, NULL, NULL, 1, 1, '2026-03-25 07:28:16', 'Bank to M-PESA transfer of KES 8,000.00 to 254721544928 - Mohamed Abdirahim Abdi successfully processed. Transaction Ref ID: 3864TTHG3204. M-PESA Ref ID: UCOGCABJKN\r\n\r\n10 days at 20% facility to be paid earliest before 10 days as KES 9,600', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(351, 68, 1, 10000.00, '2026-03-25', 0, 'repaid', '2026-03-25 07:30:42', '2026-04-05 09:21:56', NULL, NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 10,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 3872ZVOL8239. M-PESA Ref ID: UCPBMAL8MF\r\n\r\n10 days 20% payable on 3rd April', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(352, 7, 2, 1500.00, '2026-03-25', 0, 'repaid', '2026-03-25 07:54:35', '2026-05-01 15:48:02', NULL, NULL, NULL, 1, 0, NULL, 'UCP6OABVYQ Confirmed. KSH. 1,500 sent to Keneth Owino,  via MySafaricom App on 25-03-2026 11:15.', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(353, 72, 1, 10000.00, '2026-03-26', 0, 'repaid', '2026-03-26 20:57:06', '2026-04-05 15:42:55', NULL, NULL, NULL, 1, 1, '2026-03-26 20:57:06', 'rolled over loan for 5 days', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(354, 29, 1, 20000.00, '2026-03-26', 0, 'repaid', '2026-03-27 08:35:47', '2026-04-08 06:05:43', NULL, NULL, NULL, 1, 1, '2026-03-27 08:35:47', 'Bank to M-PESA transfer of KES 20,000.00 to 254721655906 - OTIENO NIGEL successfully processed. Transaction Ref ID: 3883JNTY9707. M-PESA Ref ID: UCQKBAE0DG', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(355, 53, 1, 1000.00, '2026-03-27', 0, 'repaid', '2026-03-29 16:48:58', '2026-04-08 06:09:41', NULL, NULL, NULL, 1, 1, '2026-03-29 16:48:58', 'UCR6OAKFLQ Confirmed. KSH. 1,000 sent to EMMANUEL TSUMA,  via MySafaricom App on 27-03-2026 14:35.', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(356, 67, 1, 5000.00, '2026-03-28', 0, 'repaid', '2026-03-29 16:50:57', '2026-04-13 16:38:31', NULL, NULL, NULL, 1, 1, '2026-03-29 16:50:57', 'Bank to M-PESA transfer of KES 5,000.00 to 254700742394 - MICHAEL NZUKA MUSYIMI successfully processed. Transaction Ref ID: 3902DEVE0397. M-PESA Ref ID: UCSOIB1OMC', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(357, 68, 1, 45000.00, '2026-03-30', 0, 'repaid', '2026-03-29 16:54:56', '2026-04-14 06:39:52', NULL, NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 45,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 3907OPGV8266. M-PESA Ref ID: UCTBMB1ZDN', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(358, 31, 1, 10000.00, '2026-03-27', 0, 'repaid', '2026-03-29 17:14:25', '2026-07-13 08:52:30', NULL, NULL, NULL, 1, 0, NULL, 'Dear DENNIS, MPESA transfer of KES 10000 to LEON MUSAU-254720747652 at 27-03-2026 10:05 PM was successful.MPESA Ref:UCR4AB9NS5.\r\n\r\nRepayable on Monday as KES 12000', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(359, 58, 14, 10000.00, '2026-04-01', 0, 'repaid', '2026-04-02 04:47:36', '2026-04-04 11:13:51', NULL, NULL, NULL, 1, 1, '2026-04-02 04:47:36', 'Bank to M-PESA transfer of KES 10,000.00 to 254722778298 - VIVIAN NEKESA SIMIYU successfully processed. Transaction Ref ID: 3936JYNW2747. M-PESA Ref ID: UD132BBR99', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(360, 26, 2, 100000.00, '2026-03-26', 0, 'repaid', '2026-04-02 04:57:05', '2026-05-15 07:24:07', NULL, NULL, NULL, 15, 1, '2026-04-02 04:57:05', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(361, 53, 1, 3200.00, '2026-03-31', 0, 'repaid', '2026-04-02 04:59:02', '2026-04-13 16:27:29', NULL, NULL, NULL, 1, 1, '2026-04-02 04:59:02', 'Bank to M-PESA transfer of KES 3,200.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 3926CFQD3972. M-PESA Ref ID: UCV6BB0M8H\r\n\r\nDue in 10 days 20%', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(362, 11, 1, 5000.00, '2026-03-31', 0, 'repaid', '2026-04-02 05:01:37', '2026-04-13 16:22:56', NULL, NULL, NULL, 1, 1, '2026-04-02 05:01:37', 'Bank to M-PESA transfer of KES 5,000.00 to 254724606690 - SHADRACK CHERUIYOT successfully processed. Transaction Ref ID: 3936VBGY2825. M-PESA Ref ID: UD1HDBDUSY', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(363, 2, 1, 25000.00, '2026-03-30', 0, 'repaid', '2026-04-02 05:08:26', '2026-04-17 18:13:28', NULL, NULL, NULL, 15, 1, '2026-04-02 05:08:26', 'UCU9XB5HFB Confirmed. Ksh25,000.00 sent to Edward  Kipsanai 0710920629 on 30/3/26 at 6:35 PM.', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(364, 9, 2, 73077.12, '2026-03-18', 0, 'repaid', '2026-04-02 05:17:32', '2026-05-15 07:32:36', NULL, NULL, NULL, 1, 0, NULL, 'rolled over facility because of an office scandal and no payment for a month', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(365, 48, 1, 25000.00, '2026-04-04', 0, 'repaid', '2026-04-04 10:58:42', '2026-04-18 18:09:11', NULL, NULL, NULL, 1, 1, '2026-04-04 10:58:42', 'Bank to M-PESA transfer of KES 25,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 3960XHRB9386. M-PESA Ref ID: UD4ALBIZKO\r\n\r\nDue in 10 days at 20% interest \r\n\r\nPayable on or before 14/4/2026 KES 30,000', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(366, 62, 1, 4200.00, '2026-03-14', 0, 'repaid', '2026-04-04 11:06:48', '2026-04-04 11:07:35', NULL, NULL, NULL, 1, 1, '2026-04-04 11:06:48', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(367, 62, 1, 5040.00, '2026-03-24', 0, 'repaid', '2026-04-04 11:08:07', '2026-04-13 17:18:59', NULL, NULL, NULL, 1, 1, '2026-04-04 11:08:07', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(368, 62, 1, 10368.00, '2026-03-21', 0, 'repaid', '2026-04-04 11:10:14', '2026-04-13 17:17:21', NULL, NULL, NULL, 1, 1, '2026-04-04 11:10:14', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(369, 72, 1, 10000.00, '2026-04-05', 0, 'repaid', '2026-04-05 15:43:36', '2026-04-16 15:07:20', NULL, 68, NULL, 1, 1, '2026-04-05 15:43:36', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(370, 29, 1, 24000.00, '2026-04-05', 0, 'repaid', '2026-04-08 06:06:39', '2026-04-16 15:00:18', NULL, NULL, NULL, 1, 1, '2026-04-08 06:06:39', '[21:48, 07/04/2026] Dennis Kibet: We will have to roll over\r\n[22:41, 07/04/2026] Nigel Cecil Otieno Loans Client: Niaje, nikama itabidi', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(371, 53, 1, 1500.00, '2026-04-08', 0, 'repaid', '2026-04-08 06:12:05', '2026-04-20 07:41:07', NULL, NULL, NULL, 1, 1, '2026-04-08 06:12:05', 'Bank to M-PESA transfer of KES 1,500.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 3993UINQ7428. M-PESA Ref ID: UD86BBWAX7', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(372, 11, 1, 5000.00, '2026-04-10', 0, 'repaid', '2026-04-13 16:24:48', '2026-04-21 04:04:50', NULL, NULL, NULL, 1, 0, NULL, 'roll over for the next 10 days', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(373, 53, 1, 3040.00, '2026-04-10', 0, 'repaid', '2026-04-13 16:30:11', '2026-04-22 06:42:33', NULL, NULL, NULL, 1, 1, '2026-04-13 16:30:11', 'rolled over for the next 10 days', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(374, 21, 2, 342732.00, '2026-04-03', 0, 'repaid', '2026-04-13 16:43:27', '2026-05-08 07:19:00', NULL, NULL, NULL, 1, 1, '2026-04-13 16:43:27', 'rolled over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(375, 62, 1, 18489.00, '2026-03-31', 0, 'repaid', '2026-04-13 17:18:24', '2026-04-13 17:23:12', NULL, NULL, NULL, 1, 0, NULL, 'roll over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(376, 62, 1, 22186.80, '2026-04-10', 0, 'repaid', '2026-04-13 17:24:58', '2026-04-22 06:40:46', NULL, NULL, NULL, 1, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(377, 64, 1, 10000.00, '2026-04-15', 0, 'repaid', '2026-04-15 10:11:31', '2026-04-27 04:58:17', NULL, NULL, NULL, 1, 1, '2026-04-15 10:11:31', 'UDFAI12TXH Confirmed. You have received Ksh10,000.00 from IM BANK LIMITED- APP on 15/4/26 at 2:35 PM. New M-PESA balance is Ksh10,392.57. Buy goods with M-PESA.', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(378, 67, 1, 7500.00, '2026-04-14', 0, 'repaid', '2026-04-15 10:20:49', '2026-04-23 06:21:46', NULL, NULL, NULL, 1, 1, '2026-04-15 10:20:49', 'Bank to M-PESA transfer of KES 7,500.00 to 254700742394 - MICHAEL NZUKA MUSYIMI successfully processed. Transaction Ref ID: 4049LFRF6379. M-PESA Ref ID: UDEOI142NU', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(379, 68, 1, 10000.00, '2026-04-15', 0, 'repaid', '2026-04-15 10:22:37', '2026-05-01 15:29:23', NULL, 48, 'Friend', 1, 1, '2026-04-15 10:22:37', 'Bank to M-PESA transfer of KES 10,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 4055ZDCU6256. M-PESA Ref ID: UDFBM13SLE', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(380, 50, 13, 66000.00, '2026-03-20', 0, 'repaid', '2026-04-15 10:25:47', '2026-07-01 11:48:50', NULL, NULL, NULL, 1, 0, NULL, 'roll over facility for 3 months', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(381, 72, 1, 10000.00, '2026-04-15', 0, 'repaid', '2026-04-16 15:08:27', '2026-05-01 15:32:46', NULL, 68, 'Friend', 1, 1, '2026-04-16 15:08:27', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(382, 2, 1, 30000.00, '2026-04-09', 0, 'repaid', '2026-04-17 18:14:40', '2026-04-22 07:01:57', NULL, NULL, NULL, 15, 1, '2026-04-17 18:14:40', 'rolled over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(383, 2, 5, 110796.40, '2026-04-09', 0, 'repaid', '2026-04-17 18:17:37', '2026-05-15 08:01:56', NULL, NULL, NULL, 15, 0, NULL, 'Rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(384, 11, 1, 6000.00, '2026-04-20', 0, 'repaid', '2026-04-21 04:05:45', '2026-05-01 15:16:21', NULL, NULL, NULL, 1, 1, '2026-04-21 04:05:45', '[09:03, 21/04/2026] Dennis Kibet: We roll over?\r\n[09:04, 21/04/2026] Shady Kip Cheruiyot eCitizen: Yew sir, currently it\'s bad\r\n[09:04, 21/04/2026] Dennis Kibet: Sawa chief, you will sort when paid', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(385, 68, 1, 20000.00, '2026-04-20', 0, 'repaid', '2026-04-22 06:45:45', '2026-05-05 09:45:49', NULL, NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 15,000.00 to 254791733405 - DEBORAH FAITH MURGOR successfully processed. Transaction Ref ID: 4102UYKB3384. M-PESA Ref ID: UDKBM1Q6KM\r\n\r\nPayable 30/4/2016 as KES 18,000', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(386, 70, 1, 1000.00, '2026-04-22', 0, 'repaid', '2026-04-22 07:00:21', '2026-05-08 09:42:20', NULL, NULL, NULL, 1, 1, '2026-04-22 07:00:21', 'Bank to M-PESA transfer of KES 1,000.00 to 0725408209 - nigel kimutai yegon successfully processed. Transaction Ref ID: 4114DTIN9494. M-PESA Ref ID: UDMIT1JYA4 \r\n\r\n10 DAYS 20% INTEREST FACILITY \r\nPayable on or before 1st May as KES 1200', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(387, 2, 1, 10000.00, '2026-04-22', 0, 'repaid', '2026-04-23 05:54:09', '2026-05-05 10:25:03', NULL, NULL, NULL, 15, 1, '2026-04-23 05:54:09', 'UDM9X1UI8J Confirmed. Ksh10,000.00 sent to Edward  Kipsanai 0710920629 on 22/4/26 at 12:57 PM.', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(388, 58, 1, 10000.00, '2026-04-23', 0, 'repaid', '2026-04-23 06:52:30', '2026-05-06 15:22:06', NULL, NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 10,000.00 to 254722778298 - VIVIAN NEKESA SIMIYU successfully processed. Transaction Ref ID: 4124CXRR4189. M-PESA Ref ID: UDN321V2ZZ\r\n\r\n5 days 11k', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(389, 53, 1, 5000.00, '2026-04-23', 0, 'repaid', '2026-04-26 06:43:02', '2026-05-05 10:15:28', NULL, NULL, NULL, 1, 1, '2026-04-26 06:43:02', 'Bank to M-PESA transfer of KES 3,300.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4125JYFE4889. M-PESA Ref ID: UDN6B1PHVO\r\n\r\nPayable 3rd May 2026 as KES 3,960\r\n\r\nBank to M-PESA transfer of KES 1,700.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4127SODY1166. M-PESA Ref ID: UDN6B1RC19\r\n\r\n5k total', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(390, 64, 1, 3000.00, '2026-04-25', 0, 'repaid', '2026-04-27 05:00:23', '2026-05-07 06:39:33', NULL, NULL, NULL, 1, 0, NULL, '[18:36, 26/04/2026] Judy Kerebi: Hi\r\n[18:36, 26/04/2026] Dennis Kibet: Umemanage?\r\n[18:36, 26/04/2026] Judy Kerebi: Just roll it over\r\n[18:36, 26/04/2026] Judy Kerebi: Umemanage?\r\nNaaah', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(391, 11, 1, 7200.00, '2026-04-30', 0, 'repaid', '2026-05-01 15:17:21', '2026-05-15 07:26:27', NULL, NULL, NULL, 1, 1, '2026-05-01 15:17:21', '[16:08, 30/04/2026] Dennis Kibet: Hey\r\n[16:08, 30/04/2026] Dennis Kibet: 7,200 due today\r\n[05:20, 01/05/2026] Shady Kip Cheruiyot eCitizen: Is it possible we roll over once again things are not good from my side, hii nikutafutie hiyo interest ya juu', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(392, 68, 1, 5400.00, '2026-04-27', 0, 'repaid', '2026-05-01 15:31:20', '2026-05-08 07:16:16', NULL, NULL, NULL, 1, 1, '2026-05-01 15:31:20', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(393, 7, 2, 1800.00, '2026-04-25', 0, 'repaid', '2026-05-01 15:52:39', '2026-05-27 06:14:03', NULL, NULL, NULL, 15, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(394, 58, 1, 5000.00, '2026-04-25', 0, 'repaid', '2026-05-02 13:21:26', '2026-05-05 09:42:20', NULL, NULL, NULL, 1, 1, '2026-05-02 13:21:26', 'Please NEVER share your PIN, PASSWORD, any codes or CARD details with ANYONE! not even people who may claim to be bank staff. Ref:ABFFAF765026: Dear DENNIS, MPESA transfer of KES 5000 to SAMMY MWASHIGHADI MWAMBURI-0112952244 at 25-04-2026 01:39 PM was successful.MPESA Ref:UDP5B28S4C', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(395, 29, 3, 35000.00, '2026-05-02', 0, 'repaid', '2026-05-02 14:43:56', '2026-05-19 10:19:50', NULL, NULL, NULL, 1, 1, '2026-05-02 14:43:56', 'Bank to M-PESA transfer of KES 35,000.00 to 254721655906 - OTIENO NIGEL successfully processed. Transaction Ref ID: 4204OKRD2406. M-PESA Ref ID: UE2KB2NLQH\r\n\r\n14 days 20% to be paid on or befofr 16th May 2026 as KES 42,000', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(396, 73, 3, 50000.00, '2026-05-02', 0, 'repaid', '2026-05-05 10:06:22', '2026-05-16 17:32:07', NULL, 52, 'Friend', 1, 0, NULL, 'Bank to M-PESA transfer of KES 50,000.00 to 254705254257 - MARION CLARE CHEROP successfully processed. Transaction Ref ID: 4204WKPF2468. M-PESA Ref ID: UE28O30YKZ\r\n\r\nI Anita Nanyokie ID No 37489362 Pledge 50000 loan to be paid in 2 weeks and failure to pay will attract a 10% penalty daily until the facility is settled and should the facility go bad, recovery measures at your own cost will take effect', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(397, 53, 1, 3000.00, '2026-05-04', 0, 'repaid', '2026-05-05 10:16:53', '2026-05-16 17:34:12', NULL, NULL, NULL, 1, 1, '2026-05-05 10:16:53', 'Bank to M-PESA transfer of KES 3,000.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4221LRVG6821. M-PESA Ref ID: UE46B2ZWG1', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(398, 53, 3, 7000.00, '2026-05-04', 0, 'repaid', '2026-05-05 10:19:13', '2026-05-19 10:12:48', NULL, NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 6,000.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4223GMLX1416. M-PESA Ref ID: UE46B30ZNW\r\n\r\n2nd facility for 14 days', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(399, 2, 16, 25000.00, '2026-05-04', 0, 'repaid', '2026-05-05 10:32:45', '2026-05-15 07:53:56', NULL, NULL, NULL, 15, 0, NULL, 'UE49X38M5M Confirmed. Ksh25,000.00 sent to Edward  Kipsanai 0710920629 on 4/5/26 at 11:17 AM.', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(400, 64, 1, 3600.00, '2026-05-06', 0, 'repaid', '2026-05-07 06:40:23', '2026-05-19 10:06:10', NULL, NULL, NULL, 1, 1, '2026-05-07 06:40:23', 'rolled over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(401, 52, 1, 75000.00, '2026-05-07', 0, 'repaid', '2026-05-08 07:17:31', '2026-05-20 06:47:52', NULL, NULL, NULL, 1, 1, '2026-05-08 07:17:31', 'Bank to M-PESA transfer of KES 75,000.00 to 254705254257 - MARION CLARE CHEROP successfully processed. Transaction Ref ID: 4247ZUJJ2691. M-PESA Ref ID: UE78O3LYYG\r\n\r\nFacility for 10 days 20% due on 17th May 2026', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(402, 21, 2, 411278.40, '2026-05-03', 0, 'repaid', '2026-05-08 07:20:14', '2026-06-08 09:36:53', NULL, NULL, NULL, 1, 0, NULL, 'rolled over awaiting cash', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(403, 70, 1, 1200.00, '2026-05-02', 0, 'repaid', '2026-05-08 09:43:02', '2026-05-15 07:50:18', NULL, NULL, NULL, 1, 1, '2026-05-08 09:43:02', 'rolled over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(404, 26, 2, 120000.00, '2026-04-26', 0, 'repaid', '2026-05-15 07:25:06', '2026-06-03 10:16:14', NULL, NULL, NULL, 15, 0, NULL, 'inactivity so we rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(405, 11, 1, 8640.00, '2026-05-10', 0, 'repaid', '2026-05-15 07:31:18', '2026-05-16 17:52:20', NULL, NULL, NULL, 1, 1, '2026-05-15 07:31:18', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(406, 9, 2, 87692.54, '2026-04-18', 0, 'repaid', '2026-05-15 07:40:27', '2026-05-19 10:19:17', NULL, NULL, NULL, 1, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(407, 70, 1, 1440.00, '2026-05-12', 0, 'repaid', '2026-05-15 07:51:01', '2026-05-27 05:55:08', NULL, NULL, NULL, 1, 1, '2026-05-15 07:51:01', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(408, 2, 1, 71250.00, '2026-05-11', 0, 'repaid', '2026-05-15 07:54:36', '2026-05-27 06:09:01', NULL, NULL, NULL, 15, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(409, 2, 5, 144035.32, '2026-05-09', 0, 'repaid', '2026-05-15 08:01:30', '2026-06-14 03:21:19', NULL, NULL, NULL, 15, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(410, 62, 1, 15000.00, '2026-05-14', 0, 'repaid', '2026-05-15 08:12:49', '2026-05-27 06:01:50', NULL, NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 15,000.00 to 254799388138 - DOUGLAS IMBOYWA LUTOMIA successfully processed. Transaction Ref ID: 4305WBTS8934. M-PESA Ref ID: UEE1U49IYE\r\n\r\n10 days 20% Facility for 20 days payable on 3rd June 2025', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(411, 75, 3, 100000.00, '2026-05-11', 0, 'repaid', '2026-05-15 08:15:58', '2026-05-25 06:26:23', NULL, NULL, NULL, 1, 0, NULL, 'Pesalink transfer of KES 100,000.00 to A/c 01116367542800-Dennis O Zereta on 11/05/2026 11:26 processed successfully.\r\nTransaction Ref ID:828122140763', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(412, 74, 17, 35000.00, '2026-05-15', 0, 'repaid', '2026-05-15 08:21:42', '2026-06-08 09:34:38', NULL, NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 35,000.00 to 254728688805 - Diana Jerotich successfully processed. Transaction Ref ID: 4279YIQS7240. M-PESA Ref ID: UEBFR3O053', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(413, 3, 1, 25000.00, '2026-05-11', 0, 'repaid', '2026-05-15 08:46:29', '2026-05-21 07:40:46', NULL, NULL, NULL, 1, 1, '2026-05-15 08:46:28', 'Pesalink transfer of KES 25,000.00 to A/c 0780283328011-Isiro Agencies on 11/05/2026 20:13 processed successfully.\r\nTransaction Ref ID:297966502215\r\n\r\n10 days facility 20% interest 60% broker fees on interest. Payable on 21st May 2026', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(414, 3, 3, 30000.00, '2026-05-13', 1, 'repaid', '2026-05-15 08:48:02', '2026-05-28 03:43:05', NULL, NULL, NULL, 1, 0, NULL, 'Pesalink transfer of KES 30,000.00 to A/c 0780283328011-Isiro Agencies on 13/05/2026 16:12 processed successfully.\r\nTransaction Ref ID:388220519542\r\n\r\nFacility for 14 days 20% interest 60% broker fees on interest. Total payable on 27th May 2026 KES 33,600.00', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(415, 3, 1, 10000.00, '2026-05-14', 0, 'repaid', '2026-05-15 08:49:42', '2026-05-25 07:41:23', NULL, NULL, NULL, 1, 1, '2026-05-15 08:49:42', 'Pesalink transfer of KES 10,000.00 to A/c 0780283328011-Isiro Agencies on 14/05/2026 21:12 processed successfully.\r\nTransaction Ref ID:643458978305\r\n\r\nFacility for 10 days 20% interest 60% broker fees on interest. Total payable on 24th May 2026 KES 11,200.00', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(416, 53, 1, 1860.00, '2026-05-15', 0, 'repaid', '2026-05-16 17:36:50', '2026-05-25 06:28:13', NULL, NULL, NULL, 1, 1, '2026-05-16 17:36:50', 'Niaje denno imekua ngumu kiasi tunaeza fanya rollover ndo nilipe yote this week ju payment yangu itaingia in-between hii wiki ndo nikue safe na penalties', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(417, 64, 1, 4320.00, '2026-05-16', 0, 'repaid', '2026-05-19 10:07:05', '2026-05-27 05:44:50', NULL, NULL, NULL, 1, 1, '2026-05-19 10:07:05', 'ROLLED Over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(418, 73, 1, 30000.00, '2026-05-17', 0, 'repaid', '2026-05-19 10:11:55', '2026-06-03 07:45:58', NULL, NULL, NULL, 1, 1, '2026-05-19 10:11:55', 'Bank to M-PESA transfer of KES 30,000.00 to 0708530169 - ANITA SOINA NANYOKIE successfully processed. Transaction Ref ID: 4333KMXG4064. M-PESA Ref ID: UEHC14TQ1T', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(419, 53, 1, 10000.00, '2026-05-17', 0, 'repaid', '2026-05-19 10:14:47', '2026-06-03 07:25:36', NULL, NULL, NULL, 1, 0, NULL, 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(420, 9, 1, 105231.05, '2026-05-18', 0, 'repaid', '2026-05-19 10:19:03', '2026-06-03 07:52:08', NULL, NULL, NULL, 1, 1, '2026-05-19 10:19:03', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(421, 29, 1, 22000.00, '2026-05-16', 0, 'repaid', '2026-05-19 10:20:37', '2026-05-27 08:47:42', NULL, NULL, NULL, 1, 0, NULL, 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(422, 52, 1, 90000.00, '2026-05-16', 0, 'repaid', '2026-05-20 07:00:14', '2026-07-16 07:10:40', NULL, NULL, NULL, 1, 1, '2026-05-20 07:00:14', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(423, 48, 1, 3000.00, '2026-05-21', 0, 'repaid', '2026-05-21 09:26:34', '2026-06-03 07:41:09', NULL, NULL, NULL, 1, 1, '2026-05-21 09:26:34', 'Bank to M-PESA transfer of KES 3,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 4365WIYG0039. M-PESA Ref ID: UELAL4X9AF\r\n\r\n10 days 20% and 10% daily penalties on outstanding amount after due date of 31st May 2026.\r\n\r\nPayable KES 3,600', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(424, 64, 1, 5184.00, '2026-05-26', 0, 'repaid', '2026-05-27 05:53:43', '2026-06-08 07:37:29', NULL, NULL, NULL, 1, 1, '2026-05-27 05:53:43', 'Good morning, Kibet....Kindly  roll it over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(425, 70, 1, 1728.00, '2026-05-22', 0, 'repaid', '2026-05-27 05:55:48', '2026-06-03 09:59:59', NULL, NULL, NULL, 1, 1, '2026-05-27 05:55:48', 'Rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(426, 62, 1, 18000.00, '2026-05-24', 0, 'repaid', '2026-05-27 06:02:32', '2026-06-09 07:09:43', NULL, NULL, NULL, 1, 1, '2026-05-27 06:02:32', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(427, 2, 1, 85500.00, '2026-05-21', 0, 'repaid', '2026-05-27 06:10:07', '2026-06-03 07:33:23', NULL, NULL, NULL, 1, 1, '2026-05-27 06:10:07', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(428, 7, 2, 2160.00, '2026-05-25', 0, 'repaid', '2026-05-27 06:14:46', '2026-07-04 17:05:39', NULL, NULL, NULL, 1, 0, NULL, 'Rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(429, 15, 15, 130306.20, '2026-05-27', 0, 'disbursed', '2026-05-28 06:27:50', '2026-06-14 03:13:17', NULL, NULL, NULL, NULL, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(430, 11, 1, 9000.00, '2026-05-27', 0, 'repaid', '2026-05-28 19:41:49', '2026-06-08 07:28:14', NULL, NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 3,000.00 to 254724606690 - SHADRACK CHERUIYOT successfully processed. Transaction Ref ID: 4427RILA2427. M-PESA Ref ID: UESHD5YGSA\r\n\r\nDue 7th June 2026 as KES 3,600', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(431, 53, 1, 3000.00, '2026-05-27', 0, 'repaid', '2026-06-03 07:26:48', '2026-06-07 09:44:17', NULL, NULL, NULL, 1, 1, '2026-06-03 07:26:48', 'Rolled over + 1500 loan\r\nBank to M-PESA transfer of KES 1,500.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4438AIME0767. M-PESA Ref ID: UET6B5TQ81', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(432, 2, 1, 102600.00, '2026-05-31', 0, 'repaid', '2026-06-03 07:34:05', '2026-06-14 03:19:48', NULL, NULL, NULL, 15, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(433, 48, 1, 14000.00, '2026-05-30', 0, 'repaid', '2026-06-03 07:42:35', '2026-06-09 07:09:12', NULL, NULL, NULL, 1, 1, '2026-06-03 07:42:35', 'Bank to M-PESA transfer of KES 14,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 4443MMKK9478. M-PESA Ref ID: UEUAL5ZRUE\r\n\r\nDue in 10 days at 20% interest 16,800 payable on or before 9th June 2026', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(434, 73, 1, 21000.00, '2026-05-27', 0, 'repaid', '2026-06-03 07:47:32', '2026-06-08 07:30:31', NULL, NULL, NULL, 1, 1, '2026-06-03 07:47:32', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(435, 70, 1, 2073.60, '2026-06-01', 0, 'repaid', '2026-06-03 10:01:23', '2026-06-14 03:25:59', NULL, NULL, NULL, 1, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(436, 26, 2, 124000.00, '2026-05-26', 0, 'disbursed', '2026-06-03 10:16:03', '2026-06-03 10:16:03', NULL, NULL, NULL, 15, 1, '2026-06-03 10:16:03', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(437, 53, 1, 10600.00, '2026-06-06', 0, 'repaid', '2026-06-07 09:46:02', '2026-06-18 11:10:14', NULL, NULL, NULL, 1, 1, '2026-06-07 09:46:02', '[14:45, 07/06/2026] Dennis Kibet: Bank to M-PESA transfer of KES 10,000.00 to 0768384462 - EMMANUEL RUWA TSUMA successfully processed. Transaction Ref ID: 4505TVIV3259. M-PESA Ref ID: UF66B6QSCC\r\n[14:45, 07/06/2026] Dennis Kibet: 10 days 20% interest due 16/06/2026\r\n[14:45, 07/06/2026] Dennis Kibet: 600 haujaweka\r\n[14:45, 07/06/2026] Dennis Kibet: Nimeweka kwa 10k', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(438, 11, 1, 13800.00, '2026-06-06', 0, 'repaid', '2026-06-08 07:28:55', '2026-06-17 06:55:15', NULL, NULL, NULL, 1, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(439, 73, 1, 17200.00, '2026-06-06', 0, 'repaid', '2026-06-08 07:31:15', '2026-06-17 06:48:16', NULL, NULL, NULL, 1, 1, '2026-06-08 07:31:15', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(440, 64, 1, 6220.80, '2026-06-05', 0, 'repaid', '2026-06-08 07:38:23', '2026-06-16 02:33:43', NULL, NULL, NULL, 1, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(441, 74, 17, 42000.00, '2026-06-05', 0, 'repaid', '2026-06-08 09:35:18', '2026-07-01 11:43:35', NULL, NULL, NULL, 1, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(442, 21, 2, 493534.10, '2026-06-03', 0, 'repaid', '2026-06-08 09:37:33', '2026-07-03 12:35:07', NULL, NULL, NULL, 1, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(443, 62, 1, 21600.00, '2026-06-03', 0, 'repaid', '2026-06-09 07:10:24', '2026-06-14 03:14:51', NULL, NULL, NULL, 1, 1, '2026-06-09 07:10:24', 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(444, 62, 1, 25920.00, '2026-06-13', 0, 'repaid', '2026-06-14 03:15:53', '2026-06-23 11:20:34', NULL, NULL, NULL, 1, 1, '2026-06-14 03:15:53', 'roll over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(445, 2, 1, 310365.92, '2026-06-10', 0, 'disbursed', '2026-06-14 03:21:06', '2026-06-14 03:21:06', NULL, NULL, NULL, 15, 1, '2026-06-14 03:21:06', 'roll over to clear once', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(446, 70, 1, 2488.32, '2026-06-11', 0, 'repaid', '2026-06-14 03:26:46', '2026-06-25 08:39:35', NULL, NULL, NULL, 1, 1, '2026-06-14 03:26:46', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(447, 64, 1, 7465.00, '2026-06-15', 0, 'repaid', '2026-06-16 02:34:54', '2026-07-04 16:36:50', NULL, NULL, NULL, 1, 1, '2026-06-16 02:34:54', 'rolled over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(448, 11, 1, 16560.00, '2026-06-16', 0, 'repaid', '2026-06-17 06:57:31', '2026-06-29 04:41:37', NULL, NULL, NULL, 1, 0, NULL, '[11:15, 17/06/2026] Shady Kip Cheruiyot eCitizen: fayiaa, hatukupata dhoo unaeza roll over , kindly\r\n[11:54, 17/06/2026] Dennis Kibet: fayiaa, hatukupata dhoo unaeza roll over , kindly\r\nSawa', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(449, 53, 1, 12720.00, '2026-06-16', 0, 'repaid', '2026-06-18 11:11:03', '2026-07-01 11:39:26', NULL, NULL, NULL, 1, 1, '2026-06-18 11:11:03', 'roll over loan', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(450, 76, 1, 40000.00, '2026-06-20', 0, 'disbursed', '2026-06-20 11:10:25', '2026-06-21 09:15:45', NULL, NULL, NULL, 1, 0, NULL, 'new loan facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(451, 48, 1, 10000.00, '2026-06-10', 0, 'repaid', '2026-06-21 09:19:31', '2026-06-21 09:20:24', NULL, NULL, NULL, 1, 1, '2026-06-21 09:19:31', 'Bank to M-PESA transfer of KES 10,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 4540EMLQ4038. M-PESA Ref ID: UFAAL79NHH', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(452, 70, 1, 2986.00, '2026-06-21', 0, 'repaid', '2026-06-25 08:40:23', '2026-07-04 16:32:31', NULL, NULL, NULL, 1, 1, '2026-06-25 08:40:23', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(453, 48, 1, 10000.00, '2026-06-24', 0, 'repaid', '2026-06-25 08:42:18', '2026-07-04 16:31:24', NULL, NULL, NULL, 1, 1, '2026-06-25 08:42:18', 'UFO6O8SPHT Confirmed. KSH. 10,000 sent to Sharon Chemurgor,  via MySafaricom App on 24-06-2026 18:22. \r\n\r\n10 days 20% interest', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(454, 3, 1, 50000.00, '2026-06-23', 0, 'repaid', '2026-06-25 08:43:53', '2026-06-30 15:04:43', NULL, NULL, NULL, 1, 1, '2026-06-25 08:43:53', 'Pesalink transfer of KES 50,000.00 to EQUITY BANK A/c 0780283328011 on 23/06/2026 09:39 processed successfully. Transaction Ref ID: 241310635800.\r\n\r\n10 days', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(455, 3, 17, 10000.00, '2026-06-22', 0, 'repaid', '2026-06-25 08:45:31', '2026-07-15 08:01:40', NULL, NULL, NULL, 1, 1, '2026-06-25 08:45:31', 'Bank to M-PESA transfer of KES 10,000.00 to 254727459357 - FRANCIS MUKHWANA OKWARA successfully processed. Transaction Ref ID: 4643QUOS5381. M-PESA Ref ID: UFMD88NRVB\r\n\r\n3 weeks', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(456, 9, 2, 126277.30, '2026-05-18', 0, 'repaid', '2026-06-25 08:59:56', '2026-07-01 11:51:53', NULL, NULL, NULL, 1, 0, NULL, 'rolled over', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(457, 11, 1, 30872.00, '2026-06-26', 0, 'repaid', '2026-06-29 04:43:16', '2026-07-13 09:01:49', NULL, NULL, NULL, 1, 0, NULL, 'ROLL OVER + Bank to M-PESA transfer of KES 5,000.00 to 254724606690 - SHADRACK CHERUIYOT successfully processed. Transaction Ref ID: 4680UJKH0648. M-PESA Ref ID: UFQHD9E6GZ', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(458, 3, 1, 200000.00, '2026-06-30', 0, 'repaid', '2026-06-30 15:04:06', '2026-07-10 08:35:03', NULL, NULL, NULL, 1, 1, '2026-06-30 15:04:06', 'emergency assistance', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(459, 53, 1, 15264.00, '2026-06-26', 0, 'repaid', '2026-07-01 11:41:33', '2026-07-10 08:42:22', NULL, NULL, NULL, 1, 1, '2026-07-01 11:41:33', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(460, 74, 17, 21400.00, '2026-06-26', 0, 'disbursed', '2026-07-01 11:44:17', '2026-07-16 06:28:16', NULL, NULL, NULL, 1, 0, NULL, 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(461, 50, 13, 85600.00, '2026-06-20', 0, 'disbursed', '2026-07-01 11:49:51', '2026-07-01 11:49:51', NULL, NULL, NULL, 1, 1, '2026-07-01 11:49:51', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(462, 9, 2, 151532.80, '2026-06-18', 0, 'disbursed', '2026-07-01 11:52:50', '2026-07-01 11:52:50', NULL, NULL, NULL, 1, 1, '2026-07-01 11:52:50', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(463, 21, 2, 592240.92, '2026-07-03', 0, 'disbursed', '2026-07-03 12:35:47', '2026-07-03 12:35:47', NULL, NULL, NULL, 1, 1, '2026-07-03 12:35:47', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(464, 70, 1, 3583.20, '2026-07-01', 0, 'repaid', '2026-07-04 16:33:20', '2026-07-13 09:04:42', NULL, NULL, NULL, 1, 1, '2026-07-04 16:33:20', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(465, 64, 2, 8958.00, '2026-06-25', 0, 'disbursed', '2026-07-04 16:37:27', '2026-07-16 06:44:36', NULL, NULL, NULL, 1, 0, NULL, 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(466, 84, 1, 20000.00, '2026-06-26', 0, 'repaid', '2026-07-04 16:41:09', '2026-07-04 16:43:46', NULL, NULL, NULL, 1, 1, '2026-07-04 16:41:09', 'Bank to M-PESA transfer of KES 20,000.00 to 0722559067 - BRIAN KIPLAGAT TANUI successfully processed. Transaction Ref ID: 4686EOJL2669. M-PESA Ref ID: UFRLJ9N1YY', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(467, 48, 1, 30000.00, '2026-07-04', 0, 'repaid', '2026-07-04 16:45:52', '2026-07-16 06:03:25', NULL, NULL, NULL, 1, 1, '2026-07-04 16:45:52', 'Bank to M-PESA transfer of KES 30,000.00 to 254704815115 - Sharon Chemurgor successfully processed. Transaction Ref ID: 4747XQNR1529. M-PESA Ref ID: UG4ALA02O5', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(468, 3, 3, 100000.00, '2026-07-04', 0, 'repaid', '2026-07-04 16:47:45', '2026-07-19 14:39:02', NULL, NULL, NULL, 1, 0, NULL, 'Bank to M-PESA transfer of KES 100,000.00 to 254703731558 - MAKOKO NASENYA ANJELA successfully processed. Transaction Ref ID: 4746FPNN3173. M-PESA Ref ID: UG40NAAR1R', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(469, 3, 1, 60000.00, '2026-07-04', 0, 'repaid', '2026-07-04 16:50:11', '2026-07-15 12:47:44', NULL, NULL, NULL, 1, 1, '2026-07-04 16:50:11', 'Pesalink transfer of KES 10,000.00 to EQUITY BANK A/c 0780283328011 on 04/07/2026 11:06 processed successfully. Transaction Ref ID: 718191439198.\r\n\r\nPesalink transfer of KES 50,000.00 to EQUITY BANK A/c 0780283328011 on 04/07/2026 11:05 processed successfully. Transaction Ref ID: 025301778612.\r\n\r\nFacility 10 days 12% interest \r\n\r\nPayable KES 67,200 on 14th July', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(470, 7, 2, 2592.00, '2026-06-25', 0, 'repaid', '2026-07-04 17:06:38', '2026-07-28 09:56:31', NULL, NULL, NULL, 1, 1, '2026-07-04 17:06:38', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(471, 51, 1, 60000.00, '2026-07-06', 0, 'repaid', '2026-07-06 18:05:28', '2026-07-18 15:11:34', NULL, NULL, NULL, 1, 1, '2026-07-06 18:05:28', 'Bank to M-PESA transfer of KES 60,000.00 to 254726471918 - KELVIN ROTICH successfully processed. Transaction Ref ID: 4766RIOG0469. M-PESA Ref ID: UG63XAM1SV\r\n\r\n10 days facility 20% payable on 16th July 2026 as KES 72,000', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(472, 3, 1, 240000.00, '2026-07-10', 0, 'repaid', '2026-07-10 08:35:53', '2026-07-20 09:13:36', NULL, NULL, NULL, 1, 1, '2026-07-10 08:35:53', 'ROLLED OVER FACILITY', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(473, 53, 1, 18316.80, '2026-07-06', 0, 'repaid', '2026-07-10 08:43:09', '2026-07-17 07:50:20', NULL, NULL, NULL, 1, 1, '2026-07-10 08:43:09', 'ROLLED OVER FACILITY', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(474, 73, 1, 10000.00, '2026-07-13', 0, 'repaid', '2026-07-13 08:49:25', '2026-07-25 12:16:44', NULL, NULL, NULL, 1, 1, '2026-07-13 08:49:25', 'UGD6OAX82C Confirmed. KSH. 10,000 sent to ANITA NANYOKIE,  via MySafaricom App on 13-07-2026 13:35.', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(475, 11, 1, 37046.40, '2026-07-06', 0, 'repaid', '2026-07-13 09:02:34', '2026-07-17 03:51:49', NULL, NULL, NULL, 1, 1, '2026-07-13 09:02:34', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(476, 70, 1, 5159.81, '2026-07-11', 0, 'repaid', '2026-07-13 09:05:16', '2026-07-22 06:27:47', NULL, NULL, NULL, 1, 1, '2026-07-13 09:05:16', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(477, 48, 3, 36000.00, '2026-07-14', 0, 'disbursed', '2026-07-16 06:04:14', '2026-07-16 06:04:14', NULL, NULL, NULL, 1, 1, '2026-07-16 06:04:14', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(478, 11, 1, 44455.68, '2026-07-16', 0, 'disbursed', '2026-07-17 03:53:21', '2026-07-17 03:53:21', NULL, NULL, NULL, 1, 1, '2026-07-17 03:53:21', 'Rolled over facility', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(479, 53, 1, 21980.16, '2026-07-16', 0, 'repaid', '2026-07-17 07:51:20', '2026-07-28 10:01:08', NULL, NULL, NULL, 1, 1, '2026-07-17 07:51:20', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(480, 51, 1, 32000.00, '2026-07-16', 0, 'repaid', '2026-07-18 15:12:18', '2026-07-30 07:04:41', NULL, NULL, NULL, 1, 0, NULL, 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(481, 3, 1, 288000.00, '2026-07-20', 0, 'disbursed', '2026-07-20 09:15:48', '2026-07-20 09:15:48', NULL, NULL, NULL, 1, 1, '2026-07-20 09:15:48', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(482, 31, 1, 100000.00, '2026-07-20', 0, 'disbursed', '2026-07-21 08:28:04', '2026-07-21 08:28:52', NULL, NULL, NULL, 1, 0, NULL, 'Local Funds Transfer of KES 50,000.00 to I & M BANK LTD A/c 01005685246350 on 20/07/2026 19:13 processed successfully. Transaction Ref ID: 833201967079.\r\n10 days 20% facility 2 cycles', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(483, 70, 1, 6191.80, '2026-07-21', 0, 'disbursed', '2026-07-22 06:28:27', '2026-07-22 06:28:27', NULL, NULL, NULL, 1, 1, '2026-07-22 06:28:27', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(484, 3, 1, 25000.00, '2026-07-24', 0, 'disbursed', '2026-07-25 12:12:51', '2026-07-25 12:12:51', NULL, NULL, NULL, 1, 1, '2026-07-25 12:12:51', 'Bank to M-PESA transfer of KES 25,000.00 to 254707486975 - Evelyn Mumbua Mutia successfully processed. Transaction Ref ID: 4921XQHA9734. M-PESA Ref ID: UGOCY0NR4H\r\n\r\nFacility for 10 days 20% interest 10% daily penalty fees on outstanding amounts after due date', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(485, 73, 1, 6200.00, '2026-07-25', 0, 'disbursed', '2026-07-25 12:18:10', '2026-07-25 12:18:10', NULL, NULL, NULL, 1, 1, '2026-07-25 12:18:10', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(486, 53, 2, 26376.19, '2026-07-26', 0, 'disbursed', '2026-07-28 10:03:55', '2026-07-28 10:03:55', NULL, NULL, NULL, 1, 1, '2026-07-28 10:03:55', 'ROLLED OVER', NULL, 0, NULL, 0, NULL, 0, NULL, 0),
+(487, 51, 1, 38400.00, '2026-07-26', 0, 'disbursed', '2026-07-30 07:05:13', '2026-07-30 07:05:13', NULL, NULL, NULL, 1, 1, '2026-07-30 07:05:13', 'ROLLED OVER FACILITY', NULL, 0, NULL, 0, NULL, 0, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -1482,6 +2287,26 @@ CREATE TABLE `loan_agreement_templates` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `loan_ledger`
+--
+
+CREATE TABLE `loan_ledger` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `loan_id` bigint(20) UNSIGNED NOT NULL,
+  `entry_type` enum('debit','credit','interest','penalty','fee','adjustment') NOT NULL,
+  `amount` decimal(15,2) NOT NULL,
+  `balance_after` decimal(15,2) NOT NULL,
+  `reference_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `reference_type` varchar(100) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `entry_date` date NOT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `loan_risk_assessments`
 --
 
@@ -1498,7 +2323,8 @@ CREATE TABLE `loan_risk_assessments` (
   `assessment_notes` text DEFAULT NULL,
   `recommendation` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
@@ -1540,7 +2366,8 @@ INSERT INTO `loan_types` (`id`, `name`, `period`, `unit`, `interest_rate`, `pena
 (14, 'Emergency 5 Days', 5, 'days', 10.00, 7.50, 'Upto 250k!', '2026-01-29 11:23:31', '2026-01-29 11:23:23'),
 (15, 'Family 3 months 2% monthly', 3, 'months', 6.00, 10.00, 'Upto 300k! 2 weeks!', '2025-05-29 15:05:07', '2025-05-29 15:05:07'),
 (16, '7 days 25%', 7, 'days', 25.00, 10.00, 'Upto 300k! 2 weeks!', '2026-05-05 15:05:07', '2026-05-05 15:05:07'),
-(17, '3 weeks 20%', 3, 'weeks', 20.00, 10.00, 'Upto 300k! 3 weeks!', '2026-05-15 15:05:07', '2026-05-15 15:05:07');
+(17, '3 weeks 20%', 3, 'weeks', 20.00, 10.00, 'Upto 300k! 3 weeks!', '2026-05-15 15:05:07', '2026-05-15 15:05:07'),
+(18, 'Emergency 10 Days at 30%', 10, 'days', 30.00, 10.00, 'Upto 250k!', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1625,6 +2452,13 @@ CREATE TABLE `partners` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
+--
+-- Dumping data for table `partners`
+--
+
+INSERT INTO `partners` (`id`, `user_id`, `name`, `email`, `phone`, `company_name`, `registration_number`, `type`, `status`, `total_contribution`, `total_withdrawn`, `current_balance`, `profit_share_rate`, `max_loan_to_value`, `risk_tolerance`, `bank_account_name`, `bank_account_number`, `bank_name`, `swift_code`, `tax_id`, `notes`, `created_at`, `updated_at`) VALUES
+(5, 3, 'ISIRO AGENCIES', 'isiroagencies@gmail.com', NULL, NULL, NULL, 'institutional', 'active', 0.00, 0.00, 0.00, 8.00, 75.00, 'moderate', 'ISIRO AGENCIES', NULL, 'EQUITY BANK', NULL, NULL, NULL, '2026-07-16 19:24:44', '2026-07-16 19:24:44');
+
 -- --------------------------------------------------------
 
 --
@@ -1664,7 +2498,67 @@ CREATE TABLE `password_reset_tokens` (
 --
 
 INSERT INTO `password_reset_tokens` (`email`, `token`, `created_at`) VALUES
-('michellesese99@gmail.com', '$2y$12$BZy//467z3uCC2crpZ5CFukt7hZI.Bm2NHvXxC8JOtjSdmdOa5sae', '2025-05-07 09:51:10');
+('kibettdennis@gmail.com', '$2y$12$/VTw6vzlVc4bfdCHfbPfreRfMJNbGbal19xJwBlAfChQA9iCIEzTa', '2026-07-22 10:22:41'),
+('michellesese99@gmail.com', '$2y$12$BZy//467z3uCC2crpZ5CFukt7hZI.Bm2NHvXxC8JOtjSdmdOa5sae', '2025-05-07 09:51:10'),
+('musau.mumo@teflontradingltd.co.ke', '$2y$12$hQrQlGBbprPspsWytT.SO.AYeFfhThM/xTiS5QL5cQ70LSqmD0hiO', '2026-07-22 10:22:28');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payment_methods`
+--
+
+CREATE TABLE `payment_methods` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `method_type_id` bigint(20) UNSIGNED NOT NULL,
+  `account_name` varchar(255) NOT NULL,
+  `account_number` varchar(255) DEFAULT NULL,
+  `bank_name` varchar(255) DEFAULT NULL,
+  `branch_name` varchar(255) DEFAULT NULL,
+  `swift_code` varchar(50) DEFAULT NULL,
+  `mobile_network` varchar(50) DEFAULT NULL,
+  `mobile_number` varchar(50) DEFAULT NULL,
+  `crypto_currency` varchar(50) DEFAULT NULL,
+  `wallet_address` varchar(500) DEFAULT NULL,
+  `wallet_provider` varchar(255) DEFAULT NULL,
+  `is_primary` tinyint(1) DEFAULT 0,
+  `is_verified` tinyint(1) DEFAULT 0,
+  `verification_date` date DEFAULT NULL,
+  `status` enum('active','inactive','pending_verification','suspended') DEFAULT 'active',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payment_method_types`
+--
+
+CREATE TABLE `payment_method_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `requires_verification` tinyint(1) DEFAULT 1,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `payment_method_types`
+--
+
+INSERT INTO `payment_method_types` (`id`, `name`, `slug`, `requires_verification`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Bank Account', 'bank_account', 1, 1, 10, NULL, NULL),
+(2, 'Mobile Money', 'mobile_money', 1, 1, 20, NULL, NULL),
+(3, 'Crypto Wallet', 'crypto_wallet', 0, 1, 30, NULL, NULL),
+(4, 'PayPal', 'paypal', 1, 1, 40, NULL, NULL),
+(5, 'Other', 'other', 0, 1, 999, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1681,6 +2575,256 @@ CREATE TABLE `portfolio_summary` (
 ,`total_actual_revenue_approx` decimal(38,2)
 ,`total_write_offs` decimal(37,2)
 );
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recovery_actions`
+--
+
+CREATE TABLE `recovery_actions` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED NOT NULL,
+  `contact_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `action_type_id` bigint(20) UNSIGNED NOT NULL,
+  `action_date` datetime NOT NULL DEFAULT current_timestamp(),
+  `performed_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `contact_person` varchar(255) DEFAULT NULL,
+  `contact_relationship` varchar(100) DEFAULT NULL,
+  `contact_phone` varchar(50) DEFAULT NULL,
+  `contact_email` varchar(255) DEFAULT NULL,
+  `outcome` enum('successful','partial','failed','promise_to_pay','no_answer','wrong_number','refused','pending') DEFAULT 'pending',
+  `promised_amount` decimal(15,2) DEFAULT NULL,
+  `promised_date` date DEFAULT NULL,
+  `amount_collected` decimal(15,2) DEFAULT 0.00,
+  `notes` text DEFAULT NULL,
+  `follow_up_date` date DEFAULT NULL,
+  `follow_up_notes` text DEFAULT NULL,
+  `attachment_path` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recovery_agencies`
+--
+
+CREATE TABLE `recovery_agencies` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `agency_name` varchar(255) NOT NULL,
+  `license_number` varchar(100) DEFAULT NULL,
+  `commission_rate` decimal(5,2) DEFAULT NULL,
+  `status` enum('active','inactive','suspended') DEFAULT 'active',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recovery_case_notes`
+--
+
+CREATE TABLE `recovery_case_notes` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED NOT NULL,
+  `note_type` enum('general','action','reminder','alert','legal') DEFAULT 'general',
+  `note` text NOT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `is_private` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recovery_documents`
+--
+
+CREATE TABLE `recovery_documents` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED NOT NULL,
+  `document_type_id` bigint(20) UNSIGNED NOT NULL,
+  `document_status_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `document_name` varchar(255) NOT NULL,
+  `file_path` varchar(500) NOT NULL,
+  `file_size` int(11) DEFAULT NULL,
+  `mime_type` varchar(100) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `uploaded_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recovery_installments`
+--
+
+CREATE TABLE `recovery_installments` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `payment_plan_id` bigint(20) UNSIGNED NOT NULL,
+  `installment_number` int(11) NOT NULL,
+  `due_date` date NOT NULL,
+  `amount` decimal(15,2) NOT NULL,
+  `paid_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `payment_date` date DEFAULT NULL,
+  `status` enum('pending','paid','partial','overdue','waived') DEFAULT 'pending',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `recovery_officer_workload`
+-- (See below for the actual view)
+--
+CREATE TABLE `recovery_officer_workload` (
+`officer_id` bigint(20) unsigned
+,`officer_name` varchar(255)
+,`officer_email` varchar(255)
+,`total_cases` bigint(21)
+,`active_cases` bigint(21)
+,`urgent_cases` bigint(21)
+,`total_debt_value` decimal(37,2)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recovery_payment_plans`
+--
+
+CREATE TABLE `recovery_payment_plans` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED NOT NULL,
+  `total_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `down_payment` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `installment_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `number_of_installments` int(11) NOT NULL DEFAULT 0,
+  `installment_frequency` enum('weekly','bi_weekly','monthly','quarterly') DEFAULT 'monthly',
+  `start_date` date NOT NULL,
+  `end_date` date DEFAULT NULL,
+  `status` enum('draft','proposed','accepted','rejected','completed','defaulted') DEFAULT 'draft',
+  `agreed_by_debtor` tinyint(1) DEFAULT 0,
+  `agreed_date` date DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `approved_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recovery_performance_metrics`
+--
+
+CREATE TABLE `recovery_performance_metrics` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `officer_id` bigint(20) UNSIGNED NOT NULL,
+  `metric_date` date NOT NULL,
+  `cases_assigned` int(11) DEFAULT 0,
+  `cases_resolved` int(11) DEFAULT 0,
+  `recovery_amount` decimal(15,2) DEFAULT 0.00,
+  `collection_rate` decimal(5,2) DEFAULT 0.00,
+  `avg_days_to_resolve` int(11) DEFAULT 0,
+  `contact_rate` decimal(5,2) DEFAULT 0.00,
+  `promise_to_pay_rate` decimal(5,2) DEFAULT 0.00,
+  `performance_score` decimal(5,2) DEFAULT 0.00,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recovery_priorities`
+--
+
+CREATE TABLE `recovery_priorities` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `priority_level` int(11) NOT NULL DEFAULT 1,
+  `color_code` varchar(20) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `recovery_priorities`
+--
+
+INSERT INTO `recovery_priorities` (`id`, `name`, `slug`, `priority_level`, `color_code`, `created_at`, `updated_at`) VALUES
+(1, 'Low', 'low', 1, '#6B7280', NULL, NULL),
+(2, 'Medium', 'medium', 2, '#F59E0B', NULL, NULL),
+(3, 'High', 'high', 3, '#EF4444', NULL, NULL),
+(4, 'Urgent', 'urgent', 4, '#DC2626', NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recovery_statuses`
+--
+
+CREATE TABLE `recovery_statuses` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `recovery_statuses`
+--
+
+INSERT INTO `recovery_statuses` (`id`, `name`, `slug`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Open', 'open', 1, 10, NULL, NULL),
+(2, 'In Progress', 'in_progress', 1, 20, NULL, NULL),
+(3, 'Negotiation', 'negotiation', 1, 30, NULL, NULL),
+(4, 'Legal', 'legal', 1, 40, NULL, NULL),
+(5, 'Recovered', 'recovered', 1, 50, NULL, NULL),
+(6, 'Written Off', 'written_off', 1, 60, NULL, NULL),
+(7, 'Closed', 'closed', 1, 70, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recovery_templates`
+--
+
+CREATE TABLE `recovery_templates` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `template_name` varchar(255) NOT NULL,
+  `template_type` enum('email','sms','letter','legal_notice','whatsapp') NOT NULL,
+  `subject` varchar(255) DEFAULT NULL,
+  `body` text NOT NULL,
+  `variables` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -2407,7 +3551,20 @@ INSERT INTO `repayments` (`id`, `loan_id`, `amount`, `transaction`, `mode`, `rep
 (702, 469, 6000.00, 'UGD6OAYB94', 'mpesa', '2026-07-13', '2026-07-15 12:47:44', '2026-07-15 12:47:44', NULL, NULL),
 (703, 469, 6600.00, 'BROKER FEES', 'cash', '2026-07-13', '2026-07-15 12:48:22', '2026-07-15 12:50:56', NULL, NULL),
 (704, 467, 36000.00, 'ROLL OVER', 'other', '2026-07-14', '2026-07-16 06:03:25', '2026-07-16 06:03:25', NULL, NULL),
-(705, 422, 18000.00, 'BAD DEBT', 'other', '2026-05-23', '2026-07-16 07:10:40', '2026-07-16 07:14:36', NULL, NULL);
+(705, 422, 18000.00, 'BAD DEBT', 'other', '2026-05-23', '2026-07-16 07:10:40', '2026-07-16 07:14:36', NULL, NULL),
+(706, 471, 40000.00, 'UGG3XBQ6UD', 'mpesa', '2026-07-16', '2026-07-16 11:18:53', '2026-07-16 11:18:53', NULL, NULL),
+(707, 475, 44455.68, 'ROLL OVER', 'other', '2026-07-16', '2026-07-17 03:51:49', '2026-07-17 03:52:08', NULL, NULL),
+(708, 460, 13000.00, 'UGH16BGZ9P', 'mpesa', '2026-07-16', '2026-07-17 07:49:38', '2026-07-17 07:49:38', NULL, NULL),
+(709, 473, 21980.16, 'ROLL OVER', 'other', '2026-07-16', '2026-07-17 07:50:20', '2026-07-17 07:50:31', NULL, NULL),
+(710, 471, 32000.00, 'ROLL OVER', 'other', '2026-07-16', '2026-07-18 15:11:34', '2026-07-18 15:11:34', NULL, NULL),
+(711, 468, 120000.00, 'UGJ0N01XWP', 'mpesa', '2026-07-19', '2026-07-19 14:39:02', '2026-07-19 14:39:02', NULL, NULL),
+(712, 472, 288000.00, 'ROLL OVER', 'other', '2026-07-20', '2026-07-20 09:13:36', '2026-07-20 09:13:36', NULL, NULL),
+(713, 476, 6191.80, 'ROLL OVER', 'other', '2026-07-21', '2026-07-22 06:27:47', '2026-07-22 06:27:47', NULL, NULL),
+(715, 474, 7000.00, 'UGPC10SGK8', 'mpesa', '2026-07-25', '2026-07-25 12:16:22', '2026-07-25 12:16:22', NULL, NULL),
+(716, 474, 6200.00, 'ROLL OVER', 'other', '2026-07-25', '2026-07-25 12:16:44', '2026-07-25 12:17:11', NULL, NULL),
+(717, 470, 3110.40, 'CREDIT DISCOUNT', 'other', '2026-07-25', '2026-07-28 09:56:31', '2026-07-28 09:56:31', NULL, NULL),
+(718, 479, 26376.20, 'ROLL OVER', 'other', '2026-07-26', '2026-07-28 10:01:08', '2026-07-28 10:01:44', NULL, NULL),
+(719, 480, 38400.00, 'ROLL OVER', 'other', '2026-07-26', '2026-07-30 07:04:41', '2026-07-30 07:04:41', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -2423,6 +3580,63 @@ CREATE TABLE `repayment_overflows` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `residence_types`
+--
+
+CREATE TABLE `residence_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `residence_types`
+--
+
+INSERT INTO `residence_types` (`id`, `name`, `slug`, `description`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Owned', 'owned', NULL, 1, 10, NULL, NULL),
+(2, 'Rented', 'rented', NULL, 1, 20, NULL, NULL),
+(3, 'Family', 'family', NULL, 1, 30, NULL, NULL),
+(4, 'Employer Housing', 'employer_housing', NULL, 1, 40, NULL, NULL),
+(5, 'Government Housing', 'government_housing', NULL, 1, 50, NULL, NULL),
+(6, 'Other', 'other', NULL, 1, 999, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `risk_categories`
+--
+
+CREATE TABLE `risk_categories` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `min_score` int(11) NOT NULL,
+  `max_score` int(11) NOT NULL,
+  `color_code` varchar(20) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `risk_categories`
+--
+
+INSERT INTO `risk_categories` (`id`, `name`, `slug`, `min_score`, `max_score`, `color_code`, `description`, `created_at`, `updated_at`) VALUES
+(1, 'Very High Risk', 'very_high_risk', 0, 49, '#EF4444', NULL, NULL, NULL),
+(2, 'High Risk', 'high_risk', 50, 64, '#F59E0B', NULL, NULL, NULL),
+(3, 'Medium Risk', 'medium_risk', 65, 79, '#FBBF24', NULL, NULL, NULL),
+(4, 'Low Risk', 'low_risk', 80, 100, '#10B981', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -2444,13 +3658,51 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('efy8xOi1VABCQzHPWetvBMaSMGEWyYnEcFpdDug2', NULL, '165.245.235.47', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiVWtRT0I1OTVvTThtVUhScldtOFVkTzhmUThwYzlpMEtVcHVuN3pFQyI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1784185750),
-('Ep84QBDklEeYFTi5NEymtdOG2WSNoxQdFyKkHZ8Q', 1, '41.60.250.171', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoieEZHbE9PdzV3Vk10Mlh5OFp4V0hkOTRHblBIVnZlb3Aydk0ybWR2YyI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MzM6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYS9sb2dpbiI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTA6ImxvZ2luX3dlYl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjE7fQ==', 1784194329),
-('gYYqbe08FZeIbhQOHO4qDJTNFwWqoIBLR5Wg9Ozb', NULL, '41.60.250.171', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'YToyOntzOjY6Il90b2tlbiI7czo0MDoiaFBNZ29nTzZxRUZ0RE5vVWN6Wm5FS0x6dXo3b2NZcktUa2JWa3JPNiI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1784194351),
-('jEqnVNj1whyBcdVXHiqUQyYMrlgOke17aD1u1iWV', NULL, '88.80.26.3', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/29.0 Chrome/136.0.0.0 Mobile Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiWHlvOW1lbGhwbXgzNkgza3l5NU51OFBVV0h3dnhuTGpNR09oTmI3byI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1784202213),
-('rRNr1QfvRrNgYUjzSz3KerDFwRxw1fANr6w1Q5Gv', NULL, '165.245.235.47', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiUktFb3lwSEE3UDVJZnloQkRnZ3pCU1FiRDBYek1QM093T01EblppRiI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MjY6Imh0dHA6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1784185750),
-('skImN4KTsZVn8CB3UxtA3S8H2Hsga3Hx3BrzmoYN', NULL, '34.73.178.127', 'Mozilla/5.0 (compatible; CMS-Checker/1.0; +https://example.com)', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiQmxNTHN3YkkyZXducmU4eUhuVTlac2MyelFya051ZlJsNlJhb0x2ayI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MjY6Imh0dHA6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1784205183),
-('T0RHSlgFeamNeSlC5j2CxSMVR3vORmXJqjksZ7F0', 1, '41.60.250.171', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoieXhYdFN6S2JwOTc1Z1lPRTVDMkExVmwyb3JrUVJueGV1cVA4YmlIVCI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjk6Il9wcmV2aW91cyI7YToxOntzOjM6InVybCI7czozNjoiaHR0cHM6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhL3VzZXJzLzc2Ijt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1784205602);
+('0nRrHh1w5gEdLAAk46p11T9De0vkBbwEHKx7TDXM', NULL, '34.141.215.197', 'Scrapy/2.17.0 (+https://scrapy.org)', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiQjhOT09CZWdUeDg0SDF3dGdzS21BU0pBTWVFdFQxNTRMMFdzQ1lEdCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7czo1OiJyb3V0ZSI7czo0OiJob21lIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1785368929),
+('3zGaSMSLVLXldRpf5mUasGbVR333H3RIvWDOHLAw', 1, '196.216.91.80', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiVzllYnB5T1NXV2FHbWhFU0t1TGM4NlJmOWNxVmRqckV6Y1Y1cE0xRyI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjk6Il9wcmV2aW91cyI7YToyOntzOjM6InVybCI7czoyNzoiaHR0cHM6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjtzOjU6InJvdXRlIjtzOjQ6ImhvbWUiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1785404073),
+('BmYGUE26Fd873aZH1TNZmKB0nn5jSESEXrzCa8Ce', NULL, '18.211.55.47', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoieGE0OGhCc1BxcVpzWmJHQ1FHOXZGQ0Y4NlpnZTl1Y2FhbGhaOXdwdyI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7czo1OiJyb3V0ZSI7czo0OiJob21lIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1785429022),
+('CKXQI8YfOtQWbEGtAgbiQYj1uIY3V5aQJCJDvxT3', NULL, '198.235.24.44', 'Hello from Palo Alto Networks, find out more about our scans in https://docs-cortex.paloaltonetworks.com/r/1/Cortex-Xpanse/Scanning-activity', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiSmo1WkdIMmptWjdNUW5mUjEwdG81NlhHT3o5M2FCMUtjVTl2RVhReiI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjY6Imh0dHA6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjtzOjU6InJvdXRlIjtzOjQ6ImhvbWUiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1785243829),
+('db8DXXvOwY6CvXpSLqBdsBoUDH7YQi7dW318adVs', 93, '102.217.172.2', 'Mozilla/5.0 (Linux; U; Android 15; en-us; V2310 Build/AP3A.240905.015.A2_NNCS) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.6998.135 Mobile Safari/537.36 PHX/21.9', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiRVNSRktZcWtvR2JMR0hnbXk4UFJwZEpxREdDVDBsS1ZTMmxLTFg0TCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MzY6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYS9yZWdpc3RlciI7czo1OiJyb3V0ZSI7czo4OiJyZWdpc3RlciI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTA6ImxvZ2luX3dlYl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjkzO30=', 1785396251),
+('GAvAufYwwP4qjHxEXZivR7hQRlXALl3m4mhu5fQV', NULL, '41.90.144.208', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiVFhlQnp2WVV0dGNRU1lJZXR0SXVva0lBaXpNdU1JVVdweXdBQUtybyI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MzM6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYS9sb2dpbiI7czo1OiJyb3V0ZSI7czo1OiJsb2dpbiI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1785405739),
+('gjJz7xmuWFvPQK3p5uihY0RBsEJJYI0W2rUkWxpQ', 1, '105.161.96.24', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiQnZRa3BRRWl3ME9GMVRmZWRHTHZvM3RLT1dQZHo1YlZlTWlYUVpydiI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mzc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYS9kYXNoYm9hcmQiO3M6NToicm91dGUiO3M6OToiZGFzaGJvYXJkIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTt9', 1785304866),
+('GyYlHJO5nWawONr80TCUbwglkIGFhJUXw8IHkuL7', 1, '196.216.91.80', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiYlhQZVV0MUZxWXZlb2Qyc3lUTTcyZWdXVTFHcWFVa0hKanA4VExFdiI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjk6Il9wcmV2aW91cyI7YToyOntzOjM6InVybCI7czozNzoiaHR0cHM6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhL2Rhc2hib2FyZCI7czo1OiJyb3V0ZSI7czo5OiJkYXNoYm9hcmQiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1785428372),
+('hgozSLnDxpWS2SGtYLXP4vTyp7CnhxQs4kPjICn1', 1, '41.60.250.124', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiQmZkQlFDdVd4QWc0ZnNxMzFvMXJtR28wbzAzTW5vTmdrbHZTN09xUyI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjk6Il9wcmV2aW91cyI7YToyOntzOjM6InVybCI7czo0NjoiaHR0cHM6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhL3VzZXJzLzUzL2xvYW5zLzQ4NiI7czo1OiJyb3V0ZSI7czoxNjoidXNlcnMubG9hbnMuc2hvdyI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1785240243),
+('ikwI15CCM1nvj4npaDi4gks3MKy39DKNaY2BSVgs', 93, '102.217.172.2', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiMHJnTTVhZm9DNngwbnlWakZ5N1lhQUw3cW1rZEVqSW4zd1dBeE1mdSI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mzc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYS9kYXNoYm9hcmQiO3M6NToicm91dGUiO3M6OToiZGFzaGJvYXJkIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6OTM7fQ==', 1785396633),
+('mrWqCU3UWMmG0OWBAywFQhjt7EOa5vteONJf1YpT', 1, '105.161.147.6', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiZ25ETGhxQTFYVzdyNkd4MDNFRHlmWFZvTmJMdW5nWHJVc2xDZXVERyI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mzc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYS9kYXNoYm9hcmQiO3M6NToicm91dGUiO3M6OToiZGFzaGJvYXJkIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTt9', 1785434094),
+('PZ1ARjvSuXBgZa8TXgb6Zd6mDQFoBXUPkSXalcPf', NULL, '205.210.31.17', 'Hello from Palo Alto Networks, find out more about our scans in https://docs-cortex.paloaltonetworks.com/r/1/Cortex-Xpanse/Scanning-activity', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiSnVVbE5IWE9pRndtenJ4eUU3ellPZ3FqZTdZWG1YSk5oYjZxRlFEbCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7czo1OiJyb3V0ZSI7czo0OiJob21lIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1785337035),
+('QPxHIzsemknFIAUyr5322M9nCoeT4dxW8MbyB1yQ', NULL, '54.87.222.253', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiakNDUHJLTzdZZGFhSHdWc1lUS0Q3VzVndVoyWEQ2UlBzQWdkR0lwciI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjY6Imh0dHA6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjtzOjU6InJvdXRlIjtzOjQ6ImhvbWUiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1785438560),
+('qYBy0SkeLmqfZKH83kp3esnhQC3z2QdXJRXCOTvg', NULL, '52.4.19.39', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiSEZQWGZJT21hUk1WNXI2c1VrUGFKMjFnU2F6QnFRemtPNUZ3bVFwSCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjY6Imh0dHA6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjtzOjU6InJvdXRlIjtzOjQ6ImhvbWUiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1785438366),
+('rvyErvgH3J3FP7awhWhAXX5dBAm6s60FmkYAwDwu', NULL, '34.53.249.83', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiMGUzZmduMWwwTWxIcXFxSHhndnIyTU03TUU3VGZGSWlzVnREblRFUCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjY6Imh0dHA6Ly9sb2Fucy5zaGFyZXQuYWZyaWNhIjtzOjU6InJvdXRlIjtzOjQ6ImhvbWUiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1785300298),
+('t95FvMsCKF9DlykdjxjXUAQbTxUG8i4vBYJHS3rI', NULL, '74.7.242.55', 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.4; +https://openai.com/gptbot)', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoid01BZlowcDFQd0ROMDJWMHFDdzc2U0xLcTcycm1BZ01JVTg1VkxzZCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MzM6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYS9sb2dpbiI7czo1OiJyb3V0ZSI7czo1OiJsb2dpbiI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1785430594),
+('TWRmT4t0txogSu33iulUSSZ5aWk14TFl2zFNLDbS', NULL, '3.228.112.215', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Edg/127.0.0.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoidjlkTmVJMDhUUlZ5Q2RReWJCSGxnU2F3bkZFVmNPeGdOTjhzTzJpRiI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7czo1OiJyb3V0ZSI7czo0OiJob21lIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1785429111),
+('vFL1ily7uDx7VagnjUYNpcW5U2nB61bBbQt7VTML', NULL, '13.208.40.226', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiSnpOSWkxaUxmU0JrcEJNcFFpU2hPSTZBVEdpejNTRnpPc3p2cHA2ayI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7czo1OiJyb3V0ZSI7czo0OiJob21lIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1785299703),
+('Vn8YWf9pleRMZw39plamvCogu59YWFvkyIRLS1BG', NULL, '94.154.43.178', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiaXF3eU95NEJ4cmJ0d2RoR2NhbFMyVzNGT3I1NHNZdEtDTmM4RzVYRiI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHBzOi8vbG9hbnMuc2hhcmV0LmFmcmljYSI7czo1OiJyb3V0ZSI7czo0OiJob21lIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1785421508);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `skip_tracing`
+--
+
+CREATE TABLE `skip_tracing` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `case_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `tracing_type` enum('phone','address','employment','social_media','database_search','field_investigation','other') NOT NULL,
+  `search_date` date NOT NULL,
+  `search_provider` varchar(255) DEFAULT NULL,
+  `search_result` text DEFAULT NULL,
+  `verification_method` varchar(255) DEFAULT NULL,
+  `verification_result` text DEFAULT NULL,
+  `is_verified` tinyint(1) DEFAULT 0,
+  `source_contact` varchar(255) DEFAULT NULL,
+  `source_phone` varchar(50) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -2532,11 +3784,12 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `email_verified_at` timestamp NULL DEFAULT NULL,
   `password` varchar(255) NOT NULL,
-  `role` enum('admin','borrower','broker','teller') NOT NULL,
+  `role` enum('admin','borrower','broker','teller','partner') NOT NULL,
   `status` tinyint(4) NOT NULL DEFAULT 0,
   `remember_token` varchar(100) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
   `gender` enum('male','female','other') DEFAULT NULL,
   `dob` date DEFAULT NULL,
   `pob` varchar(255) DEFAULT NULL,
@@ -2563,80 +3816,114 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `avatar`, `phone`, `email`, `email_verified_at`, `password`, `role`, `status`, `remember_token`, `created_at`, `updated_at`, `gender`, `dob`, `pob`, `nationality`, `marital_status`, `religion`, `disability`, `education`, `kin_name`, `kin_email`, `kin_phone`, `kin_occupation`, `kin_relation`, `kin_id_type`, `kin_id_number`, `signature`, `id_type`, `id_number`, `id_front_path`, `id_back_path`) VALUES
-(1, 'Dennis Kibett', 'avatars/HdBHuvf6S6ibGQh84Asue6XvRcgPiRMw68fLaXnC.png', '0717492048', 'kibettdennis@gmail.com', NULL, '$2y$12$2CR8.J2PitDIJoOoZZAfuuvcM0lU9zLj6kLxVksy2RiU7aPySXxQK', 'admin', 0, 'gpVEDhUa5Pd8x811LbEXKPSS8J7kBFOFi0Knlsdau3ohwk9AqkY76xwDsyvP', '2025-04-17 11:41:51', '2026-01-27 19:19:09', 'male', '1994-03-24', NULL, 'Kenya', 'single', 'Christianity', 0, 'Bachelor\'s Degree', 'Joseph Koech', 'josephkkoech@gmail.com', '+254722580928', 'Regional Administrator', 'Father', 'national_id', '0587257', 'signatures/signature_Dennis_Kibett.png', 'National ID', '31425580', 'id_cards/gi21rr49gf83kPyfu5RidoXExHg4ryw7nNVQAx11.jpg', 'id_cards/EUFh2ypgIKD3mVPhDJCRam2qZXKjytJBuU2UWJL7.jpg'),
-(2, 'Edward Kibet', '', '+254 710 920629', 'edwardkipsanai94@gmail.com', NULL, '$2y$12$HNUj2oDPc4GNbBKze3XbB.gsZFsEp7W2VOXu.wcKU8AIpBsK9E9jq', 'borrower', 0, NULL, '2025-04-17 11:42:36', '2026-01-22 20:30:33', 'male', NULL, NULL, 'Kenya', 'single', 'Christianity', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(3, 'Isiro Agencies', '', '0727088262', 'isiroagencies@gmail.com', NULL, '$2y$12$JMXtud5UquYiEDMC7CRhyOEMvsX70.oUG8s/AsbRu4O285gIGQwfG', 'broker', 0, 'zIK3QLzpq7E11LlGo94aOKJuH3HEllvK1mAhMD6t3TVxwhTOizpOpbzq8Ycj', '2025-04-17 11:43:36', '2025-04-17 16:41:05', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(6, 'BILDAD WAMBUA', '', '0712345678', 'bildadwambua@gmail.com', NULL, '$2y$12$MQaKkMN8wDjjbcbWmAuFGeYl9ZWZXP11b1.jw5JYamJ1nqLPDc8Pq', 'borrower', 1, NULL, '2025-04-17 12:21:34', '2025-04-17 12:21:34', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(7, 'Keneth Otieno Owino', '', '0790113034', 'kenowino@gmail.com', NULL, '$2y$12$TxyyVlWqdhMwBK1E2Vc1..GyPQzFRvy7icMJOgJuthUAmB1D/y6pW', 'borrower', 0, NULL, '2025-04-17 13:02:01', '2025-04-17 13:02:01', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(8, 'Michelle moraa sese', '', '254793867121', 'michellesese99@gmail.com', NULL, '$2y$12$4VGUFOjrMXOxqpY1i2HNPegukv9eI91aj9JOfikUSwEdyiBu4VQQu', 'borrower', 1, NULL, '2025-04-17 13:12:47', '2025-04-17 13:12:47', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(9, 'MARKLEWIS WACHIRA GATUTHA', '', '+254742421530', 'markwachira07@gmail.com', NULL, '$2y$12$Ef0YDy2KjAYZeV7vs2kyU.0nBIV0BMoG8UkTNrX5byblnm2p/txJq', 'borrower', 0, 'CxyThXOGCUwzfLeCjjeeN8QDUJZ2YiN1IfTcJdf8Azboi9ql3gpKTklFv6wy', '2025-04-17 13:22:24', '2025-04-17 13:22:24', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(10, 'CHRISTOPHER EPARA ISURA', '', '+254713985762', 'isuracarhire@gmail.com', NULL, '$2y$12$1/aF94HNoHf2SXwbYh/.xOgdT2qWkkQjNm0uwdX6TSf03pXnDyd.2', 'borrower', 1, NULL, '2025-04-17 13:27:08', '2025-04-17 13:27:08', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(11, 'Shadrack Cheruiyot', '', '0719744247', 'shadykipkorir@gmail.com', NULL, '$2y$12$omwtR4JZbfdt/JvbD/i2yubuzZ1lYf2lRnL58fK29kdxiIRYyYOw6', 'borrower', 0, NULL, '2025-04-17 13:29:11', '2026-02-03 06:19:24', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '31586471', NULL, NULL),
-(13, 'Dennis Kibet', '', '+254717492048', 'karleighdeno@gmail.com', NULL, '$2y$12$2CR8.J2PitDIJoOoZZAfuuvcM0lU9zLj6kLxVksy2RiU7aPySXxQK', 'borrower', 0, '56KThztPnVHbWd8JRYA6vfETSvXPWkxSuDvWqwxl4TuKiQHXeFpxS9jNhRyS', '2025-04-17 13:32:34', '2026-02-09 17:54:40', 'male', '1994-03-24', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Samson Kiplangat', 'samsontanui25@gmail.com', '0717492048', 'Accountant', 'Brother', 'national_id', '3400000', 'signatures/signature_Dennis_Kibet.png', 'national_id', '31425580', NULL, NULL),
-(14, 'MOSES OKURUTU BARASA', '', '254726104495', 'mosesbarasa@gmail.com', NULL, '$2y$12$STSR.E/TpRR86bXF3Jdo3OXldtd7YAPk183NisR1HD7eRbXB6.54G', 'borrower', 0, NULL, '2025-04-17 14:07:25', '2025-04-17 14:07:25', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(15, 'Samson Kiplangat', '', '0701607959', 'samsontanui25@gmail.com', NULL, '$2y$12$pBYO6eGOW1r2bgxqG9ePJ..06DxMb1bZGeJ/UVp7DtAaB8bO2Ngya', 'borrower', 0, '6g4lcvyGHhKnziD43gRsHznruRgY5FHGEwDCXgc0E24K2FoWScT5hPKDZGPS', '2025-04-17 14:20:54', '2025-12-27 08:12:41', 'male', '2025-05-21', NULL, 'KE', 'single', 'Christian', 0, 'Master\'s Degree', 'Joseph Koech', 'josephkkoech@gmail.com', '254722580928', 'Business man', 'Father', 'national_id', '0587257', 'signatures/signature_Samson_Kiplangat.png', 'national_id', '34418665', NULL, NULL),
-(16, 'DENIS LEVIS NGIRA', '', '+254721381582', 'ngirangira@gmail.com', NULL, '$2y$12$XZ8sfnO/wYVqOo6AApuyxOMsfDHGBaIgT2IhHtCA.DyN6GGFWQoS.', 'borrower', 0, NULL, '2025-04-17 14:24:34', '2025-04-17 14:24:34', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(17, 'LINNER JEPKEMBOI KOECH', '', '0720540112', 'ljkoech@gmail.com', NULL, '$2y$12$ORh0wj9X0ste0XVVc5wa3edhnpkCgZrpqURDczj5t0OLsGU32dX4u', 'borrower', 0, NULL, '2025-04-17 14:29:23', '2025-04-17 14:29:23', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(18, 'Stephanie Kanyeki', '', '+254727088262', 'stephaniekanyeki@gmail.com', NULL, '$2y$12$5hzR.H/wPVoMr9Qz95VW7u.L6lvnIbe.mr5xd7xumiMD7uJjz3b0W', 'borrower', 1, NULL, '2025-04-20 10:39:32', '2025-04-20 10:39:32', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(19, 'CFO County Busia', '', '0700123456', 'busiacfo@gmail.com', NULL, '$2y$12$h896m0HMnTjHiXNj5JiIvOkh7EDLFqpmn9iYs0aqoD7BJeY0NCN16', 'borrower', 0, NULL, '2025-04-20 17:14:25', '2025-04-20 17:14:25', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(20, 'JOSEPH KOECH', '', '0722580928', 'josephkkoech@gmail.com', NULL, '$2y$12$FwGXheD3OexInOl/tWVxluF4rJDTh6l2loNnD5I0OIYlpQ//0NQ/C', 'borrower', 1, NULL, '2025-04-20 17:45:22', '2025-04-20 17:45:22', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(21, 'David Ihaji', '', '0717465550', 'davidihaji@gmail.com', NULL, '$2y$12$tgVICqfy81Ab75UjvFirCOe3sl5H74yR9fhhSXTKMGpscRpeEt/Jy', 'borrower', 1, NULL, '2025-04-22 13:34:37', '2026-05-08 07:20:14', 'male', '1995-04-23', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Peter', 'nyenzo@gmail.com', '0796952247', 'Tech', 'Brother', 'national_id', '31930122', 'signatures/signature_David_Ihaji.png', 'national_id', '31930121', 'id-documents/0MftMeNEPFqhlUSs5aH8WOjRH4gZo7by4J9RHDRD.png', 'id-documents/Ay2f4tFEcT9J0qje0Gm7wbDMqqS9YbTB1YvtAJtY.png'),
-(22, 'Justine Omori', '', '0721855878', 'justineomori@gmail.com', NULL, '$2y$12$WklPbJc9w7aDMncNznJ70.ikODU0icUKLaBr5a6WBn0yb0l6PR2ia', 'borrower', 1, NULL, '2025-05-07 12:10:19', '2025-05-07 12:10:19', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(23, 'Joseph', '', '+255758556562', 'lamearkaaya@gmail.com', NULL, '$2y$12$oRdMr9kL9rqxBJK0v3TQv.pvflSdVOwgwUtCmMaG.CY7c0GlCCE0i', 'admin', 1, NULL, '2025-05-08 10:53:11', '2025-05-08 10:53:11', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(24, 'Steve Omwenga', '', '+254 727 665808', 'steveomwenga@gmail.com', NULL, '$2y$12$1sd9TZHAnikJzo9u5IQLOOubmQ0AFrlyoafY9MLajVN3XHtMFRaHK', 'borrower', 0, NULL, '2025-05-13 06:49:55', '2025-05-13 06:49:55', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(25, 'DOREEN NTARANGWI', '', '+254710438971', 'doreenntarangwi@gmail.com', NULL, '$2y$12$z6QRzg8ktp/YWvd33nvhYeUQxv2YB109l3gZjpElykM/.o5WxgX7u', 'borrower', 1, NULL, '2025-05-15 08:08:59', '2025-05-15 08:08:59', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(26, 'Ann Njora', '', '+254 722 596985', 'kirajsupplierskenya@gmail.com', NULL, '$2y$12$JTGPNwFVmH3kFCQffkVLlePz0/qaFV7c7JsSSVnujmHI/XYtxLga6', 'borrower', 0, 'WU70YAjW4SXP4j2m4Ys6nM1C91lEpQzULs442bpFhR02gmD06yUatuxFUXYN', '2025-05-19 12:45:53', '2026-01-28 11:58:28', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(27, 'JOSEPH KINGORI WAMBUGU', '', '+254 714 390696', 'josephkingori@gmail.com', NULL, '$2y$12$8cGto1IdjyPNIiM0HN48IuRmUHcarG8rjmGqXVaDMJhlkvomvO10O', 'borrower', 0, NULL, '2025-05-20 13:03:03', '2025-05-20 13:03:03', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '', NULL, NULL, '28539464', NULL, NULL),
-(28, 'Njeri Nduati', '', '0720517386', 'njerinduati@gmail.com', NULL, '$2y$12$C.r6Fgc1lc8xmkJtTWMTe.r/UR2qhW5S6qohBouDgOKU3d9Oo.lHe', 'borrower', 0, NULL, '2025-05-25 18:36:15', '2025-05-25 18:36:15', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '29753954', NULL, NULL),
-(29, 'Nigel Cecil Otieno', '', '+254 721 655906', 'cecilmash@gmail.com', NULL, '$2y$12$5Sbd9JS17UvgL6rgTh4dwO7ciB./oJOHau9jtLxUDWGqRyTKuscFC', 'borrower', 0, NULL, '2025-05-27 13:47:29', '2025-10-29 07:03:27', 'male', '1985-03-25', NULL, 'KENYAN', 'single', NULL, 0, NULL, 'Barry Macharia', 'barryblacks@gmail.com', '0720899750', 'Businessman', 'Brother', 'national_id', '22445566', 'signatures/signature_Nigel_Cecil_Otieno.png', 'national_id', '24011567', 'id-documents/mZ0nHUoGwxYUruZ1ioNvZJpnm9JUY82EFqTF6OPK.jpg', 'id-documents/2uoCUuOyIDQCAenJLrPuH1gbgfLdizW83cdyknWi.jpg'),
-(30, 'Ian Kipkorir Cheruiyot', '', '0710911168', 'iankcheruiyot@gmail.com', NULL, '$2y$12$QUvaA6TvKXP1xf3/3GU00.TGelMgTOAVPml2Vljx1chW/2CGYU0gG', 'admin', 1, NULL, '2025-05-29 05:14:33', '2025-05-29 05:14:33', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(31, 'Leon Musau', '', '0720747652', 'musau.mumo@teflontradingltd.co.ke', NULL, '$2y$12$WU2gPKt9m5qTKZPhoPzUIeEkyTMPKK3QCUwB.2rwe46cBJsQif1/G', 'borrower', 1, 'VH3X52MKGcLon0bybPJmawH46jKpP4YatLdpyC57HBhYGpSaVLOiOqkKZao0', '2025-05-29 13:47:36', '2026-02-09 17:16:38', 'male', '1991-07-25', NULL, 'KE', 'single', NULL, 0, 'Master\'s Degree', 'Micahel Musau', 'mukikiilumusau@gmail.com', '+254721374196', 'coffee trader', 'Brother', 'national_id', '32313915', 'signatures/signature_Leon_Musau_1770660998.png', 'national_id', '32313898', 'id-documents/xACFanBfJtr4nUIOMm4XGMtsv5gbiWhIqksinlaL.jpg', 'id-documents/OsxovFf5SSZznQOKEmA78jEmMU2QwbXNaMFgF43p.jpg'),
-(32, 'Brian Kiprop Kiprono', '', '0720098561', 'briankiprop@gmail.com', NULL, '$2y$12$GxQC0YyruW8LgBwdU7O8zuhxDjvsCzRtM8qoq34LZkD8fWQlK482O', 'borrower', 1, NULL, '2025-06-02 11:17:53', '2025-06-02 11:17:53', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(33, 'Alan Kipng\'etich Limo', '', '0705596198', 'limoalan@gmail.com', NULL, '$2y$12$TZ3mZ4LycemIe6Urg8X2oeYfD6Bdk6VsXnLR6sCNvzKSE15soyHFa', 'borrower', 0, NULL, '2025-06-14 10:26:20', '2025-06-14 10:26:20', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '31667416', NULL, NULL),
-(34, 'MOLUK AWAD', '', '0725833011', 'molukawad519@gmail.com', NULL, '$2y$12$dozzobeZBqXkor14yj8lJuRuHOH601FKA9iI4yB48hpdNg1UZjMw2', 'borrower', 0, 'A2jaRU9ng7dGHKMdOdPHcXcAvl1HSiuWmxTaEaDsnJ0lGWqSwyDPoxxffxuu', '2025-06-15 13:55:59', '2025-06-15 13:55:59', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(35, 'Lewis Kimutai', '', '0725697837', 'leuville6@gmail.com', NULL, '$2y$12$VQsSkFy5bS.wpUElVPh8y.n7D2WKd.1DQlAgS1AOg8kz1Ua5tZgRC', 'borrower', 0, NULL, '2025-06-20 18:30:23', '2025-06-20 18:30:23', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(36, 'Newton Wesonga Okumu', '', '0703654828', 'newtoncarloz@gmail.com', NULL, '$2y$12$Wxj00avSUmFTTVsquTqRouBQY0.akLqfj.Nl.czNQ7ZlmFbYILDnm', 'borrower', 1, NULL, '2025-06-21 06:15:40', '2025-06-21 06:15:40', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(37, 'BRIAN KIPLANGAT', '', '0706099588', 'briankiplangatbk@gmail.com', NULL, '$2y$12$ArbwFMHaiL/rCrXnx.VHounCl/3rOUbPO2OwRJYu9ErQVDRsCU5/S', 'borrower', 1, NULL, '2025-06-23 07:43:27', '2025-06-23 07:43:27', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(38, 'HONOURINE NZISA MUTUNGA', '', '+254729080190', 'honourinenzisa@gmail.com', NULL, '$2y$12$nP6kWDrHZrMx6A3GkycO5.VNP7S.f3CoHmpUlcCJgRv3zs9FeE4K6', 'borrower', 0, NULL, '2025-07-07 08:51:03', '2025-07-07 08:51:03', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(39, 'Faith Chepngetich', '', '0700701380', 'chepngetichfaith981@gmail.com', NULL, '$2y$12$12yyIb3Y0op09RDuG.GBn.U2NYXkp.9.Y2xCmmXrcccZsfZTfTrA.', 'borrower', 0, 'G3w4zV027oUDqDFWomDWq2YgILmyVHttMBQS9wnsa3Cb38tclTkT21umNDgQ', '2025-07-13 16:11:22', '2025-07-13 16:11:22', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(40, 'Ian Otieno Okoth', '', '0719795614', 'ianokoth@gmail.com', NULL, '$2y$12$bfTyyCGeKrzCEtU1WQZh5em967lE2kU0fLRvQ8jgPCzgDOxvy.llC', 'borrower', 0, NULL, '2025-07-14 11:35:57', '2025-07-14 11:35:57', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(41, 'Cynthia Wanjiru Muhia', '', '+254 717 459536', 'cynthiashiro78@gmail.com', NULL, '$2y$12$bO3E9MoR5kXMmYxKfZ1IJ.JU8NgFR283MNCG/lIiiZ3KOWza0O4UC', 'borrower', 0, 'mbWJ31V0W1EcyI5A0eckNUDTEbTgk92YCbihO5jmtUcZVlroH33jUU77JWbr', '2025-07-15 10:00:13', '2025-07-15 10:00:13', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(42, 'Francis Kabutu', '', '0728167511', 'kabutu.frank@gmail.com', NULL, '$2y$12$VknLy1ceuXycC3ZgvpjDfum6b6FNMMHiIq6YT6CuMDGhLPYesmPm6', 'borrower', 1, NULL, '2025-07-17 10:52:30', '2025-07-17 10:52:30', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(43, 'Brian', '', '0717503595', 'gachugubrian8@gmail.com', NULL, '$2y$12$GNKcltFvv5DmYlB6yGtf6.iYjL4fx5FKbT.oEigQktpAxOvTgsw52', 'borrower', 0, NULL, '2025-07-28 06:05:53', '2025-07-28 06:05:53', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(44, 'Arnold Maina', '', '+254724574681', 'arnold.x.maina@gmail.com', NULL, '$2y$12$dXOkpwX5CB9Ft2iaL6lUYOEqhex5utpQBJbhXrtEbHsIsb/7qsVjC', 'admin', 0, NULL, '2025-08-06 05:11:15', '2025-08-06 05:11:15', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(45, 'Ruth Sudoi Makalla', '', '+254 721 440306', 'rsmakallah@gmail.com', NULL, '$2y$12$EHzV094qb9bZ88BvsxYkLuiccJ8ZUc4AxXGudlWvhGQ6Y423Wk9.O', 'borrower', 0, NULL, '2025-08-06 11:25:20', '2025-08-06 11:25:20', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(46, 'Michelle Muriithi', '', '0732792642', 'michthi.mm@gmail.com', NULL, '$2y$12$JjG3FMRdhKucKdYVblAOouvAREuzGHoB4aLLgIFwlZYZ1CUqh8oHS', 'admin', 0, NULL, '2025-08-12 14:29:27', '2025-08-12 14:29:27', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(47, 'Kelvin Keter', '', '0727025050', 'kipchirchir101@gmail.com', NULL, '$2y$12$8QZw5VeEAiX6E2GIu6M5UOFAQswu0TAER1ht22HcLvTvHJ3UetubC', 'borrower', 0, NULL, '2025-08-14 07:30:39', '2025-08-14 07:30:39', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(48, 'Sharon Chemurgor', '', '0704815115', 'chemurgorsharon@gmail.com', NULL, '$2y$12$lIKTaV/PMy9/MbWW55kO7eKfVeHmygm3Ug9uyg8B6NzGd8FMg9Hdy', 'borrower', 0, NULL, '2025-08-19 14:58:14', '2025-08-19 14:58:14', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(49, 'Peter Tanui', '', '0701134508', 'thetanlit6@gmail.com', NULL, '$2y$12$tjpGbnZbXxtIIv53nEp4L.d.bcEoXsfhNXJToCiXtYTP669H0pVw2', 'teller', 0, 'aX6h8TUgu4woLFSU8Vncbfr43G0J4ZRcd3omSLIRZqXH0eYKSfRSDTeY5ADj', '2025-09-02 07:51:46', '2025-10-15 10:45:32', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Peter_Tanui.png', NULL, NULL, NULL, NULL),
-(50, 'Mohamed Abdirahim Abdi', '', '0721544928', 'mohaabdi41@gmail.com', NULL, '$2y$12$CVQWIt6FGp..1WoA8tbBL.hnoxaDIDhFrVhHoZtjaUEoOKiGsXZZi', 'borrower', 0, 'Av2fj49VRHgKc6WUG6hEivJXyLIw1XCKCMp1yQFDQVazAmaXxll8bzPjSKsk', '2025-09-10 06:39:51', '2025-10-27 10:13:24', 'male', '1993-04-20', NULL, 'Kenyan', 'single', 'Muslim', 0, NULL, 'TAYIB haithar', 'mohaabdi41@gmail.com', '0723597683', 'Businessman', 'Brother', 'national_id', '36827361', 'signatures/signature_Mohamed_Abdirahim_Abdi.png', 'national_id', '36827364', 'id-documents/DNLFpZa2hXxTmhI7GUJSaxXby9KkNCqMm5Sel8rU.jpg', 'id-documents/VQnXyNlVCCJpKKz74z6CPnGufSVqrALa9Pwl81YR.jpg'),
-(51, 'Kelvin', '', '0726471918', 'c.kelvinrotich@gmail.com', NULL, '$2y$12$Lu9zm/hSdT2PT08yOzz.9.yz/ZqEjg3UAEg.q1Vx5VLkEDmS5.1s.', 'borrower', 0, NULL, '2025-09-14 12:24:32', '2025-09-14 12:24:32', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(52, 'Marion Lewenei', '', '0705254257', 'leweneimarion@gmail.com', NULL, '$2y$12$4/HAJTqnsZ/.QW/BRleIsuS.jT.rvb3tLqyE1aFfyAsZvA8awbMbO', 'borrower', 0, NULL, '2025-10-01 09:11:31', '2025-11-21 05:42:00', 'female', '2025-05-15', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Maureen Mathithi', 'irenejunnie@gmail.com', '+254705254257', 'businessperson', 'Business Partner', 'national_id', '36340048', 'signatures/signature_Marion_Lewenei.png', 'national_id', '40543156', NULL, NULL),
-(53, 'EMMANUEL Ruwa Tsuma', '', '0768384462', 'emmanueltsuma19@gmail.com', NULL, '$2y$12$FdDOhmJWdlP4u0JRcT3sBOftNNL2Rl0MPGUNz1Q1Q6h0/SIY02bmm', 'borrower', 1, NULL, '2025-10-03 06:04:44', '2026-03-06 10:05:01', 'male', '2000-06-27', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Ronald ruwa', 'ronaldtsuma21@gmail.com', '0705110637', 'Human resource officer', 'Father', 'national_id', '8435579', 'signatures/signature_EMMANUEL_Ruwa_Tsuma.png', 'national_id', '38276910', 'id-documents/YE5aPHeTXZaDSZagkvH8rPOs5bNyYR5WkK9sebFZ.jpg', 'id-documents/u1AdJo50lkrTAohkTQcS3q2QuLLrYQoLVnrLCnQI.jpg'),
-(54, 'Isaac Ngugi', '', '0711499655', 'isaacngugibaker@gmail.com', NULL, '$2y$12$/IyJDyyBqHgyN10RhOw/u.oaFnjcibWlI3dgu7/uFyo7kxIjCvvme', 'borrower', 0, NULL, '2025-10-08 04:06:13', '2025-11-04 03:59:42', 'male', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Isaac_Ngugi.png', NULL, NULL, NULL, NULL),
-(55, 'Lawrence Kipngetich Byegon', 'avatars/l3VJhlbbZj8ipDk8RnLcF6y40LExyflK4TomEmUL.jpg', '0722778422', 'lawrencebyegon@gmail.com', NULL, '$2y$12$RDyjh/WTwbe2EumZLmeMMO3QApL/QXqDlv8srp.WzycTAOdOJdpOS', 'borrower', 1, NULL, '2025-10-23 05:37:11', '2025-10-26 07:54:26', 'male', '1994-05-01', NULL, 'Kenyan', 'married', 'Christian', 0, NULL, 'Mildred Asili', 'mildredasili21@gmail.com', '0717633016', 'Businesswoman', 'Business Partner', 'national_id', '38353237', 'signatures/signature_Lawrence_Kipngetich_Byegon.png', 'national_id', '31757677', 'id-documents/naw4em7mhBqObFUwTZIbCkCkoPMSgK3cgCHvMTEg.jpg', 'id-documents/yIAOFuUMIkIpqPT71ITNriTVI5C76L6M0XuKBGCn.jpg'),
-(56, 'Francis Ndungu', '', '0742386797', 'frankietheuri@gmail.com', NULL, '$2y$12$9qYfC4yjURl5XAjRDxPavOm5ooZdf4NPZBdXlWG44MOuKErGKbC/i', 'borrower', 0, NULL, '2025-10-24 03:31:10', '2026-02-01 19:45:48', 'male', '1996-10-05', NULL, 'Kenya', 'single', 'Christian', 0, NULL, 'Julie Wanjiru', 'julie.wanjiru1@gmail.com', '0114204599', 'Logistician', 'Sister', 'national_id', '30146007', NULL, 'National ID', '33103892', 'id-documents/kkzoNCDiAeejsCYixVoQ7PH3tR7cjZdQFaZ1zFVo.jpg', 'id-documents/djfdMdje61nUNps5Q6anDSyxBH13hf0eEF7hND18.jpg'),
-(57, 'Douglas Kipchirchir Yegon', 'avatars/1pU9bhJ1n7D1pOchC8HX3sjPjyQvqQYROnL8cGZe.jpg', '0701849455', 'yegondouglas@gmail.com', NULL, '$2y$12$N.ac.IwoRAc/ahSex9kMkeu/yqbq8UwDiq/wxXUWZ8nfAOQbscLPe', 'borrower', 0, NULL, '2025-10-24 09:49:49', '2025-10-24 13:12:24', 'male', '1996-01-04', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Elvis Kipkoech Yegon', 'elviskyegon@gmail.com', '0717752055', 'Businessman', 'Brother', 'national_id', '0734970', 'signatures/signature_Douglas_Kipchirchir_Yegon.png', 'national_id', '32507485', 'id-documents/EMC78WWzte1K4r4SUGczhNcnZEzZ3tRSBnEydcAO.jpg', 'id-documents/OpYuy3P29xfoGaqZ5sSH5aJLjGaC5KUcPtIYHmlS.jpg'),
-(58, 'Vivian Simiyu', '', '722778298', 'viviansimiyu77@gmail.com', NULL, '$2y$12$8bYJi.ZeyquI/Xcp87hiuOncTWxq4YXHcLQ/iL/41JIwj1Gryri0i', 'borrower', 0, NULL, '2025-10-25 13:22:18', '2026-04-27 18:32:52', 'female', NULL, NULL, 'Kenya', 'single', 'Christianity', 0, 'Bachelor\'s Degree', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Vivian_Simiyu.png', 'National ID', NULL, NULL, NULL),
-(59, 'Justin nyarindo', 'avatars/1jLvUxRf2uVvqvNN7EgmR3hAKMVz99hRceMqMGeY.jpg', '0796165555', 'aguilanmilano@gmail.com', NULL, '$2y$12$DHM3FZFQQPbaRPchxlxifOZC9iXDb8yfWiK8Z38b6OfZXSmL5KEg2', 'borrower', 0, NULL, '2025-10-27 13:40:41', '2026-02-02 13:16:40', 'male', '1996-07-03', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Stella nyarindo', 'stelanyarindo@yahoo.com', '0723396150', 'Secretary', 'Mother', 'national_id', '15247846', 'signatures/signature_Justin_Nyarindo.png', 'national_id', '34760573', 'id-documents/dWt8NmMfqdXOtIIoibeyQMbeNemkVBfQ0o4nE5og.jpg', 'id-documents/ABumIl2Hs09QcHVrYKMsmTRiIPpQjUkoYvDaEy8T.jpg'),
-(62, 'Douglas Lutomia', '', '0799918736', 'douglaslutomia13@gmail.com', NULL, '$2y$12$rpm9tsP1K9SgQytf3biZQ.jTFR5uS2yflzOMWfMcveQ5Y.bqZvDh6', 'borrower', 0, '5uuAXM5Bb58xcg32nyteRR1qpwcMQAutd2JAEx0zi54Sb8x9Lvz38qwwHsda', '2025-12-22 10:11:02', '2026-02-03 05:07:58', 'male', '1997-06-03', NULL, 'Kenya', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Eric Odhiambo', 'ericodhiambo@gmail.com', '0718664393', 'Dog trainer', 'Brother', 'national_id', '28472342', 'signatures/signature_Douglas_Lutomia.png', 'national_id', '33555254', 'id-documents/6VgExuInfnnT9taPNmQejLcRNq8HZxI450CiisF9.jpg', 'id-documents/m4c2eTCLo1Uj6RZeQ6UyzfFXORYImZLSZY09VDLH.jpg'),
-(63, 'Morris Hafare Segelan', '', '0716893824', 'morrishafare@gmail.com', NULL, '$2y$12$XYydzEfQvPnIIxNRdbQPeexqnbjdr2/.P4wXT0FFcmK/F7FOBCMuS', 'borrower', 0, NULL, '2025-12-22 10:31:24', '2025-12-22 10:34:20', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Morris_Hafare_Segelan.png', NULL, NULL, NULL, NULL),
-(64, 'Judy Kerebi', '', '0741 960 917', 'judykerebi23@gmail.com', NULL, '$2y$12$KS9qsb9J9YPaFwvJc34SMesmXKyRq17SaL8gnzN0H/Q/trFazHWhu', 'borrower', 1, 'bmdTBflv37S49rppyYH4VM30PeNdc4nO8aKFdHvsyNWQ72ULwFMsXpj71TmB', '2026-01-20 09:03:36', '2026-04-11 09:41:21', 'female', '1999-02-09', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Farida Kebaso', 'faridakebaso1@gmail.com', '+254718534504', 'Business', 'Business Partner', 'national_id', '42191432', 'signatures/signature_Judy_Kerebi.png', 'national_id', '36138998', 'id-documents/kuPygKRuhL6oj6jqkF69AQeDwy4b69DykWwx4nUg.jpg', 'id-documents/xtp2kK9k157Np83ZMRQ2unxYSdzPzTmAK82vMycX.jpg'),
-(65, 'Hesbon Kiprotich Kerewo', 'avatars/Dw2FhaoXteB6YjHy4fzIxvLxX5me5wLGsm8xT91x.jpg', '0706077705', 'hezkerewo@gmail.com', NULL, '$2y$12$NT4nA1qQn24bsrfJWeykd.gOJYuPwOVL64PMYP7iK7bchPDk.zA8C', 'borrower', 0, 'UO8Fx3w8IPnIAVVJ4ZhjpWnZ7WBKNzeRfOVyH9DYW0KPKCPI1hXeni9Hd7DQ', '2026-01-21 06:27:38', '2026-02-02 13:32:56', 'male', NULL, NULL, NULL, 'married', 'Christian', 0, 'Bachelor\'s Degree', 'Tony Kimosop', NULL, '0794864738', 'Business man', 'Brother', 'national_id', '30317319', 'signatures/signature_Hesbon_Kiprotich_Kerewo.png', 'National_Id', '30319319', 'id-documents/gb4dwWWVxiSqhSCvqdYvuJRwx7JUK3oxjzqhCE2F.png', 'id-documents/BDiGmMGsxQHGk6K9aCEELSqEepQFNxMkA5CIKlIT.png'),
-(66, 'Jacob', '', '0791250828', 'jacobgimachombe@gmail.com', NULL, '$2y$12$sDuHMFS3QUNPrqY6frCOlOT0BmlvsCjEhO2B0Za4mfAGGtp5VF4RK', 'borrower', 0, NULL, '2026-01-21 07:15:44', '2026-01-21 07:35:13', 'male', NULL, NULL, NULL, 'married', 'Christian', 0, 'Bachelor\'s Degree', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Jacob.png', NULL, NULL, NULL, NULL),
-(67, 'Michael Nzuka', NULL, '0700742393', 'musyiminzuka3@gmail.com', NULL, '$2y$12$TyQr75ASmFeVbqXtdtCvIepyt45m2U4UXrpOF7v71/VgSoSmYtYGC', 'borrower', 0, NULL, '2026-02-18 08:27:11', '2026-02-18 08:50:25', 'male', '1994-11-04', NULL, 'Kenya', 'single', 'Christianity', 0, 'Master\'s Degree', 'Grace Musyimi', 'gracemusyimi72@gmail.com', '+254716815488', 'Policies and Governance', 'Sister', 'national_id', '35658056', 'signatures/signature_Michael_Nzuka.png', 'National ID', '31529341', NULL, NULL),
-(68, 'Deborah', NULL, '0791733405', 'deborahmurgor7@gmail.com', NULL, '$2y$12$aAEBH17kgQP9w6dCjtev/eHuQtWNAlUX6YwMsGXTo556LoPkJpLBq', 'borrower', 0, NULL, '2026-02-18 08:56:28', '2026-02-18 08:56:28', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(69, 'Ronald Kemei', NULL, '+254714995946', 'kemeirnld@gmail.com', NULL, '$2y$12$euP7hNWhVfQ3m7Fr4vGAXuiL7REKowJlxqZKLmC2iDkzCFQZCvmvW', 'borrower', 1, 'xOcQhyfWId9jkeLqjmj8cg2w8AT4vYth4dCJ34a9h9lh8zNZoBYrzzyJOEMd', '2026-02-18 14:51:36', '2026-02-19 10:09:08', 'male', '1990-05-12', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Bethwel Kiprono', 'felixmaru@yahoo.com', '+254 790 819905', 'Business/freelancer', 'Business Partner', 'national_id', '29480845', 'signatures/signature_Ronald_Kemei.png', 'national_id', '29762505', 'id-documents/zMn7oIMMtSc1CSuwDDc2vunirYzWFYWbaz2XKuR4.jpg', 'id-documents/hJetnNYA1fjKx321pOBe7eUA0TEuUCAq7zazvI0b.jpg'),
-(70, 'Nigel Kimutai', NULL, '0725408209', 'nigelkimutai@gmail.com', NULL, '$2y$12$tRL3hw45tFpda00vVb4xB.vdQIG3kn9LoDmGfZVB67/1TQ3v9DFjK', 'borrower', 1, NULL, '2026-02-23 13:47:01', '2026-02-23 14:09:18', 'male', '1994-03-23', NULL, 'KE', 'single', NULL, 0, NULL, 'Prisca Choge', 'priscachoge@gmail.com', '0720978776', 'Business', 'Mother', 'national_id', '30953061', 'signatures/signature_Nigel_Kimutai.png', 'national_id', '30953061', 'id-documents/1MNy81qcXk0NFSHa1lWdKQoupc6qrj877ecKALMV.jpg', 'id-documents/BoT1TvQ4J39KP2Y2CjT6oz3QqT75L8CwgmazR1Qa.jpg'),
-(71, 'Yvonne Jemutai', NULL, '0701986999', 'yvonnejemutai3967@gmail.com', NULL, '$2y$12$dxZg4KvdGlZyZnB.nQIIl.JPwe34GxL3dxbXHKZIjKOyUmbrqtNj6', 'borrower', 0, NULL, '2026-03-06 04:57:07', '2026-03-07 11:53:44', 'female', '1996-10-28', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Vicky Jelagat', 'vickyjelagat@gmail.com', '254757869890', 'Pharmacist', 'Sister', 'national_id', '38086262', 'signatures/signature_Yvonne_Jemutai.png', 'national_id', '33246104', 'id-documents/FECg9du15dXA9E1rgjetCVbap6wPmPJRZqKpONHb.jpg', 'id-documents/nGLk6DhAwWnc5HXZkamQsShN0C5HduhVCrlwobfK.jpg'),
-(72, 'Teresa waitherero Ndirangu', NULL, '0745878281', 'teresawaitherero@gmail.com', NULL, '$2y$12$O8X6ZphiU339Q7iGcq5YC.58i9gm8hVAKC/L.YPOccS/yT9CEAecC', 'borrower', 0, NULL, '2026-03-16 09:02:56', '2026-03-16 09:02:56', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(73, 'Anita Soina Nanyokie', NULL, '+254 708 530169', 'anitasoina@gmail.com', NULL, '$2y$12$kwl.yLpYwf08AlvQKx3wi.nC3WxXqGELI1SMESpNvDxpJBUdHHOHe', 'borrower', 0, NULL, '2026-05-05 09:59:58', '2026-05-05 10:04:03', 'female', '2000-01-03', NULL, 'KE', 'single', NULL, 0, NULL, 'N/A', 'na@gmail.com', 'na', 'n/a', 'Work Colleague', 'national_id', 'n/a', NULL, 'national_id', '37489362', 'id-documents/63Hty7l8SaxdzjAbO0daOdLLNxxPn0JVXByGKazP.jpg', 'id-documents/AYRz7eKjKxgnYIQJ4NkaRXgPGRGgePUs0K7j7g9P.jpg'),
-(74, 'Diana Jerotich', NULL, '0728688805', 'jerotichdiana2@gmail.com', NULL, '$2y$12$7rAzZk9UhQYCKHCAwsP3muU7hQ4uB8VDeFLKvfJKYlSRQvEEUL0XS', 'borrower', 1, NULL, '2026-05-11 05:17:56', '2026-05-11 05:37:05', 'female', '1998-07-14', NULL, 'KE', 'married', 'Christian', 0, 'Bachelor\'s Degree', 'Lydiah Chesang', 'lydiahchesang36@gmail.com', '+254710762005', 'Business person', 'Sister', 'national_id', '34651360', 'signatures/signature_Diana_Jerotich.png', 'national_id', '35591135', 'id-documents/iUVocFrbx2gYfCvCuvMj8RcDvoe1AhvenEZiuJCF.jpg', 'id-documents/vdvrSDgZlcHNljjSUm6gXKGMyAnFElwFmKUI2ov5.jpg'),
-(75, 'Dennis', NULL, '0728064636', 'dennisosoro44@gmail.com', NULL, '$2y$12$kU4R7uBGobd2E7YFos25IO7yp2KxLWPRYGoBxSh3froU1injX49vm', 'borrower', 0, NULL, '2026-05-11 06:03:12', '2026-05-11 06:03:12', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(76, 'Lucy Kerubo', 'avatars/aY8NS1LiAjdRdxrYzp9rYS13eWiXk8UHTXxvbxQs.jpg', '0113978372', 'kerubolucy106@gmail.com', NULL, '$2y$12$YoSLFO/B3lsNBXGlvraqoOiVBCnuijJ48BEgzqNQ2C.bsPvLb.CqK', 'borrower', 0, NULL, '2026-06-20 08:55:31', '2026-06-20 11:41:31', 'female', '2005-07-18', NULL, 'Kenya', 'single', 'Christianity', 0, 'Bachelor\'s Degree', 'Elizabeth Mutinda', 'lizanzisah@gmaail.com', '0718489101', 'Employed', 'Aunt', NULL, NULL, 'signatures/signature_Lucy_Kerubo.png', 'National ID', '178556676', 'id-documents/37WUH08TYXmytvwFSi70LMU8IIaOtgteeIrnVmdu.jpg', 'id-documents/moJHBkiivtK6v9806rJOMDQCcoKvZdlYkY3xj0uC.jpg'),
-(77, 'Nicholas', NULL, '0717758500', 'nicholuskamau172@gmail.com', NULL, '$2y$12$wZ1.motCkgnKRTkDzGDdHebltzsn0pt77DcfR9ablPwlVEL5IITla', 'borrower', 0, NULL, '2026-06-24 10:24:46', '2026-06-24 10:24:46', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(84, 'Brian Tanui', 'avatars/fJ5FgzIMRomhfS2e4kBp7KiDzfuDpA3VGYv96xx3.jpg', '0729887927', 'briantanui2030@gmail.com', NULL, '$2y$12$seelGyySijUTwC9HpOMmbev5.YVM89vYnMgYHG2PfKehs3eaRJIJm', 'borrower', 0, NULL, '2026-06-26 14:40:16', '2026-06-26 16:01:29', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Brian_Tanui.png', NULL, NULL, 'id-documents/laIoXY9XLu3uvQL6opz9qXmZeukDE3TnvYCrsPth.jpg', NULL);
+INSERT INTO `users` (`id`, `name`, `avatar`, `phone`, `email`, `email_verified_at`, `password`, `role`, `status`, `remember_token`, `created_at`, `updated_at`, `deleted_at`, `gender`, `dob`, `pob`, `nationality`, `marital_status`, `religion`, `disability`, `education`, `kin_name`, `kin_email`, `kin_phone`, `kin_occupation`, `kin_relation`, `kin_id_type`, `kin_id_number`, `signature`, `id_type`, `id_number`, `id_front_path`, `id_back_path`) VALUES
+(1, 'Dennis Kibett', 'avatars/HdBHuvf6S6ibGQh84Asue6XvRcgPiRMw68fLaXnC.png', '0717492048', 'kibettdennis@gmail.com', NULL, '$2y$12$2CR8.J2PitDIJoOoZZAfuuvcM0lU9zLj6kLxVksy2RiU7aPySXxQK', 'admin', 0, 'm2uBlazJublZRpas4VEugbg0EFmtmqod0YBsV33fD0Bp0gB3k612APzhKaKz', '2025-04-17 11:41:51', '2026-01-27 19:19:09', NULL, 'male', '1994-03-24', NULL, 'Kenya', 'single', 'Christianity', 0, 'Bachelor\'s Degree', 'Joseph Koech', 'josephkkoech@gmail.com', '+254722580928', 'Regional Administrator', 'Father', 'national_id', '0587257', 'signatures/signature_Dennis_Kibett.png', 'National ID', '31425580', 'id_cards/gi21rr49gf83kPyfu5RidoXExHg4ryw7nNVQAx11.jpg', 'id_cards/EUFh2ypgIKD3mVPhDJCRam2qZXKjytJBuU2UWJL7.jpg'),
+(2, 'Edward Kibet', '', '+254 710 920629', 'edwardkipsanai94@gmail.com', NULL, '$2y$12$HNUj2oDPc4GNbBKze3XbB.gsZFsEp7W2VOXu.wcKU8AIpBsK9E9jq', 'borrower', 0, NULL, '2025-04-17 11:42:36', '2026-01-22 20:30:33', NULL, 'male', NULL, NULL, 'Kenya', 'single', 'Christianity', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 'Isiro Agencies', '', '0727088262', 'isiroagencies@gmail.com', NULL, '$2y$12$JMXtud5UquYiEDMC7CRhyOEMvsX70.oUG8s/AsbRu4O285gIGQwfG', 'partner', 0, 'zIK3QLzpq7E11LlGo94aOKJuH3HEllvK1mAhMD6t3TVxwhTOizpOpbzq8Ycj', '2025-04-17 11:43:36', '2026-07-16 19:24:44', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(6, 'BILDAD WAMBUA', '', '0712345678', 'bildadwambua@gmail.com', NULL, '$2y$12$MQaKkMN8wDjjbcbWmAuFGeYl9ZWZXP11b1.jw5JYamJ1nqLPDc8Pq', 'borrower', 1, NULL, '2025-04-17 12:21:34', '2025-04-17 12:21:34', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 'Keneth Otieno Owino', '', '0790113034', 'kenowino@gmail.com', NULL, '$2y$12$TxyyVlWqdhMwBK1E2Vc1..GyPQzFRvy7icMJOgJuthUAmB1D/y6pW', 'borrower', 0, NULL, '2025-04-17 13:02:01', '2025-04-17 13:02:01', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(8, 'Michelle moraa sese', '', '254793867121', 'michellesese99@gmail.com', NULL, '$2y$12$4VGUFOjrMXOxqpY1i2HNPegukv9eI91aj9JOfikUSwEdyiBu4VQQu', 'borrower', 1, NULL, '2025-04-17 13:12:47', '2025-04-17 13:12:47', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(9, 'MARKLEWIS WACHIRA GATUTHA', '', '+254742421530', 'markwachira07@gmail.com', NULL, '$2y$12$Ef0YDy2KjAYZeV7vs2kyU.0nBIV0BMoG8UkTNrX5byblnm2p/txJq', 'borrower', 0, 'CxyThXOGCUwzfLeCjjeeN8QDUJZ2YiN1IfTcJdf8Azboi9ql3gpKTklFv6wy', '2025-04-17 13:22:24', '2025-04-17 13:22:24', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 'CHRISTOPHER EPARA ISURA', '', '+254713985762', 'isuracarhire@gmail.com', NULL, '$2y$12$1/aF94HNoHf2SXwbYh/.xOgdT2qWkkQjNm0uwdX6TSf03pXnDyd.2', 'borrower', 1, NULL, '2025-04-17 13:27:08', '2025-04-17 13:27:08', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 'Shadrack Cheruiyot', '', '0719744247', 'shadykipkorir@gmail.com', NULL, '$2y$12$omwtR4JZbfdt/JvbD/i2yubuzZ1lYf2lRnL58fK29kdxiIRYyYOw6', 'borrower', 0, NULL, '2025-04-17 13:29:11', '2026-02-03 06:19:24', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '31586471', NULL, NULL),
+(13, 'Dennis Kibet', 'avatars/oOFtsUvlWWTcaQEvdTq5H9z6zK2KKedqq6NZ8iJG.jpg', '+254717492048', 'karleighdeno@gmail.com', NULL, '$2y$12$2CR8.J2PitDIJoOoZZAfuuvcM0lU9zLj6kLxVksy2RiU7aPySXxQK', 'borrower', 1, '8AwT8YG0mKpYg1Siw0j1BSFhi0yVIZyuMK5DglhX8Ol2UntuIY872lj3M3YU', '2025-04-17 13:32:34', '2026-07-16 15:51:14', NULL, 'male', '1994-03-24', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Samson Kiplangat', 'samsontanui25@gmail.com', '0717492048', 'Accountant', 'Brother', 'national_id', '3400000', 'signatures/signature_Dennis_Kibet.png', 'national_id', '31425580', 'id-documents/uYMpJZqnPGTdYbDn4KGq42BodGbLh14GzhtrzzMj.jpg', 'id-documents/5fqj7VAVtdaM1Jt5JbnhHhQNvrZUwoi2rBPbNOaj.jpg'),
+(14, 'MOSES OKURUTU BARASA', '', '254726104495', 'mosesbarasa@gmail.com', NULL, '$2y$12$STSR.E/TpRR86bXF3Jdo3OXldtd7YAPk183NisR1HD7eRbXB6.54G', 'borrower', 0, NULL, '2025-04-17 14:07:25', '2025-04-17 14:07:25', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(15, 'Samson Kiplangat', '', '0701607959', 'samsontanui25@gmail.com', NULL, '$2y$12$pBYO6eGOW1r2bgxqG9ePJ..06DxMb1bZGeJ/UVp7DtAaB8bO2Ngya', 'borrower', 0, '6g4lcvyGHhKnziD43gRsHznruRgY5FHGEwDCXgc0E24K2FoWScT5hPKDZGPS', '2025-04-17 14:20:54', '2025-12-27 08:12:41', NULL, 'male', '2025-05-21', NULL, 'KE', 'single', 'Christian', 0, 'Master\'s Degree', 'Joseph Koech', 'josephkkoech@gmail.com', '254722580928', 'Business man', 'Father', 'national_id', '0587257', 'signatures/signature_Samson_Kiplangat.png', 'national_id', '34418665', NULL, NULL),
+(16, 'DENIS LEVIS NGIRA', '', '+254721381582', 'ngirangira@gmail.com', NULL, '$2y$12$XZ8sfnO/wYVqOo6AApuyxOMsfDHGBaIgT2IhHtCA.DyN6GGFWQoS.', 'borrower', 0, NULL, '2025-04-17 14:24:34', '2025-04-17 14:24:34', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(17, 'LINNER JEPKEMBOI KOECH', '', '0720540112', 'ljkoech@gmail.com', NULL, '$2y$12$ORh0wj9X0ste0XVVc5wa3edhnpkCgZrpqURDczj5t0OLsGU32dX4u', 'borrower', 0, NULL, '2025-04-17 14:29:23', '2025-04-17 14:29:23', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(18, 'Stephanie Kanyeki', '', '+254727088262', 'stephaniekanyeki@gmail.com', NULL, '$2y$12$5hzR.H/wPVoMr9Qz95VW7u.L6lvnIbe.mr5xd7xumiMD7uJjz3b0W', 'borrower', 1, NULL, '2025-04-20 10:39:32', '2025-04-20 10:39:32', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(19, 'CFO County Busia', '', '0700123456', 'busiacfo@gmail.com', NULL, '$2y$12$h896m0HMnTjHiXNj5JiIvOkh7EDLFqpmn9iYs0aqoD7BJeY0NCN16', 'borrower', 0, NULL, '2025-04-20 17:14:25', '2025-04-20 17:14:25', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(20, 'JOSEPH KOECH', '', '0722580928', 'josephkkoech@gmail.com', NULL, '$2y$12$FwGXheD3OexInOl/tWVxluF4rJDTh6l2loNnD5I0OIYlpQ//0NQ/C', 'borrower', 1, NULL, '2025-04-20 17:45:22', '2025-04-20 17:45:22', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(21, 'David Ihaji', '', '0717465550', 'davidihaji@gmail.com', NULL, '$2y$12$tgVICqfy81Ab75UjvFirCOe3sl5H74yR9fhhSXTKMGpscRpeEt/Jy', 'borrower', 1, NULL, '2025-04-22 13:34:37', '2026-05-08 07:20:14', NULL, 'male', '1995-04-23', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Peter', 'nyenzo@gmail.com', '0796952247', 'Tech', 'Brother', 'national_id', '31930122', 'signatures/signature_David_Ihaji.png', 'national_id', '31930121', 'id-documents/0MftMeNEPFqhlUSs5aH8WOjRH4gZo7by4J9RHDRD.png', 'id-documents/Ay2f4tFEcT9J0qje0Gm7wbDMqqS9YbTB1YvtAJtY.png'),
+(22, 'Justine Omori', '', '0721855878', 'justineomori@gmail.com', NULL, '$2y$12$WklPbJc9w7aDMncNznJ70.ikODU0icUKLaBr5a6WBn0yb0l6PR2ia', 'borrower', 1, NULL, '2025-05-07 12:10:19', '2025-05-07 12:10:19', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(23, 'Joseph', '', '+255758556562', 'lamearkaaya@gmail.com', NULL, '$2y$12$oRdMr9kL9rqxBJK0v3TQv.pvflSdVOwgwUtCmMaG.CY7c0GlCCE0i', 'admin', 1, NULL, '2025-05-08 10:53:11', '2025-05-08 10:53:11', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(24, 'Steve Omwenga', '', '+254 727 665808', 'steveomwenga@gmail.com', NULL, '$2y$12$1sd9TZHAnikJzo9u5IQLOOubmQ0AFrlyoafY9MLajVN3XHtMFRaHK', 'borrower', 0, NULL, '2025-05-13 06:49:55', '2025-05-13 06:49:55', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(25, 'DOREEN NTARANGWI', '', '+254710438971', 'doreenntarangwi@gmail.com', NULL, '$2y$12$z6QRzg8ktp/YWvd33nvhYeUQxv2YB109l3gZjpElykM/.o5WxgX7u', 'borrower', 1, NULL, '2025-05-15 08:08:59', '2025-05-15 08:08:59', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(26, 'Ann Njora', '', '+254 722 596985', 'kirajsupplierskenya@gmail.com', NULL, '$2y$12$JTGPNwFVmH3kFCQffkVLlePz0/qaFV7c7JsSSVnujmHI/XYtxLga6', 'borrower', 0, 'WU70YAjW4SXP4j2m4Ys6nM1C91lEpQzULs442bpFhR02gmD06yUatuxFUXYN', '2025-05-19 12:45:53', '2026-01-28 11:58:28', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(27, 'JOSEPH KINGORI WAMBUGU', '', '+254 714 390696', 'josephkingori@gmail.com', NULL, '$2y$12$8cGto1IdjyPNIiM0HN48IuRmUHcarG8rjmGqXVaDMJhlkvomvO10O', 'borrower', 0, NULL, '2025-05-20 13:03:03', '2025-05-20 13:03:03', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '', NULL, NULL, '28539464', NULL, NULL),
+(28, 'Njeri Nduati', '', '0720517386', 'njerinduati@gmail.com', NULL, '$2y$12$C.r6Fgc1lc8xmkJtTWMTe.r/UR2qhW5S6qohBouDgOKU3d9Oo.lHe', 'borrower', 0, NULL, '2025-05-25 18:36:15', '2025-05-25 18:36:15', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '29753954', NULL, NULL),
+(29, 'Nigel Cecil Otieno', '', '+254 721 655906', 'cecilmash@gmail.com', NULL, '$2y$12$5Sbd9JS17UvgL6rgTh4dwO7ciB./oJOHau9jtLxUDWGqRyTKuscFC', 'borrower', 0, NULL, '2025-05-27 13:47:29', '2025-10-29 07:03:27', NULL, 'male', '1985-03-25', NULL, 'KENYAN', 'single', NULL, 0, NULL, 'Barry Macharia', 'barryblacks@gmail.com', '0720899750', 'Businessman', 'Brother', 'national_id', '22445566', 'signatures/signature_Nigel_Cecil_Otieno.png', 'national_id', '24011567', 'id-documents/mZ0nHUoGwxYUruZ1ioNvZJpnm9JUY82EFqTF6OPK.jpg', 'id-documents/2uoCUuOyIDQCAenJLrPuH1gbgfLdizW83cdyknWi.jpg'),
+(30, 'Ian Kipkorir Cheruiyot', '', '0710911168', 'iankcheruiyot@gmail.com', NULL, '$2y$12$QUvaA6TvKXP1xf3/3GU00.TGelMgTOAVPml2Vljx1chW/2CGYU0gG', 'admin', 1, NULL, '2025-05-29 05:14:33', '2025-05-29 05:14:33', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(31, 'Leon Musau', '', '0720747652', 'musau.mumo@teflontradingltd.co.ke', NULL, '$2y$12$WU2gPKt9m5qTKZPhoPzUIeEkyTMPKK3QCUwB.2rwe46cBJsQif1/G', 'borrower', 1, 'VH3X52MKGcLon0bybPJmawH46jKpP4YatLdpyC57HBhYGpSaVLOiOqkKZao0', '2025-05-29 13:47:36', '2026-02-09 17:16:38', NULL, 'male', '1991-07-25', NULL, 'KE', 'single', NULL, 0, 'Master\'s Degree', 'Micahel Musau', 'mukikiilumusau@gmail.com', '+254721374196', 'coffee trader', 'Brother', 'national_id', '32313915', 'signatures/signature_Leon_Musau_1770660998.png', 'national_id', '32313898', 'id-documents/xACFanBfJtr4nUIOMm4XGMtsv5gbiWhIqksinlaL.jpg', 'id-documents/OsxovFf5SSZznQOKEmA78jEmMU2QwbXNaMFgF43p.jpg'),
+(32, 'Brian Kiprop Kiprono', '', '0720098561', 'briankiprop@gmail.com', NULL, '$2y$12$GxQC0YyruW8LgBwdU7O8zuhxDjvsCzRtM8qoq34LZkD8fWQlK482O', 'borrower', 1, NULL, '2025-06-02 11:17:53', '2025-06-02 11:17:53', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(33, 'Alan Kipng\'etich Limo', '', '0705596198', 'limoalan@gmail.com', NULL, '$2y$12$TZ3mZ4LycemIe6Urg8X2oeYfD6Bdk6VsXnLR6sCNvzKSE15soyHFa', 'borrower', 0, NULL, '2025-06-14 10:26:20', '2025-06-14 10:26:20', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '31667416', NULL, NULL),
+(34, 'MOLUK AWAD', '', '0725833011', 'molukawad519@gmail.com', NULL, '$2y$12$dozzobeZBqXkor14yj8lJuRuHOH601FKA9iI4yB48hpdNg1UZjMw2', 'borrower', 0, 'A2jaRU9ng7dGHKMdOdPHcXcAvl1HSiuWmxTaEaDsnJ0lGWqSwyDPoxxffxuu', '2025-06-15 13:55:59', '2025-06-15 13:55:59', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(35, 'Lewis Kimutai', '', '0725697837', 'leuville6@gmail.com', NULL, '$2y$12$VQsSkFy5bS.wpUElVPh8y.n7D2WKd.1DQlAgS1AOg8kz1Ua5tZgRC', 'borrower', 0, NULL, '2025-06-20 18:30:23', '2025-06-20 18:30:23', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(36, 'Newton Wesonga Okumu', '', '0703654828', 'newtoncarloz@gmail.com', NULL, '$2y$12$Wxj00avSUmFTTVsquTqRouBQY0.akLqfj.Nl.czNQ7ZlmFbYILDnm', 'borrower', 1, NULL, '2025-06-21 06:15:40', '2025-06-21 06:15:40', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(37, 'BRIAN KIPLANGAT', '', '0706099588', 'briankiplangatbk@gmail.com', NULL, '$2y$12$ArbwFMHaiL/rCrXnx.VHounCl/3rOUbPO2OwRJYu9ErQVDRsCU5/S', 'borrower', 1, NULL, '2025-06-23 07:43:27', '2025-06-23 07:43:27', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(38, 'HONOURINE NZISA MUTUNGA', '', '+254729080190', 'honourinenzisa@gmail.com', NULL, '$2y$12$nP6kWDrHZrMx6A3GkycO5.VNP7S.f3CoHmpUlcCJgRv3zs9FeE4K6', 'borrower', 0, NULL, '2025-07-07 08:51:03', '2025-07-07 08:51:03', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(39, 'Faith Chepngetich', '', '0700701380', 'chepngetichfaith981@gmail.com', NULL, '$2y$12$12yyIb3Y0op09RDuG.GBn.U2NYXkp.9.Y2xCmmXrcccZsfZTfTrA.', 'borrower', 0, 'G3w4zV027oUDqDFWomDWq2YgILmyVHttMBQS9wnsa3Cb38tclTkT21umNDgQ', '2025-07-13 16:11:22', '2025-07-13 16:11:22', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(40, 'Ian Otieno Okoth', '', '0719795614', 'ianokoth@gmail.com', NULL, '$2y$12$bfTyyCGeKrzCEtU1WQZh5em967lE2kU0fLRvQ8jgPCzgDOxvy.llC', 'borrower', 0, NULL, '2025-07-14 11:35:57', '2025-07-14 11:35:57', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(41, 'Cynthia Wanjiru Muhia', '', '+254 717 459536', 'cynthiashiro78@gmail.com', NULL, '$2y$12$bO3E9MoR5kXMmYxKfZ1IJ.JU8NgFR283MNCG/lIiiZ3KOWza0O4UC', 'borrower', 0, 'mbWJ31V0W1EcyI5A0eckNUDTEbTgk92YCbihO5jmtUcZVlroH33jUU77JWbr', '2025-07-15 10:00:13', '2025-07-15 10:00:13', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(42, 'Francis Kabutu', '', '0728167511', 'kabutu.frank@gmail.com', NULL, '$2y$12$VknLy1ceuXycC3ZgvpjDfum6b6FNMMHiIq6YT6CuMDGhLPYesmPm6', 'borrower', 1, NULL, '2025-07-17 10:52:30', '2025-07-17 10:52:30', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(43, 'Brian', '', '0717503595', 'gachugubrian8@gmail.com', NULL, '$2y$12$GNKcltFvv5DmYlB6yGtf6.iYjL4fx5FKbT.oEigQktpAxOvTgsw52', 'borrower', 0, NULL, '2025-07-28 06:05:53', '2025-07-28 06:05:53', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(44, 'Arnold Maina', '', '+254724574681', 'arnold.x.maina@gmail.com', NULL, '$2y$12$dXOkpwX5CB9Ft2iaL6lUYOEqhex5utpQBJbhXrtEbHsIsb/7qsVjC', 'admin', 0, NULL, '2025-08-06 05:11:15', '2025-08-06 05:11:15', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(45, 'Ruth Sudoi Makalla', '', '+254 721 440306', 'rsmakallah@gmail.com', NULL, '$2y$12$EHzV094qb9bZ88BvsxYkLuiccJ8ZUc4AxXGudlWvhGQ6Y423Wk9.O', 'borrower', 0, NULL, '2025-08-06 11:25:20', '2025-08-06 11:25:20', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(46, 'Michelle Muriithi', '', '0732792642', 'michthi.mm@gmail.com', NULL, '$2y$12$JjG3FMRdhKucKdYVblAOouvAREuzGHoB4aLLgIFwlZYZ1CUqh8oHS', 'admin', 0, NULL, '2025-08-12 14:29:27', '2025-08-12 14:29:27', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(47, 'Kelvin Keter', '', '0727025050', 'kipchirchir101@gmail.com', NULL, '$2y$12$8QZw5VeEAiX6E2GIu6M5UOFAQswu0TAER1ht22HcLvTvHJ3UetubC', 'borrower', 0, NULL, '2025-08-14 07:30:39', '2025-08-14 07:30:39', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(48, 'Sharon Chemurgor', '', '0704815115', 'chemurgorsharon@gmail.com', NULL, '$2y$12$lIKTaV/PMy9/MbWW55kO7eKfVeHmygm3Ug9uyg8B6NzGd8FMg9Hdy', 'borrower', 0, NULL, '2025-08-19 14:58:14', '2025-08-19 14:58:14', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(49, 'Peter Tanui', '', '0701134508', 'thetanlit6@gmail.com', NULL, '$2y$12$tjpGbnZbXxtIIv53nEp4L.d.bcEoXsfhNXJToCiXtYTP669H0pVw2', 'teller', 0, 'aX6h8TUgu4woLFSU8Vncbfr43G0J4ZRcd3omSLIRZqXH0eYKSfRSDTeY5ADj', '2025-09-02 07:51:46', '2025-10-15 10:45:32', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Peter_Tanui.png', NULL, NULL, NULL, NULL),
+(50, 'Mohamed Abdirahim Abdi', '', '0721544928', 'mohaabdi41@gmail.com', NULL, '$2y$12$CVQWIt6FGp..1WoA8tbBL.hnoxaDIDhFrVhHoZtjaUEoOKiGsXZZi', 'borrower', 0, 'Av2fj49VRHgKc6WUG6hEivJXyLIw1XCKCMp1yQFDQVazAmaXxll8bzPjSKsk', '2025-09-10 06:39:51', '2025-10-27 10:13:24', NULL, 'male', '1993-04-20', NULL, 'Kenyan', 'single', 'Muslim', 0, NULL, 'TAYIB haithar', 'mohaabdi41@gmail.com', '0723597683', 'Businessman', 'Brother', 'national_id', '36827361', 'signatures/signature_Mohamed_Abdirahim_Abdi.png', 'national_id', '36827364', 'id-documents/DNLFpZa2hXxTmhI7GUJSaxXby9KkNCqMm5Sel8rU.jpg', 'id-documents/VQnXyNlVCCJpKKz74z6CPnGufSVqrALa9Pwl81YR.jpg'),
+(51, 'Kelvin', '', '0726471918', 'c.kelvinrotich@gmail.com', NULL, '$2y$12$Lu9zm/hSdT2PT08yOzz.9.yz/ZqEjg3UAEg.q1Vx5VLkEDmS5.1s.', 'borrower', 0, NULL, '2025-09-14 12:24:32', '2025-09-14 12:24:32', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(52, 'Marion Lewenei', '', '0705254257', 'leweneimarion@gmail.com', NULL, '$2y$12$4/HAJTqnsZ/.QW/BRleIsuS.jT.rvb3tLqyE1aFfyAsZvA8awbMbO', 'borrower', 0, NULL, '2025-10-01 09:11:31', '2025-11-21 05:42:00', NULL, 'female', '2025-05-15', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Maureen Mathithi', 'irenejunnie@gmail.com', '+254705254257', 'businessperson', 'Business Partner', 'national_id', '36340048', 'signatures/signature_Marion_Lewenei.png', 'national_id', '40543156', NULL, NULL),
+(53, 'EMMANUEL Ruwa Tsuma', '', '0768384462', 'emmanueltsuma19@gmail.com', NULL, '$2y$12$FdDOhmJWdlP4u0JRcT3sBOftNNL2Rl0MPGUNz1Q1Q6h0/SIY02bmm', 'borrower', 1, NULL, '2025-10-03 06:04:44', '2026-03-06 10:05:01', NULL, 'male', '2000-06-27', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Ronald ruwa', 'ronaldtsuma21@gmail.com', '0705110637', 'Human resource officer', 'Father', 'national_id', '8435579', 'signatures/signature_EMMANUEL_Ruwa_Tsuma.png', 'national_id', '38276910', 'id-documents/YE5aPHeTXZaDSZagkvH8rPOs5bNyYR5WkK9sebFZ.jpg', 'id-documents/u1AdJo50lkrTAohkTQcS3q2QuLLrYQoLVnrLCnQI.jpg'),
+(54, 'Isaac Ngugi', '', '0711499655', 'isaacngugibaker@gmail.com', NULL, '$2y$12$/IyJDyyBqHgyN10RhOw/u.oaFnjcibWlI3dgu7/uFyo7kxIjCvvme', 'borrower', 0, NULL, '2025-10-08 04:06:13', '2025-11-04 03:59:42', NULL, 'male', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Isaac_Ngugi.png', NULL, NULL, NULL, NULL),
+(55, 'Lawrence Kipngetich Byegon', 'avatars/l3VJhlbbZj8ipDk8RnLcF6y40LExyflK4TomEmUL.jpg', '0722778422', 'lawrencebyegon@gmail.com', NULL, '$2y$12$RDyjh/WTwbe2EumZLmeMMO3QApL/QXqDlv8srp.WzycTAOdOJdpOS', 'borrower', 1, NULL, '2025-10-23 05:37:11', '2025-10-26 07:54:26', NULL, 'male', '1994-05-01', NULL, 'Kenyan', 'married', 'Christian', 0, NULL, 'Mildred Asili', 'mildredasili21@gmail.com', '0717633016', 'Businesswoman', 'Business Partner', 'national_id', '38353237', 'signatures/signature_Lawrence_Kipngetich_Byegon.png', 'national_id', '31757677', 'id-documents/naw4em7mhBqObFUwTZIbCkCkoPMSgK3cgCHvMTEg.jpg', 'id-documents/yIAOFuUMIkIpqPT71ITNriTVI5C76L6M0XuKBGCn.jpg'),
+(56, 'Francis Ndungu', '', '0742386797', 'frankietheuri@gmail.com', NULL, '$2y$12$9qYfC4yjURl5XAjRDxPavOm5ooZdf4NPZBdXlWG44MOuKErGKbC/i', 'borrower', 0, NULL, '2025-10-24 03:31:10', '2026-02-01 19:45:48', NULL, 'male', '1996-10-05', NULL, 'Kenya', 'single', 'Christian', 0, NULL, 'Julie Wanjiru', 'julie.wanjiru1@gmail.com', '0114204599', 'Logistician', 'Sister', 'national_id', '30146007', NULL, 'National ID', '33103892', 'id-documents/kkzoNCDiAeejsCYixVoQ7PH3tR7cjZdQFaZ1zFVo.jpg', 'id-documents/djfdMdje61nUNps5Q6anDSyxBH13hf0eEF7hND18.jpg'),
+(57, 'Douglas Kipchirchir Yegon', 'avatars/1pU9bhJ1n7D1pOchC8HX3sjPjyQvqQYROnL8cGZe.jpg', '0701849455', 'yegondouglas@gmail.com', NULL, '$2y$12$N.ac.IwoRAc/ahSex9kMkeu/yqbq8UwDiq/wxXUWZ8nfAOQbscLPe', 'borrower', 0, NULL, '2025-10-24 09:49:49', '2025-10-24 13:12:24', NULL, 'male', '1996-01-04', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Elvis Kipkoech Yegon', 'elviskyegon@gmail.com', '0717752055', 'Businessman', 'Brother', 'national_id', '0734970', 'signatures/signature_Douglas_Kipchirchir_Yegon.png', 'national_id', '32507485', 'id-documents/EMC78WWzte1K4r4SUGczhNcnZEzZ3tRSBnEydcAO.jpg', 'id-documents/OpYuy3P29xfoGaqZ5sSH5aJLjGaC5KUcPtIYHmlS.jpg'),
+(58, 'Vivian Simiyu', '', '722778298', 'viviansimiyu77@gmail.com', NULL, '$2y$12$8bYJi.ZeyquI/Xcp87hiuOncTWxq4YXHcLQ/iL/41JIwj1Gryri0i', 'borrower', 0, NULL, '2025-10-25 13:22:18', '2026-04-27 18:32:52', NULL, 'female', NULL, NULL, 'Kenya', 'single', 'Christianity', 0, 'Bachelor\'s Degree', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Vivian_Simiyu.png', 'National ID', NULL, NULL, NULL),
+(59, 'Justin nyarindo', 'avatars/1jLvUxRf2uVvqvNN7EgmR3hAKMVz99hRceMqMGeY.jpg', '0796165555', 'aguilanmilano@gmail.com', NULL, '$2y$12$DHM3FZFQQPbaRPchxlxifOZC9iXDb8yfWiK8Z38b6OfZXSmL5KEg2', 'borrower', 0, NULL, '2025-10-27 13:40:41', '2026-02-02 13:16:40', NULL, 'male', '1996-07-03', NULL, 'Kenyan', 'single', 'Christian', 0, NULL, 'Stella nyarindo', 'stelanyarindo@yahoo.com', '0723396150', 'Secretary', 'Mother', 'national_id', '15247846', 'signatures/signature_Justin_Nyarindo.png', 'national_id', '34760573', 'id-documents/dWt8NmMfqdXOtIIoibeyQMbeNemkVBfQ0o4nE5og.jpg', 'id-documents/ABumIl2Hs09QcHVrYKMsmTRiIPpQjUkoYvDaEy8T.jpg'),
+(62, 'Douglas Lutomia', '', '0799918736', 'douglaslutomia13@gmail.com', NULL, '$2y$12$rpm9tsP1K9SgQytf3biZQ.jTFR5uS2yflzOMWfMcveQ5Y.bqZvDh6', 'borrower', 0, '5uuAXM5Bb58xcg32nyteRR1qpwcMQAutd2JAEx0zi54Sb8x9Lvz38qwwHsda', '2025-12-22 10:11:02', '2026-02-03 05:07:58', NULL, 'male', '1997-06-03', NULL, 'Kenya', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Eric Odhiambo', 'ericodhiambo@gmail.com', '0718664393', 'Dog trainer', 'Brother', 'national_id', '28472342', 'signatures/signature_Douglas_Lutomia.png', 'national_id', '33555254', 'id-documents/6VgExuInfnnT9taPNmQejLcRNq8HZxI450CiisF9.jpg', 'id-documents/m4c2eTCLo1Uj6RZeQ6UyzfFXORYImZLSZY09VDLH.jpg'),
+(63, 'Morris Hafare Segelan', '', '0716893824', 'morrishafare@gmail.com', NULL, '$2y$12$XYydzEfQvPnIIxNRdbQPeexqnbjdr2/.P4wXT0FFcmK/F7FOBCMuS', 'borrower', 0, NULL, '2025-12-22 10:31:24', '2025-12-22 10:34:20', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Morris_Hafare_Segelan.png', NULL, NULL, NULL, NULL),
+(64, 'Judy Kerebi', '', '0741 960 917', 'judykerebi23@gmail.com', NULL, '$2y$12$KS9qsb9J9YPaFwvJc34SMesmXKyRq17SaL8gnzN0H/Q/trFazHWhu', 'borrower', 1, 'bmdTBflv37S49rppyYH4VM30PeNdc4nO8aKFdHvsyNWQ72ULwFMsXpj71TmB', '2026-01-20 09:03:36', '2026-04-11 09:41:21', NULL, 'female', '1999-02-09', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Farida Kebaso', 'faridakebaso1@gmail.com', '+254718534504', 'Business', 'Business Partner', 'national_id', '42191432', 'signatures/signature_Judy_Kerebi.png', 'national_id', '36138998', 'id-documents/kuPygKRuhL6oj6jqkF69AQeDwy4b69DykWwx4nUg.jpg', 'id-documents/xtp2kK9k157Np83ZMRQ2unxYSdzPzTmAK82vMycX.jpg'),
+(65, 'Hesbon Kiprotich Kerewo', 'avatars/Dw2FhaoXteB6YjHy4fzIxvLxX5me5wLGsm8xT91x.jpg', '0706077705', 'hezkerewo@gmail.com', NULL, '$2y$12$NT4nA1qQn24bsrfJWeykd.gOJYuPwOVL64PMYP7iK7bchPDk.zA8C', 'borrower', 0, 'UO8Fx3w8IPnIAVVJ4ZhjpWnZ7WBKNzeRfOVyH9DYW0KPKCPI1hXeni9Hd7DQ', '2026-01-21 06:27:38', '2026-02-02 13:32:56', NULL, 'male', NULL, NULL, NULL, 'married', 'Christian', 0, 'Bachelor\'s Degree', 'Tony Kimosop', NULL, '0794864738', 'Business man', 'Brother', 'national_id', '30317319', 'signatures/signature_Hesbon_Kiprotich_Kerewo.png', 'National_Id', '30319319', 'id-documents/gb4dwWWVxiSqhSCvqdYvuJRwx7JUK3oxjzqhCE2F.png', 'id-documents/BDiGmMGsxQHGk6K9aCEELSqEepQFNxMkA5CIKlIT.png'),
+(66, 'Jacob', '', '0791250828', 'jacobgimachombe@gmail.com', NULL, '$2y$12$sDuHMFS3QUNPrqY6frCOlOT0BmlvsCjEhO2B0Za4mfAGGtp5VF4RK', 'borrower', 0, NULL, '2026-01-21 07:15:44', '2026-01-21 07:35:13', NULL, 'male', NULL, NULL, NULL, 'married', 'Christian', 0, 'Bachelor\'s Degree', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Jacob.png', NULL, NULL, NULL, NULL),
+(67, 'Michael Nzuka', NULL, '0700742393', 'musyiminzuka3@gmail.com', NULL, '$2y$12$TyQr75ASmFeVbqXtdtCvIepyt45m2U4UXrpOF7v71/VgSoSmYtYGC', 'borrower', 0, NULL, '2026-02-18 08:27:11', '2026-02-18 08:50:25', NULL, 'male', '1994-11-04', NULL, 'Kenya', 'single', 'Christianity', 0, 'Master\'s Degree', 'Grace Musyimi', 'gracemusyimi72@gmail.com', '+254716815488', 'Policies and Governance', 'Sister', 'national_id', '35658056', 'signatures/signature_Michael_Nzuka.png', 'National ID', '31529341', NULL, NULL),
+(68, 'Deborah', NULL, '0791733405', 'deborahmurgor7@gmail.com', NULL, '$2y$12$aAEBH17kgQP9w6dCjtev/eHuQtWNAlUX6YwMsGXTo556LoPkJpLBq', 'borrower', 0, NULL, '2026-02-18 08:56:28', '2026-02-18 08:56:28', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(69, 'Ronald Kemei', NULL, '+254714995946', 'kemeirnld@gmail.com', NULL, '$2y$12$euP7hNWhVfQ3m7Fr4vGAXuiL7REKowJlxqZKLmC2iDkzCFQZCvmvW', 'borrower', 1, 'xOcQhyfWId9jkeLqjmj8cg2w8AT4vYth4dCJ34a9h9lh8zNZoBYrzzyJOEMd', '2026-02-18 14:51:36', '2026-02-19 10:09:08', NULL, 'male', '1990-05-12', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Bethwel Kiprono', 'felixmaru@yahoo.com', '+254 790 819905', 'Business/freelancer', 'Business Partner', 'national_id', '29480845', 'signatures/signature_Ronald_Kemei.png', 'national_id', '29762505', 'id-documents/zMn7oIMMtSc1CSuwDDc2vunirYzWFYWbaz2XKuR4.jpg', 'id-documents/hJetnNYA1fjKx321pOBe7eUA0TEuUCAq7zazvI0b.jpg'),
+(70, 'Nigel Kimutai', NULL, '0725408209', 'nigelkimutai@gmail.com', NULL, '$2y$12$tRL3hw45tFpda00vVb4xB.vdQIG3kn9LoDmGfZVB67/1TQ3v9DFjK', 'borrower', 1, NULL, '2026-02-23 13:47:01', '2026-02-23 14:09:18', NULL, 'male', '1994-03-23', NULL, 'KE', 'single', NULL, 0, NULL, 'Prisca Choge', 'priscachoge@gmail.com', '0720978776', 'Business', 'Mother', 'national_id', '30953061', 'signatures/signature_Nigel_Kimutai.png', 'national_id', '30953061', 'id-documents/1MNy81qcXk0NFSHa1lWdKQoupc6qrj877ecKALMV.jpg', 'id-documents/BoT1TvQ4J39KP2Y2CjT6oz3QqT75L8CwgmazR1Qa.jpg'),
+(71, 'Yvonne Jemutai', NULL, '0701986999', 'yvonnejemutai3967@gmail.com', NULL, '$2y$12$dxZg4KvdGlZyZnB.nQIIl.JPwe34GxL3dxbXHKZIjKOyUmbrqtNj6', 'borrower', 0, NULL, '2026-03-06 04:57:07', '2026-03-07 11:53:44', NULL, 'female', '1996-10-28', NULL, 'KE', 'single', 'Christian', 0, 'Bachelor\'s Degree', 'Vicky Jelagat', 'vickyjelagat@gmail.com', '254757869890', 'Pharmacist', 'Sister', 'national_id', '38086262', 'signatures/signature_Yvonne_Jemutai.png', 'national_id', '33246104', 'id-documents/FECg9du15dXA9E1rgjetCVbap6wPmPJRZqKpONHb.jpg', 'id-documents/nGLk6DhAwWnc5HXZkamQsShN0C5HduhVCrlwobfK.jpg'),
+(72, 'Teresa waitherero Ndirangu', NULL, '0745878281', 'teresawaitherero@gmail.com', NULL, '$2y$12$O8X6ZphiU339Q7iGcq5YC.58i9gm8hVAKC/L.YPOccS/yT9CEAecC', 'borrower', 0, NULL, '2026-03-16 09:02:56', '2026-03-16 09:02:56', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(73, 'Anita Soina Nanyokie', NULL, '+254 708 530169', 'anitasoina@gmail.com', NULL, '$2y$12$kwl.yLpYwf08AlvQKx3wi.nC3WxXqGELI1SMESpNvDxpJBUdHHOHe', 'borrower', 0, NULL, '2026-05-05 09:59:58', '2026-05-05 10:04:03', NULL, 'female', '2000-01-03', NULL, 'KE', 'single', NULL, 0, NULL, 'N/A', 'na@gmail.com', 'na', 'n/a', 'Work Colleague', 'national_id', 'n/a', NULL, 'national_id', '37489362', 'id-documents/63Hty7l8SaxdzjAbO0daOdLLNxxPn0JVXByGKazP.jpg', 'id-documents/AYRz7eKjKxgnYIQJ4NkaRXgPGRGgePUs0K7j7g9P.jpg'),
+(74, 'Diana Jerotich', NULL, '0728688805', 'jerotichdiana2@gmail.com', NULL, '$2y$12$7rAzZk9UhQYCKHCAwsP3muU7hQ4uB8VDeFLKvfJKYlSRQvEEUL0XS', 'borrower', 1, NULL, '2026-05-11 05:17:56', '2026-05-11 05:37:05', NULL, 'female', '1998-07-14', NULL, 'KE', 'married', 'Christian', 0, 'Bachelor\'s Degree', 'Lydiah Chesang', 'lydiahchesang36@gmail.com', '+254710762005', 'Business person', 'Sister', 'national_id', '34651360', 'signatures/signature_Diana_Jerotich.png', 'national_id', '35591135', 'id-documents/iUVocFrbx2gYfCvCuvMj8RcDvoe1AhvenEZiuJCF.jpg', 'id-documents/vdvrSDgZlcHNljjSUm6gXKGMyAnFElwFmKUI2ov5.jpg'),
+(75, 'Dennis', NULL, '0728064636', 'dennisosoro44@gmail.com', NULL, '$2y$12$kU4R7uBGobd2E7YFos25IO7yp2KxLWPRYGoBxSh3froU1injX49vm', 'borrower', 0, NULL, '2026-05-11 06:03:12', '2026-05-11 06:03:12', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(76, 'Lucy Kerubo', 'avatars/aY8NS1LiAjdRdxrYzp9rYS13eWiXk8UHTXxvbxQs.jpg', '0113978372', 'kerubolucy106@gmail.com', NULL, '$2y$12$YoSLFO/B3lsNBXGlvraqoOiVBCnuijJ48BEgzqNQ2C.bsPvLb.CqK', 'borrower', 0, NULL, '2026-06-20 08:55:31', '2026-06-20 11:41:31', NULL, 'female', '2005-07-18', NULL, 'Kenya', 'single', 'Christianity', 0, 'Bachelor\'s Degree', 'Elizabeth Mutinda', 'lizanzisah@gmaail.com', '0718489101', 'Employed', 'Aunt', NULL, NULL, 'signatures/signature_Lucy_Kerubo.png', 'National ID', '178556676', 'id-documents/37WUH08TYXmytvwFSi70LMU8IIaOtgteeIrnVmdu.jpg', 'id-documents/moJHBkiivtK6v9806rJOMDQCcoKvZdlYkY3xj0uC.jpg'),
+(77, 'Nicholas', NULL, '0717758500', 'nicholuskamau172@gmail.com', NULL, '$2y$12$wZ1.motCkgnKRTkDzGDdHebltzsn0pt77DcfR9ablPwlVEL5IITla', 'borrower', 0, NULL, '2026-06-24 10:24:46', '2026-06-24 10:24:46', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(84, 'Brian Tanui', 'avatars/fJ5FgzIMRomhfS2e4kBp7KiDzfuDpA3VGYv96xx3.jpg', '0729887927', 'briantanui2030@gmail.com', NULL, '$2y$12$seelGyySijUTwC9HpOMmbev5.YVM89vYnMgYHG2PfKehs3eaRJIJm', 'borrower', 0, NULL, '2026-06-26 14:40:16', '2026-06-26 16:01:29', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'signatures/signature_Brian_Tanui.png', NULL, NULL, 'id-documents/laIoXY9XLu3uvQL6opz9qXmZeukDE3TnvYCrsPth.jpg', NULL),
+(91, 'Kipngetich Kevin', NULL, '0727371496', 'kipngetichkevin97@gmail.com', NULL, '$2y$12$FGBQ2dAV9KYU9QEKfq45Ku0w999YbU4ozhe7XIR/5avlbxYUy6krO', 'borrower', 1, NULL, '2026-07-16 13:04:57', '2026-07-16 15:00:25', NULL, 'male', '2026-06-10', NULL, 'KE', 'married', 'Christian', 0, 'Bachelor\'s Degree', 'Tyson kipngetich', 'kipngetichkevin94@gmail.com', '0712065427', 'Self employed', 'Brother', 'national_id', '34547480', 'signatures/signature_Kipngetich_Kevin.png', 'national_id', '34527481', 'id-documents/b8HcU1dc8LAQzlwotgKCalcgADIXfb2wddxrhrbc.png', 'id-documents/SLUTQb2LDl4XOjSOgG9waoi5CYSvIxrKyGIYZ6Ne.png'),
+(92, 'Brian Chepkwony', NULL, '0704938645', 'briancheps3@gmail.com', NULL, '$2y$12$1dhhC1xRW7Sm3gAWDfZszuQZ1XRaBveJ3m/D2Y/3Bni2oPCAQ6rFq', 'borrower', 1, NULL, '2026-07-27 10:50:00', '2026-07-27 11:35:54', NULL, 'male', '2026-06-21', NULL, 'KE', 'single', NULL, 0, NULL, 'Ruth Chebet', 'ruth28ron@gmail.com', '0769523866', 'Marketing strategist', 'Sister', 'national_id', '493580396', 'signatures/signature_Brian_Chepkwony.png', 'national_id', '36411666', 'id-documents/ZgU6oyfeCSJC4ZmaVVms1fPEq6XoI0g1HmYtRG6R.jpg', 'id-documents/4aYlr0bBjD57cpzIZR6ZTBZpUzgczGGxlYfRtm20.jpg'),
+(93, 'Nicholas Kamau', NULL, '28026398', 'nicholaskamau172@gmail.com', NULL, '$2y$12$RlheHR3uZwB/NKU6zp.nDeTDv1Sc/8Gb8UA5WXVmih1Ivvcc1Y4Gm', 'borrower', 0, NULL, '2026-07-30 05:23:26', '2026-07-30 05:23:26', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_profiles`
+--
+
+CREATE TABLE `user_profiles` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL COMMENT 'References users.id',
+  `current_residence` varchar(255) DEFAULT NULL,
+  `current_residence_from` date DEFAULT NULL,
+  `current_residence_to` date DEFAULT NULL,
+  `residence_type_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'References residence_types.id',
+  `residence_notes` text DEFAULT NULL,
+  `general_notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `updated_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `borrower_contact_network`
+--
+DROP TABLE IF EXISTS `borrower_contact_network`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `borrower_contact_network`  AS SELECT `u`.`id` AS `user_id`, `u`.`name` AS `borrower_name`, `c`.`id` AS `contact_id`, `c`.`name` AS `contact_name`, `c`.`phone` AS `contact_phone`, `c`.`email` AS `contact_email`, `ct`.`name` AS `contact_type`, `c`.`relationship_specific` AS `relationship_specific`, `c`.`is_primary_contact` AS `is_primary_contact`, `c`.`priority` AS `priority` FROM ((`users` `u` left join `contacts` `c` on(`u`.`id` = `c`.`user_id`)) left join `contact_types` `ct` on(`c`.`contact_type_id` = `ct`.`id`)) WHERE `u`.`role` in ('borrower','partner') ;
 
 -- --------------------------------------------------------
 
@@ -2659,6 +3946,15 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 -- --------------------------------------------------------
 
 --
+-- Structure for view `debt_recovery_summary`
+--
+DROP TABLE IF EXISTS `debt_recovery_summary`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `debt_recovery_summary`  AS SELECT `drc`.`id` AS `case_id`, `drc`.`case_number` AS `case_number`, `u`.`id` AS `user_id`, `u`.`name` AS `debtor_name`, `u`.`email` AS `debtor_email`, `u`.`phone` AS `debtor_phone`, `drc`.`total_debt_amount` AS `total_debt_amount`, `drc`.`principal_outstanding` AS `principal_outstanding`, `drc`.`interest_outstanding` AS `interest_outstanding`, `drc`.`penalty_outstanding` AS `penalty_outstanding`, `drc`.`fees_outstanding` AS `fees_outstanding`, `drc`.`default_date` AS `default_date`, `drc`.`days_in_default` AS `days_in_default`, `rs`.`name` AS `status`, `rp`.`name` AS `priority`, `drc`.`assigned_to` AS `assigned_to`, `drc`.`last_contact_date` AS `last_contact_date`, `drc`.`next_action_date` AS `next_action_date`, (select sum(`recovery_actions`.`amount_collected`) from `recovery_actions` where `recovery_actions`.`case_id` = `drc`.`id` and `recovery_actions`.`outcome` = 'successful') AS `total_recovered`, (select count(0) from `recovery_actions` where `recovery_actions`.`case_id` = `drc`.`id`) AS `total_actions` FROM (((`debt_recovery_cases` `drc` join `users` `u` on(`drc`.`user_id` = `u`.`id`)) join `recovery_statuses` `rs` on(`drc`.`status_id` = `rs`.`id`)) join `recovery_priorities` `rp` on(`drc`.`priority_id` = `rp`.`id`)) ;
+
+-- --------------------------------------------------------
+
+--
 -- Structure for view `loan_type_analysis`
 --
 DROP TABLE IF EXISTS `loan_type_analysis`;
@@ -2674,9 +3970,42 @@ DROP TABLE IF EXISTS `portfolio_summary`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `portfolio_summary`  AS SELECT count(0) AS `total_loans_issued`, sum(`l`.`amount`) AS `total_principal_disbursed`, sum(case when `l`.`status` = 'repaid' then `l`.`amount` else 0 end) AS `total_principal_repaid`, sum(case when `l`.`status` in ('pending','approved','disbursed') then `l`.`amount` else 0 end) AS `total_principal_outstanding`, sum(`l`.`amount` * (`lt`.`interest_rate` / 100)) AS `total_expected_interest`, (select sum(`repayments`.`amount`) from `repayments`) - sum(case when `l`.`status` = 'repaid' then `l`.`amount` else 0 end) AS `total_actual_revenue_approx`, (select sum(`repayments`.`amount`) from `repayments` where `repayments`.`transaction` in ('BAD DEBT','CREDIT DISCOUNT')) AS `total_write_offs` FROM (`loans` `l` join `loan_types` `lt` on(`l`.`loan_type_id` = `lt`.`id`)) ;
 
+-- --------------------------------------------------------
+
+--
+-- Structure for view `recovery_officer_workload`
+--
+DROP TABLE IF EXISTS `recovery_officer_workload`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `recovery_officer_workload`  AS SELECT `u`.`id` AS `officer_id`, `u`.`name` AS `officer_name`, `u`.`email` AS `officer_email`, count(distinct `drc`.`id`) AS `total_cases`, count(distinct case when `rs`.`slug` in ('open','in_progress','negotiation') then `drc`.`id` end) AS `active_cases`, count(distinct case when `rp`.`slug` = 'urgent' then `drc`.`id` end) AS `urgent_cases`, sum(`drc`.`total_debt_amount`) AS `total_debt_value` FROM (((`users` `u` left join `debt_recovery_cases` `drc` on(`u`.`id` = `drc`.`assigned_to`)) left join `recovery_statuses` `rs` on(`drc`.`status_id` = `rs`.`id`)) left join `recovery_priorities` `rp` on(`drc`.`priority_id` = `rp`.`id`)) WHERE `u`.`role` in ('admin','teller') GROUP BY `u`.`id`, `u`.`name`, `u`.`email` ;
+
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `action_types`
+--
+ALTER TABLE `action_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `addresses`
+--
+ALTER TABLE `addresses`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_address_type_id` (`address_type_id`),
+  ADD KEY `idx_is_primary` (`is_primary`),
+  ADD KEY `addresses_deleted_at_index` (`deleted_at`);
+
+--
+-- Indexes for table `address_types`
+--
+ALTER TABLE `address_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
 
 --
 -- Indexes for table `admins`
@@ -2684,6 +4013,51 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 ALTER TABLE `admins`
   ADD PRIMARY KEY (`id`),
   ADD KEY `admins_user_id_foreign` (`user_id`);
+
+--
+-- Indexes for table `agency_case_assignments`
+--
+ALTER TABLE `agency_case_assignments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_case_id` (`case_id`),
+  ADD KEY `idx_agency_id` (`agency_id`);
+
+--
+-- Indexes for table `agency_contacts`
+--
+ALTER TABLE `agency_contacts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_agency_id` (`agency_id`),
+  ADD KEY `idx_is_primary` (`is_primary`);
+
+--
+-- Indexes for table `assets`
+--
+ALTER TABLE `assets`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `collateral_for_loan_id` (`collateral_for_loan_id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_asset_type_id` (`asset_type_id`),
+  ADD KEY `idx_is_collateral` (`is_collateral`),
+  ADD KEY `assets_deleted_at_index` (`deleted_at`);
+
+--
+-- Indexes for table `asset_types`
+--
+ALTER TABLE `asset_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_table_record` (`table_name`,`record_id`),
+  ADD KEY `idx_action` (`action`),
+  ADD KEY `idx_created_at` (`created_at`),
+  ADD KEY `idx_user_id` (`user_id`);
 
 --
 -- Indexes for table `bank_accounts`
@@ -2709,6 +4083,13 @@ ALTER TABLE `brokers`
   ADD KEY `brokers_user_id_foreign` (`user_id`);
 
 --
+-- Indexes for table `bureau_names`
+--
+ALTER TABLE `bureau_names`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
 -- Indexes for table `cache`
 --
 ALTER TABLE `cache`
@@ -2728,6 +4109,83 @@ ALTER TABLE `categories`
   ADD KEY `categories_categoryable_type_categoryable_id_index` (`category_type`,`categoryable_id`);
 
 --
+-- Indexes for table `communications`
+--
+ALTER TABLE `communications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_case_id` (`case_id`),
+  ADD KEY `idx_communication_type_id` (`communication_type_id`),
+  ADD KEY `idx_communication_status_id` (`communication_status_id`);
+
+--
+-- Indexes for table `communication_statuses`
+--
+ALTER TABLE `communication_statuses`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `communication_types`
+--
+ALTER TABLE `communication_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `contacts`
+--
+ALTER TABLE `contacts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `updated_by` (`updated_by`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_contact_type_id` (`contact_type_id`),
+  ADD KEY `idx_name` (`name`),
+  ADD KEY `idx_phone` (`phone`),
+  ADD KEY `contacts_deleted_at_index` (`deleted_at`);
+
+--
+-- Indexes for table `contact_types`
+--
+ALTER TABLE `contact_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `court_hearings`
+--
+ALTER TABLE `court_hearings`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_legal_proceeding_id` (`legal_proceeding_id`),
+  ADD KEY `idx_hearing_date` (`hearing_date`);
+
+--
+-- Indexes for table `credit_bureau_reports`
+--
+ALTER TABLE `credit_bureau_reports`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `case_id` (`case_id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_bureau_name_id` (`bureau_name_id`);
+
+--
+-- Indexes for table `debt_recovery_cases`
+--
+ALTER TABLE `debt_recovery_cases`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_case_number` (`case_number`),
+  ADD KEY `assigned_to` (`assigned_to`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `updated_by` (`updated_by`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_loan_id` (`loan_id`),
+  ADD KEY `idx_status_id` (`status_id`),
+  ADD KEY `idx_priority_id` (`priority_id`),
+  ADD KEY `idx_default_date` (`default_date`);
+
+--
 -- Indexes for table `disbursements`
 --
 ALTER TABLE `disbursements`
@@ -2737,11 +4195,60 @@ ALTER TABLE `disbursements`
   ADD KEY `investment_id` (`investment_id`);
 
 --
+-- Indexes for table `document_statuses`
+--
+ALTER TABLE `document_statuses`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `document_types`
+--
+ALTER TABLE `document_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `employments`
+--
+ALTER TABLE `employments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `employment_type_id` (`employment_type_id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_employer_name` (`employer_name`),
+  ADD KEY `idx_is_current` (`is_current`);
+
+--
+-- Indexes for table `employment_types`
+--
+ALTER TABLE `employment_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
 -- Indexes for table `failed_jobs`
 --
 ALTER TABLE `failed_jobs`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `failed_jobs_uuid_unique` (`uuid`);
+
+--
+-- Indexes for table `financial_assessments`
+--
+ALTER TABLE `financial_assessments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `hardship_reason_id` (`hardship_reason_id`),
+  ADD KEY `assessed_by` (`assessed_by`),
+  ADD KEY `approved_by` (`approved_by`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_case_id` (`case_id`);
+
+--
+-- Indexes for table `hardship_reasons`
+--
+ALTER TABLE `hardship_reasons`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
 
 --
 -- Indexes for table `investments`
@@ -2765,6 +4272,32 @@ ALTER TABLE `job_batches`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `legal_deadlines`
+--
+ALTER TABLE `legal_deadlines`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_case_id` (`case_id`),
+  ADD KEY `idx_deadline_date` (`deadline_date`);
+
+--
+-- Indexes for table `legal_proceedings`
+--
+ALTER TABLE `legal_proceedings`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `proceeding_type_id` (`proceeding_type_id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_case_id` (`case_id`),
+  ADD KEY `idx_status` (`status`);
+
+--
+-- Indexes for table `legal_proceeding_types`
+--
+ALTER TABLE `legal_proceeding_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
 -- Indexes for table `loans`
 --
 ALTER TABLE `loans`
@@ -2786,6 +4319,16 @@ ALTER TABLE `loan_agreement_sections`
 --
 ALTER TABLE `loan_agreement_templates`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `loan_ledger`
+--
+ALTER TABLE `loan_ledger`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_loan_id` (`loan_id`),
+  ADD KEY `idx_entry_type` (`entry_type`),
+  ADD KEY `idx_entry_date` (`entry_date`);
 
 --
 -- Indexes for table `loan_risk_assessments`
@@ -2832,6 +4375,108 @@ ALTER TABLE `password_reset_tokens`
   ADD PRIMARY KEY (`email`);
 
 --
+-- Indexes for table `payment_methods`
+--
+ALTER TABLE `payment_methods`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_method_type_id` (`method_type_id`),
+  ADD KEY `idx_is_primary` (`is_primary`),
+  ADD KEY `payment_methods_deleted_at_index` (`deleted_at`);
+
+--
+-- Indexes for table `payment_method_types`
+--
+ALTER TABLE `payment_method_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `recovery_actions`
+--
+ALTER TABLE `recovery_actions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `performed_by` (`performed_by`),
+  ADD KEY `idx_case_id` (`case_id`),
+  ADD KEY `idx_contact_id` (`contact_id`),
+  ADD KEY `idx_action_type_id` (`action_type_id`),
+  ADD KEY `idx_action_date` (`action_date`);
+
+--
+-- Indexes for table `recovery_agencies`
+--
+ALTER TABLE `recovery_agencies`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_agency_name` (`agency_name`);
+
+--
+-- Indexes for table `recovery_case_notes`
+--
+ALTER TABLE `recovery_case_notes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_case_id` (`case_id`);
+
+--
+-- Indexes for table `recovery_documents`
+--
+ALTER TABLE `recovery_documents`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `document_type_id` (`document_type_id`),
+  ADD KEY `document_status_id` (`document_status_id`),
+  ADD KEY `uploaded_by` (`uploaded_by`),
+  ADD KEY `idx_case_id` (`case_id`);
+
+--
+-- Indexes for table `recovery_installments`
+--
+ALTER TABLE `recovery_installments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_payment_plan_id` (`payment_plan_id`),
+  ADD KEY `idx_due_date` (`due_date`),
+  ADD KEY `idx_status` (`status`);
+
+--
+-- Indexes for table `recovery_payment_plans`
+--
+ALTER TABLE `recovery_payment_plans`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `approved_by` (`approved_by`),
+  ADD KEY `idx_case_id` (`case_id`),
+  ADD KEY `idx_status` (`status`);
+
+--
+-- Indexes for table `recovery_performance_metrics`
+--
+ALTER TABLE `recovery_performance_metrics`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_officer_id` (`officer_id`),
+  ADD KEY `idx_metric_date` (`metric_date`);
+
+--
+-- Indexes for table `recovery_priorities`
+--
+ALTER TABLE `recovery_priorities`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `recovery_statuses`
+--
+ALTER TABLE `recovery_statuses`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `recovery_templates`
+--
+ALTER TABLE `recovery_templates`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_template_type` (`template_type`);
+
+--
 -- Indexes for table `repayments`
 --
 ALTER TABLE `repayments`
@@ -2849,12 +4494,35 @@ ALTER TABLE `repayment_overflows`
   ADD KEY `repayment_overflows_to_loan_id_foreign` (`to_loan_id`);
 
 --
+-- Indexes for table `residence_types`
+--
+ALTER TABLE `residence_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
+-- Indexes for table `risk_categories`
+--
+ALTER TABLE `risk_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_slug` (`slug`);
+
+--
 -- Indexes for table `sessions`
 --
 ALTER TABLE `sessions`
   ADD PRIMARY KEY (`id`),
   ADD KEY `sessions_user_id_index` (`user_id`),
   ADD KEY `sessions_last_activity_index` (`last_activity`);
+
+--
+-- Indexes for table `skip_tracing`
+--
+ALTER TABLE `skip_tracing`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_case_id` (`case_id`);
 
 --
 -- Indexes for table `system`
@@ -2878,13 +4546,72 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `users_email_unique` (`email`);
 
 --
+-- Indexes for table `user_profiles`
+--
+ALTER TABLE `user_profiles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_profile` (`user_id`),
+  ADD KEY `residence_type_id` (`residence_type_id`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `updated_by` (`updated_by`),
+  ADD KEY `idx_user_id` (`user_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
+
+--
+-- AUTO_INCREMENT for table `action_types`
+--
+ALTER TABLE `action_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `addresses`
+--
+ALTER TABLE `addresses`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `address_types`
+--
+ALTER TABLE `address_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `agency_case_assignments`
+--
+ALTER TABLE `agency_case_assignments`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `agency_contacts`
+--
+ALTER TABLE `agency_contacts`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `assets`
+--
+ALTER TABLE `assets`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `asset_types`
+--
+ALTER TABLE `asset_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
@@ -2897,7 +4624,7 @@ ALTER TABLE `bank_accounts`
 -- AUTO_INCREMENT for table `borrowers`
 --
 ALTER TABLE `borrowers`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=103;
 
 --
 -- AUTO_INCREMENT for table `brokers`
@@ -2906,22 +4633,112 @@ ALTER TABLE `brokers`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `bureau_names`
+--
+ALTER TABLE `bureau_names`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
 -- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
+-- AUTO_INCREMENT for table `communications`
+--
+ALTER TABLE `communications`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `communication_statuses`
+--
+ALTER TABLE `communication_statuses`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `communication_types`
+--
+ALTER TABLE `communication_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `contacts`
+--
+ALTER TABLE `contacts`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `contact_types`
+--
+ALTER TABLE `contact_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+
+--
+-- AUTO_INCREMENT for table `court_hearings`
+--
+ALTER TABLE `court_hearings`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `credit_bureau_reports`
+--
+ALTER TABLE `credit_bureau_reports`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `debt_recovery_cases`
+--
+ALTER TABLE `debt_recovery_cases`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `disbursements`
 --
 ALTER TABLE `disbursements`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=529;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=539;
+
+--
+-- AUTO_INCREMENT for table `document_statuses`
+--
+ALTER TABLE `document_statuses`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `document_types`
+--
+ALTER TABLE `document_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `employments`
+--
+ALTER TABLE `employments`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `employment_types`
+--
+ALTER TABLE `employment_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `failed_jobs`
 --
 ALTER TABLE `failed_jobs`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `financial_assessments`
+--
+ALTER TABLE `financial_assessments`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `hardship_reasons`
+--
+ALTER TABLE `hardship_reasons`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `investments`
@@ -2936,10 +4753,28 @@ ALTER TABLE `jobs`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `legal_deadlines`
+--
+ALTER TABLE `legal_deadlines`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `legal_proceedings`
+--
+ALTER TABLE `legal_proceedings`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `legal_proceeding_types`
+--
+ALTER TABLE `legal_proceeding_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
 -- AUTO_INCREMENT for table `loans`
 --
 ALTER TABLE `loans`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=478;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=488;
 
 --
 -- AUTO_INCREMENT for table `loan_agreement_sections`
@@ -2954,6 +4789,12 @@ ALTER TABLE `loan_agreement_templates`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `loan_ledger`
+--
+ALTER TABLE `loan_ledger`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `loan_risk_assessments`
 --
 ALTER TABLE `loan_risk_assessments`
@@ -2963,7 +4804,7 @@ ALTER TABLE `loan_risk_assessments`
 -- AUTO_INCREMENT for table `loan_types`
 --
 ALTER TABLE `loan_types`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `migrations`
@@ -2975,7 +4816,7 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `partners`
 --
 ALTER TABLE `partners`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `partner_transactions`
@@ -2984,15 +4825,105 @@ ALTER TABLE `partner_transactions`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `payment_methods`
+--
+ALTER TABLE `payment_methods`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `payment_method_types`
+--
+ALTER TABLE `payment_method_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `recovery_actions`
+--
+ALTER TABLE `recovery_actions`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `recovery_agencies`
+--
+ALTER TABLE `recovery_agencies`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `recovery_case_notes`
+--
+ALTER TABLE `recovery_case_notes`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `recovery_documents`
+--
+ALTER TABLE `recovery_documents`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `recovery_installments`
+--
+ALTER TABLE `recovery_installments`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `recovery_payment_plans`
+--
+ALTER TABLE `recovery_payment_plans`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `recovery_performance_metrics`
+--
+ALTER TABLE `recovery_performance_metrics`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `recovery_priorities`
+--
+ALTER TABLE `recovery_priorities`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `recovery_statuses`
+--
+ALTER TABLE `recovery_statuses`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `recovery_templates`
+--
+ALTER TABLE `recovery_templates`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `repayments`
 --
 ALTER TABLE `repayments`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=706;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=720;
 
 --
 -- AUTO_INCREMENT for table `repayment_overflows`
 --
 ALTER TABLE `repayment_overflows`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `residence_types`
+--
+ALTER TABLE `residence_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `risk_categories`
+--
+ALTER TABLE `risk_categories`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `skip_tracing`
+--
+ALTER TABLE `skip_tracing`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
@@ -3011,17 +4942,58 @@ ALTER TABLE `tellers`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=91;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
+
+--
+-- AUTO_INCREMENT for table `user_profiles`
+--
+ALTER TABLE `user_profiles`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
 --
 
 --
+-- Constraints for table `addresses`
+--
+ALTER TABLE `addresses`
+  ADD CONSTRAINT `addresses_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `addresses_ibfk_2` FOREIGN KEY (`address_type_id`) REFERENCES `address_types` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `admins`
 --
 ALTER TABLE `admins`
   ADD CONSTRAINT `admins_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `agency_case_assignments`
+--
+ALTER TABLE `agency_case_assignments`
+  ADD CONSTRAINT `agency_case_assignments_ibfk_1` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `agency_case_assignments_ibfk_2` FOREIGN KEY (`agency_id`) REFERENCES `recovery_agencies` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `agency_case_assignments_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `agency_contacts`
+--
+ALTER TABLE `agency_contacts`
+  ADD CONSTRAINT `agency_contacts_ibfk_1` FOREIGN KEY (`agency_id`) REFERENCES `recovery_agencies` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `assets`
+--
+ALTER TABLE `assets`
+  ADD CONSTRAINT `assets_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `assets_ibfk_2` FOREIGN KEY (`asset_type_id`) REFERENCES `asset_types` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `assets_ibfk_3` FOREIGN KEY (`collateral_for_loan_id`) REFERENCES `loans` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  ADD CONSTRAINT `audit_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `borrowers`
@@ -3037,6 +5009,51 @@ ALTER TABLE `brokers`
   ADD CONSTRAINT `brokers_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `communications`
+--
+ALTER TABLE `communications`
+  ADD CONSTRAINT `communications_ibfk_1` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `communications_ibfk_2` FOREIGN KEY (`communication_type_id`) REFERENCES `communication_types` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `communications_ibfk_3` FOREIGN KEY (`communication_status_id`) REFERENCES `communication_statuses` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `communications_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `contacts`
+--
+ALTER TABLE `contacts`
+  ADD CONSTRAINT `contacts_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `contacts_ibfk_2` FOREIGN KEY (`contact_type_id`) REFERENCES `contact_types` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `contacts_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `contacts_ibfk_4` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `court_hearings`
+--
+ALTER TABLE `court_hearings`
+  ADD CONSTRAINT `court_hearings_ibfk_1` FOREIGN KEY (`legal_proceeding_id`) REFERENCES `legal_proceedings` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `credit_bureau_reports`
+--
+ALTER TABLE `credit_bureau_reports`
+  ADD CONSTRAINT `credit_bureau_reports_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `credit_bureau_reports_ibfk_2` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `credit_bureau_reports_ibfk_3` FOREIGN KEY (`bureau_name_id`) REFERENCES `bureau_names` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `credit_bureau_reports_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `debt_recovery_cases`
+--
+ALTER TABLE `debt_recovery_cases`
+  ADD CONSTRAINT `debt_recovery_cases_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `debt_recovery_cases_ibfk_2` FOREIGN KEY (`loan_id`) REFERENCES `loans` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `debt_recovery_cases_ibfk_3` FOREIGN KEY (`status_id`) REFERENCES `recovery_statuses` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `debt_recovery_cases_ibfk_4` FOREIGN KEY (`priority_id`) REFERENCES `recovery_priorities` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `debt_recovery_cases_ibfk_5` FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `debt_recovery_cases_ibfk_6` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `debt_recovery_cases_ibfk_7` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
 -- Constraints for table `disbursements`
 --
 ALTER TABLE `disbursements`
@@ -3045,11 +5062,43 @@ ALTER TABLE `disbursements`
   ADD CONSTRAINT `disbursements_loan_id_foreign` FOREIGN KEY (`loan_id`) REFERENCES `loans` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `employments`
+--
+ALTER TABLE `employments`
+  ADD CONSTRAINT `employments_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `employments_ibfk_2` FOREIGN KEY (`employment_type_id`) REFERENCES `employment_types` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `financial_assessments`
+--
+ALTER TABLE `financial_assessments`
+  ADD CONSTRAINT `financial_assessments_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `financial_assessments_ibfk_2` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `financial_assessments_ibfk_3` FOREIGN KEY (`hardship_reason_id`) REFERENCES `hardship_reasons` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `financial_assessments_ibfk_4` FOREIGN KEY (`assessed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `financial_assessments_ibfk_5` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
 -- Constraints for table `investments`
 --
 ALTER TABLE `investments`
   ADD CONSTRAINT `investments_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`),
   ADD CONSTRAINT `investments_ibfk_2` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `legal_deadlines`
+--
+ALTER TABLE `legal_deadlines`
+  ADD CONSTRAINT `legal_deadlines_ibfk_1` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `legal_deadlines_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `legal_proceedings`
+--
+ALTER TABLE `legal_proceedings`
+  ADD CONSTRAINT `legal_proceedings_ibfk_1` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `legal_proceedings_ibfk_2` FOREIGN KEY (`proceeding_type_id`) REFERENCES `legal_proceeding_types` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `legal_proceedings_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `loans`
@@ -3065,6 +5114,13 @@ ALTER TABLE `loans`
 --
 ALTER TABLE `loan_agreement_sections`
   ADD CONSTRAINT `fk_agreement_loan` FOREIGN KEY (`loan_id`) REFERENCES `loans` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `loan_ledger`
+--
+ALTER TABLE `loan_ledger`
+  ADD CONSTRAINT `loan_ledger_ibfk_1` FOREIGN KEY (`loan_id`) REFERENCES `loans` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `loan_ledger_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `loan_risk_assessments`
@@ -3089,6 +5145,64 @@ ALTER TABLE `partner_transactions`
   ADD CONSTRAINT `partner_transactions_ibfk_4` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`id`);
 
 --
+-- Constraints for table `payment_methods`
+--
+ALTER TABLE `payment_methods`
+  ADD CONSTRAINT `payment_methods_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `payment_methods_ibfk_2` FOREIGN KEY (`method_type_id`) REFERENCES `payment_method_types` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `recovery_actions`
+--
+ALTER TABLE `recovery_actions`
+  ADD CONSTRAINT `recovery_actions_ibfk_1` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `recovery_actions_ibfk_2` FOREIGN KEY (`contact_id`) REFERENCES `contacts` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `recovery_actions_ibfk_3` FOREIGN KEY (`action_type_id`) REFERENCES `action_types` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `recovery_actions_ibfk_4` FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `recovery_case_notes`
+--
+ALTER TABLE `recovery_case_notes`
+  ADD CONSTRAINT `recovery_case_notes_ibfk_1` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `recovery_case_notes_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `recovery_documents`
+--
+ALTER TABLE `recovery_documents`
+  ADD CONSTRAINT `recovery_documents_ibfk_1` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `recovery_documents_ibfk_2` FOREIGN KEY (`document_type_id`) REFERENCES `document_types` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `recovery_documents_ibfk_3` FOREIGN KEY (`document_status_id`) REFERENCES `document_statuses` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `recovery_documents_ibfk_4` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `recovery_installments`
+--
+ALTER TABLE `recovery_installments`
+  ADD CONSTRAINT `recovery_installments_ibfk_1` FOREIGN KEY (`payment_plan_id`) REFERENCES `recovery_payment_plans` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `recovery_payment_plans`
+--
+ALTER TABLE `recovery_payment_plans`
+  ADD CONSTRAINT `recovery_payment_plans_ibfk_1` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `recovery_payment_plans_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `recovery_payment_plans_ibfk_3` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `recovery_performance_metrics`
+--
+ALTER TABLE `recovery_performance_metrics`
+  ADD CONSTRAINT `recovery_performance_metrics_ibfk_1` FOREIGN KEY (`officer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `recovery_templates`
+--
+ALTER TABLE `recovery_templates`
+  ADD CONSTRAINT `recovery_templates_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
 -- Constraints for table `repayments`
 --
 ALTER TABLE `repayments`
@@ -3104,10 +5218,27 @@ ALTER TABLE `repayment_overflows`
   ADD CONSTRAINT `repayment_overflows_to_loan_id_foreign` FOREIGN KEY (`to_loan_id`) REFERENCES `loans` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `skip_tracing`
+--
+ALTER TABLE `skip_tracing`
+  ADD CONSTRAINT `skip_tracing_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `skip_tracing_ibfk_2` FOREIGN KEY (`case_id`) REFERENCES `debt_recovery_cases` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `skip_tracing_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
 -- Constraints for table `tellers`
 --
 ALTER TABLE `tellers`
   ADD CONSTRAINT `tellers_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_profiles`
+--
+ALTER TABLE `user_profiles`
+  ADD CONSTRAINT `user_profiles_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `user_profiles_ibfk_2` FOREIGN KEY (`residence_type_id`) REFERENCES `residence_types` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `user_profiles_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `user_profiles_ibfk_4` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -1,7 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="flex h-full flex-col gap-6 sm:gap-5 xl:flex-row">
+<div class="flex h-full flex-col gap-6 sm:gap-5 xl:flex-row"
+     x-data="loanShow()"
+     x-init="init()">
     <!-- Loan Details Sidebar -->
     <div class="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03] xl:w-1/5">
         <div class="mb-5">
@@ -10,36 +12,55 @@
                 <div class="loan-status-badge px-3 py-1 rounded-full text-xs
                     @if($loan->status === 'approved') bg-green-100 text-green-800
                     @elseif($loan->status === 'disbursed') bg-blue-100 text-blue-800
+                    @elseif($loan->status === 'active') bg-indigo-100 text-indigo-800
+                    @elseif($loan->status === 'overdue') bg-yellow-100 text-yellow-800
                     @elseif($loan->status === 'rejected') bg-red-100 text-red-800
                     @elseif($loan->status === 'repaid') bg-purple-100 text-purple-800
                     @elseif($loan->status === 'defaulted') bg-red-100 text-red-800
+                    @elseif($loan->status === 'recovery') bg-purple-100 text-purple-800
+                    @elseif($loan->status === 'forbearance') bg-gray-100 text-gray-800
+                    @elseif($loan->status === 'written_off') bg-slate-100 text-slate-800
                     @else bg-gray-100 text-gray-800 @endif">
-                    {{ ucfirst($loan->status) }}
+                    {{ $loan->status_label }}
                 </div>
             </div>
 
-            <!-- ============ NPL STATUS SECTION ============ -->
+            <!-- ============ NPL / OVERDUE STATUS SECTION ============ -->
             <div class="mt-3 p-3 rounded-lg border
-                @if($loan->is_non_performing) 
+                @if($loan->is_non_performing || $loan->status === 'defaulted') 
                     border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20
-                @elseif($loan->isOverdue())
+                @elseif($loan->isOverdue() || $loan->status === 'overdue')
                     border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20
+                @elseif($loan->status === 'forbearance')
+                    border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50
+                @elseif($loan->status === 'recovery')
+                    border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-900/20
                 @else
                     border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20
                 @endif
             ">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        @if($loan->is_non_performing)
+                        @if($loan->is_non_performing || $loan->status === 'defaulted')
                             <svg class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
                             </svg>
-                            <span class="font-semibold text-red-800 dark:text-red-300">🚨 Non-Performing Loan (NPL)</span>
-                        @elseif($loan->isOverdue())
+                            <span class="font-semibold text-red-800 dark:text-red-300">🚨 Defaulted / NPL</span>
+                        @elseif($loan->isOverdue() || $loan->status === 'overdue')
                             <svg class="h-5 w-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <span class="font-semibold text-yellow-800 dark:text-yellow-300">⚠️ Overdue</span>
+                        @elseif($loan->status === 'forbearance')
+                            <svg class="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                            </svg>
+                            <span class="font-semibold text-gray-800 dark:text-gray-300">⏸️ Forbearance</span>
+                        @elseif($loan->status === 'recovery')
+                            <svg class="h-5 w-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                            <span class="font-semibold text-purple-800 dark:text-purple-300">🔄 In Recovery</span>
                         @else
                             <svg class="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -47,17 +68,17 @@
                             <span class="font-semibold text-green-800 dark:text-green-300">✅ Performing</span>
                         @endif
                     </div>
-                    @if($loan->is_non_performing)
+                    @if($loan->is_non_performing || $loan->status === 'defaulted')
                         <span class="text-xs text-red-600 dark:text-red-400 font-medium">
                             {{ $loan->days_overdue ?? 0 }} days overdue
                         </span>
                     @endif
                 </div>
                 
-                @if($loan->is_non_performing)
+                @if($loan->is_non_performing || $loan->status === 'defaulted')
                 <div class="mt-2 flex flex-wrap gap-2">
                     <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300">
-                        🔴 NPL Status: Defaulted
+                        🔴 Defaulted
                     </span>
                     @if($loan->default_date)
                     <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
@@ -77,14 +98,34 @@
                     </a>
                     @endif
                 </div>
-                @elseif($loan->isOverdue())
+                @elseif($loan->isOverdue() || $loan->status === 'overdue')
                 <div class="mt-2 flex flex-wrap gap-2">
                     <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300">
                         🟡 Overdue: {{ $loan->days_overdue ?? 0 }} days
                     </span>
                     <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                        ⏳ Threshold: {{ $loan->npl_trigger_threshold ?? 0 }} days until NPL
+                        ⏳ Threshold: {{ $loan->loanType->default_threshold_days ?? 30 }} days until default
                     </span>
+                </div>
+                @elseif($loan->status === 'forbearance')
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                        ⏸️ Forbearance until: {{ $loan->forbearance_until ? \Carbon\Carbon::parse($loan->forbearance_until)->format('M d, Y') : 'N/A' }}
+                    </span>
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                        📅 Days remaining: {{ $loan->forbearance_until ? \Carbon\Carbon::now()->diffInDays($loan->forbearance_until, false) : 0 }}
+                    </span>
+                </div>
+                @elseif($loan->status === 'recovery')
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-300">
+                        🔄 Recovery started: {{ $loan->recovery_started_at ? \Carbon\Carbon::parse($loan->recovery_started_at)->format('M d, Y') : 'N/A' }}
+                    </span>
+                    @if($loan->recovery_notes)
+                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                        📝 Notes available
+                    </span>
+                    @endif
                 </div>
                 @else
                 <div class="mt-2 flex flex-wrap gap-2">
@@ -99,7 +140,114 @@
                 </div>
                 @endif
             </div>
-            
+
+            <!-- ============ GRACE PERIOD STATUS ============ -->
+            <div class="mt-3 p-3 rounded-lg border 
+                @if($loan->isWithinGracePeriod()) border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20
+                @elseif($loan->grace_days_balance > 0) border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20
+                @else border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50 @endif">
+                <div class="flex items-center gap-2">
+                    @if($loan->isWithinGracePeriod())
+                        <span class="text-green-600 dark:text-green-400">🟢</span>
+                        <span class="font-medium text-green-800 dark:text-green-300">In Grace Period</span>
+                        <span class="ml-auto text-xs text-green-600 dark:text-green-400">{{ $loan->getRemainingGraceDays() }} days remaining</span>
+                    @elseif($loan->grace_days_balance > 0)
+                        <span class="text-blue-600 dark:text-blue-400">📋</span>
+                        <span class="font-medium text-blue-800 dark:text-blue-300">{{ $loan->grace_days_balance }} Grace Days</span>
+                        <span class="ml-auto text-xs text-blue-600 dark:text-blue-400">Earned: {{ $loan->grace_days_earned }} | Used: {{ $loan->grace_days_used }}</span>
+                    @else
+                        <span class="text-gray-500 dark:text-gray-400">📅</span>
+                        <span class="font-medium text-gray-600 dark:text-gray-300">No Grace Days</span>
+                        @if($loan->days_overdue > 0)
+                            <span class="ml-auto text-xs text-red-600 dark:text-red-400">{{ $loan->days_overdue }} days overdue</span>
+                        @endif
+                    @endif
+                </div>
+            </div>
+
+            <!-- ============ CYCLE / ROLLOVER STATUS ============ -->
+            <div class="mt-3 p-3 rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-purple-600 dark:text-purple-400">🔄</span>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $loan->cycle_display }}</span>
+                    @if($loan->cycle > 1)
+                        <span class="ml-auto text-xs text-purple-600 dark:text-purple-400">
+                            +{{ number_format($loan->total_capitalized_interest ?? 0, 2) }} capitalized
+                        </span>
+                    @endif
+                </div>
+                @if($loan->cycle > 1)
+                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Original: KES {{ number_format($loan->original_amount ?? $loan->amount, 2) }}
+                </div>
+                @endif
+                <button onclick="openCyclesModal({{ $loan->id }})" 
+                        class="mt-2 w-full text-xs text-indigo-600 dark:text-indigo-400 hover:underline text-center">
+                    View All Cycles →
+                </button>
+            </div>
+
+            <!-- ============ QUICK ACTIONS ============ -->
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                @if(in_array($loan->status, ['active', 'overdue', 'disbursed']) && !$loan->isDefaulted() && !$loan->isInForbearance())
+                <button @click="window.openRolloverModal({{ $loan->id }})"
+                        class="w-full flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Rollover Loan
+                </button>
+                @endif
+
+                @if(($loan->isOverdue() || $loan->status === 'overdue') && !$loan->isInForbearance())
+                <button onclick="openForbearanceModal()" 
+                        class="w-full flex items-center justify-center gap-2 rounded-lg bg-gray-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                    Grant Forbearance
+                </button>
+                @endif
+
+                @if($loan->isInForbearance())
+                <button onclick="if(confirm('End forbearance for this loan?')) { document.getElementById('end-forbearance-form').submit(); }" 
+                        class="w-full flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    End Forbearance
+                </button>
+                <form id="end-forbearance-form" action="{{ route('loans.forbearance.end', $loan) }}" method="POST" style="display:none;">
+                    @csrf
+                    @method('PATCH')
+                </form>
+                @endif
+
+                @if($loan->isDefaulted() && !$loan->isInRecovery())
+                <button onclick="if(confirm('Start recovery process for this loan?')) { document.getElementById('start-recovery-form').submit(); }" 
+                        class="w-full flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    Start Recovery
+                </button>
+                <form id="start-recovery-form" action="{{ route('loans.recovery.start', $loan) }}" method="POST" style="display:none;">
+                    @csrf
+                    @method('PATCH')
+                </form>
+                @endif
+
+                @if($loan->is_non_performing || $loan->isOverdue())
+                <button onclick="openCaseModal({{ $loan->user_id }}, {{ $loan->id }})" 
+                        class="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                    Create Recovery Case
+                </button>
+                @endif
+            </div>
+
             <!-- Rest of the existing sidebar content -->
             <div class="space-y-4 mt-4">
                 <div>
@@ -486,6 +634,67 @@
                 </div>
             </div>
 
+            <!-- Rollover Statement Section -->
+            @if($loan->cycles && $loan->cycles->count() > 1)
+            <div class="mb-8 border border-purple-200 rounded-lg overflow-hidden dark:border-purple-800">
+                <div class="bg-purple-50 px-4 py-3 border-b border-purple-200 dark:bg-purple-900/20 dark:border-purple-800">
+                    <h4 class="font-semibold text-purple-800 dark:text-purple-300 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Rollover Statement
+                        <span class="ml-auto text-xs font-normal text-purple-600 dark:text-purple-400">
+                            {{ $loan->cycles->count() }} cycles total
+                        </span>
+                    </h4>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 dark:bg-gray-800/50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Cycle</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Date</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Previous Balance</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Interest Capitalized</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">New Balance</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Due Date</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                            @foreach($loan->cycles as $cycle)
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">#{{ $cycle->cycle_number }}</td>
+                                <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ $cycle->start_date->format('M d, Y') }}</td>
+                                <td class="px-4 py-2 text-right text-gray-600 dark:text-gray-400">KES {{ number_format($cycle->previous_balance, 2) }}</td>
+                                <td class="px-4 py-2 text-right text-purple-600 dark:text-purple-400">KES {{ number_format($cycle->interest_capitalized, 2) }}</td>
+                                <td class="px-4 py-2 text-right font-medium text-gray-900 dark:text-white">KES {{ number_format($cycle->new_balance, 2) }}</td>
+                                <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ $cycle->due_date->format('M d, Y') }}</td>
+                                <td class="px-4 py-2">
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium
+                                        @if($cycle->status === 'active') bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300
+                                        @elseif($cycle->status === 'completed') bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300
+                                        @elseif($cycle->status === 'defaulted') bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300
+                                        @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 @endif">
+                                        {{ $cycle->status_label }}
+                                    </span>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700">
+                            <tr>
+                                <td colspan="2" class="px-4 py-2 font-medium text-gray-700 dark:text-gray-300">Total Capitalized Interest</td>
+                                <td colspan="5" class="px-4 py-2 text-right font-bold text-purple-700 dark:text-purple-400">
+                                    KES {{ number_format($loan->cycles->sum('interest_capitalized'), 2) }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            @endif
+
             <!-- Disbursements and Repayments -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <!-- Disbursements -->
@@ -603,11 +812,13 @@
     </div>
 </div>
 
-{{-- Include Modals --}}
+{{-- Include all modals --}}
+@include('partials.modal.loan-rollover-modal')
+@include('partials.modal.loan-cycles-modal')
+@include('partials.modal.cases-create-modal')
 @include('partials.modal.disbursement-create-modal')
 @include('partials.modal.repayment-create-modal')
 @include('partials.modal.alert-modal')
-@include('partials.modal.cases-create-modal')
 
 @endsection
 
@@ -633,3 +844,199 @@
     }
 </style>
 @endpush
+
+<script>
+// ============ GLOBAL FUNCTIONS ============
+// Define these at the top of the script section
+function openCaseModal(userId, loanId) {
+    window.dispatchEvent(new CustomEvent('open-case-create', {
+        detail: { 
+            user_id: userId, 
+            loan_id: loanId 
+        }
+    }));
+}
+
+function openRolloverModal(loanId) {
+    // Fetch rollover preview data from the API
+    fetch(`/loans/${loanId}/rollover-preview`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const preview = data.data;
+                window.dispatchEvent(new CustomEvent('open-rollover-modal', {
+                    detail: {
+                        loanId: loanId,
+                        currentBalance: preview.current_balance,
+                        interestToCapitalize: preview.interest_to_capitalize,
+                        newBalance: preview.new_balance,
+                        currentCycle: preview.current_cycle,
+                        newCycle: preview.new_cycle,
+                        newDueDate: preview.new_due_date,
+                        previousDueDate: preview.previous_due_date,
+                        interestRate: preview.interest_rate,
+                        graceDaysBalance: preview.grace_days_balance,
+                        previousBalance: preview.previous_balance,
+                        // Cycle info
+                        missedCycles: preview.missed_cycles,
+                        potentialCycles: preview.potential_cycles,
+                        daysOverdue: preview.days_overdue,
+                        periodDisplay: preview.period_display,
+                        nextDueDateIfRolled: preview.next_due_date_if_rolled,
+                        currentDueDate: preview.current_due_date,
+                    }
+                }));
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching rollover preview:', error);
+            // Fallback to client-side calculation
+            const loanData = window.loanData || {};
+            const currentBalance = loanData.amount || 0;
+            const interestRate = loanData.interest_rate || 0;
+            const period = loanData.period || 30;
+            const unit = loanData.unit || 'days';
+            // Use the actual due date from the loan data
+            const previousDueDate = loanData.due_date ? new Date(loanData.due_date) : new Date(loanData.borrow_date || new Date());
+            
+            const interestToCapitalize = (interestRate / 100) * currentBalance;
+            const newBalance = currentBalance + interestToCapitalize;
+            
+            // Calculate new due date from PREVIOUS due date based on unit
+            const newDueDate = new Date(previousDueDate);
+            if (unit === 'days') {
+                newDueDate.setDate(newDueDate.getDate() + period);
+            } else if (unit === 'weeks') {
+                newDueDate.setDate(newDueDate.getDate() + (period * 7));
+            } else if (unit === 'months') {
+                newDueDate.setMonth(newDueDate.getMonth() + period);
+            } else if (unit === 'years') {
+                newDueDate.setFullYear(newDueDate.getFullYear() + period);
+            }
+            
+            window.dispatchEvent(new CustomEvent('open-rollover-modal', {
+                detail: {
+                    loanId: loanId,
+                    currentBalance: currentBalance,
+                    interestToCapitalize: interestToCapitalize,
+                    newBalance: newBalance,
+                    currentCycle: loanData.cycle || 1,
+                    newCycle: (loanData.cycle || 1) + 1,
+                    newDueDate: newDueDate.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    }),
+                    previousDueDate: previousDueDate.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    }),
+                    interestRate: interestRate,
+                    graceDaysBalance: loanData.grace_days_balance || 0,
+                    previousBalance: currentBalance,
+                    period: period,
+                    unit: unit,
+                    missedCycles: 0,
+                    potentialCycles: 0,
+                    daysOverdue: 0,
+                    periodDisplay: period + ' ' + unit,
+                    nextDueDateIfRolled: newDueDate.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    }),
+                    currentDueDate: previousDueDate.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    }),
+                }
+            }));
+        });
+}
+
+function openCyclesModal(loanId) {
+    window.dispatchEvent(new CustomEvent('open-cycles-modal', {
+        detail: { loanId: loanId }
+    }));
+}
+
+function openForbearanceModal() {
+    const event = new CustomEvent('open-forbearance-modal');
+    window.dispatchEvent(event);
+}
+
+document.addEventListener('alpine:init', function() {
+    Alpine.data('loanShow', function() {
+        return {
+            isRolloverModalOpen: false,
+            isForbearanceModalOpen: false,
+            
+            init() {
+                // Store loan data globally for use in onclick functions
+                window.loanData = {
+                    id: {{ $loan->id }},
+                    amount: {{ $loan->amount }},
+                    cycle: {{ $loan->cycle }},
+                    grace_days_balance: {{ $loan->grace_days_balance }},
+                    interest_rate: {{ $loan->loanType->interest_rate ?? 0 }},
+                    period: {{ $loan->loanType->period ?? 30 }},
+                    unit: '{{ $loan->loanType->unit ?? 'days' }}', // Add this
+                    borrow_date: '{{ $loan->borrow_date ? $loan->borrow_date : '' }}',
+                    due_date: '{{ $loan->due_date ? $loan->due_date : '' }}',
+                    status: '{{ $loan->status }}',
+                };
+                
+                // Listen for forbearance events
+                window.addEventListener('open-forbearance-modal', () => {
+                    this.isForbearanceModalOpen = true;
+                    document.body.style.overflow = 'hidden';
+                });
+            },
+            
+            closeForbearanceModal() {
+                this.isForbearanceModalOpen = false;
+                document.body.style.overflow = '';
+            },
+            
+            // Add this method to the Alpine component
+            openRolloverModal(loanId) {
+                const loanData = window.loanData || {};
+                
+                const currentBalance = loanData.amount || 0;
+                const interestRate = loanData.interest_rate || 0;
+                const period = loanData.period || 30;
+                const interestToCapitalize = (interestRate / 100) * currentBalance * (period / 30);
+                const newBalance = currentBalance + interestToCapitalize;
+                const newDueDate = new Date();
+                newDueDate.setDate(newDueDate.getDate() + period);
+                
+                window.dispatchEvent(new CustomEvent('open-rollover-modal', {
+                    detail: {
+                        loanId: loanId,
+                        currentBalance: currentBalance,
+                        interestToCapitalize: interestToCapitalize,
+                        newBalance: newBalance,
+                        currentCycle: loanData.cycle || 1,
+                        newDueDate: newDueDate.toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                        }),
+                        interestRate: interestRate,
+                        graceDaysBalance: loanData.grace_days_balance || 0,
+                    }
+                }));
+            },
+            
+            // Add cycles modal method
+            openCyclesModal(loanId) {
+                window.dispatchEvent(new CustomEvent('open-cycles-modal', {
+                    detail: { loanId: loanId }
+                }));
+            }
+        };
+    });
+});
+</script>

@@ -42,14 +42,28 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
+        // ============ NPL & OVERDUE DATA ============
+        $data['nplCount'] = Loan::where('is_non_performing', true)->count();
+        $data['nplTotalDebt'] = Loan::where('is_non_performing', true)->sum('amount');
+        $data['overdueCount'] = Loan::where('status', Loan::STATUS_OVERDUE)->count();
+        
+        // Calculate NPL recovery rate
+        $nplLoans = Loan::where('is_non_performing', true)->get();
+        $nplTotal = $nplLoans->sum('amount');
+        $nplRecovered = 0;
+        foreach ($nplLoans as $nplLoan) {
+            $nplRecovered += $nplLoan->repayments->sum('amount');
+        }
+        $data['nplRecoveryRate'] = $nplTotal > 0 ? round(($nplRecovered / $nplTotal) * 100, 2) : 0;
+
         switch ($user->role) {
             case 'admin':
                 $data = array_merge($data, [
                     // Loan Metrics
                     'totalLoans' => Loan::count(),
                     'loansThisMonth' => Loan::where('created_at', '>=', $currentMonthStart)->count(),
-                    'completedLoans' => Loan::completed()->count(),
-                    'completedThisMonth' => Loan::completed()
+                    'completedLoans' => Loan::repaid()->count(), // Changed from completed() to repaid()
+                    'completedThisMonth' => Loan::repaid() // Changed from completed() to repaid()
                                             ->where('updated_at', '>=', $currentMonthStart)
                                             ->count(),
 
@@ -82,6 +96,10 @@ class DashboardController extends Controller
                         'approved' => Loan::where('status', 'approved')->count(),
                         'rejected' => Loan::where('status', 'rejected')->count(),
                         'repaid' => Loan::where('status', 'repaid')->count(),
+                        'overdue' => Loan::where('status', 'overdue')->count(),
+                        'defaulted' => Loan::where('status', 'defaulted')->count(),
+                        'recovery' => Loan::where('status', 'recovery')->count(),
+                        'forbearance' => Loan::where('status', 'forbearance')->count(),
                     ],
                     'disbursementTrends' => $this->getDisbursementTrends(),
                 ]);
@@ -228,6 +246,11 @@ class DashboardController extends Controller
             'myRecoveryCases' => collect(),
             'hasActiveRecovery' => false,
             'activeRecoveryCount' => 0,
+            // NPL defaults
+            'nplCount' => 0,
+            'nplTotalDebt' => 0,
+            'overdueCount' => 0,
+            'nplRecoveryRate' => 0,
         ], $data);
 
         return view('dashboard', $data);
@@ -409,7 +432,7 @@ class DashboardController extends Controller
     private function getDueLoans($user)
     {
         $baseQuery = Loan::with(['user', 'loanType'])
-            ->whereIn('status', ['disbursed', 'approved'])
+            ->whereIn('status', ['disbursed', 'approved', 'active'])
             ->join('loan_types', 'loans.loan_type_id', '=', 'loan_types.id')
             ->select('loans.*');
 
@@ -430,6 +453,10 @@ class DashboardController extends Controller
                         ->pluck('user_id');
                     $baseQuery->whereIn('loans.user_id', $borrowerIds);
                 }
+                break;
+            
+            default:
+                $baseQuery->where('loans.user_id', $user->id);
                 break;
         }
 

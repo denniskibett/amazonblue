@@ -67,8 +67,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Loans Resource
     Route::resource('loans', LoanController::class);
     
-    // Custom Loan Routes
+    // ============ LOAN ROLLOVER & FORBEARANCE ROUTES ============
     Route::prefix('loans/{loan}')->name('loans.')->group(function () {
+        // Rollover Routes
+        Route::post('/rollover', [LoanController::class, 'rollover'])->name('rollover');
+        Route::get('/rollover-statement', [LoanController::class, 'rolloverStatement'])->name('rollover.statement');
+        
+        Route::get('/cycles', [LoanController::class, 'getCycles'])->name('loans.cycles');
+        Route::get('/rollover-preview', [LoanController::class, 'getRolloverPreview'])->name('loans.rollover.preview');
+        
+    // Forbearance Routes
+        Route::post('/forbearance', [LoanController::class, 'grantForbearance'])->name('forbearance.grant');
+        Route::patch('/forbearance/end', [LoanController::class, 'endForbearance'])->name('forbearance.end');
+        
+        // Recovery Routes
+        Route::patch('/recovery/start', [LoanController::class, 'startRecovery'])->name('recovery.start');
+        
+        // Existing routes
         Route::get('/generate-pdf/{loanId}', [LoanController::class, 'generatePdf'])->name('generatePdf');
         Route::get('/agreement/download', [LoanController::class, 'downloadAgreement'])->name('agreement.download');
         Route::get('/agreement/show', [LoanController::class, 'showAgreement'])->name('agreement.show');

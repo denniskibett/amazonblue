@@ -12,6 +12,7 @@ use App\Models\DebtRecoveryCase;
 use App\Models\RecoveryStatus;
 use App\Models\RecoveryPriority;
 use App\Models\RecoveryCaseNote;
+use App\Models\LoanCycle;
 use App\Pdf\LoanPDF;
 use App\Services\LoanCalculator;
 use App\Services\SignatureService;
@@ -21,6 +22,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Validator;
 use TCPDF;
 
 class LoanController extends Controller
@@ -41,7 +43,6 @@ class LoanController extends Controller
         $this->loanAgreementService = $loanAgreementService;
         $this->nplDetectionService = $nplDetectionService;
     }
-
 
     public function store(Request $request)
     {
@@ -395,7 +396,6 @@ class LoanController extends Controller
         return $case;
     }
 
-
     public function index()
     {
         $user = auth()->user();   
@@ -474,7 +474,7 @@ class LoanController extends Controller
                 $total_penalties += $penalty;
 
                 // Calculate broker fees with null checks
-                $loanUser = $loan->user; // Renamed to avoid conflict
+                $loanUser = $loan->user;
                 $borrower = $loanUser ? $loanUser->borrower : null;
                 $broker = $borrower ? $borrower->broker : null;
                 if ($loan->broker_status == 1 && $broker) {
@@ -555,10 +555,10 @@ class LoanController extends Controller
             return view('loans.index', [
                 'allLoans' => $allLoans,
                 'stats' => $stats,
-                'users' => $users, // Added
-                'loanTypes' => $loanTypes, // Added
-                'guarantors' => $guarantors, // Added
-                'loanOfficers' => $loanOfficers // Added
+                'users' => $users,
+                'loanTypes' => $loanTypes,
+                'guarantors' => $guarantors,
+                'loanOfficers' => $loanOfficers
             ]);
         }
         elseif ($user->role === 'broker') { 
@@ -587,7 +587,7 @@ class LoanController extends Controller
                 // ======================
                 $dueDate = Carbon::parse($loan->borrow_date);
                 $dueDate->add($loan->loanType->period, $loan->loanType->unit);
-                $loan->due_date = $dueDate; // For Blade display
+                $loan->due_date = $dueDate;
 
                 // ======================
                 // 2. REPAYMENT PROCESSING
@@ -597,13 +597,13 @@ class LoanController extends Controller
                     ->sortBy('repayment_date');
 
                 $totalRepayments = $repayments->sum('amount');
-                $loan->total_repayments = $totalRepayments; // For Blade
+                $loan->total_repayments = $totalRepayments;
 
                 // ======================
                 // 3. INTEREST CALCULATION
                 // ======================
                 $interest = ($loan->loanType->interest_rate / 100) * $loan->amount;
-                $loan->total_interest = $interest; // For Blade
+                $loan->total_interest = $interest;
 
                 // ======================
                 // 4. PENALTY CALCULATION
@@ -674,21 +674,20 @@ class LoanController extends Controller
 
             // Fetch users for broker role
             $users = User::whereHas('borrower', function ($query) use ($user) {
-            $query->where('broker_id', $user->broker->id);
-                })
-                ->where('role', 'borrower')
-                ->where('status', 0)
-                ->get();
-            
+                $query->where('broker_id', $user->broker->id);
+            })
+            ->where('role', 'borrower')
+            ->where('status', 0)
+            ->get();
 
             return view('loans.index', [
                 'brokerLoans' => $brokerLoans,
                 'stats' => $stats,
                 'broker' => $broker,
-                'users' => $users, // Added
-                'loanTypes' => $loanTypes, // Added
-                'guarantors' => $guarantors, // Added
-                'loanOfficers' => $loanOfficers // Added
+                'users' => $users,
+                'loanTypes' => $loanTypes,
+                'guarantors' => $guarantors,
+                'loanOfficers' => $loanOfficers
             ]);
         }
         elseif ($user->role === 'borrower') {
@@ -697,7 +696,6 @@ class LoanController extends Controller
                 ->orderBy('borrow_date', 'desc')
                 ->get();
 
-            // Initialize empty stats array for borrower view compatibility
             $stats = [
                 'total_requested' => $userLoans->sum('amount'),
                 'total_disbursed' => $userLoans->sum(function($loan) {
@@ -713,7 +711,6 @@ class LoanController extends Controller
                 'repaidLoans' => $userLoans->where('status', 'repaid')->count(),
             ];
 
-            // Fetch data for borrower
             $users = collect([$user]);
             $guarantors = User::where('role', 'borrower')->where('id', '!=', $user->id)->get();
             $loanOfficers = User::whereIn('role', ['admin', 'teller'])->get();
@@ -721,10 +718,10 @@ class LoanController extends Controller
             return view('loans.index', [
                 'userLoans' => $userLoans,
                 'stats' => $stats,
-                'users' => $users, // Added
-                'loanTypes' => $loanTypes, // Added
-                'guarantors' => $guarantors, // Added
-                'loanOfficers' => $loanOfficers // Added
+                'users' => $users,
+                'loanTypes' => $loanTypes,
+                'guarantors' => $guarantors,
+                'loanOfficers' => $loanOfficers
             ]);
         }
         elseif ($user->role === 'teller') {
@@ -733,7 +730,6 @@ class LoanController extends Controller
                 ->orderBy('borrow_date', 'desc')
                 ->get();
 
-            // Teller stats (similar to broker view)
             $stats = [
                 'activeLoans' => $activeLoans->count(),
                 'repaidLoans' => Loan::where('status', 'pending')->count(),
@@ -745,7 +741,6 @@ class LoanController extends Controller
                 })
             ];
 
-            // Fetch data for teller
             $users = User::all();
             $guarantors = User::where('role', 'borrower')->get();
             $loanOfficers = User::whereIn('role', ['admin', 'teller'])->get();
@@ -753,10 +748,10 @@ class LoanController extends Controller
             return view('loans.index', [
                 'activeLoans' => $activeLoans,
                 'stats' => $stats,
-                'users' => $users, // Added
-                'loanTypes' => $loanTypes, // Added
-                'guarantors' => $guarantors, // Added
-                'loanOfficers' => $loanOfficers // Added
+                'users' => $users,
+                'loanTypes' => $loanTypes,
+                'guarantors' => $guarantors,
+                'loanOfficers' => $loanOfficers
             ]);
         }
         else {
@@ -765,7 +760,6 @@ class LoanController extends Controller
                 ->orderBy('borrow_date', 'desc')
                 ->get();
 
-            // Calculate borrower statistics
             $stats = [
                 'activeLoans' => $userLoans->where('status', 'disbursed')->count(),
                 'repaidLoans' => $userLoans->where('status', 'repaid')->count(),
@@ -778,14 +772,13 @@ class LoanController extends Controller
                 })
             ];
 
-        
             return view('loans.index', [
                 'userLoans' => $userLoans,
                 'stats' => $stats,
-                'users' => $users, // Added
-                'loanTypes' => $loanTypes, // Added
-                'guarantors' => $guarantors, // Added
-                'loanOfficers' => $loanOfficers // Added
+                'users' => $users,
+                'loanTypes' => $loanTypes,
+                'guarantors' => $guarantors,
+                'loanOfficers' => $loanOfficers
             ]);
         }
     }
@@ -798,6 +791,9 @@ class LoanController extends Controller
             ->get();
     }
 
+    /**
+     * Display the specified loan.
+     */
     public function show($id, $loanId = null)
     {
         $user = auth()->user();
@@ -814,7 +810,8 @@ class LoanController extends Controller
             'loanType', 
             'user.borrower',
             'guarantor',
-            'loanOfficer'
+            'loanOfficer',
+            'cycles'
         ]);
         
         try {
@@ -849,6 +846,21 @@ class LoanController extends Controller
         // Get signature status
         $signatureStatus = $this->signatureService->checkSignature($loan->user);
 
+        // ============ ADD DATA FOR CASES MODAL ============
+        $statuses = \App\Models\RecoveryStatus::all();
+        $priorities = \App\Models\RecoveryPriority::all();
+        $officers = User::whereIn('role', ['admin', 'teller'])->get();
+        $actionTypes = \App\Models\ActionType::all();
+        
+        $allBorrowers = User::borrowers()
+            ->with(['borrower', 'loans' => function($q) {
+                $q->whereIn('status', ['disbursed', 'approved', 'overdue', 'defaulted'])
+                  ->with(['loanType', 'repayments']);
+            }])
+            ->get();
+
+        $recoveryCase = DebtRecoveryCase::where('loan_id', $loan->id)->first();
+
         return view('loans.show', array_merge([
             'loan' => $loan,
             'loanType' => $loan->loanType,
@@ -861,6 +873,12 @@ class LoanController extends Controller
             'signatureStatus' => $signatureStatus,
             'hasSignature' => $signatureStatus['hasSignature'],
             'signatureUrl' => $signatureStatus['signatureUrl'],
+            'statuses' => $statuses,
+            'priorities' => $priorities,
+            'officers' => $officers,
+            'actionTypes' => $actionTypes,
+            'allBorrowers' => $allBorrowers,
+            'recoveryCase' => $recoveryCase,
         ], $metrics));
     }
 
@@ -895,27 +913,22 @@ class LoanController extends Controller
             $guarantors = $users->where('id', '!=', $request->user_id ?? $user->id);
             $loanOfficers = collect();
         } else {
-            // BORROWER - FIXED: Use authenticated user
             $loans = $user->loans()->where('status', '!=', 'repaid')->get();
             $users = collect([$user]);
             $guarantors = User::where('role', 'borrower')->where('id', '!=', $user->id)->get();
             $loanOfficers = User::whereIn('role', ['admin', 'teller'])->get();
         }
 
-        // FIXED: Simple signature check logic
         $signatureUser = null;
         $hasExistingSignature = false;
         $existingSignatureUrl = null;
 
         if ($user->role === 'borrower') {
-            // For borrower, always check their own signature
             $signatureUser = $user;
         } elseif (($user->role === 'admin' || $user->role === 'teller' || $user->role === 'broker') && $request->has('user_id')) {
-            // For admin/teller/broker, check selected user's signature
             $signatureUser = User::find($request->user_id);
         }
 
-        // Check signature if we have a user
         if ($signatureUser) {
             $signatureStatus = app(SignatureService::class)->checkSignature($signatureUser);
             $hasExistingSignature = $signatureStatus['hasSignature'];
@@ -935,7 +948,6 @@ class LoanController extends Controller
         ]);
     }
 
-
     public function edit(Loan $loan)
     {
         $loanTypes = LoanType::all();
@@ -951,9 +963,7 @@ class LoanController extends Controller
             'loanOfficers' => $loanOfficers
         ]);
     }
-    
 
-    
     public function saveSignature(Request $request, Loan $loan)
     {
         $request->validate([
@@ -963,7 +973,6 @@ class LoanController extends Controller
         $result = $this->signatureService->saveSignature($request->signature, $loan->user);
 
         if ($result['success']) {
-            // If consent was already given, generate agreement
             if ($loan->consent) {
                 $this->loanAgreementService->generateLoanAgreement($loan);
             }
@@ -985,7 +994,6 @@ class LoanController extends Controller
     {
         $loan->giveConsent();
         
-        // Generate agreement if signature exists
         $signatureStatus = $this->signatureService->checkSignature($loan->user);
         if ($signatureStatus['hasSignature']) {
             $this->loanAgreementService->generateLoanAgreement($loan);
@@ -993,14 +1001,14 @@ class LoanController extends Controller
         
         return back()->with('success', 'Consent given successfully.');
     }
-    
+
     public function destroy($id)
     {
         $loan = Loan::findOrFail($id);
         $loan->delete();
         return redirect()->route('loans.index');
     }
-    
+
     public function generatePdf($id, $loanId = null)
     {
         $user = auth()->user();
@@ -1035,10 +1043,8 @@ class LoanController extends Controller
             abort(422, 'Loan type is not defined for this loan');
         }
     
-        // Use LoanCalculator service for metrics
         $metrics = $this->loanCalculator->calculateLoanMetrics($loan);
         
-        // Generate PDF
         $pdf = new LoanPDF($loan);
         $pdf->AddPage();
         $pdf->loanDetails(
@@ -1048,7 +1054,6 @@ class LoanController extends Controller
             $metrics['last_repayment_date'] ?? null
         );
         
-        // Generate payment schedule
         $paymentSchedule = $this->generatePaymentSchedule(
             $loan,
             Carbon::parse($metrics['borrow_date']),
@@ -1059,7 +1064,6 @@ class LoanController extends Controller
         );
         $pdf->paymentSchedule($paymentSchedule);
         
-        // Prepare account summary
         $pdf->accountSummary([
             ['label' => 'Principal Amount', 'value' => 'KES ' . number_format($metrics['principal'], 2)],
             ['label' => 'Interest Rate', 'value' => $loan->loanType->interest_rate . '%'],
@@ -1070,7 +1074,6 @@ class LoanController extends Controller
             ['label' => 'Days Late', 'value' => $metrics['days_late'] > 0 ? $metrics['days_late'] . ' days' : 'On time']
         ]);
         
-        // Prepare transactions
         $transactions = collect()
             ->merge($loan->disbursements->map(function ($disbursement) use ($metrics) {
                 return (object)[
@@ -1092,7 +1095,6 @@ class LoanController extends Controller
             }))
             ->sortBy('date');
         
-        // Calculate running balances
         $runningBalance = $metrics['principal_plus_interest'];
         $transactions = $transactions->map(function ($transaction) use (&$runningBalance) {
             if ($transaction->type === 'credit') {
@@ -1111,7 +1113,6 @@ class LoanController extends Controller
         $loan = Loan::findOrFail($loanId);
         $user = auth()->user();
         
-        // Authorization check
         if (!in_array($user->role, ['admin', 'teller']) && 
             $loan->user_id !== $user->id && 
             !($user->role === 'broker' && $loan->broker_status == 1)) {
@@ -1128,7 +1129,6 @@ class LoanController extends Controller
         $loan = Loan::findOrFail($loanId);
         $user = auth()->user();
         
-        // Authorization check
         if (!in_array($user->role, ['admin', 'teller']) && 
             $loan->user_id !== $user->id && 
             !($user->role === 'broker' && $loan->broker_status == 1)) {
@@ -1140,8 +1140,287 @@ class LoanController extends Controller
         return response()->file($filePath);
     }
 
-    private function generatePaymentSchedule($loan, $startDate, $dueDate, $principal, $interestRate, $lastRepaymentDate = null)
+    // ============ ROLLOVER, FORBEARANCE & RECOVERY METHODS ============
+    /**
+     * Rollover (renew) a loan with interest type selection
+     */
+    public function rollover(Request $request, Loan $loan)
+    {
+        if (!in_array(auth()->user()->role, ['admin', 'teller'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized action.'
+            ], 403);
+        }
 
+        $validator = Validator::make($request->all(), [
+            'notes' => 'nullable|string|max:500',
+            'interest_type' => 'required|in:simple,compound',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            if (!in_array($loan->status, ['active', 'overdue', 'disbursed'])) {
+                throw new \Exception('This loan is not eligible for rollover.');
+            }
+
+            if ($loan->isDefaulted()) {
+                throw new \Exception('This loan is defaulted. Please resolve recovery case first.');
+            }
+
+            if ($loan->isInForbearance()) {
+                throw new \Exception('This loan is in forbearance. Cannot rollover.');
+            }
+
+            $interestType = $request->interest_type ?? 'compound';
+            
+            // Calculate interest based on selected type
+            $interestToCapitalize = $this->loanCalculator->calculateCycleInterest($loan, $interestType);
+            $newAmount = $this->loanCalculator->calculateRolloverNewBalance($loan, $interestType);
+            
+            // Calculate new due date (one period from previous due date)
+            $newDueDate = $this->loanCalculator->calculateRolloverDueDate($loan);
+            
+            // Get the effective due date for previous due date display
+            $effectiveDueDate = $this->loanCalculator->getEffectiveDueDate($loan);
+
+            // Create cycle record
+            $cycle = LoanCycle::create([
+                'loan_id' => $loan->id,
+                'cycle_number' => $loan->cycle + 1,
+                'previous_balance' => $loan->amount,
+                'interest_capitalized' => $interestToCapitalize,
+                'new_balance' => $newAmount,
+                'interest_rate' => $loan->loanType->interest_rate ?? 0,
+                'start_date' => now(),
+                'due_date' => $newDueDate,
+                'status' => 'active',
+                'notes' => $request->notes ?? 'Loan rollover - Cycle ' . ($loan->cycle + 1) . ' (' . ucfirst($interestType) . ' interest)',
+            ]);
+
+            if (!$loan->original_amount) {
+                $loan->original_amount = $loan->amount;
+            }
+
+            // Update the loan with new values
+            $loan->amount = $newAmount;
+            $loan->cycle += 1;
+            $loan->borrow_date = now();
+            $loan->due_date = $newDueDate;
+            $loan->calculated_due_date = $newDueDate;
+            $loan->status = Loan::STATUS_DISBURSED;
+            $loan->capitalized_interest += $interestToCapitalize;
+            $loan->applyGracePeriod();
+            $loan->days_overdue = 0;
+            $loan->is_non_performing = false;
+            $loan->default_triggered = false;
+            $loan->save();
+
+            // Get projections for the response
+            $projections = $this->loanCalculator->calculateProjectedRollovers($loan, 5);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Loan rolled over successfully. New balance: KES " . number_format($newAmount, 2) . ". New due date: " . $newDueDate->format('M d, Y'),
+                'data' => [
+                    'new_balance' => $newAmount,
+                    'cycle' => $loan->cycle,
+                    'due_date' => $newDueDate->format('Y-m-d'),
+                    'due_date_formatted' => $newDueDate->format('M d, Y'),
+                    'interest_capitalized' => $interestToCapitalize,
+                    'interest_type' => $interestType,
+                    'previous_balance' => $loan->amount - $interestToCapitalize,
+                    'interest_rate' => $loan->loanType->interest_rate,
+                    'period' => $loan->loanType->period,
+                    'period_unit' => $loan->loanType->unit,
+                    'previous_due_date' => $effectiveDueDate->format('M d, Y'),
+                    'projections' => $projections,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Loan rollover failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get rollover preview data (API endpoint)
+     */
+    public function getRolloverPreview(Loan $loan)
+    {
+        if (!in_array(auth()->user()->role, ['admin', 'teller', 'borrower'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized action.'
+            ], 403);
+        }
+
+        try {
+            $previewData = $this->loanCalculator->getRolloverPreview($loan);
+            
+            return response()->json([
+                'success' => true,
+                'data' => $previewData
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    /**
+     * Show rollover statement
+     */
+    public function rolloverStatement(Loan $loan)
+    {
+        if (!in_array(auth()->user()->role, ['admin', 'teller', 'borrower'])) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $statement = $loan->getRolloverStatement();
+        
+        return view('loans.rollover-statement', compact('loan', 'statement'));
+    }
+
+    /**
+     * Grant forbearance to a loan
+     */
+    public function grantForbearance(Request $request, Loan $loan)
+    {
+        if (!in_array(auth()->user()->role, ['admin', 'teller'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized action.'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'days' => 'required|integer|min:1|max:90',
+            'reason' => 'required|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            if (!$loan->isOverdue() && $loan->status !== 'overdue') {
+                throw new \Exception('This loan is not overdue. Forbearance is only for overdue loans.');
+            }
+
+            if ($loan->isDefaulted()) {
+                throw new \Exception('This loan is defaulted. Cannot grant forbearance.');
+            }
+
+            if ($loan->isInForbearance()) {
+                throw new \Exception('This loan is already in forbearance.');
+            }
+
+            $loan->grantForbearance($request->days, $request->reason);
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Forbearance granted for {$request->days} days."
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Forbearance grant failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * End forbearance
+     */
+    public function endForbearance(Loan $loan)
+    {
+        if (!in_array(auth()->user()->role, ['admin', 'teller'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized action.'
+            ], 403);
+        }
+
+        try {
+            if (!$loan->isInForbearance()) {
+                throw new \Exception('This loan is not in forbearance.');
+            }
+
+            $loan->endForbearance();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Forbearance ended successfully.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('End forbearance failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Start recovery process for a loan
+     */
+    public function startRecovery(Loan $loan)
+    {
+        if (!in_array(auth()->user()->role, ['admin', 'teller'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized action.'
+            ], 403);
+        }
+
+        try {
+            if (!$loan->isDefaulted()) {
+                throw new \Exception('This loan is not defaulted. Cannot start recovery.');
+            }
+
+            if ($loan->isInRecovery()) {
+                throw new \Exception('This loan is already in recovery.');
+            }
+
+            $loan->startRecovery();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Recovery process started successfully.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Start recovery failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function generatePaymentSchedule($loan, $startDate, $dueDate, $principal, $interestRate, $lastRepaymentDate = null)
     {
         $schedule = [];
         $period = $loan->loanType->period;
@@ -1199,7 +1478,6 @@ class LoanController extends Controller
                 ];
         }
         
-        // Mark paid installments
         foreach ($loan->repayments as $repayment) {
             $repaymentDate = Carbon::parse($repayment->repayment_date);
             
@@ -1217,5 +1495,40 @@ class LoanController extends Controller
         return $schedule;
     }
 
-  
+    /**
+     * Get loan cycles data for modal
+     */
+    public function getCycles(Loan $loan)
+    {
+        if (!in_array(auth()->user()->role, ['admin', 'teller', 'borrower'])) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $cycles = $loan->cycles()->orderBy('cycle_number', 'asc')->get();
+        
+        return response()->json([
+            'success' => true,
+            'cycles' => $cycles->map(function($cycle) {
+                return [
+                    'id' => $cycle->id,
+                    'cycle_number' => $cycle->cycle_number,
+                    'previous_balance' => $cycle->previous_balance,
+                    'interest_capitalized' => $cycle->interest_capitalized,
+                    'new_balance' => $cycle->new_balance,
+                    'interest_rate' => $cycle->interest_rate,
+                    'start_date' => $cycle->start_date ? $cycle->start_date->format('Y-m-d') : null,
+                    'due_date' => $cycle->due_date ? $cycle->due_date->format('Y-m-d') : null,
+                    'status' => $cycle->status,
+                    'status_label' => $cycle->status_label,
+                    'days_in_cycle' => $cycle->days_in_cycle,
+                    'notes' => $cycle->notes,
+                ];
+            }),
+            'total_cycles' => $cycles->count(),
+            'total_capitalized' => $cycles->sum('interest_capitalized'),
+            'total_balance' => $cycles->last() ? $cycles->last()->new_balance : 0,
+            'current_cycle' => $loan->cycle,
+            'active_cycles' => $cycles->where('status', 'active')->count(),
+        ]);
+    }
 }

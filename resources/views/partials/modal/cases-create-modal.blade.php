@@ -1,13 +1,4 @@
 {{-- resources/views/partials/modal/cases-create-modal.blade.php --}}
-@php
-    $borrowers = $borrowers ?? [];
-    $nplBorrowers = $nplBorrowers ?? [];
-    $statuses = $statuses ?? [];
-    $priorities = $priorities ?? [];
-    $officers = $officers ?? [];
-    $actionTypes = $actionTypes ?? [];
-@endphp
-
 <div x-data="caseFormModal()" 
      x-init="initModal()"
      x-show="isOpen" 
@@ -69,14 +60,12 @@
                                             @change="loadBorrowerData()"
                                             class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" required>
                                         <option value="">Select Borrower</option>
-                                        @foreach($borrowers as $borrower)
-                                            <option value="{{ $borrower->id }}" data-has-npl="{{ $borrower->loans->where('is_non_performing', true)->count() > 0 ? 'true' : 'false' }}">
-                                                {{ $borrower->name }} ({{ $borrower->email }})
-                                                @if($borrower->loans->where('is_non_performing', true)->count() > 0)
-                                                    - ⚠️ NPL
-                                                @endif
+                                        <template x-for="borrower in borrowers" :key="borrower.id">
+                                            <option :value="borrower.id" 
+                                                    :data-has-npl="borrower.has_npl ? 'true' : 'false'"
+                                                    x-text="borrower.name + ' (' + borrower.email + ')' + (borrower.has_npl ? ' - ⚠️ NPL' : '')">
                                             </option>
-                                        @endforeach
+                                        </template>
                                     </select>
                                     <template x-if="errors.user_id">
                                         <p class="mt-1 text-sm text-red-500" x-text="errors.user_id[0]"></p>
@@ -220,9 +209,9 @@
                                     <select x-model="formData.status_id" 
                                             class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" required>
                                         <option value="">Select Status</option>
-                                        @foreach($statuses as $status)
-                                            <option value="{{ $status->id }}">{{ $status->name }}</option>
-                                        @endforeach
+                                        <template x-for="status in statuses" :key="status.id">
+                                            <option :value="status.id" x-text="status.name"></option>
+                                        </template>
                                     </select>
                                     <template x-if="errors.status_id">
                                         <p class="mt-1 text-sm text-red-500" x-text="errors.status_id[0]"></p>
@@ -237,9 +226,9 @@
                                             @change="updateCaseCompilation()"
                                             class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" required>
                                         <option value="">Select Priority</option>
-                                        @foreach($priorities as $priority)
-                                            <option value="{{ $priority->id }}">{{ $priority->name }}</option>
-                                        @endforeach
+                                        <template x-for="priority in priorities" :key="priority.id">
+                                            <option :value="priority.id" x-text="priority.name"></option>
+                                        </template>
                                     </select>
                                     <template x-if="errors.priority_id">
                                         <p class="mt-1 text-sm text-red-500" x-text="errors.priority_id[0]"></p>
@@ -254,9 +243,9 @@
                                             @change="updateCaseCompilation()"
                                             class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                                         <option value="">Select Officer</option>
-                                        @foreach($officers as $officer)
-                                            <option value="{{ $officer->id }}">{{ $officer->name }}</option>
-                                        @endforeach
+                                        <template x-for="officer in officers" :key="officer.id">
+                                            <option :value="officer.id" x-text="officer.name"></option>
+                                        </template>
                                     </select>
                                 </div>
                             </div>
@@ -332,9 +321,9 @@
                                             @change="updateCaseCompilation()"
                                             class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                                         <option value="">Select Action</option>
-                                        @foreach($actionTypes as $actionType)
-                                            <option value="{{ $actionType->id }}">{{ $actionType->name }}</option>
-                                        @endforeach
+                                        <template x-for="actionType in actionTypes" :key="actionType.id">
+                                            <option :value="actionType.id" x-text="actionType.name"></option>
+                                        </template>
                                     </select>
                                 </div>
                                 <div>
@@ -440,7 +429,14 @@ document.addEventListener('alpine:init', function() {
             isEditMode: false,
             errors: {},
             
-            // Data
+            // Data from PHP (passed via Alpine)
+            borrowers: @json($borrowers),
+            statuses: @json($statuses),
+            priorities: @json($priorities),
+            officers: @json($officers),
+            actionTypes: @json($actionTypes),
+            
+            // Dynamic data
             borrowerLoans: [],
             showNplWarning: false,
             nplLoanCount: 0,
@@ -503,7 +499,7 @@ document.addEventListener('alpine:init', function() {
             get submitUrl() {
                 return this.isEditMode
                     ? `/cases/${this.formData.id}`
-                    : '{{ route("cases.store") }}';
+                    : '/cases';
             },
 
             get method() {
@@ -573,7 +569,6 @@ document.addEventListener('alpine:init', function() {
                 } else if (selectedLoan.due_date && selectedLoan.is_overdue) {
                     this.formData.default_date = selectedLoan.due_date;
                 } else if (selectedLoan.borrow_date) {
-                    // If not overdue, use borrow date + 30 days as default
                     const borrowDate = new Date(selectedLoan.borrow_date);
                     borrowDate.setDate(borrowDate.getDate() + 30);
                     this.formData.default_date = borrowDate.toISOString().split('T')[0];
@@ -582,13 +577,13 @@ document.addEventListener('alpine:init', function() {
                 // Auto-set status based on loan status
                 if (selectedLoan.status === 'defaulted' || selectedLoan.is_non_performing) {
                     // Find open status
-                    const openStatus = @json($statuses->firstWhere('slug', 'open'));
+                    const openStatus = this.statuses.find(s => s.slug === 'open');
                     if (openStatus) {
                         this.formData.status_id = openStatus.id;
                     }
                 } else if (selectedLoan.is_overdue) {
                     // Find in_progress status for overdue loans
-                    const inProgressStatus = @json($statuses->firstWhere('slug', 'in_progress'));
+                    const inProgressStatus = this.statuses.find(s => s.slug === 'in_progress');
                     if (inProgressStatus) {
                         this.formData.status_id = inProgressStatus.id;
                     }
@@ -597,23 +592,23 @@ document.addEventListener('alpine:init', function() {
                 // Auto-set priority based on days overdue
                 if (selectedLoan.days_overdue && selectedLoan.days_overdue > 0) {
                     if (selectedLoan.days_overdue > 90) {
-                        const urgentPriority = @json($priorities->firstWhere('slug', 'urgent'));
+                        const urgentPriority = this.priorities.find(p => p.slug === 'urgent');
                         if (urgentPriority) this.formData.priority_id = urgentPriority.id;
                     } else if (selectedLoan.days_overdue > 60) {
-                        const highPriority = @json($priorities->firstWhere('slug', 'high'));
+                        const highPriority = this.priorities.find(p => p.slug === 'high');
                         if (highPriority) this.formData.priority_id = highPriority.id;
                     } else if (selectedLoan.days_overdue > 30) {
-                        const mediumPriority = @json($priorities->firstWhere('slug', 'medium'));
+                        const mediumPriority = this.priorities.find(p => p.slug === 'medium');
                         if (mediumPriority) this.formData.priority_id = mediumPriority.id;
                     } else {
-                        const lowPriority = @json($priorities->firstWhere('slug', 'low'));
+                        const lowPriority = this.priorities.find(p => p.slug === 'low');
                         if (lowPriority) this.formData.priority_id = lowPriority.id;
                     }
                 }
 
                 // Auto-set initial action type
                 if (selectedLoan.is_overdue || selectedLoan.is_non_performing) {
-                    const phoneAction = @json($actionTypes->firstWhere('slug', 'phone_call'));
+                    const phoneAction = this.actionTypes.find(a => a.slug === 'phone_call');
                     if (phoneAction) {
                         this.formData.initial_action_type = phoneAction.id;
                         this.formData.initial_action_notes = `Initial contact regarding overdue loan #${selectedLoan.id} (${selectedLoan.days_overdue || 0} days overdue)`;
@@ -641,28 +636,19 @@ document.addEventListener('alpine:init', function() {
                     return;
                 }
 
-                console.log('Loading loans for user_id:', this.formData.user_id);
-
                 const url = `/users/${this.formData.user_id}/loans-data`;
-                console.log('Fetching from URL:', url);
 
                 fetch(url)
                     .then(response => {
-                        console.log('Response status:', response.status);
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
                         }
                         return response.json();
                     })
                     .then(data => {
-                        console.log('Received data:', data);
-                        
-                        // Handle the loans data
                         this.borrowerLoans = data.loans || [];
                         this.showNplWarning = data.npl_count > 0;
                         this.nplLoanCount = data.npl_count || 0;
-                        
-                        console.log('Loans loaded:', this.borrowerLoans.length);
                         
                         // Auto-select first loan if available
                         if (this.borrowerLoans.length > 0) {
@@ -677,16 +663,6 @@ document.addEventListener('alpine:init', function() {
                             
                             this.formData.loan_id = defaultLoan.id;
                             this.populateDebtDetails();
-                        } else {
-                            console.warn('No loans found for user:', this.formData.user_id);
-                            // Show a message to the user
-                            window.dispatchEvent(new CustomEvent('show-alert', {
-                                detail: {
-                                    type: 'warning',
-                                    title: 'No Loans Found',
-                                    message: 'This borrower has no active loans. Please create a loan first or select a different borrower.'
-                                }
-                            }));
                         }
                     })
                     .catch(error => {
@@ -728,33 +704,28 @@ document.addEventListener('alpine:init', function() {
             },
 
             getBorrowerName() {
-                const select = document.querySelector('select[name="user_id"]');
-                const option = select?.querySelector(`option[value="${this.formData.user_id}"]`);
-                return option?.textContent?.trim() || '';
+                const borrower = this.borrowers.find(b => b.id === parseInt(this.formData.user_id));
+                return borrower ? borrower.name : '';
             },
 
             getStatusName() {
-                const select = document.querySelector('select[name="status_id"]');
-                const option = select?.querySelector(`option[value="${this.formData.status_id}"]`);
-                return option?.textContent?.trim() || '';
+                const status = this.statuses.find(s => s.id === parseInt(this.formData.status_id));
+                return status ? status.name : '';
             },
 
             getPriorityName() {
-                const select = document.querySelector('select[name="priority_id"]');
-                const option = select?.querySelector(`option[value="${this.formData.priority_id}"]`);
-                return option?.textContent?.trim() || '';
+                const priority = this.priorities.find(p => p.id === parseInt(this.formData.priority_id));
+                return priority ? priority.name : '';
             },
 
             getAssignedToName() {
-                const select = document.querySelector('select[name="assigned_to"]');
-                const option = select?.querySelector(`option[value="${this.formData.assigned_to}"]`);
-                return option?.textContent?.trim() || '';
+                const officer = this.officers.find(o => o.id === parseInt(this.formData.assigned_to));
+                return officer ? officer.name : '';
             },
 
             getActionTypeName() {
-                const select = document.querySelector('select[name="initial_action_type"]');
-                const option = select?.querySelector(`option[value="${this.formData.initial_action_type}"]`);
-                return option?.textContent?.trim() || '';
+                const action = this.actionTypes.find(a => a.id === parseInt(this.formData.initial_action_type));
+                return action ? action.name : '';
             },
 
             // ============ INIT ============
@@ -868,20 +839,12 @@ document.addEventListener('alpine:init', function() {
                     const response = await fetch(this.submitUrl, {
                         method: this.method,
                         headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                             'Accept': 'application/json',
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(this.formData)
                     });
-
-                    // Check if response is JSON
-                    const contentType = response.headers.get('content-type');
-                    if (!contentType || !contentType.includes('application/json')) {
-                        const text = await response.text();
-                        console.error('Non-JSON response:', text);
-                        throw new Error('Server returned an error. Please check the logs.');
-                    }
 
                     const data = await response.json();
 
