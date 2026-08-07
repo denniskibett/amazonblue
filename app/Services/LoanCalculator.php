@@ -3,231 +3,483 @@
 namespace App\Services;
 
 use App\Models\Loan;
-use App\Models\LoanType;
-use App\Models\User;
+use App\Models\LoanCycle;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class LoanCalculator
 {
     /**
-     * Get the effective due date for a loan
-     * If due_date exists, use it. Otherwise calculate from borrow_date + period
+     * Calculate the due date for a loan based on its loan type period
+     * This is the FIRST due date from the borrow date
      */
-    public function getEffectiveDueDate(Loan $loan): Carbon
+    public function calculateDueDate(Loan $loan): ?Carbon
     {
-        if ($loan->due_date) {
-            return Carbon::parse($loan->due_date);
+        if (!$loan->loanType) {
+            Log::warning('Loan type not found for loan #' . $loan->id);
+            return null;
         }
-        
-        // Calculate from borrow_date + period
+
+        if (!$loan->borrow_date) {
+            Log::warning('Borrow date not found for loan #' . $loan->id);
+            return null;
+        }
+
         $borrowDate = Carbon::parse($loan->borrow_date);
-        $period = $loan->loanType->period ?? 30;
-        $unit = $loan->loanType->unit ?? 'days';
-        
+        $period = (int) $loan->loanType->period;
+        $unit = $loan->loanType->unit;
+
         $dueDate = $borrowDate->copy();
-        switch ($unit) {
-            case 'days': $dueDate->addDays($period); break;
-            case 'weeks': $dueDate->addWeeks($period); break;
-            case 'months': $dueDate->addMonths($period); break;
-            case 'years': $dueDate->addYears($period); break;
-            default: $dueDate->addDays($period); break;
-        }
         
+        switch ($unit) {
+            case 'days':
+                $dueDate->addDays($period);
+                break;
+            case 'weeks':
+                $dueDate->addWeeks($period);
+                break;
+            case 'months':
+                $dueDate->addMonths($period);
+                break;
+            case 'years':
+                $dueDate->addYears($period);
+                break;
+            default:
+                $dueDate->addDays($period);
+        }
+
         return $dueDate;
     }
 
     /**
-     * Calculate the number of cycles that should have occurred
+     * Get the ACTIVE cycle or the latest cycle
      */
-    public function calculatePotentialCycles(Loan $loan): array
+    public function getActiveCycle(Loan $loan): ?LoanCycle
     {
-        $effectiveDueDate = $this->getEffectiveDueDate($loan);
+        // First try to get the active cycle
+        $activeCycle = $loan->cycles()
+            ->where('status', 'active')
+            ->first();
         
-        $period = $loan->loanType->period ?? 30;
-        $unit = $loan->loanType->unit ?? 'days';
+        if ($activeCycle) {
+            return $activeCycle;
+        }
         
-        $periodDays = match($unit) {
-            'days' => $period,
-            'weeks' => $period * 7,
-            'months' => $period * 30,
-            'years' => $period * 365,
-            default => $period,
-        };
+        // If no active cycle, get the latest cycle
+        return $loan->cycles()
+            ->orderBy('cycle_number', 'desc')
+            ->first();
+    }
 
-        $periodDisplay = $period . ' ' . $unit;
-        if ($period > 1) {
-            $periodDisplay = $period . ' ' . $unit;
+    /**
+     * Get the previous due date (the due date of the ACTIVE cycle)
+     */
+    public function getPreviousDueDate(Loan $loan): Carbon
+    {
+        // Get the active cycle
+        $activeCycle = $this->getActiveCycle($loan);
+        
+        if ($activeCycle && $activeCycle->due_date) {
+            return Carbon::parse($activeCycle->due_date);
+        }
+        
+        // Fallback: get the latest cycle
+        $latestCycle = $loan->cycles()
+            ->orderBy('cycle_number', 'desc')
+            ->first();
+        
+        if ($latestCycle && $latestCycle->due_date) {
+            return Carbon::parse($latestCycle->due_date);
+        }
+        
+        // Ultimate fallback: calculate from borrow_date
+        $dueDate = $this->calculateDueDate($loan);
+        if ($dueDate) {
+            return $dueDate;
+        }
+        
+        return Carbon::parse($loan->borrow_date)->addDays(30);
+    }
+
+    /**
+     * Calculate the next due date for a rollover
+     * CRITICAL: This adds ONE period from loan_types to the ACTIVE cycle's due date
+     */
+    public function calculateRolloverDueDate(Loan $loan): Carbon
+    {
+        if (!$loan->loanType) {
+            throw new \Exception('Loan type not found for loan #' . $loan->id);
         }
 
-        $dueDate = $effectiveDueDate;
-        $today = Carbon::now();
+        $period = (int) $loan->loanType->period;
+        $unit = $loan->loanType->unit;
         
-        if ($today->lte($dueDate)) {
-            return [
-                'missed_cycles' => 0,
-                'potential_cycles' => 0,
-                'days_overdue' => 0,
-                'period_days' => $periodDays,
-                'period_display' => $periodDisplay,
-                'next_due_date' => $dueDate->format('M d, Y'),
-                'current_due_date' => $dueDate->format('M d, Y'),
-                'previous_due_date' => $dueDate->format('M d, Y'),
-                'next_due_date_raw' => $dueDate->format('Y-m-d'),
-            ];
-        }
-
-        $daysOverdue = $today->diffInDays($dueDate);
-        $missedCycles = floor($daysOverdue / $periodDays);
+        // Get the active cycle's due date
+        $previousDueDate = $this->getPreviousDueDate($loan);
         
-        $nextDueDate = $dueDate->copy();
+        $newDueDate = $previousDueDate->copy();
+        
+        // Add one period from loan_types to the previous due date
         switch ($unit) {
-            case 'days': $nextDueDate->addDays($period); break;
-            case 'weeks': $nextDueDate->addWeeks($period); break;
-            case 'months': $nextDueDate->addMonths($period); break;
-            case 'years': $nextDueDate->addYears($period); break;
-            default: $nextDueDate->addDays($period); break;
+            case 'days':
+                $newDueDate->addDays($period);
+                break;
+            case 'weeks':
+                $newDueDate->addWeeks($period);
+                break;
+            case 'months':
+                $newDueDate->addMonths($period);
+                break;
+            case 'years':
+                $newDueDate->addYears($period);
+                break;
+            default:
+                $newDueDate->addDays($period);
         }
 
+        Log::info('calculateRolloverDueDate', [
+            'loan_id' => $loan->id,
+            'period' => $period,
+            'unit' => $unit,
+            'previous_due_date' => $previousDueDate->format('Y-m-d'),
+            'new_due_date' => $newDueDate->format('Y-m-d')
+        ]);
+
+        return $newDueDate;
+    }
+
+    /**
+     * Calculate the new balance for a cycle
+     * This handles the complete math for a loan cycle
+     * 
+     * Formula:
+     * 1. Interest = Principal × (Interest Rate / 100)
+     * 2. New Balance = Principal + Interest + Processing Fee
+     * 3. Apply Repayments (in date order)
+     * 4. Calculate Penalties (only if overdue and after grace period)
+     * 5. Final Outstanding = Outstanding + Penalties
+     */
+    public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calculationDate = null): array
+    {
+        if (!$loan->loanType) {
+            throw new \Exception('Loan type not found for loan #' . $loan->id);
+        }
+
+        $calculationDate = $calculationDate ?? Carbon::now();
+        $loanType = $loan->loanType;
+        
+        // Get cycle values
+        $principal = $cycle->previous_balance > 0 ? $cycle->previous_balance : $loan->amount;
+        $interestRate = (float) $cycle->interest_rate ?: (float) $loanType->interest_rate;
+        $penaltyRate = (float) $loanType->penalty_rate;
+        $gracePeriodDays = (int) ($loanType->grace_period_days ?? 0);
+        $processingFeeRate = (float) ($loanType->processing_fee_rate ?? 0);
+        
+        // Step 1: Calculate Interest
+        $interest = $principal * ($interestRate / 100);
+        
+        // Step 2: Calculate Processing Fee (if any)
+        $processingFee = $principal * ($processingFeeRate / 100);
+        
+        // Step 3: Calculate New Balance (Principal + Interest + Processing Fee)
+        $newBalance = $principal + $interest + $processingFee;
+        
+        // Step 4: Get Repayments for this cycle (in date order)
+        $repayments = $loan->repayments()
+            ->where('loan_cycle_id', $cycle->id)
+            ->orderBy('repayment_date', 'asc')
+            ->get();
+        
+        // Step 5: Apply Repayments (in date order)
+        $outstanding = $newBalance;
+        $totalRepayments = 0;
+        $lastRepaymentDate = null;
+        
+        foreach ($repayments as $repayment) {
+            $outstanding = max(0, $outstanding - $repayment->amount);
+            $totalRepayments += $repayment->amount;
+            $lastRepaymentDate = Carbon::parse($repayment->repayment_date);
+        }
+        
+        // Step 6: Calculate Penalties (only if overdue and after grace period)
+        $penalty = 0;
+        $daysOverdue = 0;
+        $daysSubjectToPenalty = 0;
+        $isOverdue = false;
+        
+        $dueDate = Carbon::parse($cycle->due_date);
+        
+        // Check if we're past the due date and have outstanding balance
+        if ($calculationDate->gt($dueDate) && $outstanding > 0) {
+            $daysOverdue = (int) $calculationDate->diffInDays($dueDate);
+            
+            // Apply grace period
+            $daysSubjectToPenalty = max(0, $daysOverdue - $gracePeriodDays);
+            
+            if ($daysSubjectToPenalty > 0) {
+                $isOverdue = true;
+                // Simple interest on original outstanding
+                $penalty = $outstanding * ($penaltyRate / 100) * $daysSubjectToPenalty;
+            }
+        }
+        
+        // Step 7: Final Outstanding
+        $finalOutstanding = max(0, $outstanding + $penalty);
+        
+        // Determine if loan is fully repaid
+        $isFullyRepaid = $finalOutstanding <= 0;
+        
+        // Determine status for this cycle
+        $cycleStatus = 'active';
+        if ($isFullyRepaid) {
+            $cycleStatus = 'completed';
+        } elseif ($isOverdue && $daysSubjectToPenalty > 0) {
+            $cycleStatus = 'overdue';
+        }
+        
         return [
-            'missed_cycles' => (int)$missedCycles,
-            'potential_cycles' => (int)($missedCycles + 1),
-            'days_overdue' => (int)$daysOverdue,
-            'period_days' => $periodDays,
-            'period_display' => $periodDisplay,
-            'next_due_date' => $nextDueDate->format('M d, Y'),
-            'next_due_date_raw' => $nextDueDate->format('Y-m-d'),
-            'current_due_date' => $dueDate->format('M d, Y'),
-            'current_due_date_raw' => $dueDate->format('Y-m-d'),
-            'previous_due_date' => $dueDate->format('M d, Y'),
+            'principal' => $principal,
+            'interest_rate' => $interestRate,
+            'interest' => $interest,
+            'processing_fee_rate' => $processingFeeRate,
+            'processing_fee' => $processingFee,
+            'new_balance' => $newBalance,
+            'total_repayments' => $totalRepayments,
+            'outstanding_after_repayments' => $outstanding,
+            'days_overdue' => $daysOverdue,
+            'grace_period_days' => $gracePeriodDays,
+            'days_subject_to_penalty' => $daysSubjectToPenalty,
+            'penalty_rate' => $penaltyRate,
+            'penalty' => $penalty,
+            'final_outstanding' => $finalOutstanding,
+            'is_overdue' => $isOverdue,
+            'is_fully_repaid' => $isFullyRepaid,
+            'cycle_status' => $cycleStatus,
+            'last_repayment_date' => $lastRepaymentDate,
+            'due_date' => $dueDate,
+            'calculation_date' => $calculationDate,
         ];
     }
 
     /**
-     * Calculate projected rollovers with both Simple and Compound interest
+     * Create the initial cycle for a loan
      */
-    public function calculateProjectedRollovers(Loan $loan, int $maxCycles = 10): array
-    {
-        $effectiveDueDate = $this->getEffectiveDueDate($loan);
-        $period = $loan->loanType->period ?? 30;
-        $unit = $loan->loanType->unit ?? 'days';
-        $interestRate = $loan->loanType->interest_rate ?? 0;
-        $originalPrincipal = $loan->original_amount ?? $loan->amount;
-        $currentAmount = $loan->amount;
-        
-        $projections = [];
-        $currentDueDate = $effectiveDueDate->copy();
-        $currentCycle = $loan->cycle;
-        
-        $cycleInfo = $this->calculatePotentialCycles($loan);
-        $missedCycles = $cycleInfo['missed_cycles'] ?? 0;
-        $startCycle = $currentCycle + $missedCycles;
-        
-        // Simple interest: always based on original principal
-        $simpleInterestPerCycle = ($interestRate / 100) * $originalPrincipal;
-        $simpleAmount = $originalPrincipal;
-        
-        // Compound interest: starts from current amount, grows each cycle
-        $compoundAmount = $loan->amount;
-        
-        for ($i = 0; $i < $maxCycles; $i++) {
-            $cycleNumber = $startCycle + $i + 1;
-            
-            // --- SIMPLE INTEREST ---
-            // Simple interest is always the same (based on original principal)
-            $simpleInterestAmount = $simpleInterestPerCycle;
-            $simplePreviousBalance = $simpleAmount;
-            $simpleNewAmount = $simpleAmount + $simpleInterestAmount;
-            
-            // --- COMPOUND INTEREST ---
-            // Compound interest is calculated on the current balance
-            $compoundInterestAmount = ($interestRate / 100) * $compoundAmount;
-            $compoundPreviousBalance = $compoundAmount;
-            $compoundNewAmount = $compoundAmount + $compoundInterestAmount;
-            
-            // Calculate next due date
-            $nextDueDate = $currentDueDate->copy();
-            switch ($unit) {
-                case 'days': $nextDueDate->addDays($period); break;
-                case 'weeks': $nextDueDate->addWeeks($period); break;
-                case 'months': $nextDueDate->addMonths($period); break;
-                case 'years': $nextDueDate->addYears($period); break;
-                default: $nextDueDate->addDays($period); break;
-            }
-            
-            $projections[] = [
-                'cycle_number' => $cycleNumber,
-                'due_date' => $nextDueDate->format('M d, Y'),
-                'due_date_raw' => $nextDueDate->format('Y-m-d'),
-                'period_display' => $period . ' ' . $unit,
-                // Simple Interest
-                'simple_previous_balance' => $simplePreviousBalance,
-                'simple_interest' => $simpleInterestAmount,
-                'simple_new_balance' => $simpleNewAmount,
-                // Compound Interest
-                'compound_previous_balance' => $compoundPreviousBalance,
-                'compound_interest' => $compoundInterestAmount,
-                'compound_new_balance' => $compoundNewAmount,
-            ];
-            
-            // Update for next cycle
-            $simpleAmount = $simpleNewAmount;
-            $compoundAmount = $compoundNewAmount;  // <-- THIS IS THE KEY! It compounds
-            $currentDueDate = $nextDueDate;
-        }
-        
-        return $projections;
-    }
-
-    /**
-     * Calculate interest for a specific cycle type
-     */
-    public function calculateCycleInterest(Loan $loan, string $interestType = 'compound'): float
+    public function createInitialCycle(Loan $loan): LoanCycle
     {
         if (!$loan->loanType) {
-            return 0;
+            throw new \Exception('Loan type not found for loan #' . $loan->id);
         }
 
-        $interestRate = $loan->loanType->interest_rate;
+        $loanType = $loan->loanType;
+        $interestRate = (float) $loanType->interest_rate;
+        $interest = $loan->amount * ($interestRate / 100);
+        $dueDate = $this->calculateDueDate($loan);
         
-        if ($interestType === 'simple') {
-            // Simple interest: based on original principal
-            $originalPrincipal = $loan->original_amount ?? $loan->amount;
-            return ($interestRate / 100) * $originalPrincipal;
-        } else {
-            // Compound interest: based on current amount
-            return ($interestRate / 100) * $loan->amount;
+        if (!$dueDate) {
+            throw new \Exception('Could not calculate due date for loan #' . $loan->id);
         }
+
+        // Check if cycle already exists
+        $existingCycle = $loan->cycles()
+            ->where('cycle_number', 1)
+            ->first();
+
+        if ($existingCycle) {
+            Log::info('Cycle #1 already exists for loan #' . $loan->id);
+            return $existingCycle;
+        }
+
+        // Create Cycle #1
+        $cycle = LoanCycle::create([
+            'loan_id' => $loan->id,
+            'cycle_number' => 1,
+            'previous_balance' => 0,
+            'interest_capitalized' => $interest,
+            'new_balance' => $loan->amount + $interest,
+            'interest_rate' => $interestRate,
+            'start_date' => $loan->borrow_date,
+            'due_date' => $dueDate,
+            'status' => 'active',
+            'notes' => 'Initial loan cycle - ' . $loanType->name,
+        ]);
+
+        // Update the loan
+        $loan->cycle = 1;
+        $loan->due_date = $dueDate;
+        $loan->calculated_due_date = $dueDate;
+        $loan->original_amount = $loan->amount;
+        $loan->capitalized_interest = $interest;
+        $loan->save();
+
+        Log::info('Initial cycle created for loan #' . $loan->id, [
+            'loan_type_id' => $loan->loan_type_id,
+            'loan_type_name' => $loanType->name,
+            'cycle_number' => 1,
+            'interest' => $interest,
+            'new_balance' => $loan->amount + $interest,
+            'due_date' => $dueDate->format('Y-m-d')
+        ]);
+
+        return $cycle;
     }
 
     /**
-     * Calculate new balance after rollover with specified interest type
+     * Execute a loan rollover
+     * This creates a new cycle and marks the previous one as completed
      */
-    public function calculateRolloverNewBalance(Loan $loan, string $interestType = 'compound'): float
+    public function executeRollover(Loan $loan, array $options = []): array
     {
-        $interest = $this->calculateCycleInterest($loan, $interestType);
-        return $loan->amount + $interest;
+        if (!in_array($loan->status, ['active', 'overdue', 'disbursed'])) {
+            throw new \Exception('This loan is not eligible for rollover.');
+        }
+
+        if ($loan->isDefaulted()) {
+            throw new \Exception('This loan is defaulted. Please resolve recovery case first.');
+        }
+
+        if ($loan->isInForbearance()) {
+            throw new \Exception('This loan is in forbearance. Cannot rollover.');
+        }
+
+        if (!$loan->loanType) {
+            throw new \Exception('Loan type not found for loan #' . $loan->id);
+        }
+
+        $notes = $options['notes'] ?? null;
+        $loanType = $loan->loanType;
+        
+        // Get the active cycle
+        $activeCycle = $this->getActiveCycle($loan);
+
+        if (!$activeCycle) {
+            throw new \Exception('No active cycle found for loan #' . $loan->id);
+        }
+
+        // Calculate the final outstanding for the current cycle
+        $cycleCalculation = $this->calculateCycleBalance($loan, $activeCycle);
+        
+        // The final outstanding becomes the principal for the next cycle
+        $newPrincipal = $cycleCalculation['final_outstanding'];
+        
+        // If the loan is fully repaid, mark it as such
+        if ($newPrincipal <= 0) {
+            $activeCycle->update(['status' => 'completed']);
+            $loan->status = 'repaid';
+            $loan->save();
+            
+            return [
+                'success' => true,
+                'message' => 'Loan is fully repaid. No rollover needed.',
+                'data' => [
+                    'is_repaid' => true,
+                    'final_outstanding' => 0,
+                ]
+            ];
+        }
+
+        // Get the next cycle number
+        $newCycleNumber = $activeCycle->cycle_number + 1;
+        
+        // Calculate interest for the new cycle using loan_type interest rate
+        $interestRate = (float) $loanType->interest_rate;
+        $interest = $newPrincipal * ($interestRate / 100);
+        $newBalance = $newPrincipal + $interest;
+        
+        // CRITICAL: Calculate the new due date from the ACTIVE cycle's due date + period
+        $newDueDate = $this->calculateRolloverDueDate($loan);
+        
+        // CRITICAL: Start date is the ACTIVE cycle's due date
+        $newStartDate = Carbon::parse($activeCycle->due_date);
+        
+        // Mark the active cycle as completed
+        $activeCycle->update(['status' => 'completed']);
+        
+        // Create the new cycle (status = active)
+        $newCycle = LoanCycle::create([
+            'loan_id' => $loan->id,
+            'cycle_number' => $newCycleNumber,
+            'previous_balance' => $newPrincipal,
+            'interest_capitalized' => $interest,
+            'new_balance' => $newBalance,
+            'interest_rate' => $interestRate,
+            'start_date' => $newStartDate,
+            'due_date' => $newDueDate,
+            'status' => 'active',
+            'notes' => $notes ?? 'Loan rollover - Cycle ' . $newCycleNumber . ' (' . $loanType->name . ')',
+        ]);
+
+        // Update the loan
+        $loan->amount = $newBalance;
+        $loan->cycle = $newCycleNumber;
+        $loan->due_date = $newDueDate;
+        $loan->calculated_due_date = $newDueDate;
+        $loan->status = Loan::STATUS_DISBURSED;
+        $loan->capitalized_interest = ($loan->capitalized_interest ?? 0) + $interest;
+        $loan->days_overdue = 0;
+        $loan->is_non_performing = false;
+        $loan->default_triggered = false;
+        $loan->save();
+
+        Log::info('Rollover executed for loan #' . $loan->id, [
+            'loan_type_id' => $loan->loan_type_id,
+            'loan_type_name' => $loanType->name,
+            'new_cycle' => $newCycleNumber,
+            'previous_balance' => $activeCycle->new_balance,
+            'new_principal' => $newPrincipal,
+            'interest' => $interest,
+            'new_balance' => $newBalance,
+            'new_due_date' => $newDueDate->format('Y-m-d'),
+            'new_start_date' => $newStartDate->format('Y-m-d')
+        ]);
+
+        return [
+            'success' => true,
+            'message' => "Loan rolled over successfully. New balance: KES " . number_format($newBalance, 2),
+            'data' => [
+                'cycle' => $newCycle,
+                'new_balance' => $newBalance,
+                'cycle_number' => $newCycleNumber,
+                'due_date' => $newDueDate->format('Y-m-d'),
+                'due_date_formatted' => $newDueDate->format('M d, Y'),
+                'start_date' => $newStartDate->format('Y-m-d'),
+                'start_date_formatted' => $newStartDate->format('M d, Y'),
+                'interest_capitalized' => $interest,
+                'previous_balance' => $newPrincipal,
+                'interest_rate' => $interestRate,
+                'period' => (int) $loanType->period,
+                'period_unit' => $loanType->unit,
+                'period_display' => $this->getPeriodDisplay($loan),
+                'loan_type_id' => $loan->loan_type_id,
+                'loan_type_name' => $loanType->name,
+                'cycle_calculation' => $cycleCalculation,
+            ]
+        ];
     }
 
     /**
-     * Calculate new due date for rollover (one cycle at a time)
+     * Get the loan type period display
      */
-    public function calculateRolloverDueDate(Loan $loan): Carbon
+    public function getPeriodDisplay(Loan $loan): string
     {
-        $period = $loan->loanType->period ?? 30;
-        $unit = $loan->loanType->unit ?? 'days';
-        
-        $effectiveDueDate = $this->getEffectiveDueDate($loan);
-        $newDueDate = $effectiveDueDate->copy();
-        
-        switch ($unit) {
-            case 'days': $newDueDate->addDays($period); break;
-            case 'weeks': $newDueDate->addWeeks($period); break;
-            case 'months': $newDueDate->addMonths($period); break;
-            case 'years': $newDueDate->addYears($period); break;
-            default: $newDueDate->addDays($period); break;
+        if (!$loan->loanType) {
+            return 'N/A';
         }
         
-        return $newDueDate;
+        $period = (int) $loan->loanType->period;
+        $unit = $loan->loanType->unit;
+        
+        // Pluralize the unit if period > 1
+        $unitDisplay = $unit;
+        if ($period > 1) {
+            switch ($unit) {
+                case 'day': $unitDisplay = 'days'; break;
+                case 'week': $unitDisplay = 'weeks'; break;
+                case 'month': $unitDisplay = 'months'; break;
+                case 'year': $unitDisplay = 'years'; break;
+            }
+        }
+        
+        return $period . ' ' . $unitDisplay;
     }
 
     /**
@@ -235,140 +487,126 @@ class LoanCalculator
      */
     public function getRolloverPreview(Loan $loan): array
     {
-        $effectiveDueDate = $this->getEffectiveDueDate($loan);
-        $previousDueDate = $effectiveDueDate->format('M d, Y');
+        if (!$loan->loanType) {
+            throw new \Exception('Loan type not found for loan #' . $loan->id);
+        }
+
+        $loanType = $loan->loanType;
+
+        // Get the active cycle
+        $activeCycle = $this->getActiveCycle($loan);
+
+        if (!$activeCycle) {
+            throw new \Exception('No active cycle found for this loan');
+        }
+
+        // Calculate the cycle balance
+        $cycleCalculation = $this->calculateCycleBalance($loan, $activeCycle);
         
+        $newPrincipal = $cycleCalculation['final_outstanding'];
+        $interestRate = (float) $loanType->interest_rate;
+        $interest = $newPrincipal * ($interestRate / 100);
+        $newBalance = $newPrincipal + $interest;
         $newDueDate = $this->calculateRolloverDueDate($loan);
-        $cycleInfo = $this->calculatePotentialCycles($loan);
-        
-        // Calculate both interest types
-        $simpleInterest = $this->calculateCycleInterest($loan, 'simple');
-        $compoundInterest = $this->calculateCycleInterest($loan, 'compound');
-        
-        $simpleNewBalance = $loan->amount + $simpleInterest;
-        $compoundNewBalance = $loan->amount + $compoundInterest;
-        
-        $projections = $this->calculateProjectedRollovers($loan, 5);
+        $newStartDate = Carbon::parse($activeCycle->due_date);
         
         return [
-            'current_balance' => $loan->amount,
-            'current_cycle' => $loan->cycle,
-            'new_cycle' => $loan->cycle + 1,
+            'loan_type_id' => $loan->loan_type_id,
+            'loan_type_name' => $loanType->name,
+            'period' => (int) $loanType->period,
+            'period_unit' => $loanType->unit,
+            'period_display' => $this->getPeriodDisplay($loan),
+            'interest_rate' => $interestRate,
+            
+            // Current cycle info
+            'current_cycle' => $activeCycle->cycle_number,
+            'current_due_date' => Carbon::parse($activeCycle->due_date)->format('M d, Y'),
+            'current_balance' => $activeCycle->new_balance,
+            'outstanding_after_repayments' => $cycleCalculation['outstanding_after_repayments'],
+            'days_overdue' => $cycleCalculation['days_overdue'],
+            'days_subject_to_penalty' => $cycleCalculation['days_subject_to_penalty'],
+            'penalty' => $cycleCalculation['penalty'],
+            'final_outstanding' => $cycleCalculation['final_outstanding'],
+            'is_overdue' => $cycleCalculation['is_overdue'],
+            
+            // Next cycle info
+            'new_cycle' => $activeCycle->cycle_number + 1,
+            'new_start_date' => $newStartDate->format('M d, Y'),
             'new_due_date' => $newDueDate->format('M d, Y'),
             'new_due_date_raw' => $newDueDate->format('Y-m-d'),
-            'previous_due_date' => $previousDueDate,
-            'interest_rate' => $loan->loanType->interest_rate ?? 0,
-            'period' => $loan->loanType->period ?? 30,
-            'period_unit' => $loan->loanType->unit ?? 'days',
-            'grace_days_balance' => $loan->grace_days_balance,
-            'previous_balance' => $loan->amount,
+            'interest_to_capitalize' => $interest,
+            'new_balance' => $newBalance,
+            
+            // Summary
             'original_principal' => $loan->original_amount ?? $loan->amount,
-            // Simple Interest
-            'simple_interest' => $simpleInterest,
-            'simple_new_balance' => $simpleNewBalance,
-            // Compound Interest
-            'compound_interest' => $compoundInterest,
-            'compound_new_balance' => $compoundNewBalance,
-            // Cycle info
-            'missed_cycles' => $cycleInfo['missed_cycles'],
-            'potential_cycles' => $cycleInfo['potential_cycles'],
-            'days_overdue' => $cycleInfo['days_overdue'],
-            'period_display' => $cycleInfo['period_display'],
-            'next_due_date_if_rolled' => $cycleInfo['next_due_date'],
-            'current_due_date' => $cycleInfo['current_due_date'],
-            'projections' => $projections,
+            'total_capitalized_interest' => $loan->capitalized_interest ?? 0,
+            'cycle_calculation' => $cycleCalculation,
         ];
     }
 
     /**
-     * Calculate loan metrics for a given loan
+     * Calculate loan metrics for display
+     * Uses the active cycle's data for accurate display
      */
-    public function calculateLoanMetrics(Loan $loan)
+    public function calculateLoanMetrics(Loan $loan): array
     {
-        // 1. Get loan parameters with validation
         if (!$loan->loanType || !$loan->borrow_date) {
             throw new \InvalidArgumentException('Loan type or borrow date missing');
         }
 
+        $loanType = $loan->loanType;
         $principal = $loan->amount;
-        $interestRate = $loan->loanType->interest_rate;
-        $period = $loan->loanType->period;
-        $periodUnit = $loan->loanType->unit;
-        $basePenaltyRate = $loan->loanType->penalty_rate;
+        $interestRate = (float) $loanType->interest_rate;
+        $period = (int) $loanType->period;
+        $periodUnit = $loanType->unit;
+        $basePenaltyRate = (float) $loanType->penalty_rate;
         $borrowDate = Carbon::parse($loan->borrow_date);
         
-        // 2. Calculate due date
-        $dueDate = $borrowDate->copy();
-        switch ($periodUnit) {
-            case 'days': $dueDate->addDays($period); break;
-            case 'weeks': $dueDate->addWeeks($period); break;
-            case 'months': $dueDate->addMonths($period); break;
-            case 'years': $dueDate->addYears($period); break;
-        }
-
-        // 3. Calculate interest and principal plus interest
-        $interest = $principal * ($interestRate / 100);
-        $principalPlusInterest = $principal + $interest;
-
-        // 4. Get sorted repayments
-        $repayments = $loan->repayments->sortBy('repayment_date');
-        $lastRepaymentDate = $repayments->isNotEmpty() 
-            ? Carbon::parse($repayments->last()->repayment_date) 
-            : null;
-
-        // 5. Calculate repayments before and after due date
-        $repaymentsBeforeDue = $repayments->filter(function($repayment) use ($dueDate) {
-            return Carbon::parse($repayment->repayment_date)->lt($dueDate);
-        })->sum('amount');
-
-        $repaymentsAfterDue = $repayments->filter(function($repayment) use ($dueDate) {
-            return Carbon::parse($repayment->repayment_date)->gte($dueDate);
-        })->sum('amount');
-
-        $totalRepayments = $repaymentsBeforeDue + $repaymentsAfterDue;
-
-        // 6. Calculate outstanding at due date
-        $outstandingAtDueDate = max($principalPlusInterest - $repaymentsBeforeDue, 0);
-
-        // 7. Calculate penalty
-        $penaltyAmount = 0;
-        $daysLate = 0;
-
-        if ($outstandingAtDueDate > 0) {
-            $currentBalance = $outstandingAtDueDate;
-            $currentDate = $dueDate->copy();
-            $endDate = ($loan->status === 'repaid' && $repayments->isNotEmpty()) 
-                ? Carbon::parse($repayments->last()->repayment_date) 
-                : now();
-
-            $repaymentsByDate = $repayments->filter(function($repayment) use ($dueDate) {
-                return Carbon::parse($repayment->repayment_date)->gte($dueDate);
-            })->groupBy(function($repayment) {
-                return Carbon::parse($repayment->repayment_date)->toDateString();
-            });
-
-            $currentDate->addDay();
-
-            while ($currentDate->lte($endDate)) {
-                if ($currentBalance <= 0) break;
-                
-                $dateKey = $currentDate->toDateString();
-                $dailyRepayment = $repaymentsByDate->has($dateKey) 
-                    ? $repaymentsByDate->get($dateKey)->sum('amount') 
-                    : 0;
-
-                $currentBalance = max($currentBalance - $dailyRepayment, 0);
-                
-                if ($currentBalance > 0) {
-                    $penaltyAmount += ($basePenaltyRate / 100) * $outstandingAtDueDate;
-                    $daysLate++;
-                }
-                
-                $currentDate->addDay();
+        // Get the active cycle
+        $activeCycle = $this->getActiveCycle($loan);
+        
+        if ($activeCycle && $activeCycle->due_date) {
+            $dueDate = Carbon::parse($activeCycle->due_date);
+        } else {
+            // Fallback: calculate from borrow_date (only for new loans without cycles)
+            $dueDate = $this->calculateDueDate($loan);
+            if (!$dueDate) {
+                $dueDate = $borrowDate->copy()->addDays(30);
             }
         }
 
-        // 8. Calculate broker fees
+        // Calculate cycle balance
+        if ($activeCycle) {
+            $cycleCalculation = $this->calculateCycleBalance($loan, $activeCycle);
+            $interest = $cycleCalculation['interest'];
+            $totalRepayments = $cycleCalculation['total_repayments'];
+            $penaltyAmount = $cycleCalculation['penalty'];
+            $daysLate = $cycleCalculation['days_subject_to_penalty'];
+            $outstandingBalance = $cycleCalculation['final_outstanding'];
+            $outstandingAtDueDate = $cycleCalculation['outstanding_after_repayments'];
+            $principalPlusInterest = $cycleCalculation['new_balance'];
+            $totalDue = $cycleCalculation['new_balance'] + $penaltyAmount;
+        } else {
+            // Fallback: calculate without cycle
+            $interest = $principal * ($interestRate / 100);
+            $principalPlusInterest = $principal + $interest;
+            $repayments = $loan->repayments->sortBy('repayment_date');
+            $lastRepaymentDate = $repayments->isNotEmpty() 
+                ? Carbon::parse($repayments->last()->repayment_date) 
+                : null;
+            $totalRepayments = $repayments->sum('amount');
+            $outstandingAtDueDate = max($principalPlusInterest - $totalRepayments, 0);
+            $penaltyAmount = 0;
+            $daysLate = 0;
+            $outstandingBalance = max(0, $principalPlusInterest - $totalRepayments);
+            $totalDue = $principalPlusInterest;
+        }
+
+        // Get last repayment date
+        $lastRepayment = $loan->repayments()->orderBy('repayment_date', 'desc')->first();
+        $lastRepaymentDate = $lastRepayment ? Carbon::parse($lastRepayment->repayment_date) : null;
+
+        // Calculate broker fees
         $brokerFees = 0;
         $brokerRate = 0;
         $brokerPenaltyFees = 0;
@@ -376,7 +614,7 @@ class LoanCalculator
         $totalBrokerFees = 0;
         $isBrokered = false;
         
-        if ($loan->broker_status == 1 && $loan->user->borrower && $loan->user->borrower->broker) {
+        if ($loan->broker_status == 1 && $loan->user && $loan->user->borrower && $loan->user->borrower->broker) {
             $isBrokered = true;
             $borrower = $loan->user->borrower;
             $broker = $borrower->broker;
@@ -395,18 +633,19 @@ class LoanCalculator
             $totalBrokerFees = $brokerFees + $brokerPenaltyFees;
         }
 
-        // 9. Calculate all final amounts
-        $totalDue = $principalPlusInterest + $penaltyAmount;
-        $outstandingBalance = max(0, $totalDue - $totalRepayments);
+        // Calculate all final amounts
         $netEarnings = ($interest + $penaltyAmount) - $totalBrokerFees;
         $pl = $netEarnings - max(0, $totalRepayments - $principal);
 
         return [
+            'loan_type_id' => $loan->loan_type_id,
+            'loan_type_name' => $loanType->name,
+            'period' => $period,
+            'period_unit' => $periodUnit,
+            'period_display' => $this->getPeriodDisplay($loan),
             'principal' => $principal,
             'interest' => $interest,
             'interest_rate' => $interestRate,
-            'period' => $period,
-            'period_unit' => $periodUnit,
             'borrow_date' => $borrowDate,
             'due_date' => $dueDate,
             'last_repayment_date' => $lastRepaymentDate,
@@ -420,8 +659,6 @@ class LoanCalculator
             'broker_penalty_fees' => $brokerPenaltyFees,
             'total_broker_fees' => $totalBrokerFees,
             'client_type' => $loan->user->borrower->client_type ?? 0,
-            'total_repayments_before_due' => $repaymentsBeforeDue,
-            'total_repayments_after_due' => $repaymentsAfterDue,
             'total_repayments' => $totalRepayments,
             'principal_plus_interest' => $principalPlusInterest,
             'outstanding_balance' => $outstandingBalance,
@@ -431,124 +668,12 @@ class LoanCalculator
             'pl' => $pl,
             'is_overdue' => $daysLate > 0,
             'is_repaid' => $loan->status === 'repaid',
+            'active_cycle' => $activeCycle ? [
+                'number' => $activeCycle->cycle_number,
+                'start_date' => $activeCycle->start_date->format('M d, Y'),
+                'due_date' => $activeCycle->due_date->format('M d, Y'),
+                'balance' => $activeCycle->new_balance,
+            ] : null,
         ];
-    }
-
-    /**
-     * Get grace period status for a loan
-     */
-    public function getGracePeriodStatus(Loan $loan): array
-    {
-        $isWithinGrace = $loan->isWithinGracePeriod();
-        $remainingDays = $loan->getRemainingGraceDays();
-        
-        return [
-            'is_within_grace_period' => $isWithinGrace,
-            'remaining_days' => $remainingDays,
-            'grace_days_balance' => $loan->grace_days_balance,
-            'grace_days_earned' => $loan->grace_days_earned,
-            'grace_days_used' => $loan->grace_days_used,
-            'status_text' => $isWithinGrace 
-                ? "Grace Period Active ({$remainingDays} days remaining)"
-                : ($loan->grace_days_balance > 0 
-                    ? "{$loan->grace_days_balance} grace days available"
-                    : "No grace days available"),
-        ];
-    }
-
-    /**
-     * Get loan status summary
-     */
-    public function getStatusSummary(Loan $loan): array
-    {
-        return [
-            'status' => $loan->status,
-            'status_label' => $loan->status_label,
-            'status_color' => $loan->status_color,
-            'is_active' => $loan->isActive(),
-            'is_overdue' => $loan->isOverdue(),
-            'is_defaulted' => $loan->isDefaulted(),
-            'is_in_recovery' => $loan->isInRecovery(),
-            'is_in_forbearance' => $loan->isInForbearance(),
-            'is_performing' => $loan->isPerforming(),
-            'cycle_display' => $loan->cycle_display,
-        ];
-    }
-
-    // ============ EXISTING METHODS ============
-
-    public function getDueLoans(User $user)
-    {
-        $baseQuery = Loan::with(['borrower', 'loanType'])
-            ->where('status', 'disbursed')
-            ->join('loan_types', 'loans.loan_type_id', '=', 'loan_types.id');
-
-        switch ($user->role) {
-            case 'borrower':
-                $baseQuery->where('loans.user_id', $user->id);
-                break;
-            case 'broker':
-                $borrowerIds = $user->broker->borrowers()->pluck('user_id');
-                $baseQuery->whereIn('loans.user_id', $borrowerIds);
-                break;
-        }
-
-        return $baseQuery->get()->map(function ($loan) {
-            $borrowDate = Carbon::parse($loan->borrow_date)->startOfDay();
-            $dueDate = $borrowDate->copy();
-
-            switch ($loan->loanType->unit) {
-                case 'days': $dueDate->addDays($loan->loanType->period); break;
-                case 'weeks': $dueDate->addWeeks($loan->loanType->period); break;
-                case 'months': $dueDate->addMonths($loan->loanType->period); break;
-            }
-
-            $today = Carbon::now()->startOfDay();
-            $remainingDays = $today->diffInDays($dueDate, false);
-
-            $loan->due_date = $dueDate;
-            $loan->remaining_days = $remainingDays;
-            $loan->status = $remainingDays < 0 ? 'overdue' : 'disbursed';
-            $loan->overdue_days = $remainingDays < 0 ? abs($remainingDays) : 0;
-
-            if ($remainingDays < 0) {
-                $interval = $today->diff($dueDate);
-                $loan->overdue_period = ['months' => $interval->m, 'days' => $interval->d];
-            }
-
-            return $loan;
-        })->sortBy('remaining_days');
-    }
-
-    public function getLoanStats(User $user, string $period = 'month')
-    {
-        $currentPeriod = $this->getPeriodStart($period);
-
-        return [
-            'totalLoans' => $user->loans()->count(),
-            'loansThisPeriod' => $user->loans()
-                ->where('created_at', '>=', $currentPeriod)
-                ->count(),
-            'completedLoans' => $user->loans()->repaid()->count(),
-            'completedThisPeriod' => $user->loans()
-                ->repaid()
-                ->where('updated_at', '>=', $currentPeriod)
-                ->count(),
-            'totalBorrowed' => $user->loans()->sum('amount'),
-            'borrowedThisPeriod' => $user->loans()
-                ->where('borrow_date', '>=', $currentPeriod)
-                ->sum('amount'),
-            'activeLoans' => $user->loans()->active()->count(),
-        ];
-    }
-
-    protected function getPeriodStart(string $period)
-    {
-        return match($period) {
-            'day' => Carbon::today(),
-            'month' => Carbon::now()->startOfMonth(),
-            'year' => Carbon::now()->startOfYear(),
-            default => Carbon::now()->startOfMonth(),
-        };
     }
 }

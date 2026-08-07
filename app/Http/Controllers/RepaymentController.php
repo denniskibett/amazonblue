@@ -4,15 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Models\Repayment;
 use App\Models\Loan;
+use App\Services\RepaymentService;
 use Illuminate\Http\Request;
 
 class RepaymentController extends Controller
 {
+    protected $repaymentService;
+
+    public function __construct(RepaymentService $repaymentService)
+    {
+        $this->repaymentService = $repaymentService;
+    }
+
     public function index()
     {
         $user = auth()->user();
         
-        $query = Repayment::with(['loan.borrower'])->latest();
+        $query = Repayment::with(['loan.borrower', 'loanCycle'])->latest();
         
         if ($user->role === 'broker') {
             $query->whereHas('loan', function($q) use ($user) {
@@ -57,19 +65,13 @@ class RepaymentController extends Controller
             'repayment_date' => 'required|date',
             'transaction' => 'required|string|max:255|unique:repayments,transaction,NULL,id,loan_id,' . $request->loan_id,
             'mode' => 'nullable|string|max:100',
+            'notes' => 'nullable|string',
         ]);
 
-        $repayment = Repayment::create($validated);
-
-        // Check if loan is fully repaid
         $loan = Loan::find($validated['loan_id']);
-        $totalRepayments = $loan->repayments()->sum('amount');
-        $totalDue = $loan->amount + ($loan->interest ?? 0) + ($loan->penalty_amount ?? 0);
-        
-        if ($totalRepayments >= $totalDue) {
-            $loan->status = 'repaid';
-            $loan->save();
-        }
+        $cycle = $loan->getCurrentCycle();
+
+        $repayment = $this->repaymentService->createRepayment($loan, $validated, $cycle);
 
         return response()->json([
             'message' => 'Repayment created successfully!',
@@ -84,7 +86,14 @@ class RepaymentController extends Controller
             'repayment_date' => 'required|date',
             'transaction' => 'required|string|max:255|unique:repayments,transaction,' . $repayment->id . ',id,loan_id,' . $repayment->loan_id,
             'mode' => 'nullable|string|max:100',
+            'notes' => 'nullable|string',
         ]);
+
+        // Recalculate processing fee
+        $loan = $repayment->loan;
+        $processingFeeRate = $loan->processing_fee_rate ?? 0;
+        $validated['processing_fee'] = ($processingFeeRate / 100) * $validated['amount'];
+        $validated['net_amount'] = $validated['amount'] - $validated['processing_fee'];
 
         $repayment->update($validated);
 
@@ -138,6 +147,10 @@ class RepaymentController extends Controller
         if (!in_array($user->role, ['admin', 'broker'])) {
             abort(403, 'Unauthorized action.');
         }
+        
+        // Reverse the processing fee from loan total
+        $loan->total_processing_fees = max(0, ($loan->total_processing_fees ?? 0) - $repayment->processing_fee);
+        $loan->save();
         
         $repayment->delete();
         

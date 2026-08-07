@@ -1,3 +1,4 @@
+{{-- resources/views/partials/modal/repayment-create-modal.blade.php --}}
 <div 
     x-data="repaymentModal()" 
     x-init="init()"
@@ -381,16 +382,17 @@ function repaymentModal() {
                     body: formData
                 });
 
+                const data = await response.json();
+
                 if (response.ok) {
-                    this.showAlert('success', this.editId ? 'Repayment updated successfully!' : 'Repayment created successfully!');
+                    window.showAlert('success', 'Success!', this.editId ? 'Repayment updated successfully!' : 'Repayment created successfully!');
                     this.close();
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    const error = await response.json();
-                    this.showAlert('error', error.message || 'Something went wrong.');
+                    window.showAlert('error', 'Error!', data.message || 'Something went wrong.');
                 }
             } catch (error) {
-                this.showAlert('error', 'Network error. Please try again.');
+                window.showAlert('error', 'Error!', 'Network error. Please try again.');
             }
         },
 
@@ -402,14 +404,6 @@ function repaymentModal() {
             const month = String(d.getMonth() + 1).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
-        },
-
-        showAlert(type, message) {
-            if (typeof window.showAlert === 'function') {
-                window.showAlert(type, message);
-            } else {
-                alert(message);
-            }
         }
     }
 }

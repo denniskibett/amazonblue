@@ -66,7 +66,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Loans Resource
     Route::resource('loans', LoanController::class);
-    
+
     // ============ LOAN ROLLOVER & FORBEARANCE ROUTES ============
     Route::prefix('loans/{loan}')->name('loans.')->group(function () {
         // Rollover Routes
@@ -76,7 +76,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/cycles', [LoanController::class, 'getCycles'])->name('loans.cycles');
         Route::get('/rollover-preview', [LoanController::class, 'getRolloverPreview'])->name('loans.rollover.preview');
         
-    // Forbearance Routes
+        // Forbearance Routes
         Route::post('/forbearance', [LoanController::class, 'grantForbearance'])->name('forbearance.grant');
         Route::patch('/forbearance/end', [LoanController::class, 'endForbearance'])->name('forbearance.end');
         

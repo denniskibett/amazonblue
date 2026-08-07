@@ -64,6 +64,11 @@ class DebtRecoveryCase extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function borrowers()
+    {
+        return $this->belongsToMany(User::class, 'case_borrowers', 'case_id', 'user_id');
+    }
+
     public function debtor()
     {
         return $this->belongsTo(User::class, 'user_id');

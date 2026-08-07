@@ -67,9 +67,9 @@ document.addEventListener('alpine:init', function() {
             timeoutId: null,
 
             init() {
-                // Ensure modal starts closed
                 this.isOpen = false;
                 
+                // Listen for show-alert events
                 window.addEventListener('show-alert', (event) => {
                     this.show(
                         event.detail.type || 'success',
@@ -86,6 +86,7 @@ document.addEventListener('alpine:init', function() {
                 this.isOpen = true;
                 document.body.style.overflow = 'hidden';
 
+                // Auto-close for success messages
                 if (type === 'success') {
                     clearTimeout(this.timeoutId);
                     this.timeoutId = setTimeout(() => {
@@ -101,5 +102,16 @@ document.addEventListener('alpine:init', function() {
             }
         };
     });
+    
+    // Global helper function
+    window.showAlert = function(type, title, message) {
+        window.dispatchEvent(new CustomEvent('show-alert', {
+            detail: {
+                type: type || 'info',
+                title: title || '',
+                message: message || ''
+            }
+        }));
+    };
 });
 </script>

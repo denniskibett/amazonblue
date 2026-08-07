@@ -4,14 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Disbursement;
 use App\Models\Loan;
+use App\Services\DisbursementService;
 use Illuminate\Http\Request;
 
 class DisbursementController extends Controller
 {
+    protected $disbursementService;
+
+    public function __construct(DisbursementService $disbursementService)
+    {
+        $this->disbursementService = $disbursementService;
+    }
+
     public function index()
     {
         if (auth()->user()->role === 'admin') {
-            $disbursements = Disbursement::with(['loan.user'])->get();
+            $disbursements = Disbursement::with(['loan.user', 'loanCycle'])->get();
             return view('disbursements.index', compact('disbursements'));
         } else {
             $loans = auth()->user()->loans()->with('disbursements')->get();
@@ -21,7 +29,7 @@ class DisbursementController extends Controller
 
     public function show($id)
     {
-        $disbursement = Disbursement::findOrFail($id);
+        $disbursement = Disbursement::with(['loan', 'loanCycle'])->findOrFail($id);
         return view('disbursements.show', compact('disbursement'));
     }
 
@@ -41,13 +49,16 @@ class DisbursementController extends Controller
             'transaction' => 'required|string|max:255',
             'mode' => 'nullable|string|max:100',
             'payment_date' => 'nullable|date',
+            'notes' => 'nullable|string',
         ]);
 
-        $disbursement = Disbursement::create($validated);
+        $loan = Loan::find($validated['loan_id']);
+        $cycle = $loan->getCurrentCycle();
+
+        $disbursement = $this->disbursementService->createDisbursement($loan, $validated, $cycle);
 
         // Update loan status if approved
-        $loan = Loan::find($validated['loan_id']);
-        if ($loan && $loan->status === 'approved') {
+        if ($loan->status === 'approved') {
             $loan->status = 'disbursed';
             $loan->save();
         }
@@ -66,7 +77,14 @@ class DisbursementController extends Controller
             'transaction' => 'required|string|max:255',
             'mode' => 'nullable|string|max:100',
             'payment_date' => 'nullable|date',
+            'notes' => 'nullable|string',
         ]);
+
+        // Recalculate processing fee
+        $loan = $disbursement->loan;
+        $processingFeeRate = $loan->processing_fee_rate ?? 0;
+        $validated['processing_fee'] = ($processingFeeRate / 100) * $validated['amount'];
+        $validated['net_amount'] = $validated['amount'] - $validated['processing_fee'];
 
         $disbursement->update($validated);
 
@@ -79,6 +97,12 @@ class DisbursementController extends Controller
     public function destroy($id)
     {
         $disbursement = Disbursement::findOrFail($id);
+        
+        // Reverse the processing fee from loan total
+        $loan = $disbursement->loan;
+        $loan->total_processing_fees = max(0, ($loan->total_processing_fees ?? 0) - $disbursement->processing_fee);
+        $loan->save();
+
         $disbursement->delete();
 
         return response()->json([

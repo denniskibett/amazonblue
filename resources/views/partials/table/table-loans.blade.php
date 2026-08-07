@@ -5,11 +5,11 @@
     $loans = $loans ?? [];
     $context = $context ?? 'user-profile';
     
-    // Ensure variables exist with defaults
+    // Ensure variables exist with defaults - query if not provided
     $users = $users ?? collect();
-    $loanTypes = $loanTypes ?? collect();
-    $guarantors = $guarantors ?? collect();
-    $loanOfficers = $loanOfficers ?? collect();
+    $loanTypes = $loanTypes ?? App\Models\LoanType::all();
+    $guarantors = $guarantors ?? App\Models\User::where('role', 'borrower')->get();
+    $loanOfficers = $loanOfficers ?? App\Models\User::whereIn('role', ['admin', 'teller'])->get();
     
     // Signature-related variables with defaults
     $signatureUser = $signatureUser ?? null;
@@ -69,7 +69,7 @@
 
       @if(isset($user) && (auth()->user()->role === 'admin' || auth()->user()->role === 'teller' || (auth()->user()->role === 'broker' && auth()->user()->broker && $user->borrower->broker_id === auth()->user()->broker->id)))
       <button 
-          @click="openCreateModal()"
+          @click="openCreateModal({ userId: {{ $user->id }}, userName: '{{ addslashes($user->name) }}' })"
           class="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-theme-sm font-medium text-gray-500 shadow-theme-xs ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03]">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -208,7 +208,14 @@
           }
         @endphp
         
-        <tr class="loan-row hover:bg-gray-50 transition duration-150" data-loan-id="{{ $loan->id }}">
+        <tr class="loan-row hover:bg-gray-50 transition duration-150" 
+            data-loan-id="{{ $loan->id }}" 
+            data-user-id="{{ $loan->user_id }}"
+            data-loan-type="{{ $loan->loanType->name ?? '' }}"
+            data-status="{{ $loan->status }}"
+            data-amount="{{ $loan->amount }}"
+            data-borrow-date="{{ $loan->borrow_date->format('Y-m-d') }}"
+            data-due-date="{{ $dueDate->format('Y-m-d') }}">
           @if($showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']))
           <td class="py-3 hidden sm:table-cell">
             <div class="flex items-center gap-3">
@@ -285,11 +292,14 @@
               @endif
 
               @if(in_array(auth()->user()->role, ['admin', 'broker', 'teller']) && $loan->status !== 'rejected')
-              <a href="{{ route('loans.edit', $loan->id) }}" class="text-green-600 hover:text-green-900" title="Edit">
+              <button 
+                  @click="openEditModal({{ $loan->id }})"
+                  class="text-green-600 hover:text-green-900" 
+                  title="Edit">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
                 </svg>
-              </a>
+              </button>
               @endif
 
               @if(in_array(auth()->user()->role, ['admin', 'broker']))
@@ -339,11 +349,14 @@
             @endif
           
             @if(in_array(auth()->user()->role, ['admin', 'broker', 'teller']) && $loan->status !== 'rejected')
-            <a href="{{ route('loans.edit', $loan->id) }}" class="text-green-600 hover:text-green-900 inline-block mr-2" title="Edit">
+            <button 
+                @click="openEditModal({{ $loan->id }})"
+                class="text-green-600 hover:text-green-900 inline-block mr-2" 
+                title="Edit">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
               </svg>
-            </a>
+            </button>
             @endif
           
             @if(in_array(auth()->user()->role, ['admin', 'broker']))
@@ -387,434 +400,8 @@
     </div>
   </div>
 
-  <!-- Create Loan Modal -->
-  <div x-show="isCreateModalOpen" 
-       class="fixed inset-0 z-99999 overflow-y-auto" 
-       style="display: none;"
-       x-transition:enter="transition ease-out duration-300"
-       x-transition:enter-start="opacity-0"
-       x-transition:enter-end="opacity-100"
-       x-transition:leave="transition ease-in duration-200"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0">
-    <div class="flex items-center justify-center min-h-screen p-5">
-      <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="closeCreateModal()"></div>
-      
-      <div class="relative w-full max-w-4xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10 z-50 max-h-[90vh] overflow-y-auto">
-        <button @click="closeCreateModal()" class="group absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
-          <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M6.04289 16.5413C5.65237 16.9318 5.65237 17.565 6.04289 17.9555C6.43342 18.346 7.06658 18.346 7.45711 17.9555L11.9987 13.4139L16.5408 17.956C16.9313 18.3466 17.5645 18.3466 17.955 17.956C18.3455 17.5655 18.3455 16.9323 17.955 16.5418L13.4129 11.9997L17.955 7.4576C18.3455 7.06707 18.3455 6.43391 17.955 6.04338C17.5645 5.65286 16.9313 5.65286 16.5408 6.04338L11.9987 10.5855L7.45711 6.0439C7.06658 5.65338 6.43342 5.65338 6.04289 6.0439C5.65237 6.43442 5.65237 7.06759 6.04289 7.45811L10.5845 11.9997L6.04289 16.5413Z" fill=""/>
-          </svg>
-        </button>
-
-        <div class="pr-4">
-          <h4 class="mb-6 text-2xl font-semibold text-gray-800 dark:text-white/90">Create New Loan</h4>
-
-          <form id="createLoanForm" @submit.prevent="submitCreateForm" class="space-y-6">
-            @csrf
-
-            @if(auth()->user()->role === 'admin' && !isset($user))
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Select User</label>
-              <div class="relative z-20 bg-transparent">
-                <select name="user_id" x-model="createFormData.user_id" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                  <option value="">-- Select User --</option>
-                  @foreach($users as $userOption)
-                    <option value="{{ $userOption->id }}">{{ $userOption->name }} ({{ $userOption->email }} - {{ ucfirst($userOption->role) }})</option>
-                  @endforeach
-                </select>
-              </div>
-              <template x-if="createFormErrors.user_id">
-                <p class="mt-1 text-sm text-red-500" x-text="createFormErrors.user_id[0]"></p>
-              </template>
-            </div>
-            @elseif(auth()->user()->role === 'broker')
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Select Your Borrower</label>
-              <div class="relative z-20 bg-transparent">
-                <select name="user_id" x-model="createFormData.user_id" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                  <option value="">-- Select Borrower --</option>
-                  @foreach($users as $userOption)
-                    <option value="{{ $userOption->id }}">{{ $userOption->name }} ({{ $userOption->email }})</option>
-                  @endforeach
-                </select>
-              </div>
-              <template x-if="createFormErrors.user_id">
-                <p class="mt-1 text-sm text-red-500" x-text="createFormErrors.user_id[0]"></p>
-              </template>
-            </div>
-            <input type="hidden" name="broker_status" value="1">
-            @else
-            <input type="hidden" name="user_id" value="{{ $user->id ?? auth()->id() }}">
-            <input type="hidden" name="broker_status" value="0">
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Borrower Name</label>
-              <p class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                {{ $user->name ?? auth()->user()->name }}
-              </p>
-            </div>
-            @endif
-
-            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Loan Amount (KES)</label>
-                <input type="number" step="0.01" min="1" name="amount" x-model="createFormData.amount" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                <template x-if="createFormErrors.amount">
-                  <p class="mt-1 text-sm text-red-500" x-text="createFormErrors.amount[0]"></p>
-                </template>
-              </div>
-
-              <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Borrow Date</label>
-                <div class="relative">
-                  <input type="date" name="borrow_date" x-model="createFormData.borrow_date" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 pl-4 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                </div>
-                <template x-if="createFormErrors.borrow_date">
-                  <p class="mt-1 text-sm text-red-500" x-text="createFormErrors.borrow_date[0]"></p>
-                </template>
-              </div>
-
-              <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Loan Type</label>
-                <div class="relative z-20 bg-transparent">
-                  <select name="loan_type_id" x-model="createFormData.loan_type_id" @change="calculateDueDate()" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                    <option value="">-- Select Loan Type --</option>
-                    @foreach($loanTypes as $loanType)
-                      <option value="{{ $loanType->id }}" data-period="{{ $loanType->period }}" data-unit="{{ $loanType->unit }}">
-                        {{ $loanType->name }} ({{ $loanType->interest_rate }}% interest)
-                      </option>
-                    @endforeach
-                  </select>
-                </div>
-                <template x-if="createFormErrors.loan_type_id">
-                  <p class="mt-1 text-sm text-red-500" x-text="createFormErrors.loan_type_id[0]"></p>
-                </template>
-              </div>
-
-              <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Due Date</label>
-                <p class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" x-text="dueDateDisplay"></p>
-                <input type="hidden" name="due_date" x-model="createFormData.due_date">
-              </div>
-            </div>
-
-            @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Loan Status</label>
-              <div class="relative z-20 bg-transparent">
-                <select name="status" x-model="createFormData.status" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="disbursed">Disbursed</option>
-                  <option value="repaid">Repaid</option>
-                </select>
-              </div>
-            </div>
-            @else
-            <input type="hidden" name="status" value="pending">
-            @endif
-
-            @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Transaction Type</label>
-              <div class="relative z-20 bg-transparent">
-                <select name="broker_status" x-model="createFormData.broker_status" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                  <option value="0">Direct Transaction</option>
-                  <option value="1">Broker Transaction</option>
-                </select>
-              </div>
-            </div>
-            @endif
-
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Reason for Loan <span class="text-red-500">*</span></label>
-              <textarea name="reason" x-model="createFormData.reason" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" rows="3" required></textarea>
-              <template x-if="createFormErrors.reason">
-                <p class="mt-1 text-sm text-red-500" x-text="createFormErrors.reason[0]"></p>
-              </template>
-            </div>
-
-            @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller' || auth()->user()->role === 'borrower')
-            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Guarantor</label>
-                <div class="relative z-20 bg-transparent">
-                  <select name="guarantor_id" x-model="createFormData.guarantor_id" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30">
-                    <option value="">-- Select Guarantor (Optional) --</option>
-                    @foreach($guarantors as $guarantor)
-                      <option value="{{ $guarantor->id }}">{{ $guarantor->name }} ({{ $guarantor->email }})</option>
-                    @endforeach
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Relationship to Guarantor</label>
-                <input type="text" name="guarantor_relationship" x-model="createFormData.guarantor_relationship" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" placeholder="e.g., Friend, Relative, Colleague">
-              </div>
-            </div>
-            @endif
-
-            @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Loan Officer</label>
-              <div class="relative z-20 bg-transparent">
-                <select name="loan_officer_id" x-model="createFormData.loan_officer_id" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30">
-                  <option value="">-- Select Loan Officer (Optional) --</option>
-                  @foreach($loanOfficers as $officer)
-                    <option value="{{ $officer->id }}">{{ $officer->name }} ({{ ucfirst($officer->role) }})</option>
-                  @endforeach
-                </select>
-              </div>
-            </div>
-            @endif
-
-            <div class="border-t border-gray-200 pt-6 dark:border-gray-800">
-              <h4 class="text-lg font-medium mb-4 text-gray-700 dark:text-white/90">Digital Signature</h4>
-              
-              @php
-                  $selectedUserId = isset($user) ? $user->id : (auth()->user()->role === 'borrower' ? auth()->id() : null);
-                  $selectedUser = $selectedUserId ? \App\Models\User::find($selectedUserId) : null;
-                  $hasExistingSignature = $selectedUser && $selectedUser->signature;
-                  $existingSignatureUrl = $hasExistingSignature ? asset('storage/' . $selectedUser->signature) : null;
-              @endphp
-
-              @if($hasExistingSignature && $selectedUser && $existingSignatureUrl)
-              <div class="mb-6">
-                  <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
-                      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                          <div class="flex-shrink-0">
-                              <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-green-200 dark:border-green-700 shadow-sm">
-                                  <div class="w-32 h-32 flex items-center justify-center bg-transparent">
-                                      <img src="{{ $existingSignatureUrl }}" 
-                                          alt="Existing signature of {{ $selectedUser->name }}"
-                                          class="max-w-full max-h-full object-contain">
-                                  </div>
-                              </div>
-                          </div>
-                          <div class="flex-1">
-                              <h4 class="font-semibold text-green-800 dark:text-green-300 text-lg">{{ $selectedUser->name }}</h4>
-                              <p class="text-green-700 dark:text-green-400 text-sm mb-2">✅ Existing Signature Found</p>
-                              <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                  <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                  </svg>
-                                  Signature Verified
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-                  
-                  <div class="mt-4 flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <div>
-                          <p class="text-sm font-medium text-blue-800 dark:text-blue-300">Use existing signature?</p>
-                          <p class="text-xs text-blue-600 dark:text-blue-400">The existing signature will be used for the loan agreement unless you create a new one below.</p>
-                      </div>
-                      <div class="flex items-center space-x-2">
-                          <input type="checkbox" id="use-existing-signature" x-model="useExistingSignature" class="rounded border-blue-300 text-blue-600 focus:ring-blue-500 dark:border-blue-600 dark:bg-blue-900">
-                          <label for="use-existing-signature" class="text-sm text-blue-800 dark:text-blue-300">Use Existing Signature</label>
-                      </div>
-                  </div>
-              </div>
-              @endif
-
-              <div id="signature-creation-section" class="@if($hasExistingSignature) border-t border-gray-200 dark:border-gray-700 pt-6 @endif">
-                  <h4 class="text-md font-medium mb-4 text-gray-700 dark:text-gray-300">
-                      @if($hasExistingSignature) Create New Signature (Optional - will replace existing) @else Create Digital Signature @endif
-                  </h4>
-                  
-                  <div>
-                      <div class="mb-4">
-                          <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                              @if($hasExistingSignature) Draw a new signature below to replace the existing one @else Draw Your Signature in the Square Below @endif
-                          </label>
-                          <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white dark:bg-gray-900">
-                              <div class="flex justify-center">
-                                  <div class="signature-pad relative">
-                                      <canvas id="signature-canvas" class="border border-gray-300 rounded-lg bg-white" 
-                                              style="touch-action: none; width: 400px; height: 400px; max-width: 100%;"></canvas>
-                                  </div>
-                              </div>
-                              
-                              <div class="mt-4 flex flex-col sm:flex-row gap-2 justify-center items-center">
-                                  <button type="button" @click="clearSignature()" class="px-4 py-2 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">Clear Signature</button>
-                                  <button type="button" @click="saveSignature()" class="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                                      @if($hasExistingSignature) Save New Signature @else Save Signature @endif
-                                  </button>
-                              </div>
-                          </div>
-                          <div id="signature-status" class="mt-2 text-sm text-center" x-text="signatureStatus"></div>
-                          <input type="hidden" name="signature_data" x-model="signatureData">
-                          <input type="hidden" name="use_existing_signature" x-model="useExistingSignature">
-                          
-                          <div x-show="showSignaturePreview" class="mt-6">
-                              <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                                  <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">Signature Preview</h4>
-                                  <div class="flex flex-col items-center gap-4">
-                                      <div class="flex-shrink-0">
-                                          <div class="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm">
-                                              <div class="w-64 h-64 flex items-center justify-center bg-transparent">
-                                                  <img :src="signatureData" x-show="signatureData" class="max-w-full max-h-full object-contain" alt="Signature Preview">
-                                              </div>
-                                          </div>
-                                      </div>
-                                      <div class="text-center">
-                                          <p class="text-sm text-gray-600 dark:text-gray-400"><strong>File name:</strong> <span x-text="signatureFilename"></span></p>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-            </div>
-
-            <div class="border-t border-gray-200 pt-6 dark:border-gray-800">
-              <div class="flex items-start space-x-3">
-                <input type="checkbox" name="consent" id="consent" value="1" x-model="createFormData.consent" class="mt-1 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800">
-                <div>
-                  <label for="consent" class="text-sm font-medium text-gray-700 dark:text-gray-400">
-                    I agree to the terms and conditions of the loan agreement
-                  </label>
-                  <p class="text-xs text-gray-500 mt-1">By checking this box, you acknowledge that you have read, understood, and agree to be bound by all terms and conditions of the loan agreement.</p>
-                </div>
-              </div>
-              <template x-if="createFormErrors.consent">
-                <p class="mt-1 text-sm text-red-500" x-text="createFormErrors.consent[0]"></p>
-              </template>
-            </div>
-
-            <div class="flex items-center justify-end w-full gap-3 pt-6">
-              <button type="button" @click="closeCreateModal()" class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 sm:w-auto">Cancel</button>
-              <button type="submit" :disabled="isCreateSubmitting" class="flex justify-center w-full px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto">
-                <span x-show="!isCreateSubmitting">Create Loan</span>
-                <span x-show="isCreateSubmitting" class="flex items-center">
-                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Custom Alert Modal (Styled to match form modal) -->
-  <div x-show="isAlertModalOpen" 
-       class="fixed inset-0 z-999999 overflow-y-auto" 
-       style="display: none;"
-       x-transition:enter="transition ease-out duration-300"
-       x-transition:enter-start="opacity-0"
-       x-transition:enter-end="opacity-100"
-       x-transition:leave="transition ease-in duration-200"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0">
-    <div class="flex items-center justify-center min-h-screen p-5">
-      <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="closeAlertModal()"></div>
-      
-      <div class="relative w-full max-w-2xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10 z-50 max-h-[90vh] overflow-y-auto">
-        <button @click="closeAlertModal()" class="group absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
-          <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M6.04289 16.5413C5.65237 16.9318 5.65237 17.565 6.04289 17.9555C6.43342 18.346 7.06658 18.346 7.45711 17.9555L11.9987 13.4139L16.5408 17.956C16.9313 18.3466 17.5645 18.3466 17.955 17.956C18.3455 17.5655 18.3455 16.9323 17.955 16.5418L13.4129 11.9997L17.955 7.4576C18.3455 7.06707 18.3455 6.43391 17.955 6.04338C17.5645 5.65286 16.9313 5.65286 16.5408 6.04338L11.9987 10.5855L7.45711 6.0439C7.06658 5.65338 6.43342 5.65338 6.04289 6.0439C5.65237 6.43442 5.65237 7.06759 6.04289 7.45811L10.5845 11.9997L6.04289 16.5413Z" fill=""/>
-          </svg>
-        </button>
-
-        <div class="text-center">
-          <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full" 
-               :class="alertType === 'success' ? 'bg-green-100 dark:bg-green-900/30' : (alertType === 'error' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-yellow-100 dark:bg-yellow-900/30')">
-            <svg x-show="alertType === 'success'" class="h-8 w-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <svg x-show="alertType === 'error'" class="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-            <svg x-show="alertType === 'warning'" class="h-8 w-8 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
-            <svg x-show="alertType === 'info'" class="h-8 w-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          
-          <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white" x-text="alertTitle"></h3>
-          
-          <div class="mt-2">
-            <p class="text-sm text-gray-600 dark:text-gray-400" x-html="alertMessage"></p>
-          </div>
-          
-          <!-- Multiple active loans display -->
-          <div x-show="alertData && alertData.active_loans && alertData.active_loans.length > 0" class="mt-4">
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-left">
-              <h4 class="font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
-                <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Active Loans (<span x-text="alertData.active_loans.length"></span>)
-              </h4>
-              <div class="space-y-3 max-h-60 overflow-y-auto">
-                <template x-for="(loan, index) in alertData.active_loans" :key="index">
-                  <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                    <div class="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <p><strong class="text-gray-700 dark:text-gray-300">Amount:</strong> <span class="text-gray-900 dark:text-white font-semibold" x-text="'KES ' + formatNumber(loan.amount)"></span></p>
-                        <p><strong class="text-gray-700 dark:text-gray-300">Loan Type:</strong> <span class="text-gray-900 dark:text-white" x-text="loan.loan_type"></span></p>
-                        <p><strong class="text-gray-700 dark:text-gray-300">Borrow Date:</strong> <span class="text-gray-900 dark:text-white" x-text="loan.borrow_date_formatted"></span></p>
-                      </div>
-                      <div>
-                        <p><strong class="text-gray-700 dark:text-gray-300">Due Date:</strong> <span class="text-gray-900 dark:text-white" x-text="loan.due_date_formatted"></span></p>
-                        <p><strong class="text-gray-700 dark:text-gray-300">Status:</strong> 
-                          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" 
-                                :class="loan.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                                       (loan.status === 'approved' ? 'bg-blue-100 text-blue-800' : 
-                                       (loan.status === 'disbursed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'))">
-                            <span x-text="loan.status_display"></span>
-                          </span>
-                        </p>
-                        <p><strong class="text-gray-700 dark:text-gray-300">Days Until Due:</strong> 
-                          <span class="font-medium" :class="loan.days_until_due > 0 ? 'text-green-600' : (loan.days_until_due === 0 ? 'text-yellow-600' : 'text-red-600')">
-                            <span x-text="loan.days_until_due_text"></span>
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                    <p x-show="loan.outstanding_balance > 0" class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <strong class="text-gray-700 dark:text-gray-300">Outstanding Balance:</strong> 
-                      <span class="text-red-600 font-bold" x-text="'KES ' + formatNumber(loan.outstanding_balance)"></span>
-                    </p>
-                  </div>
-                </template>
-              </div>
-            </div>
-            <div class="mt-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3">
-              <p class="text-sm text-yellow-800 dark:text-yellow-300 flex items-start gap-2">
-                <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span>This borrower has <strong x-text="alertData.active_loans.length"></strong> active loan(s). Creating another loan may affect their credit score and repayment capacity.</span>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-6 flex justify-center gap-3">
-          <button x-show="alertConfirmText" 
-                  @click="confirmAlert()" 
-                  class="flex justify-center px-6 py-2.5 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 transition-colors"
-                  x-text="alertConfirmText">
-          </button>
-          <button x-show="alertCancelText" 
-                  @click="cancelAlert()" 
-                  class="flex justify-center px-6 py-2.5 text-sm font-medium text-gray-700 bg-white rounded-lg border border-gray-300 shadow-theme-xs hover:bg-gray-50 transition-colors dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
-                  x-text="alertCancelText">
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Loans Create Modal (Slideover) -->
+  @include('partials.modal.loans-create-modal')
 
   <!-- PDF Agreement Modal -->
   <div x-show="isPdfModalOpen" class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto modal z-99999" style="display: none;">
@@ -912,51 +499,8 @@
 function loanTable() {
     return {
         // Modal states
-        isCreateModalOpen: false,
         isPdfModalOpen: false,
         isDeleteModalOpen: false,
-        isAlertModalOpen: false,
-        
-        // Alert modal properties
-        alertType: 'info',
-        alertTitle: '',
-        alertMessage: '',
-        alertConfirmText: '',
-        alertCancelText: '',
-        alertData: null,
-        alertResolve: null,
-        alertReject: null,
-        pendingFormData: null,
-        
-        // Create form data
-        createFormData: {
-            user_id: '',
-            amount: '',
-            borrow_date: new Date().toISOString().split('T')[0],
-            loan_type_id: '',
-            status: 'pending',
-            broker_status: '0',
-            reason: '',
-            guarantor_id: '',
-            guarantor_relationship: '',
-            loan_officer_id: '',
-            consent: false,
-            due_date: '',
-            signature_data: '',
-            use_existing_signature: '1'
-        },
-        createFormErrors: {},
-        isCreateSubmitting: false,
-        dueDateDisplay: '',
-        
-        // Signature related properties
-        signaturePad: null,
-        signatureData: '',
-        signatureStatus: '',
-        showSignaturePreview: false,
-        signatureFilename: '',
-        useExistingSignature: true,
-        canvasSize: 400,
         
         // PDF modal data
         pdfLoanId: null,
@@ -976,161 +520,58 @@ function loanTable() {
         init() {
             this.allLoans = Array.from(document.querySelectorAll('.loan-row'));
             this.filteredLoans = [...this.allLoans];
-            this.calculateDueDate();
-            
-            this.$watch('createFormData.borrow_date', () => this.calculateDueDate());
-            this.$watch('createFormData.loan_type_id', () => this.calculateDueDate());
-            
-            this.$watch('isCreateModalOpen', (value) => {
-                if (value) {
-                    setTimeout(() => this.initializeSignaturePad(), 100);
-                }
-            });
-            
             this.initializeStatusColors();
-        },
-        
-        // Custom Alert Modal Methods
-        showAlert(options) {
-            return new Promise((resolve, reject) => {
-                this.alertType = options.type || 'info';
-                this.alertTitle = options.title || '';
-                this.alertMessage = options.message || '';
-                this.alertConfirmText = options.confirmText || '';
-                this.alertCancelText = options.cancelText || '';
-                this.alertData = options.data || null;
-                this.pendingFormData = options.formData || null;
-                this.alertResolve = resolve;
-                this.alertReject = reject;
-                this.isAlertModalOpen = true;
-                document.body.style.overflow = 'hidden';
-            });
-        },
-        
-        closeAlertModal() {
-            this.isAlertModalOpen = false;
-            if (this.alertReject) {
-                this.alertReject('closed');
-            }
-            this.alertResolve = null;
-            this.alertReject = null;
-            this.pendingFormData = null;
-            document.body.style.overflow = '';
-        },
-        
-        async confirmAlert() {
-            this.isAlertModalOpen = false;
-            if (this.alertResolve) {
-                this.alertResolve(true);
-            }
             
-            // If we have pending form data and this was a duplicate alert, proceed with creation
-            if (this.pendingFormData) {
-                // Close the create modal first
-                this.closeCreateModal();
-                
-                // Show loading
-                this.isCreateSubmitting = true;
-                
-                try {
-                    // Add force create header
-                    const response = await fetch('{{ route("loans.store") }}', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-Force-Create': 'true'
-                        },
-                        body: this.pendingFormData
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok && data.success) {
-                        await this.showAlert({
-                            type: 'success',
-                            title: 'Success!',
-                            message: 'Loan created successfully! The page will now refresh.',
-                            confirmText: 'OK'
-                        });
-                        window.location.reload();
-                    } else {
-                        throw new Error(data.message || 'Failed to create loan');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    await this.showAlert({
-                        type: 'error',
-                        title: 'Error!',
-                        message: error.message || 'Failed to create loan',
-                        confirmText: 'OK'
-                    });
-                } finally {
-                    this.isCreateSubmitting = false;
-                    this.pendingFormData = null;
-                }
-            }
+            // Set up table instance for external access
+            window.loanTableInstance = this;
             
-            this.alertResolve = null;
-            this.alertReject = null;
-            document.body.style.overflow = '';
-        },
-        
-        cancelAlert() {
-            this.isAlertModalOpen = false;
-            if (this.alertResolve) {
-                this.alertResolve(false);
-            }
-            
-            // If user cancels, close all modals and refresh the page
-            this.closeCreateModal();
-            
-            // Show a brief message then refresh
-            setTimeout(() => {
-                window.location.reload();
-            }, 100);
-            
-            this.alertResolve = null;
-            this.alertReject = null;
-            this.pendingFormData = null;
-            document.body.style.overflow = '';
-        },
-        
-        formatNumber(num) {
-            return parseFloat(num).toLocaleString();
+            console.log('LoanTable initialized with', this.allLoans.length, 'loans');
         },
         
         // Modal methods
-        openCreateModal() {
-            this.isCreateModalOpen = true;
-            this.createFormErrors = {};
-            this.createFormData = {
-                ...this.createFormData,
-                amount: '',
-                loan_type_id: '',
-                reason: '',
-                guarantor_id: '',
-                guarantor_relationship: '',
-                loan_officer_id: '',
-                consent: false,
-                signature_data: '',
-                use_existing_signature: '1'
-            };
-            
-            const hasExistingSignature = {{ $hasExistingSignature ? 'true' : 'false' }};
-            this.useExistingSignature = hasExistingSignature;
-            this.createFormData.use_existing_signature = hasExistingSignature ? '1' : '0';
-            
-            document.body.style.overflow = 'hidden';
+        openCreateModal(data = null) {
+            console.log('openCreateModal called with data:', data);
+            if (typeof window.openLoansCreateModal === 'function') {
+                window.openLoansCreateModal(data);
+            } else {
+                console.warn('Loans create modal not initialized. Make sure the modal partial is included.');
+            }
         },
         
-        closeCreateModal() {
-            this.isCreateModalOpen = false;
-            this.showSignaturePreview = false;
-            this.signatureData = '';
-            if (this.signaturePad) this.signaturePad.clear();
-            document.body.style.overflow = '';
+        async openEditModal(loanId) {
+            console.log('openEditModal called for loan ID:', loanId);
+            
+            try {
+                // Fetch the full loan data using the edit route with AJAX
+                const response = await fetch(`/loans/${loanId}/edit`, {
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch loan data: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Fetched loan data:', data);
+                
+                if (typeof window.openLoansCreateModal === 'function') {
+                    window.openLoansCreateModal({
+                        edit: data,
+                        userId: data.user_id,
+                        userName: data.user_name || ''
+                    });
+                } else {
+                    window.location.href = `/loans/${loanId}/edit`;
+                }
+            } catch (error) {
+                console.error('Error fetching loan data:', error);
+                // Fallback: Try to extract from DOM
+                this.openEditModalFromDOM(loanId);
+            }
         },
         
         openPdfModal(loanId, loanName) {
@@ -1160,116 +601,6 @@ function loanTable() {
             document.body.style.overflow = '';
         },
         
-        async submitCreateForm() {
-            this.isCreateSubmitting = true;
-            this.createFormErrors = {};
-            
-            if (!this.createFormData.consent) {
-                await this.showAlert({
-                    type: 'warning',
-                    title: 'Consent Required',
-                    message: 'You must agree to the terms and conditions to proceed.',
-                    confirmText: 'OK'
-                });
-                this.isCreateSubmitting = false;
-                return;
-            }
-            
-            const useExisting = this.createFormData.use_existing_signature === '1';
-            if (!useExisting && this.signaturePad && !this.signaturePad.isEmpty() && (!this.signatureData || this.signatureData.trim() === '')) {
-                this.signatureData = this.getFullSquareSignature();
-                this.createFormData.signature_data = this.signatureData;
-            }
-            
-            const form = document.getElementById('createLoanForm');
-            const formData = new FormData(form);
-            if (this.signatureData) formData.set('signature_data', this.signatureData);
-            
-            try {
-                const response = await fetch('{{ route("loans.store") }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    if (response.status === 422 && data.errors) {
-                        this.createFormErrors = data.errors;
-                        let errorMessage = Object.values(data.errors).flat().join('\n');
-                        await this.showAlert({
-                            type: 'error',
-                            title: 'Validation Error',
-                            message: errorMessage,
-                            confirmText: 'OK'
-                        });
-                    } else if (data.duplicate && data.active_loans && data.active_loans.length > 0) {
-                        // Format dates for display
-                        data.active_loans.forEach(loan => {
-                            loan.borrow_date_formatted = new Date(loan.borrow_date).toLocaleDateString();
-                            loan.due_date_formatted = loan.due_date_formatted;
-                        });
-                        
-                        // Store form data for retry
-                        const clonedFormData = new FormData(form);
-                        if (this.signatureData) clonedFormData.set('signature_data', this.signatureData);
-                        
-                        const confirmed = await this.showAlert({
-                            type: 'warning',
-                            title: 'Active Loans Found',
-                            message: data.message,
-                            confirmText: 'Yes, Create Another',
-                            cancelText: 'No, Refresh Page',
-                            data: data,
-                            formData: clonedFormData
-                        });
-                        
-                        if (confirmed) {
-                            // Alert will handle the creation via confirmAlert
-                            this.isCreateSubmitting = false;
-                            return;
-                        } else {
-                            // Cancel - will refresh page
-                            this.isCreateSubmitting = false;
-                            return;
-                        }
-                    } else {
-                        throw new Error(data.message || 'Failed to create loan');
-                    }
-                } else if (data.success) {
-                    await this.showAlert({
-                        type: 'success',
-                        title: 'Success!',
-                        message: data.message,
-                        confirmText: 'OK'
-                    });
-                    window.location.reload();
-                } else {
-                    await this.showAlert({
-                        type: 'error',
-                        title: 'Error',
-                        message: data.message,
-                        confirmText: 'OK'
-                    });
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                await this.showAlert({
-                    type: 'error',
-                    title: 'Error!',
-                    message: error.message || 'Failed to create loan',
-                    confirmText: 'OK'
-                });
-            } finally {
-                this.isCreateSubmitting = false;
-            }
-        },
-        
         async submitDeleteForm() {
             this.isDeleteSubmitting = true;
             
@@ -1277,7 +608,7 @@ function loanTable() {
                 const response = await fetch(`/loans/${this.deleteLoanId}`, {
                     method: 'DELETE',
                     headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
                     }
@@ -1286,145 +617,26 @@ function loanTable() {
                 const data = await response.json();
                 
                 if (response.ok && data.success) {
-                    await this.showAlert({
-                        type: 'success',
-                        title: 'Deleted!',
-                        message: data.message,
-                        confirmText: 'OK'
-                    });
-                    window.location.reload();
+                    if (typeof window.showAlert === 'function') {
+                        window.showAlert('success', 'Deleted!', data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                    this.closeDeleteModal();
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
                     throw new Error(data.message || 'Failed to delete loan');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                await this.showAlert({
-                    type: 'error',
-                    title: 'Error!',
-                    message: error.message || 'Failed to delete loan',
-                    confirmText: 'OK'
-                });
+                if (typeof window.showAlert === 'function') {
+                    window.showAlert('error', 'Error!', error.message || 'Failed to delete loan');
+                } else {
+                    alert('Error: ' + error.message);
+                }
             } finally {
                 this.isDeleteSubmitting = false;
             }
-        },
-        
-        calculateDueDate() {
-            const borrowDate = new Date(this.createFormData.borrow_date);
-            if (isNaN(borrowDate.getTime())) {
-                this.dueDateDisplay = '';
-                this.createFormData.due_date = '';
-                return;
-            }
-            
-            let period = 10;
-            let unit = 'days';
-            
-            if (this.createFormData.loan_type_id) {
-                const select = document.querySelector('select[name="loan_type_id"]');
-                if (select && select.selectedIndex > 0) {
-                    const selectedOption = select.options[select.selectedIndex];
-                    period = parseInt(selectedOption.dataset.period) || 10;
-                    unit = selectedOption.dataset.unit || 'days';
-                }
-            }
-            
-            const dueDate = new Date(borrowDate);
-            if (unit === 'days') dueDate.setDate(dueDate.getDate() + period);
-            else if (unit === 'weeks') dueDate.setDate(dueDate.getDate() + (period * 7));
-            else if (unit === 'months') dueDate.setMonth(dueDate.getMonth() + period);
-            else if (unit === 'years') dueDate.setFullYear(dueDate.getFullYear() + period);
-            
-            this.dueDateDisplay = dueDate.toISOString().split('T')[0];
-            this.createFormData.due_date = this.dueDateDisplay;
-        },
-        
-        initializeSignaturePad() {
-            const canvas = document.querySelector('#signature-canvas');
-            if (!canvas || this.signaturePad) return;
-            
-            canvas.width = this.canvasSize;
-            canvas.height = this.canvasSize;
-            canvas.style.width = this.canvasSize + 'px';
-            canvas.style.height = this.canvasSize + 'px';
-            
-            this.signaturePad = new SignaturePad(canvas, {
-                backgroundColor: 'rgba(255, 255, 255, 0)',
-                penColor: 'rgb(0, 0, 0)',
-                minWidth: 2,
-                maxWidth: 4,
-                throttle: 16,
-                velocityFilterWeight: 0.7
-            });
-            
-            canvas.addEventListener('mouseup', () => {
-                if (this.signaturePad && !this.signaturePad.isEmpty()) {
-                    this.signatureData = this.getFullSquareSignature();
-                    this.createFormData.signature_data = this.signatureData;
-                    this.useExistingSignature = false;
-                    this.createFormData.use_existing_signature = '0';
-                }
-            });
-        },
-        
-        getFullSquareSignature() {
-            return this.signaturePad.toDataURL('image/png');
-        },
-        
-        clearSignature() {
-            if (this.signaturePad) {
-                this.signaturePad.clear();
-                this.signatureData = '';
-                this.createFormData.signature_data = '';
-                this.updateSignatureStatus('Signature cleared', 'text-gray-600');
-                this.showSignaturePreview = false;
-                
-                const hasExistingSignature = {{ $hasExistingSignature ? 'true' : 'false' }};
-                if (hasExistingSignature) {
-                    this.useExistingSignature = true;
-                    this.createFormData.use_existing_signature = '1';
-                }
-            }
-        },
-        
-        saveSignature() {
-            if (!this.signaturePad || this.signaturePad.isEmpty()) {
-                this.updateSignatureStatus('Please provide a signature first', 'text-red-500');
-                return;
-            }
-            
-            this.signatureData = this.getFullSquareSignature();
-            this.createFormData.signature_data = this.signatureData;
-            this.useExistingSignature = false;
-            this.createFormData.use_existing_signature = '0';
-            
-            const hasExistingSignature = {{ $hasExistingSignature ? 'true' : 'false' }};
-            this.updateSignatureStatus(hasExistingSignature ? 'New signature captured! This will replace the existing one.' : 'Signature captured successfully!', 'text-green-500');
-            this.showSignaturePreview = true;
-            this.updateSignatureFilename();
-        },
-        
-        updateSignatureStatus(message, className) {
-            this.signatureStatus = message;
-            const statusEl = document.getElementById('signature-status');
-            if (statusEl) {
-                statusEl.textContent = message;
-                statusEl.className = 'mt-2 text-sm ' + className;
-            }
-        },
-        
-        updateSignatureFilename() {
-            const userSelect = document.querySelector('select[name="user_id"]');
-            let userName = 'user';
-            
-            if (userSelect && userSelect.selectedIndex > 0) {
-                userName = userSelect.options[userSelect.selectedIndex].text.split(' (')[0].replace(/[^a-zA-Z0-9]/g, '_');
-            } else {
-                const borrowerNameField = document.querySelector('p.dark\\:bg-dark-900');
-                if (borrowerNameField) userName = borrowerNameField.textContent.trim().replace(/[^a-zA-Z0-9]/g, '_');
-            }
-            
-            this.signatureFilename = `signature_${userName}.png`;
         },
         
         initializeStatusColors() {
@@ -1435,19 +647,21 @@ function loanTable() {
                 'rejected': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
                 'repaid': 'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-300',
                 'overdue': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+                'due': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+                'active': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+                'defaulted': 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200',
                 'default': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
             };
             
             document.querySelectorAll('.loan-status').forEach(el => {
                 const status = el.textContent.trim().toLowerCase();
-                el.className = 'rounded-full px-2 py-0.5 text-xs font-medium loan-status';
                 const colors = statusColors[status] || statusColors['default'];
+                el.className = 'rounded-full px-2 py-0.5 text-xs font-medium loan-status';
                 el.classList.add(...colors.split(' '));
             });
         },
         
         sortTable(columnIndex) {
-            // Sorting logic
             console.log('Sorting column', columnIndex);
         }
     };
@@ -1456,6 +670,8 @@ function loanTable() {
 window.loanTableInstance = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (typeof Alpine === 'undefined') console.warn('Alpine.js is not loaded.');
+    if (typeof Alpine === 'undefined') {
+        console.warn('Alpine.js is not loaded. Make sure to include Alpine.js in your layout.');
+    }
 });
 </script>

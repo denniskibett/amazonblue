@@ -13,6 +13,34 @@ class Loan extends Model
 {
     use HasFactory, SoftDeletes;
 
+    // ============ STATUS CONSTANTS ============
+    
+    const STATUS_PENDING = 'pending';
+    const STATUS_APPROVED = 'approved';
+    const STATUS_DISBURSED = 'disbursed';
+    const STATUS_ACTIVE = 'active';
+    const STATUS_OVERDUE = 'overdue';
+    const STATUS_DEFAULTED = 'defaulted';
+    const STATUS_RECOVERY = 'recovery';
+    const STATUS_FORBEARANCE = 'forbearance';
+    const STATUS_REPAID = 'repaid';
+    const STATUS_WRITTEN_OFF = 'written_off';
+    const STATUS_REJECTED = 'rejected';
+
+    const STATUS_ACTIVE_LIST = [
+        self::STATUS_ACTIVE,
+        self::STATUS_OVERDUE,
+        self::STATUS_DISBURSED,
+    ];
+
+    const STATUS_FINAL_LIST = [
+        self::STATUS_REPAID,
+        self::STATUS_WRITTEN_OFF,
+        self::STATUS_REJECTED,
+    ];
+
+    // ============ FILLABLE ============
+
     protected $fillable = [
         'user_id',
         'loan_type_id',
@@ -49,6 +77,8 @@ class Loan extends Model
         'recovery_notes',
     ];
 
+    // ============ CASTS ============
+
     protected $casts = [
         'amount' => 'decimal:2',
         'capitalized_interest' => 'decimal:2',
@@ -75,20 +105,6 @@ class Loan extends Model
         'grace_days_used' => 'integer',
         'days_in_default' => 'integer',
     ];
-
-    // ============ STATUS CONSTANTS ============
-
-    const STATUS_PENDING = 'pending';
-    const STATUS_APPROVED = 'approved';
-    const STATUS_DISBURSED = 'disbursed';
-    const STATUS_ACTIVE = 'active';
-    const STATUS_OVERDUE = 'overdue';
-    const STATUS_DEFAULTED = 'defaulted';
-    const STATUS_RECOVERY = 'recovery';
-    const STATUS_FORBEARANCE = 'forbearance';
-    const STATUS_REPAID = 'repaid';
-    const STATUS_WRITTEN_OFF = 'written_off';
-    const STATUS_REJECTED = 'rejected';
 
     // ============ RELATIONSHIPS ============
 
@@ -137,19 +153,9 @@ class Loan extends Model
         return $this->hasMany(LoanRiskAssessment::class);
     }
 
-    public function repaymentOverflows()
+    public function cycles()
     {
-        return $this->hasMany(RepaymentOverflow::class, 'from_loan_id');
-    }
-
-    public function repaymentOverflowsTo()
-    {
-        return $this->hasMany(RepaymentOverflow::class, 'to_loan_id');
-    }
-
-    public function broker()
-    {
-        return $this->belongsTo(Broker::class);
+        return $this->hasMany(LoanCycle::class)->orderBy('cycle_number', 'desc');
     }
 
     public function recoveryCases()
@@ -157,27 +163,23 @@ class Loan extends Model
         return $this->hasMany(DebtRecoveryCase::class);
     }
 
-    public function cycles()
-    {
-        return $this->hasMany(LoanCycle::class)->orderBy('cycle_number', 'desc');
-    }
-
     // ============ STATUS CHECK METHODS ============
-    
+
     public function isActive(): bool
     {
-        return in_array($this->status, [
-            self::STATUS_ACTIVE,
-            self::STATUS_OVERDUE,
-            self::STATUS_DISBURSED,
-        ]);
+        return in_array($this->status, self::STATUS_ACTIVE_LIST);
+    }
+
+    public function isFinal(): bool
+    {
+        return in_array($this->status, self::STATUS_FINAL_LIST);
     }
 
     public function isOverdue(): bool
     {
         return $this->status === self::STATUS_OVERDUE || 
-               ($this->due_date && Carbon::now()->gt($this->due_date) && 
-                !in_array($this->status, [self::STATUS_REPAID, self::STATUS_WRITTEN_OFF]));
+               ($this->getDueDate() && Carbon::now()->gt($this->getDueDate()) && 
+                !$this->isFinal());
     }
 
     public function isDefaulted(): bool
@@ -197,7 +199,306 @@ class Loan extends Model
 
     public function isPerforming(): bool
     {
-        return !$this->isOverdue() && !$this->isDefaulted() && !$this->isInRecovery() && !$this->isInForbearance();
+        return $this->status === self::STATUS_ACTIVE || 
+               $this->status === self::STATUS_DISBURSED;
+    }
+
+    // ============ NPL THRESHOLD - THE FIX ============
+
+    /**
+     * Get the NPL threshold (days overdue before default)
+     * 
+     * Priority:
+     * 1. Use database value if set (npl_trigger_threshold)
+     * 2. Calculate from loan type period + grace period
+     * 3. Fallback to 30 days
+     */
+    public function getNplThreshold(): int
+    {
+        // 1. Use database value if it exists and is > 0
+        if ($this->npl_trigger_threshold > 0) {
+            return $this->npl_trigger_threshold;
+        }
+
+        // 2. Calculate from loan type
+        if ($this->loanType) {
+            $periodInDays = $this->getPeriodInDays();
+            
+            // Grace period = 2x the loan period, minimum 14 days, maximum 60 days
+            $graceDays = max(14, min(60, $periodInDays * 2));
+            
+            return $periodInDays + $graceDays;
+        }
+
+        // 3. Fallback
+        return 30;
+    }
+
+    /**
+     * Get loan period in days
+     */
+    private function getPeriodInDays(): int
+    {
+        if (!$this->loanType) {
+            return 30;
+        }
+
+        return match($this->loanType->unit) {
+            'days' => $this->loanType->period,
+            'weeks' => $this->loanType->period * 7,
+            'months' => $this->loanType->period * 30,
+            'years' => $this->loanType->period * 365,
+            default => 30,
+        };
+    }
+
+    /**
+     * Get the due date (from database or calculated)
+     */
+    public function getDueDate(): ?Carbon
+    {
+        if ($this->calculated_due_date) {
+            return Carbon::parse($this->calculated_due_date);
+        }
+        
+        if ($this->due_date) {
+            return Carbon::parse($this->due_date);
+        }
+
+        return null;
+    }
+
+    public function calculateDaysOverdue(): int
+    {
+        $dueDate = $this->getDueDate();
+        
+        if (!$dueDate) {
+            return 0;
+        }
+
+        // Use diffInDays with absolute value and only if due date is in the past
+        $now = Carbon::now();
+        
+        if ($now->lt($dueDate)) {
+            return 0; // Not overdue yet
+        }
+        
+        return (int) $now->diffInDays($dueDate); // Only positive days
+    }
+
+    /**
+     * Check if loan should be defaulted based on threshold
+     */
+    public function shouldBeDefaulted(): bool
+    {
+        // Already defaulted or final status
+        if ($this->default_triggered || $this->isFinal()) {
+            return false;
+        }
+
+        // Must have a due date
+        $dueDate = $this->getDueDate();
+        if (!$dueDate) {
+            return false;
+        }
+
+        // Not overdue yet
+        if (Carbon::now()->lte($dueDate)) {
+            return false;
+        }
+
+        $daysOverdue = $this->calculateDaysOverdue();
+        $threshold = $this->getNplThreshold();
+
+        return $daysOverdue >= $threshold;
+    }
+
+    // ============ SINGLE STATUS UPDATE METHOD ============
+
+    /**
+     * Update loan status based on current state
+     * This is the ONLY method that changes loan status
+     */
+    public function updateStatus(): void
+    {
+        // Don't update final statuses
+        if ($this->isFinal()) {
+            return;
+        }
+
+        // Don't update if in forbearance
+        if ($this->isForbearanceActive()) {
+            return;
+        }
+
+        // Don't update if in recovery (handled by recovery case)
+        if ($this->isInRecovery()) {
+            return;
+        }
+
+        $dueDate = $this->getDueDate();
+        
+        // No due date - can't determine status
+        if (!$dueDate) {
+            return;
+        }
+
+        $daysOverdue = $this->calculateDaysOverdue();
+        $threshold = $this->getNplThreshold();
+
+        // Update days overdue
+        $this->days_overdue = $daysOverdue;
+        $this->last_overdue_check = now();
+
+        // CASE 1: Not overdue
+        if ($daysOverdue <= 0) {
+            if (in_array($this->status, [self::STATUS_OVERDUE, self::STATUS_DEFAULTED])) {
+                $this->status = self::STATUS_ACTIVE;
+            }
+            // Reset NPL flags if they were set
+            if ($this->is_non_performing) {
+                $this->is_non_performing = false;
+            }
+            $this->save();
+            return;
+        }
+
+        // CASE 2: Check grace days
+        if ($this->grace_days_balance > 0 && $this->grace_days_balance >= $daysOverdue) {
+            $this->useGraceDays((int) $daysOverdue);
+            if (in_array($this->status, [self::STATUS_OVERDUE, self::STATUS_DEFAULTED])) {
+                $this->status = self::STATUS_ACTIVE;
+            }
+            $this->save();
+            return;
+        }
+
+        // CASE 3: Defaulted
+        if ($daysOverdue >= $threshold && !$this->default_triggered) {
+            $this->markAsDefaulted("Loan overdue for {$daysOverdue} days (threshold: {$threshold} days)");
+            $this->save();
+            return;
+        }
+
+        // CASE 4: Overdue (but not defaulted yet)
+        if ($this->status !== self::STATUS_OVERDUE) {
+            $this->status = self::STATUS_OVERDUE;
+            $this->save();
+        }
+    }
+
+    /**
+     * Mark loan as defaulted
+     */
+    public function markAsDefaulted(string $reason = null): void
+    {
+        if ($this->default_triggered) {
+            return;
+        }
+
+        $this->status = self::STATUS_DEFAULTED;
+        $this->default_triggered = true;
+        $this->default_triggered_at = now();
+        $this->default_date = now();
+        $this->is_non_performing = true;
+        $this->days_in_default = 0;
+        
+        if ($reason) {
+            $this->recovery_notes = ($this->recovery_notes ? $this->recovery_notes . "\n" : '') . 
+                                   "Default triggered: {$reason} on " . now()->format('Y-m-d H:i');
+        }
+
+        $this->save();
+
+        // Create recovery case
+        $this->createRecoveryCase();
+    }
+
+    // ============ RECOVERY METHODS ============
+
+    public function startRecovery(): void
+    {
+        if ($this->isFinal()) {
+            return;
+        }
+
+        $this->status = self::STATUS_RECOVERY;
+        $this->recovery_started_at = now();
+        $this->save();
+    }
+
+    public function grantForbearance(int $days, string $reason = null): void
+    {
+        if ($this->isFinal()) {
+            return;
+        }
+
+        $this->status = self::STATUS_FORBEARANCE;
+        $this->forbearance_until = now()->addDays($days);
+        $this->recovery_notes = ($this->recovery_notes ? $this->recovery_notes . "\n" : '') . 
+                               "Forbearance granted: {$reason} until {$this->forbearance_until->format('Y-m-d')}";
+        $this->save();
+    }
+
+    public function endForbearance(): void
+    {
+        if ($this->isInForbearance()) {
+            $this->status = self::STATUS_OVERDUE;
+            $this->forbearance_until = null;
+            $this->save();
+        }
+    }
+
+    public function isForbearanceActive(): bool
+    {
+        return $this->status === self::STATUS_FORBEARANCE && 
+               $this->forbearance_until && 
+               Carbon::now()->lte($this->forbearance_until);
+    }
+
+    // ============ RECOVERY CASE CREATION ============
+
+    private function createRecoveryCase(): void
+    {
+        // Check if recovery case already exists
+        if ($this->recoveryCases()->exists()) {
+            return;
+        }
+
+        $status = RecoveryStatus::where('slug', 'open')->first();
+        $priority = RecoveryPriority::where('slug', 'high')->first();
+
+        if (!$status || !$priority) {
+            return;
+        }
+
+        DebtRecoveryCase::create([
+            'user_id' => $this->user_id,
+            'loan_id' => $this->id,
+            'case_number' => 'DR-' . now()->format('Y') . '-' . str_pad(
+                DebtRecoveryCase::whereYear('created_at', now()->year)->count() + 1, 
+                4, 
+                '0', 
+                STR_PAD_LEFT
+            ),
+            'total_debt_amount' => $this->calculateTotalDebt(),
+            'principal_outstanding' => $this->amount,
+            'interest_outstanding' => $this->capitalized_interest ?? 0,
+            'penalty_outstanding' => 0,
+            'fees_outstanding' => 0,
+            'default_date' => $this->default_date ?? now(),
+            'days_in_default' => 0,
+            'status_id' => $status->id,
+            'priority_id' => $priority->id,
+            'notes' => "Recovery case created from defaulted loan #{$this->id}",
+            'created_by' => auth()->id(),
+        ]);
+    }
+
+    private function calculateTotalDebt(): float
+    {
+        $totalRepaid = $this->repayments->sum('amount') ?? 0;
+        return max(0, ($this->amount + ($this->capitalized_interest ?? 0)) - $totalRepaid);
     }
 
     // ============ GRACE PERIOD METHODS ============
@@ -217,37 +518,6 @@ class Loan extends Model
         }
         $remaining = Carbon::now()->diffInDays($this->grace_period_end_date, false);
         return max(0, (int) $remaining);
-    }
-
-    public function calculateGraceDaysEarned(): int
-    {
-        if (!$this->due_date) {
-            return 0;
-        }
-
-        $paidDate = $this->repayments()->latest('repayment_date')->first();
-        if (!$paidDate) {
-            return 0;
-        }
-
-        $paidDate = Carbon::parse($paidDate->repayment_date);
-        $dueDate = Carbon::parse($this->due_date);
-
-        if ($paidDate->lt($dueDate)) {
-            return (int) $dueDate->diffInDays($paidDate);
-        }
-
-        return 0;
-    }
-
-    public function earnGraceDays(): void
-    {
-        $earned = $this->calculateGraceDaysEarned();
-        if ($earned > 0) {
-            $this->grace_days_earned += $earned;
-            $this->grace_days_balance += $earned;
-            $this->save();
-        }
     }
 
     public function useGraceDays(int $daysUsed): bool
@@ -275,33 +545,20 @@ class Loan extends Model
 
     // ============ ROLLOVER METHODS ============
 
-    public function rollover(array $options = [], $loanCalculator = null): self
+    public function rollover(array $options = []): self
     {
-        // If calculator not provided, create a new instance
-        if (!$loanCalculator) {
-            $loanCalculator = app(\App\Services\LoanCalculator::class);
-        }
+        $loanCalculator = app(\App\Services\LoanCalculator::class);
 
         $interestToCapitalize = $loanCalculator->calculateCapitalizedInterest($this);
         $newAmount = $this->amount + $interestToCapitalize;
         $newDueDate = $loanCalculator->calculateRolloverDueDate($this);
         
-        $this->createCycleRecord([
-            'cycle_number' => $this->cycle + 1,
-            'previous_balance' => $this->amount,
-            'interest_capitalized' => $interestToCapitalize,
-            'new_balance' => $newAmount,
-            'interest_rate' => $this->loanType->interest_rate ?? 0,
-            'start_date' => now(),
-            'due_date' => $newDueDate,
-            'status' => 'active',
-            'notes' => $options['notes'] ?? 'Loan rollover',
-        ]);
-        
+        // Store original amount if not set
         if (!$this->original_amount) {
             $this->original_amount = $this->amount;
         }
         
+        // Update current loan
         $this->amount = $newAmount;
         $this->cycle += 1;
         $this->borrow_date = now();
@@ -311,40 +568,32 @@ class Loan extends Model
         $this->capitalized_interest += $interestToCapitalize;
         $this->applyGracePeriod();
         $this->save();
-        
-        return $this;
-    }
 
-    public function getRolloverStatement(): array
-    {
-        $statement = [];
-        $cycles = $this->cycles()->orderBy('cycle_number', 'asc')->get();
-        
-        foreach ($cycles as $cycle) {
-            $statement[] = [
-                'cycle' => $cycle->cycle_number,
-                'date' => $cycle->start_date->format('Y-m-d'),
-                'previous_balance' => $cycle->previous_balance,
-                'interest_capitalized' => $cycle->interest_capitalized,
-                'new_balance' => $cycle->new_balance,
-                'due_date' => $cycle->due_date->format('Y-m-d'),
-                'status' => $cycle->status,
-                'notes' => $cycle->notes,
-            ];
-        }
-        
-        return $statement;
+        // Create cycle record
+        $this->createCycleRecord([
+            'cycle_number' => $this->cycle,
+            'previous_balance' => $newAmount - $interestToCapitalize,
+            'interest_capitalized' => $interestToCapitalize,
+            'new_balance' => $newAmount,
+            'interest_rate' => $this->loanType->interest_rate ?? 0,
+            'start_date' => now(),
+            'due_date' => $newDueDate,
+            'status' => 'active',
+            'notes' => $options['notes'] ?? 'Loan rollover',
+        ]);
+
+        return $this;
     }
 
     public function createCycleRecord(array $data): LoanCycle
     {
         return LoanCycle::create([
             'loan_id' => $this->id,
-            'cycle_number' => $data['cycle_number'] ?? $this->cycle + 1,
+            'cycle_number' => $data['cycle_number'] ?? $this->cycle,
             'previous_balance' => $data['previous_balance'] ?? $this->amount,
             'interest_capitalized' => $data['interest_capitalized'] ?? 0,
             'new_balance' => $data['new_balance'] ?? $this->amount,
-            'interest_rate' => $data['interest_rate'] ?? $this->loanType->interest_rate ?? 0,
+            'interest_rate' => $data['interest_rate'] ?? 0,
             'start_date' => $data['start_date'] ?? now(),
             'due_date' => $data['due_date'] ?? $this->due_date,
             'status' => $data['status'] ?? 'active',
@@ -357,405 +606,37 @@ class Loan extends Model
         return $this->cycles()->where('status', 'active')->first();
     }
 
-    public function completeCurrentCycle(string $status = 'completed'): void
+    public function getRolloverStatement(): array
     {
-        $cycle = $this->getCurrentCycle();
-        if ($cycle) {
-            $cycle->update(['status' => $status]);
-        }
-    }
-
-    // ============ NPL METHODS ============
-
-    public function calculateDueDate()
-    {
-        if (!$this->loanType || !$this->borrow_date) {
-            return null;
-        }
-
-        $borrowDate = Carbon::parse($this->borrow_date);
-        $period = $this->loanType->period;
-        $unit = $this->loanType->unit;
-
-        $dueDate = $borrowDate->copy();
-        switch ($unit) {
-            case 'days': $dueDate->addDays($period); break;
-            case 'weeks': $dueDate->addWeeks($period); break;
-            case 'months': $dueDate->addMonths($period); break;
-            case 'years': $dueDate->addYears($period); break;
-            default: $dueDate->addDays($period); break;
-        }
-
-        return $dueDate;
-    }
-
-    public function calculateDaysOverdue()
-    {
-        if (!$this->calculated_due_date) {
-            $this->calculated_due_date = $this->calculateDueDate();
-            $this->save();
-        }
-
-        if (!$this->calculated_due_date) {
-            return 0;
-        }
-
-        $dueDate = Carbon::parse($this->calculated_due_date);
-        
-        if (now()->lt($dueDate)) {
-            return 0;
-        }
-
-        return now()->diffInDays($dueDate);
-    }
-
-    public function isNonPerformingLoan(): bool
-    {
-        return (bool) $this->is_non_performing;
-    }
-
-    public function wouldBeNonPerforming(): bool
-    {
-        if (!$this->loanType) {
-            return false;
-        }
-
-        $daysOverdue = $this->calculateDaysOverdue();
-        $period = $this->loanType->period;
-        $nplThreshold = $period * 2;
-
-        return $daysOverdue > $nplThreshold;
-    }
-
-    public function getNplThreshold()
-    {
-        if (!$this->loanType) {
-            return 0;
-        }
-        return $this->loanType->period * 2;
-    }
-
-    public function updateNplStatus()
-    {
-        $daysOverdue = $this->calculateDaysOverdue();
-        $threshold = $this->getNplThreshold();
-        $wouldBeNpl = $daysOverdue > $threshold;
-
-        $this->days_overdue = $daysOverdue;
-        $this->npl_trigger_threshold = $threshold;
-        $this->last_overdue_check = now();
-
-        if ($wouldBeNpl && !$this->is_non_performing) {
-            $this->is_non_performing = true;
-            $this->default_date = now();
-            $this->default_triggered = true;
-            if ($this->status !== self::STATUS_DEFAULTED) {
-                $this->status = self::STATUS_DEFAULTED;
-            }
-        } elseif (!$wouldBeNpl && $this->is_non_performing) {
-            $this->is_non_performing = false;
-        }
-
-        if ($daysOverdue > 0 && !$wouldBeNpl && $this->status !== self::STATUS_OVERDUE) {
-            $this->status = self::STATUS_OVERDUE;
-        }
-
-        if ($daysOverdue <= 0 && in_array($this->status, [self::STATUS_OVERDUE, self::STATUS_DEFAULTED])) {
-            if (!$this->isFullyRepaid()) {
-                $this->status = self::STATUS_DISBURSED;
-            }
-        }
-
-        $this->save();
-        return $this;
-    }
-
-    public function getRecoveryStage()
-    {
-        $daysOverdue = $this->days_overdue ?? $this->calculateDaysOverdue();
-        $period = $this->loanType->period ?? 0;
-
-        if ($daysOverdue <= 0) {
-            return 'current';
-        }
-
-        $ratio = $daysOverdue / max(1, $period);
-
-        if ($ratio <= 0.5) {
-            return 'early_overdue';
-        } elseif ($ratio <= 1) {
-            return 'overdue';
-        } elseif ($ratio <= 2) {
-            return 'serious_overdue';
-        } else {
-            return 'npl';
-        }
-    }
-
-    public function getRecoveryStageLabel()
-    {
-        $stages = [
-            'current' => 'Current',
-            'early_overdue' => 'Early Overdue (1-50% of period)',
-            'overdue' => 'Overdue (50-100% of period)',
-            'serious_overdue' => 'Seriously Overdue (100-200% of period)',
-            'npl' => 'Non-Performing (NPL)',
-        ];
-
-        return $stages[$this->getRecoveryStage()] ?? 'Unknown';
-    }
-
-    public function getRecoveryStageColor()
-    {
-        $colors = [
-            'current' => 'green',
-            'early_overdue' => 'yellow',
-            'overdue' => 'orange',
-            'serious_overdue' => 'orange',
-            'npl' => 'red',
-        ];
-
-        return $colors[$this->getRecoveryStage()] ?? 'gray';
-    }
-
-    public function getNplBadgeClass()
-    {
-        if ($this->is_non_performing) {
-            return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-        } elseif ($this->isOverdue()) {
-            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-        }
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-    }
-
-    public function getNplBadgeText()
-    {
-        if ($this->is_non_performing) {
-            return 'NPL';
-        } elseif ($this->isOverdue()) {
-            return 'Overdue (' . $this->days_overdue . ' days)';
-        }
-        return 'Current';
-    }
-
-    // ============ DEFAULT MANAGEMENT ============
-
-    public function checkOverdueStatus(): void
-    {
-        if (!$this->due_date) {
-            return;
-        }
-
-        if (in_array($this->status, [
-            self::STATUS_RECOVERY, 
-            self::STATUS_FORBEARANCE, 
-            self::STATUS_REPAID, 
-            self::STATUS_WRITTEN_OFF
-        ])) {
-            return;
-        }
-
-        $daysOverdue = Carbon::now()->diffInDays($this->due_date, false);
-        
-        if ($daysOverdue <= 0) {
-            if ($this->status === self::STATUS_OVERDUE) {
-                $this->status = self::STATUS_ACTIVE;
-                $this->save();
-            }
-            return;
-        }
-
-        $this->days_overdue = (int) $daysOverdue;
-        $this->last_overdue_check = now();
-
-        if ($this->grace_days_balance > 0 && $this->grace_days_balance >= $daysOverdue) {
-            $this->useGraceDays((int) $daysOverdue);
-            $this->status = self::STATUS_ACTIVE;
-            $this->save();
-            return;
-        }
-
-        $threshold = $this->loanType->default_threshold_days ?? 30;
-        
-        if ($daysOverdue >= $threshold && !$this->default_triggered) {
-            $this->triggerDefault("Loan overdue for {$daysOverdue} days");
-            $this->save();
-            return;
-        }
-
-        if ($this->status !== self::STATUS_OVERDUE) {
-            $this->status = self::STATUS_OVERDUE;
-            $this->save();
-        }
-    }
-
-    public function triggerDefault(string $reason = null): void
-    {
-        if (!$this->default_triggered) {
-            $this->status = self::STATUS_DEFAULTED;
-            $this->default_triggered = true;
-            $this->default_triggered_at = now();
-            $this->default_date = now();
-            $this->is_non_performing = true;
-            $this->recovery_notes = ($this->recovery_notes ? $this->recovery_notes . "\n" : '') . 
-                                   "Default triggered: {$reason} on " . now()->format('Y-m-d H:i');
-            $this->save();
-            $this->createRecoveryCase();
-        }
-    }
-
-    public function startRecovery(): void
-    {
-        $this->status = self::STATUS_RECOVERY;
-        $this->recovery_started_at = now();
-        $this->save();
-    }
-
-    public function grantForbearance(int $days, string $reason = null): void
-    {
-        $this->status = self::STATUS_FORBEARANCE;
-        $this->forbearance_until = now()->addDays($days);
-        $this->recovery_notes = ($this->recovery_notes ? $this->recovery_notes . "\n" : '') . 
-                               "Forbearance granted: {$reason} until {$this->forbearance_until->format('Y-m-d')}";
-        $this->save();
-    }
-
-    public function endForbearance(): void
-    {
-        if ($this->isInForbearance()) {
-            $this->status = self::STATUS_OVERDUE;
-            $this->forbearance_until = null;
-            $this->save();
-        }
-    }
-
-    public function isForbearanceActive(): bool
-    {
-        return $this->isInForbearance() && 
-               $this->forbearance_until && 
-               Carbon::now()->lte($this->forbearance_until);
-    }
-
-    // ============ RECOVERY CASE CREATION ============
-
-    private function createRecoveryCase(): void
-    {
-        $existingCase = DebtRecoveryCase::where('loan_id', $this->id)->first();
-        
-        if ($existingCase) {
-            return;
-        }
-
-        $status = RecoveryStatus::where('slug', 'open')->first();
-        $priority = RecoveryPriority::where('slug', 'high')->first();
-
-        if (!$status || !$priority) {
-            return;
-        }
-
-        $totalDebt = $this->calculateTotalDebt();
-
-        DebtRecoveryCase::create([
-            'user_id' => $this->user_id,
-            'loan_id' => $this->id,
-            'case_number' => 'DR-' . now()->format('Y') . '-' . str_pad(DebtRecoveryCase::whereYear('created_at', now()->year)->count() + 1, 4, '0', STR_PAD_LEFT),
-            'total_debt_amount' => $totalDebt,
-            'principal_outstanding' => $this->amount,
-            'interest_outstanding' => $this->capitalized_interest,
-            'penalty_outstanding' => 0,
-            'fees_outstanding' => 0,
-            'default_date' => $this->default_date ?? now(),
-            'days_in_default' => $this->days_in_default ?? 0,
-            'status_id' => $status->id,
-            'priority_id' => $priority->id,
-            'notes' => "Recovery case created from defaulted loan #{$this->id}",
-            'created_by' => auth()->id(),
-        ]);
-    }
-
-    private function calculateTotalDebt(): float
-    {
-        $totalRepaid = $this->repayments->sum('amount') ?? 0;
-        $totalPenalty = 0;
-        
-        if ($this->default_triggered && $this->default_date) {
-            $daysInDefault = Carbon::parse($this->default_date)->diffInDays(now());
-            $penaltyRate = $this->loanType->penalty_rate ?? 0;
-            $totalPenalty = ($penaltyRate / 100) * $this->amount * ($daysInDefault / 30);
-        }
-        
-        return max(0, ($this->amount + $this->capitalized_interest + $totalPenalty) - $totalRepaid);
+        return $this->cycles->map(function ($cycle) {
+            return [
+                'cycle' => $cycle->cycle_number,
+                'date' => $cycle->start_date->format('Y-m-d'),
+                'previous_balance' => $cycle->previous_balance,
+                'interest_capitalized' => $cycle->interest_capitalized,
+                'new_balance' => $cycle->new_balance,
+                'due_date' => $cycle->due_date->format('Y-m-d'),
+                'status' => $cycle->status,
+                'notes' => $cycle->notes,
+            ];
+        })->toArray();
     }
 
     // ============ FINANCIAL METHODS ============
 
-    public function calculateTotalDue()
+    public function getTotalRepaymentsAttribute(): float
     {
-        $principal = $this->amount;
-        $interest = ($this->loanType->interest_rate / 100) * $principal;
-        $penalties = $this->calculatePenalties();
-        
-        return $principal + $interest + $penalties;
-    }
-    
-    public function calculatePenalties()
-    {
-        if (!$this->disbursements()->exists()) {
-            return 0;
-        }
-    
-        $disbursementDate = $this->disbursements->first()->date ?? $this->borrow_date;
-        $dueDate = $this->calculateDueDate();
-        
-        if (!$dueDate || now()->lte($dueDate)) {
-            return 0;
-        }
-    
-        $outstandingAtDueDate = $this->calculateOutstandingAtDueDate($dueDate);
-        $daysLate = now()->diffInDays($dueDate);
-        $penaltyRate = $this->loanType->penalty_rate / 100;
-        
-        return $outstandingAtDueDate * $penaltyRate * $daysLate;
-    }
-    
-    protected function calculateOutstandingAtDueDate($dueDate)
-    {
-        $principal = $this->amount;
-        $interest = ($this->loanType->interest_rate / 100) * $principal;
-        $principalPlusInterest = $principal + $interest;
-        
-        $totalRepaymentsBeforeDue = $this->repayments()
-            ->whereDate('repayment_date', '<=', $dueDate)
-            ->sum('amount');
-        
-        return max($principalPlusInterest - $totalRepaymentsBeforeDue, 0);
-    }
-    
-    public function getTotalRepaymentsAttribute()
-    {
-        return $this->repayments->sum('amount');
-    }
-    
-    public function getOutstandingBalanceAttribute()
-    {
-        return $this->calculateTotalDue() - $this->total_repayments;
+        return $this->repayments->sum('amount') ?? 0;
     }
 
-    public function getBalanceAttribute()
+    public function getOutstandingBalanceAttribute(): float
     {
-        return $this->calculateTotalDue() - $this->repayments->sum('amount');
+        return max(0, $this->amount - $this->total_repayments);
     }
 
-    public function updateStatusIfNeeded()
+    public function isFullyRepaid(): bool
     {
-        if ($this->balance <= 0 && $this->status !== self::STATUS_REPAID) {
-            $this->update(['status' => self::STATUS_REPAID]);
-        }
-    }
-
-    public function isFullyRepaid()
-    {
-        return $this->balance <= 0;
+        return $this->outstanding_balance <= 0;
     }
 
     // ============ GETTERS ============
@@ -815,14 +696,50 @@ class Loan extends Model
         return "No grace days available";
     }
 
-    public function getTotalCapitalizedInterestAttribute(): float
+    public function getRecoveryStage()
     {
-        return $this->cycles()->sum('interest_capitalized');
+        $daysOverdue = $this->days_overdue ?? $this->calculateDaysOverdue();
+        $period = $this->getPeriodInDays();
+
+        if ($daysOverdue <= 0) {
+            return 'current';
+        }
+
+        $ratio = $daysOverdue / max(1, $period);
+
+        if ($ratio <= 0.5) {
+            return 'early_overdue';
+        } elseif ($ratio <= 1) {
+            return 'overdue';
+        } elseif ($ratio <= 2) {
+            return 'serious_overdue';
+        } else {
+            return 'npl';
+        }
     }
 
-    public function getTotalRolloverAmountAttribute(): float
+    public function getRecoveryStageLabel(): string
     {
-        return $this->amount - ($this->original_amount ?? $this->amount);
+        return match($this->getRecoveryStage()) {
+            'current' => 'Current',
+            'early_overdue' => 'Early Overdue',
+            'overdue' => 'Overdue',
+            'serious_overdue' => 'Seriously Overdue',
+            'npl' => 'Non-Performing (NPL)',
+            default => 'Unknown',
+        };
+    }
+
+    public function getRecoveryStageColor(): string
+    {
+        return match($this->getRecoveryStage()) {
+            'current' => 'green',
+            'early_overdue' => 'yellow',
+            'overdue' => 'orange',
+            'serious_overdue' => 'orange',
+            'npl' => 'red',
+            default => 'gray',
+        };
     }
 
     // ============ SCOPES ============
@@ -837,9 +754,24 @@ class Loan extends Model
         return $query->where('status', self::STATUS_APPROVED);
     }
 
-    public function scopeRejected(Builder $query): Builder
+    public function scopeActive(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_REJECTED);
+        return $query->whereIn('status', self::STATUS_ACTIVE_LIST);
+    }
+
+    public function scopeOverdue(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_OVERDUE);
+    }
+
+    public function scopeDefaulted(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_DEFAULTED);
+    }
+
+    public function scopeNonPerforming(Builder $query): Builder
+    {
+        return $query->where('is_non_performing', true);
     }
 
     public function scopeRepaid(Builder $query): Builder
@@ -847,56 +779,91 @@ class Loan extends Model
         return $query->where('status', self::STATUS_REPAID);
     }
 
-    public function scopeCompleted(Builder $query): Builder
+    /**
+     * Calculate the total due amount (principal + interest - repayments)
+     */
+    public function calculateTotalDue(): float
     {
-        return $query->where('status', self::STATUS_REPAID);
+        $interest = 0;
+        
+        // Calculate interest based on loan type
+        if ($this->loanType) {
+            $interest = ($this->loanType->interest_rate / 100) * $this->amount;
+        }
+        
+        // Add capitalized interest if any
+        $interest += $this->capitalized_interest ?? 0;
+        
+        // Total due = principal + interest
+        $totalDue = $this->amount + $interest;
+        
+        // Subtract any repayments already made
+        $totalRepaid = $this->repayments->sum('amount') ?? 0;
+        
+        return max(0, $totalDue - $totalRepaid);
     }
 
-    public function scopeActive(Builder $query): Builder
+    /**
+     * Calculate total repaid amount
+     */
+    public function totalRepaid(): float
     {
-        return $query->whereIn('status', [self::STATUS_APPROVED, self::STATUS_DISBURSED, self::STATUS_ACTIVE]);
+        return $this->repayments->sum('amount') ?? 0;
     }
 
-    public function scopeDisbursed($query)
+    /**
+     * Calculate total penalties
+     */
+    public function calculatePenalties(): float
     {
-        return $query->where('status', self::STATUS_DISBURSED);
+        $penaltyAmount = 0;
+        
+        // If loan is overdue, calculate penalties
+        $dueDate = $this->getDueDate();
+        if ($dueDate && Carbon::now()->gt($dueDate)) {
+            $daysOverdue = Carbon::now()->diffInDays($dueDate);
+            
+            // Get penalty rate from loan type
+            $penaltyRate = $this->loanType->penalty_rate ?? 0.5; // Default 0.5%
+            
+            // Simple penalty calculation: penalty rate * overdue days * outstanding balance
+            $outstanding = $this->getOutstandingBalanceAttribute();
+            $penaltyAmount = ($penaltyRate / 100) * $daysOverdue * $outstanding;
+            
+            // Cap penalty at 100% of outstanding balance
+            $penaltyAmount = min($penaltyAmount, $outstanding);
+        }
+        
+        return $penaltyAmount;
     }
 
-    public function scopeOverdue($query)
+    /**
+     * Get days overdue
+     */
+    public function getDaysOverdue(): int
     {
-        return $query->where('status', self::STATUS_OVERDUE);
+        $dueDate = $this->getDueDate();
+        if (!$dueDate || Carbon::now()->lte($dueDate)) {
+            return 0;
+        }
+        return (int) Carbon::now()->diffInDays($dueDate);
     }
 
-    public function scopeNonPerforming($query)
+    /**
+     * Calculate the due amount including penalties
+     */
+    public function getTotalDueWithPenalties(): float
     {
-        return $query->where('is_non_performing', true);
-    }
-
-    public function scopeDefaulted($query)
-    {
-        return $query->where('status', self::STATUS_DEFAULTED);
-    }
-
-    public function scopeInRecovery($query)
-    {
-        return $query->where('status', self::STATUS_RECOVERY);
-    }
-
-    public function scopeInForbearance($query)
-    {
-        return $query->where('status', self::STATUS_FORBEARANCE);
+        return $this->calculateTotalDue() + $this->calculatePenalties();
     }
 
     // ============ BOOT ============
 
-    public static function boot()
+    protected static function boot()
     {
         parent::boot();
-        
-        static::retrieved(function ($loan) {
-            if (in_array($loan->status, ['active', 'disbursed', 'overdue'])) {
-                $loan->checkOverdueStatus();
-            }
-        });
+
+        // REMOVED: static::retrieved event - DO NOT update on read
+        // Models should NEVER update themselves just because they were fetched
     }
 }

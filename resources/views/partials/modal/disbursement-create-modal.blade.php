@@ -1,3 +1,4 @@
+{{-- resources/views/partials/modal/disbursement-create-modal.blade.php --}}
 <div 
     x-data="disbursementModal()" 
     x-init="init()"
@@ -83,7 +84,6 @@
                             placeholder="Select date" required>
                     </div>
 
-                    <!-- Transaction Reference - Always shown and editable -->
                     <div>
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Transaction Reference <span class="text-red-500">*</span>
@@ -424,16 +424,17 @@ function disbursementModal() {
                     body: formData
                 });
 
+                const data = await response.json();
+
                 if (response.ok) {
-                    this.showAlert('success', this.editId ? 'Disbursement updated successfully!' : 'Disbursement created successfully!');
+                    window.showAlert('success', 'Success!', this.editId ? 'Disbursement updated successfully!' : 'Disbursement created successfully!');
                     this.close();
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    const error = await response.json();
-                    this.showAlert('error', error.message || 'Something went wrong.');
+                    window.showAlert('error', 'Error!', data.message || 'Something went wrong.');
                 }
             } catch (error) {
-                this.showAlert('error', 'Network error. Please try again.');
+                window.showAlert('error', 'Error!', 'Network error. Please try again.');
             }
         },
 
@@ -445,14 +446,6 @@ function disbursementModal() {
             const month = String(d.getMonth() + 1).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
-        },
-
-        showAlert(type, message) {
-            if (typeof window.showAlert === 'function') {
-                window.showAlert(type, message);
-            } else {
-                alert(message);
-            }
         }
     }
 }

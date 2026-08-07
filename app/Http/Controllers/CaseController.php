@@ -395,169 +395,167 @@ class CaseController extends Controller
         }
     }
 
-    /**
-     * Display the specified recovery case.
-     */
-    public function show(string $id)
-    {
-        $caseData = DebtRecoveryCase::with([
-            'user',
-            'user.borrower',
-            'loan',
-            'loan.loanType',
-            'status',
-            'priority',
-            'assignedTo',
-            'actions',
-            'actions.actionType',
-            'actions.performedBy',
-            'paymentPlans',
-            'paymentPlans.installments',
-            'documents',
-            'notes',
-            'notes.createdBy',
-            'legalProceedings',
-            'legalDeadlines',
-            'communications',
-            'communications.communicationType',
-            'tasks',
-            'tasks.assignedTo',
-            'tasks.priority',
-        ])->findOrFail($id);
+/**
+ * Display the specified recovery case.
+ */
+public function show(string $id)
+{
+    $caseData = DebtRecoveryCase::with([
+        'user',
+        'user.borrower',
+        'loan',
+        'loan.loanType',
+        'status',
+        'priority',
+        'assignedTo',
+        'actions',
+        'actions.actionType',
+        'actions.performedBy',
+        'paymentPlans',
+        'paymentPlans.installments',
+        'documents',
+        'notes',
+        'notes.createdBy',
+        'legalProceedings',
+        'legalDeadlines',
+        'communications',
+        'communications.communicationType',
+    ])->findOrFail($id);
 
-        // Check permission
-        $user = Auth::user();
-        if ($user->role === 'borrower' && $caseData->user_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
-        }
-        if ($user->role === 'broker') {
-            $broker = $user->broker;
-            if ($broker) {
-                $borrowerIds = Borrower::where('broker_id', $broker->id)->pluck('user_id');
-                if (!$borrowerIds->contains($caseData->user_id)) {
-                    abort(403, 'Unauthorized action.');
-                }
-            } else {
+    // Check permission
+    $user = Auth::user();
+    if ($user->role === 'borrower' && $caseData->user_id !== $user->id) {
+        abort(403, 'Unauthorized action.');
+    }
+    if ($user->role === 'broker') {
+        $broker = $user->broker;
+        if ($broker) {
+            $borrowerIds = Borrower::where('broker_id', $broker->id)->pluck('user_id');
+            if (!$borrowerIds->contains($caseData->user_id)) {
                 abort(403, 'Unauthorized action.');
             }
+        } else {
+            abort(403, 'Unauthorized action.');
         }
-
-        // FIX: Ensure paymentPlans is a collection, not a string
-        if (!($caseData->paymentPlans instanceof \Illuminate\Support\Collection) && is_string($caseData->paymentPlans)) {
-            // If it's a string (maybe JSON), try to decode it
-            $decoded = json_decode($caseData->paymentPlans, true);
-            if (is_array($decoded)) {
-                $caseData->paymentPlans = collect($decoded);
-            } else {
-                $caseData->paymentPlans = collect();
-            }
-        }
-
-        // Get NPL info if case is from a loan - FIXED: Safe method calls
-        $nplInfo = null;
-        if ($caseData->loan) {
-            // Get recovery stage using safe method with fallbacks
-            $recoveryStage = 'unknown';
-            $stageLabel = 'Unknown';
-            $stageColor = 'gray';
-            
-            try {
-                // Check if the loan has the getRecoveryStage method
-                if (method_exists($caseData->loan, 'getRecoveryStage')) {
-                    $recoveryStage = $caseData->loan->getRecoveryStage();
-                } else {
-                    // Manual calculation based on days overdue
-                    $daysOverdue = $caseData->loan->days_overdue ?? 0;
-                    $period = $caseData->loan->loanType->period ?? 30;
-                    $ratio = $daysOverdue / max(1, $period);
-                    
-                    if ($daysOverdue <= 0) {
-                        $recoveryStage = 'current';
-                    } elseif ($ratio <= 0.5) {
-                        $recoveryStage = 'early_overdue';
-                    } elseif ($ratio <= 1) {
-                        $recoveryStage = 'overdue';
-                    } elseif ($ratio <= 2) {
-                        $recoveryStage = 'serious_overdue';
-                    } else {
-                        $recoveryStage = 'npl';
-                    }
-                }
-            } catch (\Exception $e) {
-                // If method fails, use default
-                $recoveryStage = 'unknown';
-            }
-            
-            // Get stage label
-            try {
-                if (method_exists($caseData->loan, 'getRecoveryStageLabel')) {
-                    $stageLabel = $caseData->loan->getRecoveryStageLabel();
-                } else {
-                    // Manual mapping
-                    $stageMap = [
-                        'current' => 'Current',
-                        'early_overdue' => 'Early Overdue',
-                        'overdue' => 'Overdue',
-                        'serious_overdue' => 'Seriously Overdue',
-                        'npl' => 'Non-Performing (NPL)',
-                        'unknown' => 'Unknown',
-                    ];
-                    $stageLabel = $stageMap[$recoveryStage] ?? 'Unknown';
-                }
-            } catch (\Exception $e) {
-                $stageLabel = 'Unknown';
-            }
-            
-            // Get stage color
-            try {
-                if (method_exists($caseData->loan, 'getRecoveryStageColor')) {
-                    $stageColor = $caseData->loan->getRecoveryStageColor();
-                } else {
-                    // Manual mapping
-                    $colorMap = [
-                        'current' => 'green',
-                        'early_overdue' => 'yellow',
-                        'overdue' => 'orange',
-                        'serious_overdue' => 'orange',
-                        'npl' => 'red',
-                        'unknown' => 'gray',
-                    ];
-                    $stageColor = $colorMap[$recoveryStage] ?? 'gray';
-                }
-            } catch (\Exception $e) {
-                $stageColor = 'gray';
-            }
-            
-            $nplInfo = [
-                'is_npl' => $caseData->loan->is_non_performing ?? false,
-                'days_overdue' => $caseData->loan->days_overdue ?? 0,
-                'threshold' => $caseData->loan->npl_trigger_threshold ?? 0,
-                'default_date' => $caseData->loan->default_date,
-                'recovery_stage' => $recoveryStage,
-                'stage_label' => $stageLabel,
-                'stage_color' => $stageColor,
-            ];
-        }
-
-        // Get related data
-        $actionTypes = ActionType::all();
-        $statuses = RecoveryStatus::all();
-        $priorities = RecoveryPriority::all();
-        $officers = User::whereIn('role', ['admin', 'teller'])->get();
-
-        // Build timeline manually
-        $timeline = $this->getCaseTimeline($caseData);
-
-        return view('cases.show', compact(
-            'caseData',
-            'actionTypes',
-            'statuses',
-            'priorities',
-            'officers',
-            'timeline',
-            'nplInfo'
-        ));
     }
+
+    // FIX: Ensure paymentPlans is a collection, not a string
+    if (!($caseData->paymentPlans instanceof \Illuminate\Support\Collection) && is_string($caseData->paymentPlans)) {
+        $decoded = json_decode($caseData->paymentPlans, true);
+        if (is_array($decoded)) {
+            $caseData->paymentPlans = collect($decoded);
+        } else {
+            $caseData->paymentPlans = collect();
+        }
+    }
+
+    // Get NPL info if case is from a loan
+    $nplInfo = null;
+    if ($caseData->loan) {
+        $recoveryStage = 'unknown';
+        $stageLabel = 'Unknown';
+        $stageColor = 'gray';
+        
+        try {
+            if (method_exists($caseData->loan, 'getRecoveryStage')) {
+                $recoveryStage = $caseData->loan->getRecoveryStage();
+            } else {
+                $daysOverdue = $caseData->loan->days_overdue ?? 0;
+                $period = $caseData->loan->loanType->period ?? 30;
+                $ratio = $daysOverdue / max(1, $period);
+                
+                if ($daysOverdue <= 0) {
+                    $recoveryStage = 'current';
+                } elseif ($ratio <= 0.5) {
+                    $recoveryStage = 'early_overdue';
+                } elseif ($ratio <= 1) {
+                    $recoveryStage = 'overdue';
+                } elseif ($ratio <= 2) {
+                    $recoveryStage = 'serious_overdue';
+                } else {
+                    $recoveryStage = 'npl';
+                }
+            }
+        } catch (\Exception $e) {
+            $recoveryStage = 'unknown';
+        }
+        
+        try {
+            if (method_exists($caseData->loan, 'getRecoveryStageLabel')) {
+                $stageLabel = $caseData->loan->getRecoveryStageLabel();
+            } else {
+                $stageMap = [
+                    'current' => 'Current',
+                    'early_overdue' => 'Early Overdue',
+                    'overdue' => 'Overdue',
+                    'serious_overdue' => 'Seriously Overdue',
+                    'npl' => 'Non-Performing (NPL)',
+                    'unknown' => 'Unknown',
+                ];
+                $stageLabel = $stageMap[$recoveryStage] ?? 'Unknown';
+            }
+        } catch (\Exception $e) {
+            $stageLabel = 'Unknown';
+        }
+        
+        try {
+            if (method_exists($caseData->loan, 'getRecoveryStageColor')) {
+                $stageColor = $caseData->loan->getRecoveryStageColor();
+            } else {
+                $colorMap = [
+                    'current' => 'green',
+                    'early_overdue' => 'yellow',
+                    'overdue' => 'orange',
+                    'serious_overdue' => 'orange',
+                    'npl' => 'red',
+                    'unknown' => 'gray',
+                ];
+                $stageColor = $colorMap[$recoveryStage] ?? 'gray';
+            }
+        } catch (\Exception $e) {
+            $stageColor = 'gray';
+        }
+        
+        $nplInfo = [
+            'is_npl' => $caseData->loan->is_non_performing ?? false,
+            'days_overdue' => $caseData->loan->days_overdue ?? 0,
+            'threshold' => $caseData->loan->npl_trigger_threshold ?? 0,
+            'default_date' => $caseData->loan->default_date,
+            'recovery_stage' => $recoveryStage,
+            'stage_label' => $stageLabel,
+            'stage_color' => $stageColor,
+        ];
+    }
+
+    // Get related data
+    $actionTypes = ActionType::all();
+    $statuses = RecoveryStatus::all();
+    $priorities = RecoveryPriority::all();
+    $officers = User::whereIn('role', ['admin', 'teller'])->get();
+
+    // ============ ADD DATA FOR CASES MODAL ============
+    // Get all borrowers for the modal - DO NOT add to with() array
+    $borrowers = User::borrowers()
+        ->with(['borrower', 'loans' => function($q) {
+            $q->whereIn('status', ['disbursed', 'approved', 'overdue', 'defaulted'])
+              ->with(['loanType', 'repayments']);
+        }])
+        ->get();
+
+    // Build timeline manually
+    $timeline = $this->getCaseTimeline($caseData);
+
+    return view('cases.show', compact(
+        'caseData',
+        'actionTypes',
+        'statuses',
+        'priorities',
+        'officers',
+        'timeline',
+        'nplInfo',
+        'borrowers'  // <-- Pass to view
+    ));
+}
 
     /**
      * Show the form for editing the specified recovery case.
