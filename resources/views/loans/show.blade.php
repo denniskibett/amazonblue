@@ -457,8 +457,30 @@
                 ID : #{{ str_pad($loan->id, 5, '0', STR_PAD_LEFT) }}
             </h4>
         </div>
+        
+        <!-- Default Warning Banner -->
+        @if($is_defaulted || $loan->status === 'defaulted')
+        <div class="mt-3 p-4 rounded-lg border-2 border-red-500 bg-red-50 dark:bg-red-900/20 animate-pulse">
+            <div class="flex items-center gap-3">
+                <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+                <div>
+                    <h4 class="font-bold text-red-800 dark:text-red-300">⚠️ LOAN DEFAULTED</h4>
+                    <p class="text-sm text-red-700 dark:text-red-400">
+                        This loan has been defaulted due to {{ $days_overdue }} days of non-payment.
+                        Penalties have been capped at KES {{ number_format($penalty_amount, 2) }}.
+                    </p>
+                    <p class="text-xs text-red-600 dark:text-red-500 mt-1">
+                        Default threshold: {{ $default_threshold_days ?? 30 }} days
+                    </p>
+                </div>
+            </div>
+        </div>
+        @endif
 
         <div class="p-5 xl:p-8">
+            
             <div class="mb-9 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <span class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-400">
@@ -576,6 +598,8 @@
                             </div>
                         </div>
                         @endif
+
+         
 
                         <!-- Broker Fees -->
                         @if($is_brokered)

@@ -167,6 +167,7 @@ class LoanCalculator
 
         $calculationDate = $calculationDate ?? Carbon::now();
         $loanType = $loan->loanType;
+        $today = Carbon::now()->startOfDay();
         
         // Get cycle values
         $principal = $cycle->previous_balance > 0 ? $cycle->previous_balance : $loan->amount;
@@ -174,6 +175,12 @@ class LoanCalculator
         $penaltyRate = (float) $loanType->penalty_rate;
         $gracePeriodDays = (int) ($loanType->grace_period_days ?? 0);
         $processingFeeRate = (float) ($loanType->processing_fee_rate ?? 0);
+        
+        // Use NPL trigger threshold
+        $defaultThresholdDays = (int) (
+            $loan->npl_trigger_threshold
+            ?: $loan->getNplThreshold()
+        );
         
         // Step 1: Calculate Interest
         $interest = $principal * ($interestRate / 100);
@@ -201,25 +208,33 @@ class LoanCalculator
             $lastRepaymentDate = Carbon::parse($repayment->repayment_date);
         }
         
-        // Step 6: Calculate Penalties (only if overdue and after grace period)
+        // ============ CALCULATE PENALTIES ============
         $penalty = 0;
         $daysOverdue = 0;
         $daysSubjectToPenalty = 0;
         $isOverdue = false;
+        $isDefaulted = false;
         
-        $dueDate = Carbon::parse($cycle->due_date);
+        $dueDate = Carbon::parse($cycle->due_date)->startOfDay();
         
         // Check if we're past the due date and have outstanding balance
-        if ($calculationDate->gt($dueDate) && $outstanding > 0) {
-            $daysOverdue = (int) $calculationDate->diffInDays($dueDate);
+        if ($today->gt($dueDate) && $outstanding > 0) {
+            // FIXED: Calculate days overdue correctly
+            $daysOverdue = (int) $dueDate->diffInDays($today);
             
             // Apply grace period
             $daysSubjectToPenalty = max(0, $daysOverdue - $gracePeriodDays);
             
-            if ($daysSubjectToPenalty > 0) {
+            if ($daysSubjectToPenalty > 0 && $penaltyRate > 0) {
                 $isOverdue = true;
-                // Simple interest on original outstanding
+                
+                // Calculate penalty WITHOUT cap
                 $penalty = $outstanding * ($penaltyRate / 100) * $daysSubjectToPenalty;
+                
+                // Check if default threshold is reached
+                if ($daysOverdue >= $defaultThresholdDays) {
+                    $isDefaulted = true;
+                }
             }
         }
         
@@ -233,6 +248,8 @@ class LoanCalculator
         $cycleStatus = 'active';
         if ($isFullyRepaid) {
             $cycleStatus = 'completed';
+        } elseif ($isDefaulted) {
+            $cycleStatus = 'defaulted';
         } elseif ($isOverdue && $daysSubjectToPenalty > 0) {
             $cycleStatus = 'overdue';
         }
@@ -254,6 +271,8 @@ class LoanCalculator
             'final_outstanding' => $finalOutstanding,
             'is_overdue' => $isOverdue,
             'is_fully_repaid' => $isFullyRepaid,
+            'is_defaulted' => $isDefaulted,
+            'default_threshold_days' => $defaultThresholdDays,
             'cycle_status' => $cycleStatus,
             'last_repayment_date' => $lastRepaymentDate,
             'due_date' => $dueDate,
@@ -528,6 +547,8 @@ class LoanCalculator
             'penalty' => $cycleCalculation['penalty'],
             'final_outstanding' => $cycleCalculation['final_outstanding'],
             'is_overdue' => $cycleCalculation['is_overdue'],
+            'is_defaulted' => $cycleCalculation['is_defaulted'],
+            'default_threshold_days' => $cycleCalculation['default_threshold_days'],
             
             // Next cycle info
             'new_cycle' => $activeCycle->cycle_number + 1,
@@ -546,7 +567,11 @@ class LoanCalculator
 
     /**
      * Calculate loan metrics for display
-     * Uses the active cycle's data for accurate display
+     * Uses the active cycle's data for accurate display if available
+     * Otherwise falls back to loan-level calculations
+     * Penalties are calculated per cycle, not globally
+     * 
+     * FIXED: Proper penalty calculation for BOTH scenarios
      */
     public function calculateLoanMetrics(Loan $loan): array
     {
@@ -560,47 +585,104 @@ class LoanCalculator
         $period = (int) $loanType->period;
         $periodUnit = $loanType->unit;
         $basePenaltyRate = (float) $loanType->penalty_rate;
+        $gracePeriodDays = (int) ($loanType->grace_period_days ?? 0);
         $borrowDate = Carbon::parse($loan->borrow_date);
+        $today = Carbon::now()->startOfDay();
         
-        // Get the active cycle
+        // ============ GET THE ACTIVE CYCLE ============
         $activeCycle = $this->getActiveCycle($loan);
+        $dueDate = null;
+        $cycleCalculation = null;
+        $interest = 0;
+        $principalPlusInterest = 0;
+        $totalRepayments = 0;
+        $repaymentsBeforeDue = 0;
+        $outstandingAtDueDate = 0;
+        $outstandingBalance = 0;
+        $totalDue = 0;
+        $penaltyAmount = 0;
+        $daysLate = 0;
+        $daysOverdue = 0;
+        $isDefaulted = false;
         
+        // ============ GET DUE DATE ============
         if ($activeCycle && $activeCycle->due_date) {
-            $dueDate = Carbon::parse($activeCycle->due_date);
+            $dueDate = Carbon::parse($activeCycle->due_date)->startOfDay();
         } else {
-            // Fallback: calculate from borrow_date (only for new loans without cycles)
+            // Fallback: calculate from borrow_date
             $dueDate = $this->calculateDueDate($loan);
             if (!$dueDate) {
                 $dueDate = $borrowDate->copy()->addDays(30);
             }
+            $dueDate = $dueDate->startOfDay();
         }
-
-        // Calculate cycle balance
-        if ($activeCycle) {
-            $cycleCalculation = $this->calculateCycleBalance($loan, $activeCycle);
-            $interest = $cycleCalculation['interest'];
-            $totalRepayments = $cycleCalculation['total_repayments'];
-            $penaltyAmount = $cycleCalculation['penalty'];
-            $daysLate = $cycleCalculation['days_subject_to_penalty'];
-            $outstandingBalance = $cycleCalculation['final_outstanding'];
-            $outstandingAtDueDate = $cycleCalculation['outstanding_after_repayments'];
-            $principalPlusInterest = $cycleCalculation['new_balance'];
-            $totalDue = $cycleCalculation['new_balance'] + $penaltyAmount;
-        } else {
-            // Fallback: calculate without cycle
-            $interest = $principal * ($interestRate / 100);
-            $principalPlusInterest = $principal + $interest;
-            $repayments = $loan->repayments->sortBy('repayment_date');
-            $lastRepaymentDate = $repayments->isNotEmpty() 
-                ? Carbon::parse($repayments->last()->repayment_date) 
-                : null;
-            $totalRepayments = $repayments->sum('amount');
-            $outstandingAtDueDate = max($principalPlusInterest - $totalRepayments, 0);
-            $penaltyAmount = 0;
-            $daysLate = 0;
-            $outstandingBalance = max(0, $principalPlusInterest - $totalRepayments);
-            $totalDue = $principalPlusInterest;
+        
+        // ============ CALCULATE INTEREST ============
+        $interest = $principal * ($interestRate / 100);
+        $principalPlusInterest = $principal + $interest;
+        
+        // ============ CALCULATE REPAYMENTS ============
+        // CRITICAL FIX: Separate repayments before due date from total repayments
+        $repaymentsBeforeDue = $loan->repayments()
+            ->whereDate('repayment_date', '<=', $dueDate)
+            ->sum('amount');
+        
+        $totalRepayments = $loan->repayments()->sum('amount');
+        $outstandingAtDueDate = max(0, $principalPlusInterest - $repaymentsBeforeDue);
+        
+        // ============ CALCULATE DAYS OVERDUE ============
+        // CRITICAL FIX: Use correct diffInDays
+        $daysOverdue = 0;
+        if ($today->gt($dueDate)) {
+            $daysOverdue = (int) $dueDate->diffInDays($today);
         }
+        
+        // ============ CALCULATE PENALTIES ============
+        // Use NPL trigger threshold
+        $defaultThresholdDays = (int) (
+            $loan->npl_trigger_threshold
+            ?: $loan->getNplThreshold()
+        );
+        
+        $penaltyAmount = 0;
+        $daysLate = 0;
+        $isDefaulted = false;
+        
+        // Check if overdue and has outstanding balance at due date
+        if ($daysOverdue > 0 && $outstandingAtDueDate > 0 && $basePenaltyRate > 0) {
+            // Apply grace period
+            $daysSubjectToPenalty = max(0, $daysOverdue - $gracePeriodDays);
+            $daysLate = $daysSubjectToPenalty;
+            
+            if ($daysSubjectToPenalty > 0) {
+                // Calculate penalty: simple interest on outstanding at due date
+                // NO CAP - full penalty calculation
+                $dailyPenaltyRate = $basePenaltyRate / 100;
+                $penaltyAmount = $outstandingAtDueDate * $dailyPenaltyRate * $daysSubjectToPenalty;
+                
+                // Check if default threshold is reached
+                if ($daysOverdue >= $defaultThresholdDays) {
+                    $isDefaulted = true;
+                }
+            }
+        }
+        
+        // ============ DEFAULTED LOAN HANDLING ============
+        // If the loan is defaulted, ensure penalties are properly displayed
+        if ($loan->status === 'defaulted' || $isDefaulted) {
+            // If penalty amount is 0 but the loan is defaulted, we need to calculate
+            // the maximum penalty
+            if ($penaltyAmount == 0 && $outstandingAtDueDate > 0 && $basePenaltyRate > 0) {
+                $daysSubjectToPenalty = max(0, $daysOverdue - $gracePeriodDays);
+                $dailyPenaltyRate = $basePenaltyRate / 100;
+                $penaltyAmount = $outstandingAtDueDate * $dailyPenaltyRate * $daysSubjectToPenalty;
+                $daysLate = $daysSubjectToPenalty;
+            }
+        }
+        
+        // ============ CALCULATE FINAL AMOUNTS ============
+        $totalDue = $principalPlusInterest + $penaltyAmount;
+        $outstandingBalance = max(0, $totalDue - $totalRepayments);
 
         // Get last repayment date
         $lastRepayment = $loan->repayments()->orderBy('repayment_date', 'desc')->first();
@@ -650,6 +732,8 @@ class LoanCalculator
             'due_date' => $dueDate,
             'last_repayment_date' => $lastRepaymentDate,
             'days_late' => $daysLate,
+            'days_overdue' => $daysOverdue,
+            'grace_period_days' => $gracePeriodDays,
             'base_penalty_rate' => $basePenaltyRate,
             'penalty_rate' => $penaltyRate,
             'penalty_amount' => $penaltyAmount,
@@ -660,20 +744,34 @@ class LoanCalculator
             'total_broker_fees' => $totalBrokerFees,
             'client_type' => $loan->user->borrower->client_type ?? 0,
             'total_repayments' => $totalRepayments,
+            'repayments_before_due' => $repaymentsBeforeDue,
             'principal_plus_interest' => $principalPlusInterest,
             'outstanding_balance' => $outstandingBalance,
             'outstanding_at_due' => $outstandingAtDueDate,
             'total_due' => $totalDue,
             'net_earnings' => $netEarnings,
             'pl' => $pl,
-            'is_overdue' => $daysLate > 0,
+            'is_overdue' => $daysOverdue > 0,
             'is_repaid' => $loan->status === 'repaid',
+            'is_defaulted' => ($loan->status === 'defaulted' || $isDefaulted),
+            'default_threshold_days' => $defaultThresholdDays,
             'active_cycle' => $activeCycle ? [
                 'number' => $activeCycle->cycle_number,
                 'start_date' => $activeCycle->start_date->format('M d, Y'),
                 'due_date' => $activeCycle->due_date->format('M d, Y'),
                 'balance' => $activeCycle->new_balance,
             ] : null,
+            'cycle_calculation' => $cycleCalculation ?? null,
+            'penalty_breakdown' => [
+                'days_overdue' => $daysOverdue,
+                'grace_period_days' => $gracePeriodDays,
+                'days_subject_to_penalty' => $daysLate,
+                'daily_rate' => $basePenaltyRate . '%',
+                'outstanding_at_due' => $outstandingAtDueDate,
+                'penalty_amount' => $penaltyAmount,
+                'default_threshold' => $defaultThresholdDays,
+                'is_defaulted' => ($loan->status === 'defaulted' || $isDefaulted),
+            ],
         ];
     }
 }

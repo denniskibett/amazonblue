@@ -429,43 +429,106 @@ class DashboardController extends Controller
         });
     }
 
-    private function getDueLoans($user)
-    {
-        $baseQuery = Loan::with(['user', 'loanType'])
-            ->whereIn('status', ['disbursed', 'approved', 'active'])
-            ->join('loan_types', 'loans.loan_type_id', '=', 'loan_types.id')
-            ->select('loans.*');
+private function getDueLoans($user)
+{
+    $baseQuery = Loan::with(['user', 'loanType', 'cycles'])
+        ->whereIn('status', ['disbursed', 'approved', 'active'])
+        ->join('loan_types', 'loans.loan_type_id', '=', 'loan_types.id')
+        ->select('loans.*');
 
-        switch ($user->role) {
-            case 'admin':
-            case 'teller':
-                // Get all loans with status disbursed or approved
-                break;
+    // Role-based filtering...
+    switch ($user->role) {
+        case 'admin':
+        case 'teller':
+            break;
+        case 'borrower':
+            $baseQuery->where('loans.user_id', $user->id);
+            break;
+        case 'broker':
+            $currentBrokerId = $user->broker->id ?? null;
+            if ($currentBrokerId) {
+                $borrowerIds = Borrower::where('broker_id', $currentBrokerId)->pluck('user_id');
+                $baseQuery->whereIn('loans.user_id', $borrowerIds);
+            }
+            break;
+        default:
+            $baseQuery->where('loans.user_id', $user->id);
+            break;
+    }
 
-            case 'borrower':
-                $baseQuery->where('loans.user_id', $user->id);
-                break;
+    $loans = $baseQuery->get();
 
-            case 'broker':
-                $currentBrokerId = $user->broker->id ?? null;
-                if ($currentBrokerId) {
-                    $borrowerIds = Borrower::where('broker_id', $currentBrokerId)
-                        ->pluck('user_id');
-                    $baseQuery->whereIn('loans.user_id', $borrowerIds);
-                }
-                break;
-            
-            default:
-                $baseQuery->where('loans.user_id', $user->id);
-                break;
+    return $loans->map(function ($loan) {
+        // ============ CRITICAL FIX: Get ACTIVE cycle ============
+        $activeCycle = $loan->cycles()
+            ->where('status', 'active')
+            ->first();
+        
+        // If there's no active cycle, get the latest cycle
+        if (!$activeCycle) {
+            $activeCycle = $loan->cycles()
+                ->orderBy('cycle_number', 'desc')
+                ->first();
         }
 
-        $loans = $baseQuery->get();
+        $today = Carbon::now()->startOfDay();
 
-        return $loans->map(function ($loan) {
+        if ($activeCycle && $activeCycle->due_date) {
+            // ============ USE ACTIVE CYCLE DATA ============
+            $dueDate = Carbon::parse($activeCycle->due_date)->startOfDay();
+            $startDate = Carbon::parse($activeCycle->start_date)->startOfDay();
+            
+            // Calculate remaining days
+            $remainingDays = $today->diffInDays($dueDate, false);
+            
+            // Use the active cycle's balance as the current amount
+            $loanAmount = $activeCycle->new_balance;
+            
+            // Get repayments for this specific cycle
+            $cycleRepayments = $loan->repayments()
+                ->where('loan_cycle_id', $activeCycle->id)
+                ->sum('amount');
+            
+            $loan->total_repayments = $cycleRepayments;
+            
+            // Update loan with cycle data
+            $loan->due_date = $dueDate;
+            $loan->cycle_start_date = $startDate;
+            $loan->remaining_days = $remainingDays;
+            $loan->cycle_number = $activeCycle->cycle_number;
+            $loan->new_balance = $activeCycle->new_balance;
+            
+            // Determine status based on remaining days
+            if ($remainingDays < 0) {
+                $loan->status = 'overdue';
+                $loan->overdue_days = abs($remainingDays);
+                $interval = $today->diff($dueDate);
+                $loan->overdue_period = [
+                    'months' => $interval->m,
+                    'days' => $interval->d
+                ];
+            } else {
+                // If loan is not overdue, use its actual status
+                $loan->status = $loan->status;
+                $loan->overdue_days = 0;
+                $loan->overdue_period = ['months' => 0, 'days' => 0];
+            }
+            
+            // Log for debugging
+            \Log::info('Due loan with cycle', [
+                'loan_id' => $loan->id,
+                'cycle' => $activeCycle->cycle_number,
+                'due_date' => $dueDate->format('Y-m-d'),
+                'remaining_days' => $remainingDays,
+                'status' => $loan->status
+            ]);
+            
+        } else {
+            // ============ FALLBACK: No cycles found ============
+            // Calculate from borrow_date (legacy/new loans without cycles)
             $borrowDate = Carbon::parse($loan->borrow_date)->startOfDay();
             $dueDate = $borrowDate->copy();
-
+            
             switch ($loan->loanType->unit ?? 'days') {
                 case 'days':
                     $dueDate->addDays($loan->loanType->period ?? 30);
@@ -480,24 +543,24 @@ class DashboardController extends Controller
                     $dueDate->addDays(30);
                     break;
             }
-
-            $today = Carbon::now()->startOfDay();
+            
             $remainingDays = $today->diffInDays($dueDate, false);
-
             $loan->due_date = $dueDate;
             $loan->remaining_days = $remainingDays;
-            $loan->status = $remainingDays < 0 ? 'overdue' : 'disbursed';
-            $loan->overdue_days = $remainingDays < 0 ? abs($remainingDays) : 0;
-
+            $loan->cycle_number = 1;
+            
             if ($remainingDays < 0) {
+                $loan->status = 'overdue';
+                $loan->overdue_days = abs($remainingDays);
                 $interval = $today->diff($dueDate);
                 $loan->overdue_period = [
                     'months' => $interval->m,
                     'days' => $interval->d
                 ];
             }
+        }
 
-            return $loan;
-        })->sortBy('remaining_days')->values();
-    }
+        return $loan;
+    })->sortBy('remaining_days')->values();
+}
 }
