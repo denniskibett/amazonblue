@@ -393,7 +393,7 @@
         </div>
         
         <!-- ============ FINANCIAL SUMMARY - CYCLE SPECIFIC ============ -->
-        <div class="border-t border-gray-200 pt-4">
+        <div class="border-t border-gray-200 pt-4 mt-4">
             <h3 class="text-md font-semibold mb-3">
                 Financial Summary 
                 <span class="text-xs font-normal text-gray-500">(Cycle #{{ $loan->cycle ?? 1 }})</span>
@@ -401,16 +401,10 @@
             
             @php
                 $currentCycle = $loan->getCurrentCycle();
+                $cycleRepayments = $currentCycle ? $loan->repayments()->where('loan_cycle_id', $currentCycle->id)->sum('amount') : 0;
+                $cycleDisbursements = $currentCycle ? $loan->disbursements()->where('loan_cycle_id', $currentCycle->id)->sum('amount') : 0;
                 $cycleBalance = $currentCycle ? $currentCycle->new_balance : $loan->amount;
                 $cycleInterest = $currentCycle ? $currentCycle->interest_capitalized : 0;
-                $cycleRepayments = $currentCycle ? $loan->repayments()->where('loan_cycle_id', $currentCycle->id)->sum('amount') : 0;
-                $cyclePenalty = isset($penalty_amount) ? $penalty_amount : 0;
-                // CORRECTED: Outstanding = Cycle Balance + Penalties - Repayments
-                $cycleOutstanding = max(0, $cycleBalance + $cyclePenalty - $cycleRepayments);
-                
-                $cycleDaysOverdue = isset($days_overdue) ? $days_overdue : 0;
-                $cycleGraceDaysRemaining = $loan->getRemainingGraceDays();
-                $cycleGraceDaysBalance = $loan->grace_days_balance ?? 0;
             @endphp
             
             <div class="space-y-3">
@@ -422,38 +416,16 @@
                     <span class="text-sm text-gray-600">Interest Capitalized</span>
                     <span class="text-sm font-medium">KES {{ number_format($cycleInterest, 2) }}</span>
                 </div>
-                @if($cyclePenalty > 0)
-                <div class="flex justify-between">
-                    <span class="text-sm text-gray-600">Penalties (This Cycle)</span>
-                    <span class="text-sm font-medium text-red-600">+KES {{ number_format($cyclePenalty, 2) }}</span>
-                </div>
-                @endif
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600">Repayments (This Cycle)</span>
                     <span class="text-sm font-medium text-green-600">-KES {{ number_format($cycleRepayments, 2) }}</span>
                 </div>
                 <div class="flex justify-between border-t pt-2">
                     <span class="text-sm font-medium">Outstanding (This Cycle)</span>
-                    <span class="text-sm font-bold @if($cycleOutstanding > 0) text-red-600 @else text-green-600 @endif">
-                        KES {{ number_format($cycleOutstanding, 2) }}
+                    <span class="text-sm font-bold @if(($cycleBalance - $cycleRepayments) > 0) text-red-600 @else text-green-600 @endif">
+                        KES {{ number_format(max(0, $cycleBalance - $cycleRepayments), 2) }}
                     </span>
                 </div>
-                
-                <!-- Grace Period Info -->
-                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 border-t pt-2 mt-2">
-                    <span>Grace Days Remaining</span>
-                    <span>{{ $cycleGraceDaysRemaining }}</span>
-                </div>
-                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <span>Grace Days Balance</span>
-                    <span>{{ $cycleGraceDaysBalance }}</span>
-                </div>
-                @if($cycleDaysOverdue > 0)
-                <div class="flex justify-between text-xs text-red-500 dark:text-red-400">
-                    <span>Days Overdue</span>
-                    <span>{{ $cycleDaysOverdue }} days</span>
-                </div>
-                @endif
                 
                 @if($loan->cycle > 1)
                 <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 border-t pt-2 mt-2">
@@ -637,8 +609,7 @@
 
                         <!-- Total Repayments (Current Cycle Only) -->
                         @php
-                            $currentCycle = $loan->getCurrentCycle();
-                            $cycleRepaymentsTotal = $currentCycle ? $loan->repayments()->where('loan_cycle_id', $currentCycle->id)->sum('amount') : 0;
+                            $currentCycleRepayments = $currentCycle ? $loan->repayments()->where('loan_cycle_id', $currentCycle->id)->sum('amount') : 0;
                         @endphp
                         <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
                             <div class="col-span-1 flex items-center">
@@ -651,7 +622,7 @@
                                 <p class="text-sm text-gray-500 dark:text-gray-400">-</p>
                             </div>
                             <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-green-500 dark:text-green-400">-{{ number_format($cycleRepaymentsTotal, 2) }}</p>
+                                <p class="text-right text-sm text-green-500 dark:text-green-400">-{{ number_format($currentCycleRepayments, 2) }}</p>
                             </div>
                         </div>
                     </div>
@@ -661,25 +632,15 @@
             <!-- Summary - Cycle Specific -->
             <div class="my-6 border-b border-gray-100 pb-6 dark:border-gray-800">
                 @php
-                    $currentCycle = $loan->getCurrentCycle();
                     $cycleBalance = $currentCycle ? $currentCycle->new_balance : $loan->amount;
                     $cycleRepaymentsTotal = $currentCycle ? $loan->repayments()->where('loan_cycle_id', $currentCycle->id)->sum('amount') : 0;
-                    $cyclePenalty = isset($penalty_amount) ? $penalty_amount : 0;
-                    // CORRECTED: Balance Due = Cycle Balance + Penalties - Repayments
-                    $cycleOutstanding = max(0, $cycleBalance + $cyclePenalty - $cycleRepaymentsTotal);
+                    $cycleOutstanding = max(0, $cycleBalance - $cycleRepaymentsTotal);
                 @endphp
                 
                 <div class="flex justify-between mb-2">
                     <p class="text-sm text-gray-500 dark:text-gray-400">Cycle Balance (Principal + Interest):</p>
                     <p class="text-sm text-gray-700 dark:text-gray-300">KES {{ number_format($cycleBalance, 2) }}</p>
                 </div>
-                
-                @if($cyclePenalty > 0)
-                <div class="flex justify-between mb-2">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Penalties (This Cycle):</p>
-                    <p class="text-sm text-red-600 dark:text-red-400">+KES {{ number_format($cyclePenalty, 2) }}</p>
-                </div>
-                @endif
                 
                 <div class="flex justify-between mb-3">
                     <p class="text-sm text-gray-500 dark:text-gray-400">Repayments (This Cycle):</p>
@@ -693,24 +654,8 @@
                     </p>
                 </div>
                 
-                <!-- Grace Period Info -->
-                <div class="flex justify-between pt-2 text-xs text-gray-500 dark:text-gray-400 border-t mt-2">
-                    <span>Grace Days Remaining</span>
-                    <span>{{ $loan->getRemainingGraceDays() }}</span>
-                </div>
-                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <span>Grace Days Balance</span>
-                    <span>{{ $loan->grace_days_balance ?? 0 }}</span>
-                </div>
-                @if(isset($days_overdue) && $days_overdue > 0)
-                <div class="flex justify-between text-xs text-red-500 dark:text-red-400">
-                    <span>Days Overdue</span>
-                    <span>{{ $days_overdue }} days</span>
-                </div>
-                @endif
-                
                 @if($loan->cycle > 1)
-                <div class="flex justify-between text-xs text-gray-400 dark:text-gray-500 border-t mt-2 pt-2">
+                <div class="flex justify-between pt-2 text-xs text-gray-400 dark:text-gray-500 border-t mt-2">
                     <span>Total Capitalized Interest (All Cycles)</span>
                     <span>KES {{ number_format($loan->cycles->sum('interest_capitalized'), 2) }}</span>
                 </div>
@@ -804,6 +749,10 @@
                                         @if($disbursement->transaction_ref)
                                             <p class="text-xs text-gray-400">Ref: {{ $disbursement->transaction_ref }}</p>
                                         @endif
+                                        <!-- Show which cycle this belongs to -->
+                                        @if($disbursement->loanCycle)
+                                            <p class="text-xs text-purple-600">Cycle #{{ $disbursement->loanCycle->cycle_number }}</p>
+                                        @endif
                                     </div>
                                     <div class="text-right">
                                         <p class="text-xs text-gray-500">{{ $disbursement->transaction ?? 'N/A' }}</p>
@@ -861,7 +810,6 @@
                                         @if($repayment->transaction_ref)
                                             <p class="text-xs text-gray-400">Ref: {{ $repayment->transaction_ref }}</p>
                                         @endif
-                                        <p class="text-xs text-green-600">Cycle #{{ $currentCycle->cycle_number }}</p>
                                     </div>
                                     <div class="text-right">
                                         <p class="text-xs text-gray-500">{{ $repayment->transaction ?? 'N/A' }}</p>

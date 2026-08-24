@@ -46,6 +46,7 @@
                 <input type="hidden" name="_method" x-model="method">
                 <input type="hidden" name="id" x-model="editId">
                 <input type="hidden" name="loan_id" x-model="loanId">
+                <input type="hidden" name="loan_cycle_id" x-model="selectedCycleId">
 
                 <!-- Transaction Message Input - Only show on create -->
                 <div x-show="!editId" class="mb-6">
@@ -64,6 +65,25 @@
 
                 <div x-show="!editId" class="border-t border-gray-200 dark:border-gray-700 my-4"></div>
 
+                <!-- Loan Cycle Selection -->
+                <div class="mb-4">
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Apply to Loan Cycle <span class="text-red-500">*</span>
+                    </label>
+                    <select x-model="selectedCycleId" 
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        required>
+                        <option value="">-- Select Cycle --</option>
+                        <template x-for="cycle in cycles" :key="cycle.id">
+                            <option :value="cycle.id" x-text="'Cycle #' + cycle.cycle_number + ' - Balance: KES ' + cycle.new_balance.toFixed(2) + ' (' + cycle.status + ')'"></option>
+                        </template>
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        <span x-show="selectedCycleId" x-text="'Selected cycle #' + getSelectedCycleNumber()"></span>
+                        <span x-show="!selectedCycleId">Please select the cycle this repayment applies to</span>
+                    </p>
+                </div>
+
                 <!-- Form Fields -->
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
@@ -73,6 +93,9 @@
                         <input type="number" x-model="form.amount" step="0.01" min="0"
                             class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                             required>
+                        <p class="mt-1 text-xs text-gray-400" x-show="selectedCycleId">
+                            Cycle balance: KES <span x-text="getSelectedCycleBalance().toFixed(2)"></span>
+                        </p>
                     </div>
 
                     <div>
@@ -151,6 +174,8 @@ function repaymentModal() {
         method: 'POST',
         editId: null,
         loanId: null,
+        selectedCycleId: null,
+        cycles: [],
         message: '',
         parsedData: {},
         form: {
@@ -165,6 +190,7 @@ function repaymentModal() {
                 if (value) {
                     this.$nextTick(() => {
                         this.initDatepicker();
+                        this.loadCycles();
                     });
                 }
             });
@@ -191,10 +217,48 @@ function repaymentModal() {
             }
         },
 
+        async loadCycles() {
+            if (!this.loanId) return;
+            
+            try {
+                const response = await fetch(`/loans/${this.loanId}/cycles`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    this.cycles = data.cycles;
+                    // Auto-select the active cycle
+                    const activeCycle = this.cycles.find(c => c.status === 'active');
+                    if (activeCycle) {
+                        this.selectedCycleId = activeCycle.id;
+                    } else if (this.cycles.length > 0) {
+                        this.selectedCycleId = this.cycles[this.cycles.length - 1].id;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading cycles:', error);
+            }
+        },
+
+        getSelectedCycleNumber() {
+            const cycle = this.cycles.find(c => c.id === this.selectedCycleId);
+            return cycle ? cycle.cycle_number : '';
+        },
+
+        getSelectedCycleBalance() {
+            const cycle = this.cycles.find(c => c.id === this.selectedCycleId);
+            return cycle ? cycle.new_balance : 0;
+        },
+
         openModal(loanId = null, data = null) {
             this.resetForm();
             this.open = true;
             document.body.style.overflow = 'hidden';
+            this.loanId = loanId || (data ? data.loan_id : null);
 
             if (data) {
                 this.title = 'Edit Repayment';
@@ -202,6 +266,7 @@ function repaymentModal() {
                 this.method = 'PUT';
                 this.editId = data.id;
                 this.loanId = data.loan_id;
+                this.selectedCycleId = data.loan_cycle_id || null;
                 this.form.amount = data.amount;
                 this.form.transaction = data.transaction || '';
                 this.form.mode = data.mode || '';
@@ -220,7 +285,6 @@ function repaymentModal() {
                 this.submitText = 'Create Repayment';
                 this.method = 'POST';
                 this.editId = null;
-                this.loanId = loanId;
                 
                 this.$nextTick(() => {
                     const input = this.$refs.datepicker;
@@ -249,6 +313,8 @@ function repaymentModal() {
             this.message = '';
             this.parsedData = {};
             this.editId = null;
+            this.selectedCycleId = null;
+            this.cycles = [];
         },
 
         autoParseMessage() {
@@ -362,12 +428,18 @@ function repaymentModal() {
         },
 
         async submitForm() {
+            if (!this.selectedCycleId) {
+                window.showAlert('error', 'Error!', 'Please select a loan cycle.');
+                return;
+            }
+
             try {
                 const formData = new FormData();
                 const action = this.editId ? `/repayments/${this.editId}` : '/repayments';
                 
                 formData.append('_method', this.method);
                 formData.append('loan_id', this.loanId);
+                formData.append('loan_cycle_id', this.selectedCycleId);
                 formData.append('amount', this.form.amount);
                 formData.append('repayment_date', this.formatDate(this.form.repayment_date));
                 formData.append('transaction', this.form.transaction || '');
