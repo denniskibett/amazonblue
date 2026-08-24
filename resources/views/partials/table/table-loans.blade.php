@@ -21,14 +21,31 @@
     if (isset($user) || auth()->user()->role === 'borrower') {
         $showSignatureSection = true;
         $signatureUser = $signatureUser ?? $user ?? auth()->user();
-        $hasExistingSignature = $signatureUser ? ($signatureUser->signature ?? false) : false;
-        $existingSignatureUrl = $hasExistingSignature ? asset('storage/' . $signatureUser->signature) : null;
+        $hasExistingSignature = $signatureUser ? (!empty($signatureUser->signature)) : false;
+        $existingSignatureUrl = $hasExistingSignature ? Storage::url($signatureUser->signature) : null;
+    }
+    
+    // ============ FIX: Prepare user data for JavaScript with signature ============
+    $userDataForJs = null;
+    if (isset($user)) {
+        $hasSignature = !empty($user->signature);
+        $signatureUrl = $hasSignature ? Storage::url($user->signature) : '';
+        
+        $userDataForJs = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'hasSignature' => $hasSignature,
+            'signatureUrl' => $signatureUrl
+        ];
     }
 @endphp
 
 <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6"
      x-data="loanTable()"
-     x-init="init()">
+     x-init="init()"
+     @if(isset($userDataForJs))
+     data-user='@json($userDataForJs)'
+     @endif>
   <div class="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
@@ -69,7 +86,12 @@
 
       @if(isset($user) && (auth()->user()->role === 'admin' || auth()->user()->role === 'teller' || (auth()->user()->role === 'broker' && auth()->user()->broker && $user->borrower->broker_id === auth()->user()->broker->id)))
       <button 
-          @click="openCreateModal({ userId: {{ $user->id }}, userName: '{{ addslashes($user->name) }}' })"
+          @click="openCreateModal({ 
+              userId: {{ $user->id }}, 
+              userName: '{{ addslashes($user->name) }}',
+              hasSignature: {{ !empty($user->signature) ? 'true' : 'false' }},
+              signatureUrl: '{{ !empty($user->signature) ? Storage::url($user->signature) : '' }}'
+          })"
           class="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-theme-sm font-medium text-gray-500 shadow-theme-xs ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03]">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -502,6 +524,9 @@ function loanTable() {
         isPdfModalOpen: false,
         isDeleteModalOpen: false,
         
+        // User data
+        userData: null,
+        
         // PDF modal data
         pdfLoanId: null,
         pdfLoanName: '',
@@ -522,19 +547,52 @@ function loanTable() {
             this.filteredLoans = [...this.allLoans];
             this.initializeStatusColors();
             
+            // Get user data from the data attribute
+            const userDataEl = document.querySelector('[data-user]');
+            if (userDataEl) {
+                try {
+                    this.userData = JSON.parse(userDataEl.dataset.user);
+                    console.log('User data loaded in table:', this.userData);
+                } catch (e) {
+                    console.warn('Failed to parse user data:', e);
+                    this.userData = null;
+                }
+            }
+            
             // Set up table instance for external access
             window.loanTableInstance = this;
             
             console.log('LoanTable initialized with', this.allLoans.length, 'loans');
         },
         
-        // Modal methods
+        // ============ FIXED: openCreateModal with signature data ============
         openCreateModal(data = null) {
             console.log('openCreateModal called with data:', data);
-            if (typeof window.openLoansCreateModal === 'function') {
-                window.openLoansCreateModal(data);
+            
+            // If we have user data with signature info, merge it
+            if (this.userData) {
+                const modalData = {
+                    userId: this.userData.id,
+                    userName: this.userData.name,
+                    hasSignature: this.userData.hasSignature || false,
+                    signatureUrl: this.userData.signatureUrl || '',
+                    ...(data || {}) // Merge any additional data passed
+                };
+                console.log('Passing user data with signature to modal:', modalData);
+                
+                if (typeof window.openLoansCreateModal === 'function') {
+                    window.openLoansCreateModal(modalData);
+                } else {
+                    console.warn('Loans create modal not initialized.');
+                }
             } else {
-                console.warn('Loans create modal not initialized. Make sure the modal partial is included.');
+                // Fallback: pass data as is
+                console.log('No user data available, passing data as is');
+                if (typeof window.openLoansCreateModal === 'function') {
+                    window.openLoansCreateModal(data);
+                } else {
+                    console.warn('Loans create modal not initialized.');
+                }
             }
         },
         
@@ -542,7 +600,6 @@ function loanTable() {
             console.log('openEditModal called for loan ID:', loanId);
             
             try {
-                // Fetch the full loan data using the edit route with AJAX
                 const response = await fetch(`/loans/${loanId}/edit`, {
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -558,12 +615,17 @@ function loanTable() {
                 const data = await response.json();
                 console.log('Fetched loan data:', data);
                 
+                // Pass signature data from the user if available
+                const modalData = {
+                    edit: data,
+                    userId: data.user_id,
+                    userName: data.user_name || '',
+                    hasSignature: data.has_signature || false,
+                    signatureUrl: data.signature_url || ''
+                };
+                
                 if (typeof window.openLoansCreateModal === 'function') {
-                    window.openLoansCreateModal({
-                        edit: data,
-                        userId: data.user_id,
-                        userName: data.user_name || ''
-                    });
+                    window.openLoansCreateModal(modalData);
                 } else {
                     window.location.href = `/loans/${loanId}/edit`;
                 }
@@ -571,6 +633,50 @@ function loanTable() {
                 console.error('Error fetching loan data:', error);
                 // Fallback: Try to extract from DOM
                 this.openEditModalFromDOM(loanId);
+            }
+        },
+        
+        openEditModalFromDOM(loanId) {
+            // Fallback: Try to get data from the table row
+            const row = document.querySelector(`.loan-row[data-loan-id="${loanId}"]`);
+            if (row) {
+                const userId = row.dataset.userId;
+                // Try to get user name from the row
+                const nameEl = row.querySelector('.loan-borrower p');
+                const userName = nameEl ? nameEl.textContent : '';
+                
+                // Get signature data from userData if available
+                const hasSignature = this.userData ? this.userData.hasSignature : false;
+                const signatureUrl = this.userData ? this.userData.signatureUrl : '';
+                
+                const modalData = {
+                    edit: {
+                        id: loanId,
+                        user_id: userId,
+                        user_name: userName,
+                        amount: row.dataset.amount || '',
+                        borrow_date: row.dataset.borrowDate || '',
+                        loan_type_id: null,
+                        status: row.dataset.status || 'pending',
+                        reason: '',
+                        guarantor_id: null,
+                        guarantor_relationship: '',
+                        loan_officer_id: null,
+                        consent: false,
+                        due_date: row.dataset.dueDate || '',
+                        broker_status: '0',
+                        has_signature: hasSignature,
+                        signature_url: signatureUrl
+                    },
+                    userId: userId,
+                    userName: userName,
+                    hasSignature: hasSignature,
+                    signatureUrl: signatureUrl
+                };
+                
+                if (typeof window.openLoansCreateModal === 'function') {
+                    window.openLoansCreateModal(modalData);
+                }
             }
         },
         

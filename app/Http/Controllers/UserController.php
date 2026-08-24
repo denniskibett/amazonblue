@@ -77,6 +77,9 @@ class UserController extends Controller
         $guarantors = User::where('role', 'borrower')->get();
         $loanOfficers = User::whereIn('role', ['admin', 'teller'])->get();
         $signatureUser = null;
+            // ============ ADD SIGNATURE DATA ============
+        $signatureService = app(\App\Services\SignatureService::class);
+        $signatureData = $signatureService->checkSignature($user);
         
         return view('users.show', compact(
             'user',
@@ -92,7 +95,8 @@ class UserController extends Controller
             'loanTypes',
             'guarantors',
             'loanOfficers',
-            'signatureUser'
+            'signatureUser',
+            'signatureData'
         ));
     }
         

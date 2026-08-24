@@ -215,8 +215,8 @@
                   </label>
                   <select x-model="formData.client_type"
                           class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                    <option value="0">Our Client</option>
-                    <option value="1">Broker Client</option>
+                    <option value="individual">Individual</option>
+                    <option value="non_individual">Non-Individual</option>
                   </select>
                 </div>
 
@@ -461,8 +461,8 @@
                   </label>
                   <select x-model="editFormData.client_type"
                           class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                    <option value="0">Our Client</option>
-                    <option value="1">Broker Client</option>
+                    <option value="individual">Individual</option>
+                    <option value="non_individual">Non-Individual</option>
                   </select>
                 </div>
 
@@ -749,7 +749,7 @@
             'phone' => $user->phone,
             'role' => $user->role,
             'national_id' => $user->borrower->national_id ?? '',
-            'client_type' => $user->borrower->client_type ?? '0',
+            'client_type' => $user->borrower->client_type ?? 'individual',
             'status' => $user->status ?? '1',
             'cert_no' => $user->broker->cert_no ?? '',
             'interest_client' => $user->broker->interest_client ?? '',
@@ -848,7 +848,6 @@
     </div>
   </div>
 </td>
-
 
           <!-- Loan Stats -->
           <td class="py-3 hidden sm:table-cell">
@@ -1052,7 +1051,7 @@ function userTable() {
             penalty_broker: '',
             // Borrower fields (broker_id REMOVED)
             national_id: '',
-            client_type: '0',
+            client_type: 'individual',
             status: '1',
         },
         
@@ -1072,7 +1071,7 @@ function userTable() {
             penalty_broker: '',
             // Borrower fields (broker_id REMOVED)
             national_id: '',
-            client_type: '0',
+            client_type: 'individual',
             status: '1',
         },
         
@@ -1134,7 +1133,7 @@ function userTable() {
                 penalty_client: '',
                 penalty_broker: '',
                 national_id: '',
-                client_type: '0',
+                client_type: 'individual',
                 status: '1',
             };
             this.message = '';
@@ -1236,7 +1235,7 @@ function userTable() {
                     penalty_broker: userData.penalty_broker || '',
                     // Borrower fields (broker_id REMOVED)
                     national_id: userData.national_id || '',
-                    client_type: userData.client_type || '0',
+                    client_type: userData.client_type || 'individual',
                     status: userData.status || '1',
                 };
                 this.isEditModalOpen = true;
@@ -1262,7 +1261,7 @@ function userTable() {
                 penalty_client: '',
                 penalty_broker: '',
                 national_id: '',
-                client_type: '0',
+                client_type: 'individual',
                 status: '1',
             };
             // Restore body scroll

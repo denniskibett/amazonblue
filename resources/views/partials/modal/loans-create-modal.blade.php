@@ -258,7 +258,7 @@
                 <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
                     <h4 class="text-lg font-medium mb-4 text-gray-700 dark:text-white/90">Digital Signature</h4>
                     
-                    <!-- Existing Signature -->
+                    <!-- Existing Signature Found -->
                     <div x-show="hasExistingSignature" class="mb-4">
                         <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
                             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -280,6 +280,9 @@
                                         </svg>
                                         Signature Verified
                                     </div>
+                                    <p class="text-sm text-green-600 dark:text-green-400 mt-2">
+                                        <span x-text="useExistingSignature ? '✅ Will use existing signature' : '⚠️ Will create new signature'"></span>
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -296,10 +299,24 @@
                         </div>
                     </div>
 
+                    <!-- No Signature Found -->
+                    <div x-show="!hasExistingSignature" class="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-yellow-800 dark:text-yellow-300">No Signature Found</p>
+                                <p class="text-xs text-yellow-700 dark:text-yellow-400">Please draw your signature below to proceed.</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Signature Pad -->
                     <div class="mt-4" id="signature-section">
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            <span x-text="hasExistingSignature ? 'Draw New Signature (Will Replace Existing)' : 'Draw Your Signature'"></span>
+                            <span x-text="hasExistingSignature ? 'Draw New Signature (Optional - Will Replace Existing)' : 'Draw Your Signature'"></span>
+                            <span x-show="!hasExistingSignature" class="text-red-500">*</span>
                         </label>
                         <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white dark:bg-gray-900">
                             <div class="flex justify-center">
@@ -316,7 +333,9 @@
                                 </button>
                             </div>
                         </div>
-                        <div id="signature-status-modal" class="mt-2 text-sm text-center" x-text="signatureStatus"></div>
+                        <div id="signature-status-modal" class="mt-2 text-sm text-center" 
+                             :class="signatureStatus.includes('⚠️') ? 'text-red-500' : (signatureStatus.includes('✅') ? 'text-green-500' : 'text-gray-500')"
+                             x-text="signatureStatus"></div>
                         
                         <!-- Signature Preview -->
                         <div x-show="showSignaturePreview" class="mt-4">
@@ -439,7 +458,10 @@ function loansCreateModal() {
                         this.initSignaturePad();
                         // Check for existing signature after a slight delay to ensure user data is loaded
                         setTimeout(() => {
-                            this.checkExistingSignature();
+                            // Only check via AJAX if we don't already have signature data from parent
+                            if (!this.hasExistingSignature && !this.existingSignatureUrl) {
+                                this.checkExistingSignature();
+                            }
                         }, 300);
                     });
                 }
@@ -498,10 +520,14 @@ function loansCreateModal() {
                     this.signatureData = this.getFullSignature();
                     this.form.signature_data = this.signatureData;
                     this.useExistingSignature = false;
+                    this.signatureStatus = '✅ New signature captured successfully!';
+                    this.showSignaturePreview = true;
+                    this.updateSignatureFilename();
                 }
             });
         },
 
+        // ============ FIX: Check signature using data passed from parent ============
         checkExistingSignature() {
             const userId = this.selectedUserId || '{{ isset($user) ? $user->id : '' }}';
             
@@ -512,10 +538,52 @@ function loansCreateModal() {
                 this.hasExistingSignature = false;
                 this.existingSignatureUrl = '';
                 this.useExistingSignature = false;
+                this.signatureStatus = '⚠️ No user selected - please draw your signature';
                 return;
             }
 
-            // Check if the user has an existing signature
+            // Check if we already have signature data from the parent (passed via openModal)
+            if (this._signatureDataFromParent) {
+                console.log('Using signature data from parent:', this._signatureDataFromParent);
+                this.hasExistingSignature = this._signatureDataFromParent.hasSignature || false;
+                this.existingSignatureUrl = this._signatureDataFromParent.signatureUrl || '';
+                this.useExistingSignature = this.hasExistingSignature;
+                this._signatureDataFromParent = null; // Clear after use
+                
+                if (this.hasExistingSignature) {
+                    this.signatureStatus = '✅ Existing signature found - using it for this loan';
+                } else {
+                    this.signatureStatus = '⚠️ No signature found - please draw your signature';
+                }
+                return;
+            }
+
+            // Fallback: Try to get signature data from the user object in the page
+            // This is for cases where the modal is opened from a different context
+            try {
+                // Look for user data on the page
+                const userDataElement = document.querySelector('[data-user-signature]');
+                if (userDataElement) {
+                    const userData = JSON.parse(userDataElement.dataset.userSignature || '{}');
+                    if (userData && userData.userId == userId) {
+                        console.log('Found user signature data on page:', userData);
+                        this.hasExistingSignature = userData.hasSignature || false;
+                        this.existingSignatureUrl = userData.signatureUrl || '';
+                        this.useExistingSignature = this.hasExistingSignature;
+                        
+                        if (this.hasExistingSignature) {
+                            this.signatureStatus = '✅ Existing signature found - using it for this loan';
+                        } else {
+                            this.signatureStatus = '⚠️ No signature found - please draw your signature';
+                        }
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.log('Error reading user data from page:', e);
+            }
+
+            // Last resort: Try AJAX call (but this will likely fail if route doesn't exist)
             fetch(`/users/${userId}/signature-check`, {
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -524,26 +592,35 @@ function loansCreateModal() {
             })
             .then(response => {
                 console.log('Signature check response status:', response.status);
+                if (!response.ok) {
+                    throw new Error('Signature check failed');
+                }
                 return response.json();
             })
             .then(data => {
                 console.log('Signature check data:', data);
                 this.hasExistingSignature = data.hasSignature || false;
                 this.existingSignatureUrl = data.signatureUrl || '';
-                // IMPORTANT: Set useExistingSignature based on whether signature exists
                 this.useExistingSignature = data.hasSignature || false;
                 
                 if (this.hasExistingSignature) {
                     console.log('Existing signature found:', this.existingSignatureUrl);
+                    this.signatureStatus = '✅ Existing signature found - using it for this loan';
                 } else {
                     console.log('No existing signature found');
+                    this.signatureStatus = '⚠️ No signature found - please draw your signature';
                 }
             })
             .catch((error) => {
                 console.error('Error checking signature:', error);
-                this.hasExistingSignature = false;
-                this.existingSignatureUrl = '';
-                this.useExistingSignature = false;
+                // Don't set to false - user might have a signature but the check failed
+                // If we already have a signature URL from parent, keep it
+                if (!this.existingSignatureUrl) {
+                    this.hasExistingSignature = false;
+                    this.existingSignatureUrl = '';
+                    this.useExistingSignature = false;
+                    this.signatureStatus = '⚠️ Please draw your signature to proceed';
+                }
             });
         },
 
@@ -559,6 +636,7 @@ function loansCreateModal() {
             this.checkExistingSignature();
         },
 
+        // ============ FIX: openModal now accepts signature data ============
         openModal(data = null) {
             this.resetForm();
             this.open = true;
@@ -568,6 +646,17 @@ function loansCreateModal() {
             this.showUserSelection = userRole === 'admin' || userRole === 'teller' || userRole === 'broker';
             
             const isEdit = data && data.edit;
+            
+            // ============ FIX: Store signature data from parent ============
+            if (data && data.hasSignature !== undefined) {
+                this._signatureDataFromParent = {
+                    hasSignature: data.hasSignature,
+                    signatureUrl: data.signatureUrl || ''
+                };
+                console.log('Received signature data from parent:', this._signatureDataFromParent);
+            } else {
+                this._signatureDataFromParent = null;
+            }
             
             if (isEdit) {
                 console.log('EDIT MODE - Received data:', data);
@@ -613,6 +702,8 @@ function loansCreateModal() {
                     this.hasExistingSignature = data.edit.has_signature;
                     this.existingSignatureUrl = data.edit.signature_url || '';
                     this.useExistingSignature = this.hasExistingSignature;
+                    // Clear parent data since we have it from edit
+                    this._signatureDataFromParent = null;
                 }
                 
                 // Set due date display
@@ -684,6 +775,15 @@ function loansCreateModal() {
                     this.selectedUserId = data.userId;
                     this.borrowerName = data.userName || '';
                     this.showUserSelection = false;
+                    
+                    // ============ FIX: Use signature data from parent ============
+                    if (data.hasSignature !== undefined) {
+                        this.hasExistingSignature = data.hasSignature;
+                        this.existingSignatureUrl = data.signatureUrl || '';
+                        this.useExistingSignature = data.hasSignature;
+                        this._signatureDataFromParent = null; // Clear after use
+                        this.signatureStatus = data.hasSignature ? '✅ Existing signature found - using it for this loan' : '⚠️ No signature found - please draw your signature';
+                    }
                 } else if (data && data.user) {
                     this.selectedUserId = data.user.id;
                     this.borrowerName = data.user.name;
@@ -711,9 +811,11 @@ function loansCreateModal() {
                     this.brokerStatus = '1';
                 }
                 
-                // Check for existing signature
+                // Check for existing signature if not already set from parent
                 this.$nextTick(() => {
-                    this.checkExistingSignature();
+                    if (!this.hasExistingSignature && !this.existingSignatureUrl) {
+                        this.checkExistingSignature();
+                    }
                 });
             }
         },
@@ -746,6 +848,10 @@ function loansCreateModal() {
             this.loanId = null;
             this.isSubmitting = false;
             this.showConsentError = false;
+            this.useExistingSignature = true;
+            this.hasExistingSignature = false;
+            this.existingSignatureUrl = '';
+            this._signatureDataFromParent = null;
             
             if (this.signaturePad) {
                 this.signaturePad.clear();
@@ -796,6 +902,9 @@ function loansCreateModal() {
                 
                 if (this.hasExistingSignature) {
                     this.useExistingSignature = true;
+                    this.signatureStatus = '✅ Using existing signature';
+                } else {
+                    this.signatureStatus = '⚠️ Please draw your signature';
                 }
             }
         },
@@ -809,10 +918,9 @@ function loansCreateModal() {
             this.signatureData = this.getFullSignature();
             this.form.signature_data = this.signatureData;
             this.useExistingSignature = false;
-            
-            this.signatureStatus = '✅ Signature captured successfully!';
             this.showSignaturePreview = true;
             this.updateSignatureFilename();
+            this.signatureStatus = '✅ New signature captured successfully!';
         },
 
         onUseExistingSignatureChange() {
@@ -820,8 +928,19 @@ function loansCreateModal() {
                 this.signatureData = '';
                 this.form.signature_data = '';
                 this.showSignaturePreview = false;
+                this.signatureStatus = '✅ Using existing signature';
                 if (this.signaturePad) {
                     this.signaturePad.clear();
+                }
+            } else {
+                this.signatureStatus = '⚠️ Please draw a new signature';
+                // If there's already a signature in the pad, keep it
+                if (this.signaturePad && !this.signaturePad.isEmpty()) {
+                    this.signatureData = this.getFullSignature();
+                    this.form.signature_data = this.signatureData;
+                    this.showSignaturePreview = true;
+                    this.updateSignatureFilename();
+                    this.signatureStatus = '✅ New signature captured successfully!';
                 }
             }
         },
@@ -839,21 +958,22 @@ function loansCreateModal() {
             }
             this.showConsentError = false;
 
-            // SIGNATURE VALIDATION - FIXED
-            // Check if we need a signature:
-            // 1. If in edit mode AND has existing signature AND useExistingSignature is true -> OK
-            // 2. If in create mode AND has existing signature AND useExistingSignature is true -> OK
-            // 3. If in create mode AND no existing signature -> need to draw one
-            // 4. If in create mode AND useExistingSignature is false -> need to draw one
-            
-            const hasValidSignature = this.hasExistingSignature && this.useExistingSignature;
-            const hasNewSignature = this.signatureData && !this.useExistingSignature;
-            
-            // For create mode: must have either an existing signature (checked) or a new signature
-            // For edit mode: can use existing signature or provide a new one
-            const needsSignature = !this.editId && !hasValidSignature && !hasNewSignature;
-            
-            if (needsSignature) {
+            // ============ FIX: Signature Validation ============
+            // If using existing signature, we don't need a new one
+            if (this.useExistingSignature && this.hasExistingSignature) {
+                // Valid - using existing signature
+                this.signatureStatus = '✅ Using existing signature';
+            } 
+            // If not using existing, we need a new signature
+            else if (!this.useExistingSignature) {
+                if (!this.signatureData || this.signatureData === '') {
+                    this.signatureStatus = '⚠️ Please draw your signature first';
+                    return;
+                }
+                this.signatureStatus = '✅ New signature captured';
+            }
+            // If no existing signature and not drawing one
+            else if (!this.hasExistingSignature && !this.signatureData) {
                 this.signatureStatus = '⚠️ Please provide a signature';
                 return;
             }
@@ -881,6 +1001,9 @@ function loansCreateModal() {
                 // Add signature if using new one (not using existing)
                 if (!this.useExistingSignature && this.signatureData) {
                     formData.append('signature_data', this.signatureData);
+                } else if (this.useExistingSignature && this.hasExistingSignature) {
+                    // We're using existing signature, no need to send new data
+                    formData.append('use_existing_signature', '1');
                 }
 
                 const response = await fetch(action, {
