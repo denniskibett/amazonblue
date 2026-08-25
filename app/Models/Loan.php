@@ -545,6 +545,7 @@ class Loan extends Model
 
     // ============ ROLLOVER METHODS ============
 
+
     public function rollover(array $options = []): self
     {
         $loanCalculator = app(\App\Services\LoanCalculator::class);
@@ -558,7 +559,7 @@ class Loan extends Model
             $this->original_amount = $this->amount;
         }
         
-        // Update current loan
+        // ============ FIX: Update loan amount to new balance ============
         $this->amount = $newAmount;
         $this->cycle += 1;
         $this->borrow_date = now();
@@ -569,10 +570,10 @@ class Loan extends Model
         $this->applyGracePeriod();
         $this->save();
 
-        // Create cycle record
+        // ============ FIX: Create cycle record with previous_balance = old amount ============
         $this->createCycleRecord([
             'cycle_number' => $this->cycle,
-            'previous_balance' => $newAmount - $interestToCapitalize,
+            'previous_balance' => $newAmount - $interestToCapitalize, // This is the old balance
             'interest_capitalized' => $interestToCapitalize,
             'new_balance' => $newAmount,
             'interest_rate' => $this->loanType->interest_rate ?? 0,

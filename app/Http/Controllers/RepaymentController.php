@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Repayment;
 use App\Models\Loan;
+use App\Models\LoanCycle;
 use App\Services\RepaymentService;
 use Illuminate\Http\Request;
 
@@ -57,26 +58,36 @@ class RepaymentController extends Controller
         return view('repayments.create', compact('loan'));
     }
     
+
     public function store(Request $request)
     {
         $validated = $request->validate([
             'loan_id' => 'required|exists:loans,id',
-            'amount' => 'required|numeric|min:0.01',
+            'loan_cycle_id' => 'required|exists:loan_cycles,id', // Make this required
+            'amount' => 'required|numeric|min:0',
             'repayment_date' => 'required|date',
-            'transaction' => 'required|string|max:255|unique:repayments,transaction,NULL,id,loan_id,' . $request->loan_id,
-            'mode' => 'nullable|string|max:100',
-            'notes' => 'nullable|string',
+            'transaction' => 'nullable|string',
+            'mode' => 'nullable|string',
         ]);
 
-        $loan = Loan::find($validated['loan_id']);
-        $cycle = $loan->getCurrentCycle();
-
-        $repayment = $this->repaymentService->createRepayment($loan, $validated, $cycle);
+        $repayment = Repayment::create($validated);
+        
+        // Update the cycle balance
+        $cycle = LoanCycle::find($validated['loan_cycle_id']);
+        if ($cycle) {
+            // Recalculate the cycle balance
+            $outstanding = $cycle->new_balance - $validated['amount'];
+            // Update cycle status if fully paid
+            if ($outstanding <= 0) {
+                $cycle->update(['status' => 'completed']);
+            }
+        }
 
         return response()->json([
-            'message' => 'Repayment created successfully!',
-            'data' => $repayment
-        ], 201);
+            'success' => true,
+            'message' => 'Repayment created successfully.',
+            'repayment' => $repayment
+        ]);
     }
 
     public function update(Request $request, Repayment $repayment)

@@ -75,7 +75,7 @@
                         required>
                         <option value="">-- Select Cycle --</option>
                         <template x-for="cycle in cycles" :key="cycle.id">
-                            <option :value="cycle.id" x-text="'Cycle #' + cycle.cycle_number + ' - Balance: KES ' + cycle.new_balance.toFixed(2) + ' (' + cycle.status + ')'"></option>
+                            <option :value="cycle.id" x-text="'Cycle #' + cycle.cycle_number + ' - Balance: KES ' + Number(cycle.new_balance).toFixed(2) + ' (' + cycle.status + ')'"></option>
                         </template>
                     </select>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -94,7 +94,7 @@
                             class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                             required>
                         <p class="mt-1 text-xs text-gray-400" x-show="selectedCycleId">
-                            Cycle balance: KES <span x-text="getSelectedCycleBalance().toFixed(2)"></span>
+                            Cycle balance: KES <span x-text="Number(getSelectedCycleBalance()).toFixed(2)"></span>
                         </p>
                     </div>
 
@@ -190,13 +190,28 @@ function repaymentModal() {
                 if (value) {
                     this.$nextTick(() => {
                         this.initDatepicker();
-                        this.loadCycles();
+                        // Load cycles from the page data instead of AJAX
+                        this.loadCyclesFromPage();
                     });
                 }
             });
 
             window.openRepaymentModal = (loanId, data) => this.openModal(loanId, data);
             window.closeRepaymentModal = () => this.close();
+            
+            // Listen for cycle data from the parent page
+            window.addEventListener('set-cycles-data', (event) => {
+                if (event.detail && event.detail.cycles) {
+                    this.cycles = event.detail.cycles;
+                    // Auto-select the active cycle
+                    const activeCycle = this.cycles.find(c => c.status === 'active');
+                    if (activeCycle) {
+                        this.selectedCycleId = activeCycle.id;
+                    } else if (this.cycles.length > 0) {
+                        this.selectedCycleId = this.cycles[this.cycles.length - 1].id;
+                    }
+                }
+            });
         },
 
         initDatepicker() {
@@ -217,6 +232,46 @@ function repaymentModal() {
             }
         },
 
+        // ============ FIX: Load cycles from page data ============
+        loadCyclesFromPage() {
+            // Try to get cycles from the page's loan data
+            if (window.loanData && window.loanData.cycles) {
+                this.cycles = window.loanData.cycles;
+                console.log('Cycles loaded from page data:', this.cycles);
+                // Auto-select the active cycle
+                const activeCycle = this.cycles.find(c => c.status === 'active');
+                if (activeCycle) {
+                    this.selectedCycleId = activeCycle.id;
+                } else if (this.cycles.length > 0) {
+                    this.selectedCycleId = this.cycles[this.cycles.length - 1].id;
+                }
+                return;
+            }
+
+            // If not found, try to get from a data attribute on the page
+            const cyclesDataEl = document.querySelector('[data-cycles]');
+            if (cyclesDataEl) {
+                try {
+                    const cyclesData = JSON.parse(cyclesDataEl.dataset.cycles);
+                    this.cycles = cyclesData;
+                    console.log('Cycles loaded from data attribute:', this.cycles);
+                    const activeCycle = this.cycles.find(c => c.status === 'active');
+                    if (activeCycle) {
+                        this.selectedCycleId = activeCycle.id;
+                    } else if (this.cycles.length > 0) {
+                        this.selectedCycleId = this.cycles[this.cycles.length - 1].id;
+                    }
+                    return;
+                } catch (e) {
+                    console.warn('Failed to parse cycles data:', e);
+                }
+            }
+
+            // Fallback: try AJAX if page data is not available
+            this.loadCycles();
+        },
+
+        // ============ FIX: Load cycles via AJAX (fallback) ============
         async loadCycles() {
             if (!this.loanId) return;
             
@@ -229,6 +284,7 @@ function repaymentModal() {
                 });
                 
                 const data = await response.json();
+                console.log('Cycles loaded via AJAX:', data);
                 if (data.success) {
                     this.cycles = data.cycles;
                     // Auto-select the active cycle
@@ -286,6 +342,9 @@ function repaymentModal() {
                 this.method = 'POST';
                 this.editId = null;
                 
+                // Load cycles when modal opens
+                this.loadCyclesFromPage();
+                
                 this.$nextTick(() => {
                     const input = this.$refs.datepicker;
                     if (input && input._flatpickr) {
@@ -313,8 +372,7 @@ function repaymentModal() {
             this.message = '';
             this.parsedData = {};
             this.editId = null;
-            this.selectedCycleId = null;
-            this.cycles = [];
+            // Don't reset cycles and selectedCycleId on close
         },
 
         autoParseMessage() {

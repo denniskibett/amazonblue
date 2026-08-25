@@ -169,9 +169,8 @@ class LoanCalculator
         $loanType = $loan->loanType;
         $today = Carbon::now()->startOfDay();
         
-        // Get cycle values
-        $principal = $cycle->previous_balance > 0 ? $cycle->previous_balance : $loan->amount;
-        $interestRate = (float) $cycle->interest_rate ?: (float) $loanType->interest_rate;
+        // ============ USE THE CYCLE'S INTEREST RATE OR LOAN TYPE ============
+        $interestRate = (float) ($cycle->interest_rate ?: $loanType->interest_rate);
         $penaltyRate = (float) $loanType->penalty_rate;
         $gracePeriodDays = (int) ($loanType->grace_period_days ?? 0);
         $processingFeeRate = (float) ($loanType->processing_fee_rate ?? 0);
@@ -181,6 +180,9 @@ class LoanCalculator
             $loan->npl_trigger_threshold
             ?: $loan->getNplThreshold()
         );
+        
+        // ============ PRINCIPAL IS THE CYCLE'S PREVIOUS BALANCE ============
+        $principal = $cycle->previous_balance > 0 ? $cycle->previous_balance : $loan->amount;
         
         // Step 1: Calculate Interest
         $interest = $principal * ($interestRate / 100);
@@ -219,7 +221,6 @@ class LoanCalculator
         
         // Check if we're past the due date and have outstanding balance
         if ($today->gt($dueDate) && $outstanding > 0) {
-            // FIXED: Calculate days overdue correctly
             $daysOverdue = (int) $dueDate->diffInDays($today);
             
             // Apply grace period
@@ -345,6 +346,9 @@ class LoanCalculator
     /**
      * Execute a loan rollover
      * This creates a new cycle and marks the previous one as completed
+     * 
+     * CRITICAL FIX: Interest should be calculated on the outstanding balance,
+     * NOT on the full new balance.
      */
     public function executeRollover(Loan $loan, array $options = []): array
     {
@@ -374,11 +378,14 @@ class LoanCalculator
             throw new \Exception('No active cycle found for loan #' . $loan->id);
         }
 
-        // Calculate the final outstanding for the current cycle
+        // ============ GET THE CORRECT INTEREST RATE FROM LOAN TYPE ============
+        $interestRate = (float) $loanType->interest_rate;
+        
+        // ============ CALCULATE THE FINAL OUTSTANDING FOR THE CURRENT CYCLE ============
         $cycleCalculation = $this->calculateCycleBalance($loan, $activeCycle);
         
-        // The final outstanding becomes the principal for the next cycle
-        $newPrincipal = $cycleCalculation['final_outstanding'];
+        // ============ FIX: The new principal is the outstanding balance after repayments ============
+        $newPrincipal = $cycleCalculation['outstanding_after_repayments'];
         
         // If the loan is fully repaid, mark it as such
         if ($newPrincipal <= 0) {
@@ -399,25 +406,24 @@ class LoanCalculator
         // Get the next cycle number
         $newCycleNumber = $activeCycle->cycle_number + 1;
         
-        // Calculate interest for the new cycle using loan_type interest rate
-        $interestRate = (float) $loanType->interest_rate;
+        // ============ FIX: Calculate interest on the new principal (outstanding balance) ============
         $interest = $newPrincipal * ($interestRate / 100);
         $newBalance = $newPrincipal + $interest;
         
-        // CRITICAL: Calculate the new due date from the ACTIVE cycle's due date + period
+        // ============ Calculate the new due date from the ACTIVE cycle's due date + period ============
         $newDueDate = $this->calculateRolloverDueDate($loan);
         
-        // CRITICAL: Start date is the ACTIVE cycle's due date
+        // ============ Start date is the ACTIVE cycle's due date ============
         $newStartDate = Carbon::parse($activeCycle->due_date);
         
-        // Mark the active cycle as completed
+        // ============ Mark the active cycle as completed ============
         $activeCycle->update(['status' => 'completed']);
         
-        // Create the new cycle (status = active)
+        // ============ Create the new cycle with correct values ============
         $newCycle = LoanCycle::create([
             'loan_id' => $loan->id,
             'cycle_number' => $newCycleNumber,
-            'previous_balance' => $newPrincipal,
+            'previous_balance' => $newPrincipal, // FIX: Previous balance = outstanding balance
             'interest_capitalized' => $interest,
             'new_balance' => $newBalance,
             'interest_rate' => $interestRate,
@@ -427,7 +433,7 @@ class LoanCalculator
             'notes' => $notes ?? 'Loan rollover - Cycle ' . $newCycleNumber . ' (' . $loanType->name . ')',
         ]);
 
-        // Update the loan
+        // ============ Update the loan amount to the new balance ============
         $loan->amount = $newBalance;
         $loan->cycle = $newCycleNumber;
         $loan->due_date = $newDueDate;
@@ -442,13 +448,14 @@ class LoanCalculator
         Log::info('Rollover executed for loan #' . $loan->id, [
             'loan_type_id' => $loan->loan_type_id,
             'loan_type_name' => $loanType->name,
+            'interest_rate_used' => $interestRate,
             'new_cycle' => $newCycleNumber,
-            'previous_balance' => $activeCycle->new_balance,
-            'new_principal' => $newPrincipal,
-            'interest' => $interest,
+            'previous_balance' => $newPrincipal,
+            'interest_calculated' => $interest,
             'new_balance' => $newBalance,
             'new_due_date' => $newDueDate->format('Y-m-d'),
-            'new_start_date' => $newStartDate->format('Y-m-d')
+            'new_start_date' => $newStartDate->format('Y-m-d'),
+            'cycle_calculation' => $cycleCalculation
         ]);
 
         return [
@@ -463,8 +470,9 @@ class LoanCalculator
                 'start_date' => $newStartDate->format('Y-m-d'),
                 'start_date_formatted' => $newStartDate->format('M d, Y'),
                 'interest_capitalized' => $interest,
+                'interest_rate_used' => $interestRate,
                 'previous_balance' => $newPrincipal,
-                'interest_rate' => $interestRate,
+                'new_principal' => $newPrincipal,
                 'period' => (int) $loanType->period,
                 'period_unit' => $loanType->unit,
                 'period_display' => $this->getPeriodDisplay($loan),
@@ -522,7 +530,7 @@ class LoanCalculator
         // Calculate the cycle balance
         $cycleCalculation = $this->calculateCycleBalance($loan, $activeCycle);
         
-        $newPrincipal = $cycleCalculation['final_outstanding'];
+        $newPrincipal = $cycleCalculation['outstanding_after_repayments'];
         $interestRate = (float) $loanType->interest_rate;
         $interest = $newPrincipal * ($interestRate / 100);
         $newBalance = $newPrincipal + $interest;
@@ -570,8 +578,6 @@ class LoanCalculator
      * Uses the active cycle's data for accurate display if available
      * Otherwise falls back to loan-level calculations
      * Penalties are calculated per cycle, not globally
-     * 
-     * FIXED: Proper penalty calculation for BOTH scenarios
      */
     public function calculateLoanMetrics(Loan $loan): array
     {
@@ -622,7 +628,6 @@ class LoanCalculator
         $principalPlusInterest = $principal + $interest;
         
         // ============ CALCULATE REPAYMENTS ============
-        // CRITICAL FIX: Separate repayments before due date from total repayments
         $repaymentsBeforeDue = $loan->repayments()
             ->whereDate('repayment_date', '<=', $dueDate)
             ->sum('amount');
@@ -631,14 +636,12 @@ class LoanCalculator
         $outstandingAtDueDate = max(0, $principalPlusInterest - $repaymentsBeforeDue);
         
         // ============ CALCULATE DAYS OVERDUE ============
-        // CRITICAL FIX: Use correct diffInDays
         $daysOverdue = 0;
         if ($today->gt($dueDate)) {
             $daysOverdue = (int) $dueDate->diffInDays($today);
         }
         
         // ============ CALCULATE PENALTIES ============
-        // Use NPL trigger threshold
         $defaultThresholdDays = (int) (
             $loan->npl_trigger_threshold
             ?: $loan->getNplThreshold()
@@ -650,17 +653,13 @@ class LoanCalculator
         
         // Check if overdue and has outstanding balance at due date
         if ($daysOverdue > 0 && $outstandingAtDueDate > 0 && $basePenaltyRate > 0) {
-            // Apply grace period
             $daysSubjectToPenalty = max(0, $daysOverdue - $gracePeriodDays);
             $daysLate = $daysSubjectToPenalty;
             
             if ($daysSubjectToPenalty > 0) {
-                // Calculate penalty: simple interest on outstanding at due date
-                // NO CAP - full penalty calculation
                 $dailyPenaltyRate = $basePenaltyRate / 100;
                 $penaltyAmount = $outstandingAtDueDate * $dailyPenaltyRate * $daysSubjectToPenalty;
                 
-                // Check if default threshold is reached
                 if ($daysOverdue >= $defaultThresholdDays) {
                     $isDefaulted = true;
                 }
@@ -668,10 +667,7 @@ class LoanCalculator
         }
         
         // ============ DEFAULTED LOAN HANDLING ============
-        // If the loan is defaulted, ensure penalties are properly displayed
         if ($loan->status === 'defaulted' || $isDefaulted) {
-            // If penalty amount is 0 but the loan is defaulted, we need to calculate
-            // the maximum penalty
             if ($penaltyAmount == 0 && $outstandingAtDueDate > 0 && $basePenaltyRate > 0) {
                 $daysSubjectToPenalty = max(0, $daysOverdue - $gracePeriodDays);
                 $dailyPenaltyRate = $basePenaltyRate / 100;

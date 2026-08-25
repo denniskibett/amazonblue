@@ -396,21 +396,48 @@
         <div class="border-t border-gray-200 pt-4">
             <h3 class="text-md font-semibold mb-3">
                 Financial Summary 
-                <span class="text-xs font-normal text-gray-500">(Cycle #{{ $loan->cycle ?? 1 }})</span>
+                <span class="text-xs font-normal text-gray-500">(Cycle #{{ $cycleNumber ?? 1 }})</span>
             </h3>
             
             @php
+                $latestCycle = $loan->cycles()->orderBy('cycle_number', 'desc')->first();
                 $currentCycle = $loan->getCurrentCycle();
-                $cycleBalance = $currentCycle ? $currentCycle->new_balance : $loan->amount;
-                $cycleInterest = $currentCycle ? $currentCycle->interest_capitalized : 0;
-                $cycleRepayments = $currentCycle ? $loan->repayments()->where('loan_cycle_id', $currentCycle->id)->sum('amount') : 0;
-                $cyclePenalty = isset($penalty_amount) ? $penalty_amount : 0;
-                // CORRECTED: Outstanding = Cycle Balance + Penalties - Repayments
-                $cycleOutstanding = max(0, $cycleBalance + $cyclePenalty - $cycleRepayments);
+                $displayCycle = $latestCycle ?? $currentCycle;
                 
-                $cycleDaysOverdue = isset($days_overdue) ? $days_overdue : 0;
+                $cycleBalance = $displayCycle ? $displayCycle->new_balance : $loan->amount;
+                $cycleInterest = $displayCycle ? $displayCycle->interest_capitalized : 0;
+                $cycleNumber = $displayCycle ? $displayCycle->cycle_number : 1;
+                
+                // Get repayments for this specific cycle
+                $cycleRepayments = $displayCycle ? $loan->repayments()->where('loan_cycle_id', $displayCycle->id)->sum('amount') : 0;
+                
+                // Calculate days overdue for this cycle
+                $cycleDueDateCarbon = $displayCycle ? Carbon\Carbon::parse($displayCycle->due_date) : Carbon\Carbon::parse($loan->due_date);
+                $today = Carbon\Carbon::now()->startOfDay();
+                $cycleDaysOverdue = $today->gt($cycleDueDateCarbon) ? (int) $cycleDueDateCarbon->diffInDays($today) : 0;
+                
+                // Calculate outstanding after repayments
+                $outstandingAfterRepayments = max(0, $cycleBalance - $cycleRepayments);
+                
+                // Calculate penalty for this cycle - ONLY if there is an outstanding balance
+                $loanType = $loan->loanType;
+                $basePenaltyRate = (float) ($loanType->penalty_rate ?? 0);
+                $gracePeriodDays = (int) ($loanType->grace_period_days ?? 0);
+                
+                $cyclePenalty = 0;
+                if ($cycleDaysOverdue > 0 && $outstandingAfterRepayments > 0 && $basePenaltyRate > 0) {
+                    $daysSubjectToPenalty = max(0, $cycleDaysOverdue - $gracePeriodDays);
+                    if ($daysSubjectToPenalty > 0) {
+                        $cyclePenalty = $outstandingAfterRepayments * ($basePenaltyRate / 100) * $daysSubjectToPenalty;
+                    }
+                }
+                
+                $cycleOutstanding = max(0, $outstandingAfterRepayments + $cyclePenalty);
+                
                 $cycleGraceDaysRemaining = $loan->getRemainingGraceDays();
                 $cycleGraceDaysBalance = $loan->grace_days_balance ?? 0;
+                
+                $isFullyPaid = $cycleOutstanding <= 0;
             @endphp
             
             <div class="space-y-3">
@@ -439,6 +466,14 @@
                     </span>
                 </div>
                 
+                @if($isFullyPaid)
+                <div class="mt-1 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p class="text-xs text-green-600 dark:text-green-400 font-medium text-center">
+                        ✅ This cycle is fully paid
+                    </p>
+                </div>
+                @endif
+                
                 <!-- Grace Period Info -->
                 <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 border-t pt-2 mt-2">
                     <span>Grace Days Remaining</span>
@@ -448,10 +483,15 @@
                     <span>Grace Days Balance</span>
                     <span>{{ $cycleGraceDaysBalance }}</span>
                 </div>
-                @if($cycleDaysOverdue > 0)
+                @if($cycleDaysOverdue > 0 && $outstandingAfterRepayments > 0)
                 <div class="flex justify-between text-xs text-red-500 dark:text-red-400">
                     <span>Days Overdue</span>
                     <span>{{ $cycleDaysOverdue }} days</span>
+                </div>
+                @elseif($cycleDaysOverdue > 0 && $outstandingAfterRepayments <= 0)
+                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <span>Days Overdue</span>
+                    <span>{{ $cycleDaysOverdue }} days <span class="text-green-500">(Paid off)</span></span>
                 </div>
                 @endif
                 
@@ -545,133 +585,171 @@
                 </div>
             </div>
 
-            <!-- Loan Charges Table -->
-            <div class="mb-6 overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-                <div class="max-w-full overflow-x-auto">
-                    <div class="min-w-[1026px]">
-                        <!-- table header -->
-                        <div class="grid grid-cols-11 px-5 py-3 bg-gray-50">
-                            <div class="col-span-1 flex items-center">
-                                <p class="text-sm font-medium text-gray-700 dark:text-gray-400">#</p>
-                            </div>
-                            <div class="col-span-5 flex items-center">
-                                <p class="text-sm font-medium text-gray-700 dark:text-gray-400">Charge Description</p>
-                            </div>
-                            <div class="col-span-2 flex items-center">
-                                <p class="text-sm font-medium text-gray-700 dark:text-gray-400">Rate</p>
-                            </div>
-                            <div class="col-span-3 flex items-center">
-                                <p class="w-full text-right text-sm font-medium text-gray-700 dark:text-gray-400">Amount (KES)</p>
-                            </div>
-                        </div>
-
-                        <!-- Principal -->
-                        <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
-                            <div class="col-span-1 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">1</p>
-                            </div>
-                            <div class="col-span-5 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Principal Amount</p>
-                            </div>
-                            <div class="col-span-2 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">-</p>
-                            </div>
-                            <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-gray-500 dark:text-gray-400">{{ number_format($principal, 2) }}</p>
-                            </div>
-                        </div>
-
-                        <!-- Interest -->
-                        <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
-                            <div class="col-span-1 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">2</p>
-                            </div>
-                            <div class="col-span-5 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Interest ({{ number_format($interest_rate, 0) }}%)</p>
-                            </div>
-                            <div class="col-span-2 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">-</p>
-                            </div>
-                            <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-gray-500 dark:text-gray-400">{{ number_format($interest, 2) }}</p>
-                            </div>
-                        </div>
-
-                        <!-- Penalties -->
-                        @if($penalty_amount > 0)
-                        <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
-                            <div class="col-span-1 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">3</p>
-                            </div>
-                            <div class="col-span-5 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Penalties ({{ number_format($base_penalty_rate, 0) }}% daily)</p>
-                            </div>
-                            <div class="col-span-2 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    KES {{ number_format($base_penalty_rate/100*$outstanding_at_due, 2) }} * {{ round($days_late) }} days
-                                </p>
-                            </div>
-                            <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-red-500 dark:text-red-400">{{ number_format($penalty_amount, 2) }}</p>
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Broker Fees -->
-                        @if($is_brokered)
-                        <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
-                            <div class="col-span-1 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">4</p>
-                            </div>
-                            <div class="col-span-5 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Broker Fees (Interest {{ number_format($brokerRate, 0) }}% + Penalties {{ number_format($penalty_rate, 0) }}%)</p>
-                            </div>
-                            <div class="col-span-2 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">KES {{ number_format($total_broker_fees, 2) }}</p>
-                            </div>
-                            <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-gray-500 dark:text-gray-400">-</p>
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Total Repayments (Current Cycle Only) -->
-                        @php
-                            $currentCycle = $loan->getCurrentCycle();
-                            $cycleRepaymentsTotal = $currentCycle ? $loan->repayments()->where('loan_cycle_id', $currentCycle->id)->sum('amount') : 0;
-                        @endphp
-                        <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
-                            <div class="col-span-1 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">5</p>
-                            </div>
-                            <div class="col-span-5 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Total Repayments (Cycle #{{ $loan->cycle ?? 1 }})</p>
-                            </div>
-                            <div class="col-span-2 flex items-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">-</p>
-                            </div>
-                            <div class="col-span-3 flex items-center justify-end">
-                                <p class="text-right text-sm text-green-500 dark:text-green-400">-{{ number_format($cycleRepaymentsTotal, 2) }}</p>
-                            </div>
-                        </div>
-                    </div>
+<!-- Loan Charges Table -->
+<div class="mb-6 overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+    <div class="max-w-full overflow-x-auto">
+        <div class="min-w-[1026px]">
+            <!-- table header -->
+            <div class="grid grid-cols-11 px-5 py-3 bg-gray-50">
+                <div class="col-span-1 flex items-center">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-400">#</p>
+                </div>
+                <div class="col-span-5 flex items-center">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-400">Charge Description</p>
+                </div>
+                <div class="col-span-2 flex items-center">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-400">Rate</p>
+                </div>
+                <div class="col-span-3 flex items-center">
+                    <p class="w-full text-right text-sm font-medium text-gray-700 dark:text-gray-400">Amount (KES)</p>
                 </div>
             </div>
+
+            <!-- Principal -->
+            <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
+                <div class="col-span-1 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">1</p>
+                </div>
+                <div class="col-span-5 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Principal Amount</p>
+                </div>
+                <div class="col-span-2 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">-</p>
+                </div>
+                <div class="col-span-3 flex items-center justify-end">
+                    <p class="text-right text-sm text-gray-500 dark:text-gray-400">{{ number_format($principal, 2) }}</p>
+                </div>
+            </div>
+
+            <!-- Interest -->
+            <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
+                <div class="col-span-1 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">2</p>
+                </div>
+                <div class="col-span-5 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Interest ({{ number_format($interest_rate, 0) }}%)</p>
+                </div>
+                <div class="col-span-2 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">-</p>
+                </div>
+                <div class="col-span-3 flex items-center justify-end">
+                    <p class="text-right text-sm text-gray-500 dark:text-gray-400">{{ number_format($interest, 2) }}</p>
+                </div>
+            </div>
+
+            <!-- Penalties - ONLY SHOW IF OUTSTANDING BALANCE > 0 -->
+            @php
+                // Get the latest cycle for calculations
+                $latestCycleForTable = $loan->cycles()->orderBy('cycle_number', 'desc')->first();
+                $currentCycleForTable = $loan->getCurrentCycle();
+                $displayCycleForTable = $latestCycleForTable ?? $currentCycleForTable;
+                
+                $cycleBalanceForTable = $displayCycleForTable ? $displayCycleForTable->new_balance : $loan->amount;
+                $cycleRepaymentsTotalForTable = $displayCycleForTable ? $loan->repayments()->where('loan_cycle_id', $displayCycleForTable->id)->sum('amount') : 0;
+                $outstandingAfterRepaymentsForTable = max(0, $cycleBalanceForTable - $cycleRepaymentsTotalForTable);
+            @endphp
+            
+            @if($penalty_amount > 0 && $outstandingAfterRepaymentsForTable > 0)
+            <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
+                <div class="col-span-1 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">3</p>
+                </div>
+                <div class="col-span-5 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Penalties ({{ number_format($base_penalty_rate, 0) }}% daily)</p>
+                </div>
+                <div class="col-span-2 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        KES {{ number_format($base_penalty_rate/100*$outstanding_at_due, 2) }} * {{ round($days_late) }} days
+                    </p>
+                </div>
+                <div class="col-span-3 flex items-center justify-end">
+                    <p class="text-right text-sm text-red-500 dark:text-red-400">{{ number_format($penalty_amount, 2) }}</p>
+                </div>
+            </div>
+            @endif
+
+            <!-- Broker Fees -->
+            @if($is_brokered)
+            <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
+                <div class="col-span-1 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">4</p>
+                </div>
+                <div class="col-span-5 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Broker Fees (Interest {{ number_format($brokerRate, 0) }}% + Penalties {{ number_format($penalty_rate, 0) }}%)</p>
+                </div>
+                <div class="col-span-2 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">KES {{ number_format($total_broker_fees, 2) }}</p>
+                </div>
+                <div class="col-span-3 flex items-center justify-end">
+                    <p class="text-right text-sm text-gray-500 dark:text-gray-400">-</p>
+                </div>
+            </div>
+            @endif
+
+            <!-- Total Repayments (Current Cycle Only) -->
+            <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
+                <div class="col-span-1 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">5</p>
+                </div>
+                <div class="col-span-5 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Total Repayments (Cycle #{{ $cycleNumber ?? 1 }})</p>
+                </div>
+                <div class="col-span-2 flex items-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">-</p>
+                </div>
+                <div class="col-span-3 flex items-center justify-end">
+                    <p class="text-right text-sm text-green-500 dark:text-green-400">-{{ number_format($cycleRepaymentsTotalForTable, 2) }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- Summary - Cycle Specific -->
             <div class="my-6 border-b border-gray-100 pb-6 dark:border-gray-800">
                 @php
+                    $latestCycle = $loan->cycles()->orderBy('cycle_number', 'desc')->first();
                     $currentCycle = $loan->getCurrentCycle();
-                    $cycleBalance = $currentCycle ? $currentCycle->new_balance : $loan->amount;
-                    $cycleRepaymentsTotal = $currentCycle ? $loan->repayments()->where('loan_cycle_id', $currentCycle->id)->sum('amount') : 0;
-                    $cyclePenalty = isset($penalty_amount) ? $penalty_amount : 0;
-                    // CORRECTED: Balance Due = Cycle Balance + Penalties - Repayments
-                    $cycleOutstanding = max(0, $cycleBalance + $cyclePenalty - $cycleRepaymentsTotal);
+                    $displayCycle = $latestCycle ?? $currentCycle;
+                    
+                    $cycleBalance = $displayCycle ? $displayCycle->new_balance : $loan->amount;
+                    $cycleNumber = $displayCycle ? $displayCycle->cycle_number : 1;
+                    $cycleRepaymentsTotal = $displayCycle ? $loan->repayments()->where('loan_cycle_id', $displayCycle->id)->sum('amount') : 0;
+                    
+                    // Calculate days overdue for this cycle
+                    $cycleDueDateCarbon = $displayCycle ? Carbon\Carbon::parse($displayCycle->due_date) : Carbon\Carbon::parse($loan->due_date);
+                    $today = Carbon\Carbon::now()->startOfDay();
+                    $cycleDaysOverdue = $today->gt($cycleDueDateCarbon) ? (int) $cycleDueDateCarbon->diffInDays($today) : 0;
+                    
+                    // Calculate outstanding after repayments
+                    $outstandingAfterRepayments = max(0, $cycleBalance - $cycleRepaymentsTotal);
+                    
+                    // Calculate penalty for this cycle - ONLY if there is an outstanding balance
+                    $loanType = $loan->loanType;
+                    $basePenaltyRate = (float) ($loanType->penalty_rate ?? 0);
+                    $gracePeriodDays = (int) ($loanType->grace_period_days ?? 0);
+                    
+                    $cyclePenalty = 0;
+                    if ($cycleDaysOverdue > 0 && $outstandingAfterRepayments > 0 && $basePenaltyRate > 0) {
+                        $daysSubjectToPenalty = max(0, $cycleDaysOverdue - $gracePeriodDays);
+                        if ($daysSubjectToPenalty > 0) {
+                            $cyclePenalty = $outstandingAfterRepayments * ($basePenaltyRate / 100) * $daysSubjectToPenalty;
+                        }
+                    }
+                    
+                    $cycleOutstanding = max(0, $outstandingAfterRepayments + $cyclePenalty);
+                    
+                    $isFullyPaid = $cycleOutstanding <= 0;
                 @endphp
                 
                 <div class="flex justify-between mb-2">
                     <p class="text-sm text-gray-500 dark:text-gray-400">Cycle Balance (Principal + Interest):</p>
                     <p class="text-sm text-gray-700 dark:text-gray-300">KES {{ number_format($cycleBalance, 2) }}</p>
+                </div>
+                
+                <div class="flex justify-between mb-2">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Cycle #:</p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">{{ $cycleNumber }}</p>
                 </div>
                 
                 @if($cyclePenalty > 0)
@@ -687,11 +765,19 @@
                 </div>
 
                 <div class="flex justify-between pt-4 border-t">
-                    <p class="text-lg font-semibold text-gray-800 dark:text-white/90">Balance Due (Cycle #{{ $loan->cycle ?? 1 }}):</p>
+                    <p class="text-lg font-semibold text-gray-800 dark:text-white/90">Balance Due (Cycle #{{ $cycleNumber }}):</p>
                     <p class="text-lg font-bold @if($cycleOutstanding > 0) text-red-600 @else text-green-600 @endif">
                         KES {{ number_format($cycleOutstanding, 2) }}
                     </p>
                 </div>
+                
+                @if($isFullyPaid)
+                <div class="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p class="text-sm text-green-600 dark:text-green-400 font-medium text-center">
+                        ✅ This cycle is fully paid
+                    </p>
+                </div>
+                @endif
                 
                 <!-- Grace Period Info -->
                 <div class="flex justify-between pt-2 text-xs text-gray-500 dark:text-gray-400 border-t mt-2">
@@ -702,10 +788,15 @@
                     <span>Grace Days Balance</span>
                     <span>{{ $loan->grace_days_balance ?? 0 }}</span>
                 </div>
-                @if(isset($days_overdue) && $days_overdue > 0)
+                @if($cycleDaysOverdue > 0 && $outstandingAfterRepayments > 0)
                 <div class="flex justify-between text-xs text-red-500 dark:text-red-400">
                     <span>Days Overdue</span>
-                    <span>{{ $days_overdue }} days</span>
+                    <span>{{ $cycleDaysOverdue }} days</span>
+                </div>
+                @elseif($cycleDaysOverdue > 0 && $outstandingAfterRepayments <= 0)
+                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <span>Days Overdue</span>
+                    <span>{{ $cycleDaysOverdue }} days <span class="text-green-500">(Paid off)</span></span>
                 </div>
                 @endif
                 
@@ -745,7 +836,10 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                            @foreach($loan->cycles as $cycle)
+                            @php
+                                $sortedCycles = $loan->cycles->sortBy('cycle_number');
+                            @endphp
+                            @foreach($sortedCycles as $cycle)
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                 <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">#{{ $cycle->cycle_number }}</td>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ $cycle->start_date->format('M d, Y') }}</td>
@@ -835,7 +929,7 @@
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-lg font-semibold">
                             Repayments 
-                            <span class="text-xs font-normal text-gray-500">(Cycle #{{ $loan->cycle ?? 1 }})</span>
+                            <span class="text-xs font-normal text-gray-500">(Cycle #{{ $cycleNumber ?? 1 }})</span>
                         </h3>
                         @if(auth()->user()->role !== 'borrower')
                             <button onclick="openRepaymentModal({{ $loan->id }})" 
@@ -846,7 +940,7 @@
                     </div>
                     
                     @php
-                        $cycleRepayments = $currentCycle ? $loan->repayments()->where('loan_cycle_id', $currentCycle->id)->get() : collect();
+                        $cycleRepayments = $displayCycle ? $loan->repayments()->where('loan_cycle_id', $displayCycle->id)->get() : collect();
                     @endphp
                     
                     @if($cycleRepayments->isEmpty())
@@ -861,7 +955,7 @@
                                         @if($repayment->transaction_ref)
                                             <p class="text-xs text-gray-400">Ref: {{ $repayment->transaction_ref }}</p>
                                         @endif
-                                        <p class="text-xs text-green-600">Cycle #{{ $currentCycle->cycle_number }}</p>
+                                        <p class="text-xs text-green-600">Cycle #{{ $displayCycle->cycle_number ?? 1 }}</p>
                                     </div>
                                     <div class="text-right">
                                         <p class="text-xs text-gray-500">{{ $repayment->transaction ?? 'N/A' }}</p>
