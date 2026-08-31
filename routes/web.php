@@ -63,7 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/loans/{loan}/repayments/create', [RepaymentController::class, 'create'])->name('loans.repayments.create');
         Route::post('/loans/{loan}/repayments', [RepaymentController::class, 'store'])->name('loans.repayments.store');
     });
-
+@
     // Loans Resource
     Route::resource('loans', LoanController::class);
 

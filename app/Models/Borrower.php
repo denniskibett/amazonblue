@@ -526,7 +526,7 @@ class Borrower extends Model
         elseif ($bankAccounts >= 1) $score += 5;
         
         // Education level
-        if ($this->user->education) {
+        if ($this->user?->education) {
             $educationScores = [
                 'phd' => 15,
                 'masters' => 12,
@@ -540,7 +540,7 @@ class Borrower extends Model
                 'primary' => 1
             ];
             
-            $education = strtolower($this->user->education);
+            $education = strtolower($this->user?->education);
             foreach ($educationScores as $key => $value) {
                 if (str_contains($education, $key)) {
                     $score += $value;
@@ -550,26 +550,26 @@ class Borrower extends Model
         }
         
         // Marital status stability
-        if ($this->user->marital_status === 'married') $score += 8;
-        elseif ($this->user->marital_status === 'single') $score += 3;
-        elseif (in_array($this->user->marital_status, ['divorced', 'separated'])) $score -= 5;
+        if ($this->user?->marital_status === 'married') $score += 8;
+        elseif ($this->user?->marital_status === 'single') $score += 3;
+        elseif (in_array($this->user?->marital_status, ['divorced', 'separated'])) $score -= 5;
         
         // Age factor - middle age is most stable
-        if ($this->user->age) {
-            if ($this->user->age >= 30 && $this->user->age <= 50) $score += 10;
-            elseif ($this->user->age >= 25 && $this->user->age <= 60) $score += 5;
-            elseif ($this->user->age < 25) $score -= 5; // Young, less established
+        if ($this->user?->age) {
+            if ($this->user?->age >= 30 && $this->user?->age <= 50) $score += 10;
+            elseif ($this->user?->age >= 25 && $this->user?->age <= 60) $score += 5;
+            elseif ($this->user?->age < 25) $score -= 5; // Young, less established
         }
         
         // Complete personal information indicates organization
-        if ($this->user->hasCompletePersonalInfo()) {
+        if ($this->user?->hasCompletePersonalInfo()) {
             $score += 10;
         }
         
         // Has identification documents
-        if ($this->user->id_front_path && $this->user->id_back_path) {
+        if ($this->user?->id_front_path && $this->user?->id_back_path) {
             $score += 8;
-        } elseif ($this->user->id_front_path) {
+        } elseif ($this->user?->id_front_path) {
             $score += 5;
         }
         

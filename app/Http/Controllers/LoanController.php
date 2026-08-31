@@ -389,9 +389,6 @@ class LoanController extends Controller
      */
 public function show($id, $loanId = null)
 {
-    // ============================================================
-    // AUTHENTICATED USER
-    // ============================================================
     $user = auth()->user();
 
     if (!$user) {
@@ -483,83 +480,39 @@ public function show($id, $loanId = null)
     // CYCLE CALCULATED VALUES
     // ============================================================
 
-    $cycleNumber = $cycleCalculation['cycle_number']
-        ?? $activeCycle?->cycle_number
-        ?? 1;
-
-    $newCycleBalance = $cycleCalculation['new_balance']
-        ?? 0;
-
-    $cycleInterest = $cycleCalculation['interest']
-        ?? 0;
-
-    $cycleRepayments = $cycleCalculation['total_repayments']
-        ?? 0;
-
-    $outstandingAfterRepayments =
-        $cycleCalculation['outstanding_after_repayments']
-        ?? 0;
-
-    $cyclePenalty = $cycleCalculation['penalty']
-        ?? 0;
-
-    $cycleOutstanding = $cycleCalculation['final_outstanding']
-        ?? 0;
-
-    $cycleDaysOverdue = $cycleCalculation['days_overdue']
-        ?? 0;
-
-    $cycleGraceDaysRemaining =
-        $loan->getRemainingGraceDays();
-
-    $cycleGraceDaysBalance =
-        $loan->grace_days_balance ?? 0;
-
-    $isFullyPaid =
-        $cycleOutstanding <= 0;
-
-    $cycleBalanceFull =
-        $cycleCalculation['new_balance']
-        ?? $metrics['principal_plus_interest']
-        ?? 0;
+    $cycleNumber = $cycleCalculation['cycle_number'] ?? $activeCycle?->cycle_number ?? 1;
+    $newCycleBalance = $cycleCalculation['new_balance'] ?? 0;
+    $cycleInterest = $cycleCalculation['interest'] ?? 0;
+    $cycleRepayments = $cycleCalculation['total_repayments'] ?? 0;
+    $outstandingAfterRepayments = $cycleCalculation['outstanding_after_repayments'] ?? 0;
+    $cyclePenalty = $cycleCalculation['penalty'] ?? 0;
+    $cycleOutstanding = $cycleCalculation['final_outstanding'] ?? 0;
+    $cycleDaysOverdue = $cycleCalculation['days_overdue'] ?? 0;
+    $cycleGraceDaysRemaining = $loan->getRemainingGraceDays();
+    $cycleGraceDaysBalance = $loan->grace_days_balance ?? 0;
+    $isFullyPaid = $cycleOutstanding <= 0;
+    $cycleBalanceFull = $cycleCalculation['new_balance'] ?? $metrics['principal_plus_interest'] ?? 0;
 
     // ============================================================
     // PENALTY VALUES
     // ============================================================
 
-    $penaltyAmount =
-        $cycleCalculation['penalty']
-        ?? $metrics['penalty_amount']
-        ?? 0;
-
-    $outstandingAtDue =
-        $cycleCalculation['outstanding_at_due']
-        ?? $metrics['outstanding_at_due']
-        ?? 0;
-
-    $daysSubjectToPenalty =
-        $cycleCalculation['days_subject_to_penalty']
-        ?? 0;
-
-    $penaltyRate =
-        $cycleCalculation['penalty_rate']
-        ?? $metrics['base_penalty_rate']
-        ?? 0;
+    $penaltyAmount = $cycleCalculation['penalty'] ?? $metrics['penalty_amount'] ?? 0;
+    $outstandingAtDue = $cycleCalculation['outstanding_at_due'] ?? $metrics['outstanding_at_due'] ?? 0;
+    $daysSubjectToPenalty = $cycleCalculation['days_subject_to_penalty'] ?? 0;
+    $penaltyRate = $cycleCalculation['penalty_rate'] ?? $metrics['base_penalty_rate'] ?? 0;
 
     // ============================================================
     // GET CLIENT TYPE
     // ============================================================
     $borrower = $loan->user->borrower;
-
     $broker = $borrower->broker ?? null;
-
     $client_type = $borrower->client_type ?? 0;
 
     // ============================================================
     // GET BROKER FEES
     // ============================================================
     $is_brokered = $loan->broker_status == 1;
-
     $brokerRate = 0;
     $penalty_rate = 0;
     $total_broker_fees = 0;
@@ -583,14 +536,9 @@ public function show($id, $loanId = null)
     // ============================================================
     // SIGNATURE STATUS
     // ============================================================
-    $signatureStatus =
-        $this->signatureService->checkSignature($loan->user);
-
-    $hasSignature =
-        $signatureStatus['hasSignature'] ?? false;
-
-    $signatureUrl =
-        $signatureStatus['signatureUrl'] ?? null;
+    $signatureStatus = $this->signatureService->checkSignature($loan->user);
+    $hasSignature = $signatureStatus['hasSignature'] ?? false;
+    $signatureUrl = $signatureStatus['signatureUrl'] ?? null;
 
     // ============================================================
     // DEFAULT STATUS
@@ -602,19 +550,15 @@ public function show($id, $loanId = null)
     $days_overdue =
         $metrics['days_overdue'] ?? 0;
 
-    $penalty_amount =
-        $metrics['penalty_amount'] ?? 0;
+    $penalty_amount = $metrics['penalty_amount'] ?? 0;
 
-    $default_threshold_days =
-        $metrics['default_threshold_days'] ?? 30;
+    $default_threshold_days = $metrics['default_threshold_days'] ?? 30;
 
     // ============================================================
     // CASES / RECOVERY MODAL DATA
     // ============================================================
     $statuses = \App\Models\RecoveryStatus::all();
-
     $priorities = \App\Models\RecoveryPriority::all();
-
     $officers = User::whereIn('role', [
         'admin',
         'teller'
