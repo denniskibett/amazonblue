@@ -1,4 +1,3 @@
-{{-- resources/views/reports/index.blade.php --}}
 @extends('layouts.app')
 
 @section('content')
@@ -6,17 +5,17 @@
     <!-- Header -->
     <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-            <h1 class="text-2xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+            <h1 class="text-2xl font-semibold text-gray-800 dark:text-white flex items-center gap-2 font-outfit">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                 </svg>
                 Reports & Analytics Dashboard
             </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Comprehensive reporting for all business operations</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 font-outfit">Comprehensive reporting for all business operations</p>
         </div>
         <div class="flex items-center gap-2">
             <button onclick="window.location.reload()" 
-                    class="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    class="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-outfit">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
@@ -30,8 +29,8 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Reports</p>
-                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ count($reports) }}</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-outfit">Total Reports</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white font-outfit">{{ count($reports) }}</p>
                 </div>
                 <div class="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -43,8 +42,8 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lending Reports</p>
-                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ collect($reports)->where('category', 'lending')->count() }}</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-outfit">Lending Reports</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white font-outfit">{{ collect($reports)->where('category', 'lending')->count() }}</p>
                 </div>
                 <div class="p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -56,8 +55,8 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer Reports</p>
-                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ collect($reports)->where('category', 'customer')->count() }}</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-outfit">Customer Reports</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white font-outfit">{{ collect($reports)->where('category', 'customer')->count() }}</p>
                 </div>
                 <div class="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -69,8 +68,8 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Categories</p>
-                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ collect($reports)->groupBy('category')->count() }}</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-outfit">Categories</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white font-outfit">{{ collect($reports)->groupBy('category')->count() }}</p>
                 </div>
                 <div class="p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -84,7 +83,7 @@
     <!-- Category Filters -->
     <div class="flex flex-wrap gap-2 mb-6">
         <button onclick="filterReports('all')" 
-                class="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors category-filter active" 
+                class="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors category-filter active font-outfit" 
                 data-category="all">
             All Reports
         </button>
@@ -93,7 +92,7 @@
         @endphp
         @foreach($categories as $category)
         <button onclick="filterReports('{{ $category }}')" 
-                class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors category-filter" 
+                class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors category-filter font-outfit" 
                 data-category="{{ $category }}">
             {{ ucfirst($category) }}
         </button>
@@ -132,14 +131,14 @@
                     </svg>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <h3 class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    <h3 class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors font-outfit">
                         {{ $report['name'] }}
                     </h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 font-outfit">
                         {{ $report['description'] }}
                     </p>
                     <div class="mt-2">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-outfit">
                             {{ ucfirst($report['category']) }}
                         </span>
                     </div>
@@ -159,8 +158,8 @@
         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No reports found</h3>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Try selecting a different category</p>
+        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white font-outfit">No reports found</h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 font-outfit">Try selecting a different category</p>
     </div>
 </div>
 

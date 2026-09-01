@@ -155,8 +155,12 @@ class LoanCalculator
      * Calculate the new balance for a cycle
      * This handles the complete math for a loan cycle
      * 
-     * FIXED FORMULA:
-     * 1. Principal = Current cycle's new_balance (from previous cycle) OR loan->amount for first cycle
+     * FIXED FORMULA - Using previous_balance as the source of truth:
+     * 
+     * Cycle #1: principal = loan->amount (since previous_balance = 0)
+     * Cycle #2+: principal = previous_balance (which came from previous cycle's new_balance)
+     * 
+     * 1. Principal = previous_balance > 0 ? previous_balance : loan->amount
      * 2. Interest = Principal × (Interest Rate / 100)
      * 3. Full Balance = Principal + Interest + Processing Fee
      * 4. Repayments BEFORE due date reduce the outstanding at due
@@ -188,13 +192,14 @@ class LoanCalculator
             ?: $loan->getNplThreshold()
         );
         
-        // ============ FIX: PRINCIPAL = CYCLE'S NEW_BALANCE OR LOAN AMOUNT ============
+        // ============ FIX: PRINCIPAL = PREVIOUS_BALANCE OR LOAN AMOUNT ============
         // For first cycle (previous_balance = 0), use loan->amount
-        // For subsequent cycles, use the cycle's new_balance (which was set from previous cycle)
-        $principal = $cycle->new_balance > 0 ? $cycle->new_balance : $loan->amount;
+        // For subsequent cycles, use previous_balance (which came from previous cycle's new_balance)
+        $principal = $cycle->previous_balance > 0 ? $cycle->previous_balance : $loan->amount;
         
-        // Store previous_balance for reference (what was carried over)
+        // Store for reference
         $previousBalance = $cycle->previous_balance;
+        $newBalanceFromDb = $cycle->new_balance;
         
         // Step 1: Calculate Interest
         $interest = $principal * ($interestRate / 100);
@@ -309,6 +314,7 @@ class LoanCalculator
             'cycle_number' => $cycle->cycle_number,
             'principal' => $principal,
             'previous_balance' => $previousBalance,
+            'new_balance_from_db' => $newBalanceFromDb,
             'interest_rate' => $interestRate,
             'interest' => $interest,
             'processing_fee_rate' => $processingFeeRate,
@@ -530,7 +536,7 @@ class LoanCalculator
 
     /**
      * Create the initial cycle for a loan
-     * FIXED: Sets new_balance = loan amount + interest (this becomes principal for next cycle)
+     * FIXED: previous_balance = 0, new_balance = loan amount + interest
      */
     public function createInitialCycle(Loan $loan): LoanCycle
     {
@@ -559,13 +565,13 @@ class LoanCalculator
 
         // ============ CREATE CYCLE #1 ============
         // previous_balance = 0 (no previous cycle)
-        // new_balance = loan->amount + interest (this becomes the principal for cycle #2)
+        // new_balance = loan->amount + interest (this becomes the previous_balance for cycle #2)
         $cycle = LoanCycle::create([
             'loan_id' => $loan->id,
             'cycle_number' => 1,
             'previous_balance' => 0,
             'interest_capitalized' => $interest,
-            'new_balance' => $loan->amount + $interest,  // This is the PRINCIPAL for next cycle
+            'new_balance' => $loan->amount + $interest,
             'interest_rate' => $interestRate,
             'start_date' => $loan->borrow_date,
             'due_date' => $dueDate,
@@ -585,6 +591,7 @@ class LoanCalculator
             'loan_type_id' => $loan->loan_type_id,
             'loan_type_name' => $loanType->name,
             'cycle_number' => 1,
+            'principal_used' => $loan->amount,
             'interest' => $interest,
             'new_balance' => $loan->amount + $interest,
             'due_date' => $dueDate->format('Y-m-d')
@@ -597,7 +604,7 @@ class LoanCalculator
      * Execute a loan rollover
      * This creates a new cycle and marks the previous one as completed
      * 
-     * FIXED: Properly sets new_balance as the principal for the next cycle
+     * FIXED: Uses previous_balance as the principal for the new cycle
      */
     public function executeRollover(Loan $loan, array $options = []): array
     {
@@ -673,13 +680,14 @@ class LoanCalculator
         $activeCycle->update(['status' => 'completed']);
         
         // ============ Create the new cycle with correct values ============
-        // CRITICAL: new_balance becomes the principal for the next cycle
+        // CRITICAL: previous_balance = the outstanding amount from previous cycle
+        // new_balance = previous_balance + interest (this becomes previous_balance for NEXT cycle)
         $newCycle = LoanCycle::create([
             'loan_id' => $loan->id,
             'cycle_number' => $newCycleNumber,
-            'previous_balance' => $newPrincipal,      // What was carried over
+            'previous_balance' => $newPrincipal,      // What was carried over (becomes principal)
             'interest_capitalized' => $interest,       // Interest added
-            'new_balance' => $newBalance,              // This becomes the principal for NEXT cycle
+            'new_balance' => $newBalance,              // New total (becomes previous_balance for next cycle)
             'interest_rate' => $interestRate,
             'start_date' => $newStartDate,
             'due_date' => $newDueDate,
@@ -709,7 +717,6 @@ class LoanCalculator
             'new_balance' => $newBalance,
             'new_due_date' => $newDueDate->format('Y-m-d'),
             'new_start_date' => $newStartDate->format('Y-m-d'),
-            'cycle_calculation' => $cycleCalculation
         ]);
 
         return [
@@ -811,7 +818,6 @@ class LoanCalculator
 
     /**
      * Get rollover preview data
-     * UPDATED: Uses new formula with correct principal tracking
      */
     public function getRolloverPreview(Loan $loan): array
     {
@@ -851,7 +857,7 @@ class LoanCalculator
             'current_due_date' => Carbon::parse($activeCycle->due_date)->format('M d, Y'),
             'current_balance' => $activeCycle->new_balance,
             
-            // NEW FORMULA VALUES - Using cycle's new_balance as principal
+            // NEW FORMULA VALUES - Using previous_balance as principal
             'principal' => $cycleCalculation['principal'],
             'outstanding_at_due' => $cycleCalculation['outstanding_at_due'],
             'repayments_before_due' => $cycleCalculation['repayments_before_due'],
@@ -890,7 +896,6 @@ class LoanCalculator
     /**
      * Calculate loan metrics for display
      * Uses the active cycle's data for accurate display if available
-     * UPDATED: Uses new formula with correct principal tracking
      */
     public function calculateLoanMetrics(Loan $loan): array
     {
@@ -899,7 +904,7 @@ class LoanCalculator
         }
 
         $loanType = $loan->loanType;
-        $principal = $loan->amount;
+        $loanAmount = $loan->amount;
         $interestRate = (float) $loanType->interest_rate;
         $period = (int) $loanType->period;
         $periodUnit = $loanType->unit;
@@ -945,11 +950,13 @@ class LoanCalculator
         }
         
         // ============ GET THE CYCLE PRINCIPAL ============
-        // FIXED: Use cycle's new_balance as principal
+        // FIXED: Use previous_balance as principal if > 0, otherwise use loan amount
         if ($activeCycle) {
-            $cyclePrincipal = $activeCycle->new_balance > 0 ? $activeCycle->new_balance : $loan->amount;
+            $cyclePrincipal = $activeCycle->previous_balance > 0 
+                ? $activeCycle->previous_balance 
+                : $loanAmount;
         } else {
-            $cyclePrincipal = $loan->amount;
+            $cyclePrincipal = $loanAmount;
         }
         
         // ============ CALCULATE INTEREST ============

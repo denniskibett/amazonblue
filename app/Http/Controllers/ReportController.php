@@ -33,14 +33,20 @@ class ReportController extends Controller
 
     public function show($reportType)
     {
+        // Generate report data
         $reportData = $this->generateReport($reportType);
         $filters = $this->getReportFilters($reportType);
+        
+        // Determine available charts for this report type
+        $availableCharts = $this->getAvailableChartsForReport($reportType);
         
         return view('reports.show', [
             'reportType' => $reportType,
             'reportData' => $reportData,
             'filters' => $filters,
-            'reportTitle' => $this->getReportTitle($reportType)
+            'reportTitle' => $this->getReportTitle($reportType),
+            'availableCharts' => $availableCharts,
+            'defaultChart' => $availableCharts[0]['value'] ?? 'default'
         ]);
     }
 
@@ -176,10 +182,6 @@ class ReportController extends Controller
 
     private function generateReport($reportType, $filters = [])
     {
-        $user = auth()->user();
-        $startDate = $filters['start_date'] ?? Carbon::now()->startOfMonth();
-        $endDate = $filters['end_date'] ?? Carbon::now()->endOfMonth();
-        
         switch ($reportType) {
             case 'customer_reports':
                 return $this->generateCustomerReport($filters);
@@ -216,11 +218,86 @@ class ReportController extends Controller
         }
     }
 
+    private function getAvailableChartsForReport($reportType)
+    {
+        $charts = [
+            'customer_reports' => [
+                ['label' => 'Customer Balance', 'value' => 'customer-balance'],
+                ['label' => 'Role Distribution', 'value' => 'role-distribution']
+            ],
+            'customer_balance_summary' => [
+                ['label' => 'Outstanding Balance', 'value' => 'outstanding-balance'],
+                ['label' => 'Repayment %', 'value' => 'repayment-percentage']
+            ],
+            'customer_statistics' => [
+                ['label' => 'Gender Distribution', 'value' => 'gender-distribution'],
+                ['label' => 'Age Distribution', 'value' => 'age-distribution'],
+                ['label' => 'Behavior', 'value' => 'customer-behavior']
+            ],
+            'customer_savings' => [
+                ['label' => 'Savings Balance', 'value' => 'savings-balance']
+            ],
+            'loan_portfolio' => [
+                ['label' => 'Status Distribution', 'value' => 'status-distribution'],
+                ['label' => 'By Loan Type', 'value' => 'loan-type-distribution'],
+                ['label' => 'By Size', 'value' => 'loan-size-distribution']
+            ],
+            'active_loans' => [
+                ['label' => 'Amount vs Balance', 'value' => 'amount-vs-balance'],
+                ['label' => 'Repayment %', 'value' => 'active-repayment-percentage']
+            ],
+            'completed_loans' => [
+                ['label' => 'Principal vs Interest', 'value' => 'principal-vs-interest'],
+                ['label' => 'Duration', 'value' => 'duration']
+            ],
+            'defaulted_loans' => [
+                ['label' => 'Default Breakdown', 'value' => 'default-breakdown'],
+                ['label' => 'Recovery Status', 'value' => 'recovery-status']
+            ],
+            'expected_repayments' => [
+                ['label' => 'Expected Repayments', 'value' => 'expected-repayments'],
+                ['label' => 'Status Breakdown', 'value' => 'repayment-status-breakdown']
+            ],
+            'loan_disbursement' => [
+                ['label' => 'Disbursement Amounts', 'value' => 'disbursement-amounts'],
+                ['label' => 'By Channel', 'value' => 'disbursement-channel']
+            ],
+            'group_summary' => [
+                ['label' => 'Loan Status', 'value' => 'group-loan-status'],
+                ['label' => 'Financial Summary', 'value' => 'financial-summary'],
+                ['label' => 'Performance Metrics', 'value' => 'performance-metrics']
+            ],
+            'cashflow' => [
+                ['label' => 'Cashflow Trend', 'value' => 'cashflow-trend'],
+                ['label' => 'Running Balance', 'value' => 'running-balance']
+            ],
+            'journal_entries' => [
+                ['label' => 'Journal Entries', 'value' => 'journal-entries']
+            ],
+            'cic_reports' => [
+                ['label' => 'Credit Score', 'value' => 'credit-score-distribution'],
+                ['label' => 'Bureau Listings', 'value' => 'bureau-listings']
+            ],
+            'crb_report' => [
+                ['label' => 'Default Amounts', 'value' => 'default-amounts'],
+                ['label' => 'Default vs Cleared', 'value' => 'default-vs-cleared']
+            ]
+        ];
+
+        return $charts[$reportType] ?? [
+            ['label' => 'Default', 'value' => 'default']
+        ];
+    }
+
+    // ============================================================
+    // REPORT GENERATION METHODS (LIGHTWEIGHT - JUST DATA)
+    // ============================================================
+
     private function generateCustomerReport($filters)
     {
         $users = User::with(['borrower', 'loans', 'repayments'])->get();
         
-        $data = [
+        return [
             'summary' => [
                 'total_customers' => $users->count(),
                 'active_customers' => $users->where('status', 0)->count(),
@@ -248,8 +325,6 @@ class ReportController extends Controller
                 ];
             })
         ];
-        
-        return $data;
     }
 
     private function generateCicReport($filters)
@@ -276,7 +351,7 @@ class ReportController extends Controller
     {
         $loans = Loan::with(['loanType', 'user', 'repayments', 'disbursements'])->get();
         
-        $portfolio = [
+        return [
             'summary' => [
                 'total_loans' => $loans->count(),
                 'total_portfolio_value' => $loans->sum('amount'),
@@ -317,94 +392,6 @@ class ReportController extends Controller
                     'status' => $loan->status,
                     'borrow_date' => $loan->borrow_date->format('Y-m-d'),
                     'repayment_percentage' => $this->calculateRepaymentPercentage($loan)
-                ];
-            })
-        ];
-        
-        return $portfolio;
-    }
-
-    private function generateExpectedRepaymentsReport($filters)
-    {
-        $startDate = $filters['start_date'] ?? Carbon::now()->startOfMonth();
-        $endDate = $filters['end_date'] ?? Carbon::now()->endOfMonth();
-        
-        $loans = Loan::with(['loanType', 'user', 'repayments'])
-            ->whereIn('status', ['approved', 'disbursed'])
-            ->get();
-        
-        $expectedRepayments = [];
-        $totalExpected = 0;
-        
-        foreach ($loans as $loan) {
-            $dueDate = Carbon::parse($loan->borrow_date);
-            $dueDate->add($loan->loanType->period, $loan->loanType->unit);
-            
-            $outstanding = $this->loanCalculator->calculateLoanMetrics($loan)['outstanding_balance'];
-            
-            if ($outstanding > 0 && $dueDate->between($startDate, $endDate)) {
-                $expectedRepayments[] = [
-                    'loan_id' => $loan->id,
-                    'borrower' => $loan->user->name,
-                    'amount' => $loan->amount,
-                    'outstanding' => $outstanding,
-                    'due_date' => $dueDate->format('Y-m-d'),
-                    'days_until_due' => Carbon::now()->diffInDays($dueDate, false),
-                    'status' => $dueDate->isPast() ? 'Overdue' : 'Pending'
-                ];
-                $totalExpected += $outstanding;
-            }
-        }
-        
-        return [
-            'summary' => [
-                'total_expected' => $totalExpected,
-                'total_loans' => count($expectedRepayments),
-                'overdue' => collect($expectedRepayments)->where('status', 'Overdue')->count(),
-                'pending' => collect($expectedRepayments)->where('status', 'Pending')->count(),
-            ],
-            'repayments' => $expectedRepayments
-        ];
-    }
-
-    private function generateCrbReport($filters)
-    {
-        // Get loans that have been rejected (defaulted) for CRB reporting
-        $defaultedLoans = Loan::with(['user', 'loanType'])
-            ->where('status', 'rejected')
-            ->get();
-            
-        $repaidLoans = Loan::with(['user'])
-            ->where('status', 'repaid')
-            ->get();
-        
-        return [
-            'summary' => [
-                'total_defaults' => $defaultedLoans->count(),
-                'total_default_amount' => $defaultedLoans->sum('amount'),
-                'total_cleared' => $repaidLoans->count(),
-                'total_cleared_amount' => $repaidLoans->sum('amount'),
-                'pending_review' => Loan::where('status', 'pending')->count(),
-            ],
-            'defaults' => $defaultedLoans->map(function ($loan) {
-                return [
-                    'id' => $loan->id,
-                    'borrower' => $loan->user->name,
-                    'amount' => $loan->amount,
-                    'borrow_date' => $loan->borrow_date->format('Y-m-d'),
-                    'default_date' => $loan->updated_at->format('Y-m-d'),
-                    'status' => 'Defaulted',
-                    'reference_number' => 'CRB-' . str_pad($loan->id, 6, '0', STR_PAD_LEFT)
-                ];
-            }),
-            'cleared' => $repaidLoans->map(function ($loan) {
-                return [
-                    'id' => $loan->id,
-                    'borrower' => $loan->user->name,
-                    'amount' => $loan->amount,
-                    'repayment_date' => $loan->updated_at->format('Y-m-d'),
-                    'status' => 'Cleared',
-                    'reference_number' => 'CLR-' . str_pad($loan->id, 6, '0', STR_PAD_LEFT)
                 ];
             })
         ];
@@ -515,12 +502,95 @@ class ReportController extends Controller
         ];
     }
 
+    private function generateExpectedRepaymentsReport($filters)
+    {
+        $startDate = $filters['start_date'] ?? Carbon::now()->startOfMonth();
+        $endDate = $filters['end_date'] ?? Carbon::now()->endOfMonth();
+        
+        $loans = Loan::with(['loanType', 'user', 'repayments'])
+            ->whereIn('status', ['approved', 'disbursed'])
+            ->get();
+        
+        $expectedRepayments = [];
+        $totalExpected = 0;
+        
+        foreach ($loans as $loan) {
+            $dueDate = Carbon::parse($loan->borrow_date);
+            $dueDate->add($loan->loanType->period, $loan->loanType->unit);
+            
+            $outstanding = $this->loanCalculator->calculateLoanMetrics($loan)['outstanding_balance'];
+            
+            if ($outstanding > 0 && $dueDate->between($startDate, $endDate)) {
+                $expectedRepayments[] = [
+                    'loan_id' => $loan->id,
+                    'borrower' => $loan->user->name,
+                    'amount' => $loan->amount,
+                    'outstanding' => $outstanding,
+                    'due_date' => $dueDate->format('Y-m-d'),
+                    'days_until_due' => Carbon::now()->diffInDays($dueDate, false),
+                    'status' => $dueDate->isPast() ? 'Overdue' : 'Pending'
+                ];
+                $totalExpected += $outstanding;
+            }
+        }
+        
+        return [
+            'summary' => [
+                'total_expected' => $totalExpected,
+                'total_loans' => count($expectedRepayments),
+                'overdue' => collect($expectedRepayments)->where('status', 'Overdue')->count(),
+                'pending' => collect($expectedRepayments)->where('status', 'Pending')->count(),
+            ],
+            'repayments' => $expectedRepayments
+        ];
+    }
+
+    private function generateCrbReport($filters)
+    {
+        $defaultedLoans = Loan::with(['user', 'loanType'])
+            ->where('status', 'rejected')
+            ->get();
+            
+        $repaidLoans = Loan::with(['user'])
+            ->where('status', 'repaid')
+            ->get();
+        
+        return [
+            'summary' => [
+                'total_defaults' => $defaultedLoans->count(),
+                'total_default_amount' => $defaultedLoans->sum('amount'),
+                'total_cleared' => $repaidLoans->count(),
+                'total_cleared_amount' => $repaidLoans->sum('amount'),
+                'pending_review' => Loan::where('status', 'pending')->count(),
+            ],
+            'defaults' => $defaultedLoans->map(function ($loan) {
+                return [
+                    'id' => $loan->id,
+                    'borrower' => $loan->user->name,
+                    'amount' => $loan->amount,
+                    'borrow_date' => $loan->borrow_date->format('Y-m-d'),
+                    'default_date' => $loan->updated_at->format('Y-m-d'),
+                    'status' => 'Defaulted',
+                    'reference_number' => 'CRB-' . str_pad($loan->id, 6, '0', STR_PAD_LEFT)
+                ];
+            }),
+            'cleared' => $repaidLoans->map(function ($loan) {
+                return [
+                    'id' => $loan->id,
+                    'borrower' => $loan->user->name,
+                    'amount' => $loan->amount,
+                    'repayment_date' => $loan->updated_at->format('Y-m-d'),
+                    'status' => 'Cleared',
+                    'reference_number' => 'CLR-' . str_pad($loan->id, 6, '0', STR_PAD_LEFT)
+                ];
+            })
+        ];
+    }
+
     private function generateGroupSummaryReport($filters)
     {
-        $user = auth()->user();
         $loans = Loan::with(['loanType', 'user', 'repayments', 'disbursements'])->get();
         
-        // Calculate financial metrics
         $totalDisbursed = $loans->sum(function($loan) {
             return $loan->disbursements->sum('amount');
         });
@@ -779,35 +849,6 @@ class ReportController extends Controller
     {
         $users = User::with(['loans', 'repayments'])->get();
         
-        $genderDistribution = [
-            'male' => $users->where('gender', 'male')->count(),
-            'female' => $users->where('gender', 'female')->count(),
-            'other' => $users->where('gender', 'other')->count(),
-        ];
-        
-        $ageGroups = [
-            '18_25' => $users->filter(function($user) { 
-                $age = $user->age; 
-                return $age >= 18 && $age <= 25;
-            })->count(),
-            '26_35' => $users->filter(function($user) { 
-                $age = $user->age; 
-                return $age >= 26 && $age <= 35;
-            })->count(),
-            '36_45' => $users->filter(function($user) { 
-                $age = $user->age; 
-                return $age >= 36 && $age <= 45;
-            })->count(),
-            '46_60' => $users->filter(function($user) { 
-                $age = $user->age; 
-                return $age >= 46 && $age <= 60;
-            })->count(),
-            '60_plus' => $users->filter(function($user) { 
-                $age = $user->age; 
-                return $age > 60;
-            })->count(),
-        ];
-        
         return [
             'summary' => [
                 'total_customers' => $users->count(),
@@ -822,8 +863,33 @@ class ReportController extends Controller
                 'churn_rate' => 5.2,
             ],
             'demographics' => [
-                'gender' => $genderDistribution,
-                'age_groups' => $ageGroups,
+                'gender' => [
+                    'male' => $users->where('gender', 'male')->count(),
+                    'female' => $users->where('gender', 'female')->count(),
+                    'other' => $users->where('gender', 'other')->count(),
+                ],
+                'age_groups' => [
+                    '18_25' => $users->filter(function($user) { 
+                        $age = $user->age; 
+                        return $age >= 18 && $age <= 25;
+                    })->count(),
+                    '26_35' => $users->filter(function($user) { 
+                        $age = $user->age; 
+                        return $age >= 26 && $age <= 35;
+                    })->count(),
+                    '36_45' => $users->filter(function($user) { 
+                        $age = $user->age; 
+                        return $age >= 36 && $age <= 45;
+                    })->count(),
+                    '46_60' => $users->filter(function($user) { 
+                        $age = $user->age; 
+                        return $age >= 46 && $age <= 60;
+                    })->count(),
+                    '60_plus' => $users->filter(function($user) { 
+                        $age = $user->age; 
+                        return $age > 60;
+                    })->count(),
+                ],
                 'marital_status' => [
                     'single' => $users->where('marital_status', 'single')->count(),
                     'married' => $users->where('marital_status', 'married')->count(),
