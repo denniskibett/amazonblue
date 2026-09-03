@@ -63,23 +63,43 @@ class RepaymentController extends Controller
     {
         $validated = $request->validate([
             'loan_id' => 'required|exists:loans,id',
-            'loan_cycle_id' => 'required|exists:loan_cycles,id', // Make this required
+            'loan_cycle_id' => 'required|exists:loan_cycles,id',
             'amount' => 'required|numeric|min:0',
             'repayment_date' => 'required|date',
             'transaction' => 'nullable|string',
             'mode' => 'nullable|string',
         ]);
 
+        // Create repayment
         $repayment = Repayment::create($validated);
         
-        // Update the cycle balance
+        // ============ UPDATE THE CYCLE ============
         $cycle = LoanCycle::find($validated['loan_cycle_id']);
         if ($cycle) {
-            // Recalculate the cycle balance
-            $outstanding = $cycle->new_balance - $validated['amount'];
-            // Update cycle status if fully paid
+            $cycleRepayments = Repayment::where('loan_cycle_id', $cycle->id)->sum('amount');
+            $outstanding = $cycle->new_balance - $cycleRepayments;
+            
             if ($outstanding <= 0) {
                 $cycle->update(['status' => 'completed']);
+            }
+        }
+        
+        // ============ UPDATE THE LOAN STATUS DIRECTLY ============
+        $loan = Loan::find($validated['loan_id']);
+        if ($loan) {
+            // Check if all cycles are completed
+            $hasActiveCycles = $loan->cycles()
+                ->where('status', 'active')
+                ->exists();
+            
+            // Check if total repayments cover the loan amount
+            $totalRepaid = $loan->repayments()->sum('amount');
+            $totalLoanAmount = $loan->amount;
+            
+            // If no active cycles OR total repayments >= loan amount
+            if (!$hasActiveCycles || $totalRepaid >= $totalLoanAmount) {
+                $loan->status = Loan::STATUS_REPAID;
+                $loan->save();
             }
         }
 
@@ -159,11 +179,40 @@ class RepaymentController extends Controller
             abort(403, 'Unauthorized action.');
         }
         
-        // Reverse the processing fee from loan total
-        $loan->total_processing_fees = max(0, ($loan->total_processing_fees ?? 0) - $repayment->processing_fee);
-        $loan->save();
+        $loanId = $repayment->loan_id;
+        $cycleId = $repayment->loan_cycle_id;
         
+        // Delete the repayment
         $repayment->delete();
+        
+        // ============ UPDATE THE CYCLE STATUS ============
+        $cycle = LoanCycle::find($cycleId);
+        if ($cycle) {
+            $cycleRepayments = Repayment::where('loan_cycle_id', $cycleId)->sum('amount');
+            $outstanding = $cycle->new_balance - $cycleRepayments;
+            
+            if ($outstanding > 0) {
+                $cycle->update(['status' => 'active']);
+            }
+        }
+        
+        // ============ UPDATE THE LOAN STATUS ============
+        $loan = Loan::find($loanId);
+        if ($loan && $loan->status === Loan::STATUS_REPAID) {
+            // Recalculate - if not fully repaid anymore, revert status
+            $totalRepaid = $loan->repayments()->sum('amount');
+            $totalLoanAmount = $loan->amount;
+            
+            if ($totalRepaid < $totalLoanAmount) {
+                $dueDate = $loan->getDueDate();
+                if ($dueDate && Carbon::now()->gt($dueDate)) {
+                    $loan->status = Loan::STATUS_OVERDUE;
+                } else {
+                    $loan->status = Loan::STATUS_ACTIVE;
+                }
+                $loan->save();
+            }
+        }
         
         return response()->json([
             'message' => 'Repayment deleted successfully!'

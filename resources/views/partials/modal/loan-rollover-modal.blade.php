@@ -171,6 +171,28 @@
                     </div>
                 </div>
 
+
+<!-- ============ PAYMENT PLAN TOGGLE ============ -->
+<div class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+    <label class="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" x-model="waivePenalty" class="mt-1 w-4 h-4 text-yellow-600 focus:ring-yellow-500">
+        <div>
+            <div class="flex items-center gap-2">
+                <p class="font-medium text-gray-900 dark:text-white">📋 Payment Plan (Waive Penalties)</p>
+                <span x-show="waivePenalty" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
+                    Selected
+                </span>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Create a payment plan with waived penalties. New cycle will be in forbearance.
+            </p>
+            <div x-show="waivePenalty" class="mt-2 p-2 bg-green-100 dark:bg-green-800/30 rounded-lg">
+                <p class="text-xs text-green-700 dark:text-green-300 font-medium">✅ Penalties will be WAIVED for this cycle</p>
+            </div>
+        </div>
+    </label>
+</div>
+
                 <!-- Rollover Preview -->
                 <div class="mb-6 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                     <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Current Rollover Preview</h4>
@@ -388,7 +410,10 @@ document.addEventListener('alpine:init', function() {
                         },
                         body: JSON.stringify({ 
                             notes: this.notes,
-                            interest_type: this.interestType 
+                            interest_type: this.interestType,
+                            waive_penalty: this.waivePenalty,  // Add this
+                            interest_rate: this.customInterestRate,  // Add custom rate
+                            period_days: this.customPeriodDays  // Add custom period
                         })
                     });
 

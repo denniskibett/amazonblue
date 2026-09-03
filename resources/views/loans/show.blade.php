@@ -468,6 +468,7 @@
 
 {{-- Include all modals --}}
 @include('partials.modal.loan-rollover-modal')
+@include('partials.modal.loan-payment-plan-modal') 
 @include('partials.modal.loan-cycles-modal')
 @include('partials.modal.cases-create-modal')
 @include('partials.modal.disbursement-create-modal')

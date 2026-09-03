@@ -63,18 +63,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/loans/{loan}/repayments/create', [RepaymentController::class, 'create'])->name('loans.repayments.create');
         Route::post('/loans/{loan}/repayments', [RepaymentController::class, 'store'])->name('loans.repayments.store');
     });
-@
+
     // Loans Resource
     Route::resource('loans', LoanController::class);
 
-    // ============ LOAN ROLLOVER & FORBEARANCE ROUTES ============
+    // ============ LOAN ROLLOVER, FORBEARANCE, & PAYMENT PLAN ROUTES ============
     Route::prefix('loans/{loan}')->name('loans.')->group(function () {
         // Rollover Routes
         Route::post('/rollover', [LoanController::class, 'rollover'])->name('rollover');
         Route::get('/rollover-statement', [LoanController::class, 'rolloverStatement'])->name('rollover.statement');
+        Route::get('/rollover-preview', [LoanController::class, 'getRolloverPreview'])->name('rollover.preview');
         
-        Route::get('/cycles', [LoanController::class, 'getCycles'])->name('loans.cycles');
-        Route::get('/rollover-preview', [LoanController::class, 'getRolloverPreview'])->name('loans.rollover.preview');
+        // ============ PAYMENT PLAN ROUTES (NEW) ============
+        Route::get('/payment-plan-preview', [LoanController::class, 'getPaymentPlanPreview'])->name('payment-plan.preview');
+        Route::post('/payment-plan', [LoanController::class, 'createPaymentPlan'])->name('payment-plan.create');
+        
+        // Cycle Routes
+        Route::get('/cycles', [LoanController::class, 'getCycles'])->name('cycles');
         
         // Forbearance Routes
         Route::post('/forbearance', [LoanController::class, 'grantForbearance'])->name('forbearance.grant');

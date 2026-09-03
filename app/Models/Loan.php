@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Log; 
 use Carbon\Carbon;
 
 class Loan extends Model
@@ -326,19 +327,39 @@ class Loan extends Model
             return;
         }
 
+        // ============ CHECK IF LOAN IS FULLY REPAID ============
+        // Check if all cycles are completed
+        $hasActiveCycles = $this->cycles()
+            ->where('status', 'active')
+            ->exists();
+        
+        // Check if total repayments cover the loan amount
+        $totalRepaid = $this->repayments()->sum('amount');
+        $totalLoanAmount = $this->amount;
+        
+        if (!$hasActiveCycles || $totalRepaid >= $totalLoanAmount) {
+            $this->status = self::STATUS_REPAID;
+            $this->save();
+            Log::info('Loan auto-marked as repaid', [
+                'loan_id' => $this->id,
+                'total_repaid' => $totalRepaid,
+                'loan_amount' => $totalLoanAmount,
+                'has_active_cycles' => $hasActiveCycles
+            ]);
+            return;
+        }
+
         // Don't update if in forbearance
         if ($this->isForbearanceActive()) {
             return;
         }
 
-        // Don't update if in recovery (handled by recovery case)
+        // Don't update if in recovery
         if ($this->isInRecovery()) {
             return;
         }
 
         $dueDate = $this->getDueDate();
-        
-        // No due date - can't determine status
         if (!$dueDate) {
             return;
         }
@@ -346,16 +367,13 @@ class Loan extends Model
         $daysOverdue = $this->calculateDaysOverdue();
         $threshold = $this->getNplThreshold();
 
-        // Update days overdue
         $this->days_overdue = $daysOverdue;
         $this->last_overdue_check = now();
 
-        // CASE 1: Not overdue
         if ($daysOverdue <= 0) {
             if (in_array($this->status, [self::STATUS_OVERDUE, self::STATUS_DEFAULTED])) {
                 $this->status = self::STATUS_ACTIVE;
             }
-            // Reset NPL flags if they were set
             if ($this->is_non_performing) {
                 $this->is_non_performing = false;
             }
@@ -363,7 +381,6 @@ class Loan extends Model
             return;
         }
 
-        // CASE 2: Check grace days
         if ($this->grace_days_balance > 0 && $this->grace_days_balance >= $daysOverdue) {
             $this->useGraceDays((int) $daysOverdue);
             if (in_array($this->status, [self::STATUS_OVERDUE, self::STATUS_DEFAULTED])) {
@@ -373,14 +390,12 @@ class Loan extends Model
             return;
         }
 
-        // CASE 3: Defaulted
         if ($daysOverdue >= $threshold && !$this->default_triggered) {
-            $this->markAsDefaulted("Loan overdue for {$daysOverdue} days (threshold: {$threshold} days)");
+            $this->markAsDefaulted("Loan overdue for {$daysOverdue} days");
             $this->save();
             return;
         }
 
-        // CASE 4: Overdue (but not defaulted yet)
         if ($this->status !== self::STATUS_OVERDUE) {
             $this->status = self::STATUS_OVERDUE;
             $this->save();
@@ -433,11 +448,23 @@ class Loan extends Model
             return;
         }
 
+        // Calculate the forbearance end date
+        $forbearanceUntil = now()->addDays($days);
+        
         $this->status = self::STATUS_FORBEARANCE;
-        $this->forbearance_until = now()->addDays($days);
+        $this->forbearance_until = $forbearanceUntil;
+        $this->calculated_due_date = $forbearanceUntil;
+        $this->due_date = $forbearanceUntil;
+        
         $this->recovery_notes = ($this->recovery_notes ? $this->recovery_notes . "\n" : '') . 
-                               "Forbearance granted: {$reason} until {$this->forbearance_until->format('Y-m-d')}";
+                               "Forbearance granted: {$reason} until {$forbearanceUntil->format('Y-m-d')}";
         $this->save();
+        
+        Log::info('Forbearance granted', [
+            'loan_id' => $this->id,
+            'days' => $days,
+            'until' => $forbearanceUntil->format('Y-m-d'),
+        ]);
     }
 
     public function endForbearance(): void
@@ -449,11 +476,81 @@ class Loan extends Model
         }
     }
 
-    public function isForbearanceActive(): bool
+    public function manualBalanceAdjustment(float $newBalance, string $reason = null): LoanCycle
+    {
+        $activeCycle = $this->getCurrentCycle();
+        if (!$activeCycle) {
+            throw new \Exception('No active cycle found');
+        }
+        
+        $loanType = $this->loanType;
+        $interestRate = (float) $loanType->interest_rate;
+        $periodDays = (int) $loanType->period;
+        
+        // Calculate interest on the new balance
+        $interest = $newBalance * ($interestRate / 100);
+        $totalBalance = $newBalance + $interest;
+        
+        // Calculate due date
+        $newDueDate = now()->addDays($periodDays);
+        
+        // Mark old cycle as completed
+        $activeCycle->update(['status' => 'completed']);
+        
+        // Create new cycle with manual balance
+        $newCycle = LoanCycle::create([
+            'loan_id' => $this->id,
+            'cycle_number' => $this->cycle + 1,
+            'previous_balance' => $newBalance,
+            'interest_capitalized' => $interest,
+            'new_balance' => $totalBalance,
+            'interest_rate' => $interestRate,
+            'start_date' => now(),
+            'due_date' => $newDueDate,
+            'status' => 'active',
+            'notes' => "MANUAL ADJUSTMENT: New principal set to KES " . number_format($newBalance, 2) . 
+                       " | Interest: {$interestRate}% | Reason: {$reason}"
+        ]);
+        
+        // Update loan
+        $this->cycle += 1;
+        $this->amount = $totalBalance;
+        $this->status = self::STATUS_FORBEARANCE;
+        $this->forbearance_until = $newDueDate;
+        $this->calculated_due_date = $newDueDate;
+        $this->due_date = $newDueDate;
+        $this->capitalized_interest = ($this->capitalized_interest ?? 0) + $interest;
+        $this->save();
+        
+        Log::info('Manual balance adjustment applied', [
+            'loan_id' => $this->id,
+            'old_cycle' => $activeCycle->cycle_number,
+            'new_cycle' => $newCycle->cycle_number,
+            'new_balance' => $newBalance,
+            'total_balance' => $totalBalance,
+            'interest' => $interest,
+            'due_date' => $newDueDate->format('Y-m-d'),
+            'reason' => $reason,
+        ]);
+        
+        return $newCycle;
+    }
+
+   public function isForbearanceActive(): bool
     {
         return $this->status === self::STATUS_FORBEARANCE && 
                $this->forbearance_until && 
                Carbon::now()->lte($this->forbearance_until);
+    }
+
+    /**
+     * Get current active cycle
+     */
+    public function getCurrentCycle(): ?LoanCycle
+    {
+        return $this->cycles()
+            ->where('status', 'active')
+            ->first();
     }
 
     // ============ RECOVERY CASE CREATION ============
@@ -600,11 +697,6 @@ class Loan extends Model
             'status' => $data['status'] ?? 'active',
             'notes' => $data['notes'] ?? null,
         ]);
-    }
-
-    public function getCurrentCycle(): ?LoanCycle
-    {
-        return $this->cycles()->where('status', 'active')->first();
     }
 
     public function getRolloverStatement(): array
@@ -856,6 +948,162 @@ class Loan extends Model
     public function getTotalDueWithPenalties(): float
     {
         return $this->calculateTotalDue() + $this->calculatePenalties();
+    }
+
+    public function startPaymentPlan(float $customInterestRate = null, int $periodDays = null, float $manualNewBalance = null): LoanCycle
+    {
+        $activeCycle = $this->getCurrentCycle();
+        if (!$activeCycle) {
+            throw new \Exception('No active cycle found');
+        }
+        
+        // ============ GET LOAN TYPE DEFAULTS ============
+        $loanType = $this->loanType;
+        $defaultRate = (float) $loanType->interest_rate;
+        $defaultPeriod = (int) $loanType->period;
+        
+        // ============ USE PROVIDED VALUES OR DEFAULTS ============
+        $interestRate = $customInterestRate ?? $defaultRate;
+        $periodDays = $periodDays ?? $defaultPeriod;
+        
+        // ============ CALCULATE THE TRUE OUTSTANDING ============
+        $cycleRepayments = $this->repayments()
+            ->where('loan_cycle_id', $activeCycle->id)
+            ->sum('amount');
+        
+        $principal = $activeCycle->previous_balance > 0 
+            ? $activeCycle->previous_balance 
+            : $this->amount;
+        
+        $interest = $principal * ($interestRate / 100);
+        $fullBalance = $principal + $interest;
+        $outstanding = max(0, $fullBalance - $cycleRepayments);
+        
+        // ============ MANUAL BALANCE OVERRIDE ============
+        // If manual new balance is provided, use it directly
+        // This allows staff to set any balance (e.g., 180k → 50k)
+        if ($manualNewBalance !== null && $manualNewBalance >= 0) {
+            $newPrincipal = $manualNewBalance;
+            // Calculate interest on the new manual balance
+            $newInterest = $newPrincipal * ($interestRate / 100);
+            $newBalance = $newPrincipal + $newInterest;
+            
+            Log::info('Manual balance override applied', [
+                'loan_id' => $this->id,
+                'old_outstanding' => $outstanding,
+                'new_manual_balance' => $manualNewBalance,
+                'difference' => $outstanding - $manualNewBalance,
+            ]);
+        } else {
+            // Normal calculation
+            $newPrincipal = $outstanding;
+            $newInterest = $newPrincipal * ($interestRate / 100);
+            $newBalance = $newPrincipal + $newInterest;
+        }
+        
+        // ============ CALCULATE DUE DATE ============
+        // Due date = today + period days
+        $newDueDate = now()->addDays($periodDays);
+        
+        // ============ MARK OLD CYCLE AS COMPLETED ============
+        $activeCycle->update(['status' => 'completed']);
+        
+        // ============ CREATE NEW PAYMENT PLAN CYCLE ============
+        $notes = "PAYMENT PLAN: Interest {$interestRate}%, Period {$periodDays} days, Penalties WAIVED.";
+        $notes .= " Previous repayments: KES " . number_format($cycleRepayments, 2);
+        
+        if ($manualNewBalance !== null) {
+            $notes .= " | MANUAL ADJUSTMENT: New balance set to KES " . number_format($manualNewBalance, 2);
+        }
+        
+        $newCycle = LoanCycle::create([
+            'loan_id' => $this->id,
+            'cycle_number' => $this->cycle + 1,
+            'previous_balance' => $newPrincipal,
+            'interest_capitalized' => 0, // No interest
+            'new_balance' => $newBalance,
+            'interest_rate' => 0, // 0% interest for payment plan
+            'start_date' => now(),
+            'due_date' => now()->addDays($periodDays),
+            'status' => 'active',
+            'notes' => "PAYMENT PLAN: Interest 0%, Period {$periodDays} days, Penalties WAIVED. Previous repayments: KES " . number_format($cycleRepayments, 2)
+        ]);
+        
+        // ============ UPDATE LOAN ============
+        $this->cycle += 1;
+        $this->amount = $newBalance;
+        $this->status = self::STATUS_FORBEARANCE;
+        $this->forbearance_until = $newDueDate;
+        $this->calculated_due_date = $newDueDate;
+        $this->due_date = $newDueDate;
+        $this->capitalized_interest = ($this->capitalized_interest ?? 0) + $newInterest;
+        $this->save();
+        
+        Log::info('Payment plan started for loan #' . $this->id, [
+            'old_cycle' => $activeCycle->cycle_number,
+            'new_cycle' => $newCycle->cycle_number,
+            'old_outstanding' => $outstanding,
+            'new_principal' => $newPrincipal,
+            'new_interest' => $newInterest,
+            'new_balance' => $newBalance,
+            'interest_rate' => $interestRate,
+            'period_days' => $periodDays,
+            'due_date' => $newDueDate->format('Y-m-d'),
+            'manual_adjustment' => $manualNewBalance !== null,
+        ]);
+        
+        return $newCycle;
+    }
+
+    /**
+     * End forbearance and resume normal payments
+    */
+    public function endPaymentPlan(): void
+    {
+        if ($this->status !== self::STATUS_FORBEARANCE) {
+            return;
+        }
+        
+        $this->status = self::STATUS_ACTIVE;
+        $this->forbearance_until = null;
+        $this->save();
+        
+        Log::info('Payment plan ended for loan #' . $this->id);
+    }
+
+    /**
+     * Check if loan is fully repaid and update status
+     */
+    public function checkAndUpdateRepaidStatus(): bool
+    {
+        // If already repaid or final status, skip
+        if ($this->isFinal()) {
+            return false;
+        }
+        
+        // Check if all cycles are completed
+        $hasActiveCycles = $this->cycles()
+            ->where('status', 'active')
+            ->exists();
+        
+        // Check if total repayments cover the loan amount
+        $totalRepaid = $this->repayments()->sum('amount');
+        $totalLoanAmount = $this->amount;
+        
+        if (!$hasActiveCycles || $totalRepaid >= $totalLoanAmount) {
+            $this->status = self::STATUS_REPAID;
+            $this->save();
+            
+            Log::info('Loan auto-marked as repaid', [
+                'loan_id' => $this->id,
+                'total_repaid' => $totalRepaid,
+                'loan_amount' => $totalLoanAmount,
+                'has_active_cycles' => $hasActiveCycles
+            ]);
+            return true;
+        }
+        
+        return false;
     }
 
     // ============ BOOT ============

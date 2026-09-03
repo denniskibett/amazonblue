@@ -575,12 +575,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const paginationEnd = document.getElementById('paginationEnd');
     const paginationTotal = document.getElementById('paginationTotal');
     
-    // Status color mapping
+    // Status color mapping - ADD forbearance
     const statusColors = {
         'overdue': 'bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500',
         'due': 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-orange-400',
         'disbursed': 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
         'pending': 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-orange-400',
+        'active': 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
+        'approved': 'bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400',
+        'rejected': 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400',
+        'repaid': 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400',
+        'defaulted': 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400',
+        'recovery': 'bg-purple-50 text-purple-600 dark:bg-purple-500/15 dark:text-purple-400',
+        'forbearance': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',  // ADD THIS
+        'written_off': 'bg-slate-50 text-slate-600 dark:bg-slate-500/15 dark:text-slate-400',
         'default': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
     };
     

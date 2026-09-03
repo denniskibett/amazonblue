@@ -23,8 +23,16 @@
 
     {{-- Fonts --}}
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- In the head section, make sure Alpine.js is loaded BEFORE your custom scripts -->
 
-   
+    <!-- ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <!-- Flatpickr for date picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    
     <!-- Vite Assets -->
     @vite([
         'resources/css/app.css',
@@ -33,16 +41,10 @@
         'resources/js/index.js',
     ])
 
-<!-- In the head section, make sure Alpine.js is loaded BEFORE your custom scripts -->
-<!-- Alpine.js -->
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-<!-- ApexCharts -->
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-<!-- Flatpickr for date picker -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <style>    
         :root {

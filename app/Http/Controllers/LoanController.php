@@ -23,6 +23,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
+
 use TCPDF;
 
 class LoanController extends Controller
@@ -387,336 +388,336 @@ class LoanController extends Controller
     /**
      * Display the specified loan
      */
-public function show($id, $loanId = null)
-{
-    $user = auth()->user();
+    public function show($id, $loanId = null)
+    {
+        $user = auth()->user();
 
-    if (!$user) {
-        abort(403, 'Unauthorized');
-    }
-
-    // ============================================================
-    // BASIC DATA
-    // ============================================================
-    $brokers = Broker::with('user')->get();
-    $borrowers = Borrower::all();
-    $today = Carbon::now();
-
-    // ============================================================
-    // LOAD LOAN WITH REQUIRED RELATIONSHIPS
-    // ============================================================
-    $loanQuery = Loan::with([
-        'disbursements',
-        'repayments',
-        'loanType',
-        'user.borrower',
-        'guarantor',
-        'loanOfficer',
-        'cycles'
-    ]);
-
-    try {
-
-        if ($user->role === 'admin') {
-
-            $loan = $loanQuery
-                ->where('user_id', $id)
-                ->where('id', $loanId)
-                ->firstOrFail();
-
-        } elseif (in_array($user->role, ['broker', 'teller'])) {
-
-            $loan = $loanQuery
-                ->findOrFail($loanId);
-
-        } elseif ($user->role === 'borrower') {
-
-            $loan = $loanQuery
-                ->where('id', $loanId)
-                ->where('user_id', $user->id)
-                ->whereIn('status', ['approved', 'disbursed'])
-                ->firstOrFail();
-
-        } else {
-
-            abort(403, 'Unauthorized role');
+        if (!$user) {
+            abort(403, 'Unauthorized');
         }
 
-    } catch (ModelNotFoundException $e) {
+        // ============================================================
+        // BASIC DATA
+        // ============================================================
+        $brokers = Broker::with('user')->get();
+        $borrowers = Borrower::all();
+        $today = Carbon::now();
 
-        return response()->json([
-            'error' => 'Loan not found'
-        ], 404);
-    }
+        // ============================================================
+        // LOAD LOAN WITH REQUIRED RELATIONSHIPS
+        // ============================================================
+        $loanQuery = Loan::with([
+            'disbursements',
+            'repayments',
+            'loanType',
+            'user.borrower',
+            'guarantor',
+            'loanOfficer',
+            'cycles'
+        ]);
 
-    // ============================================================
-    // VALIDATE LOAN TYPE
-    // ============================================================
-    if (!$loan->loanType) {
-        abort(422, 'Loan type is not defined for this loan');
-    }
+        try {
 
-    // ============================================================
-    // LOAN CALCULATOR SERVICE
-    // ============================================================
-    $metrics = $this->loanCalculator->calculateLoanMetrics($loan);
+            if ($user->role === 'admin') {
 
-    // ============================================================
-    // GET ACTIVE CYCLE
-    // ============================================================
-    $activeCycle = $this->loanCalculator->getActiveCycle($loan);
+                $loan = $loanQuery
+                    ->where('user_id', $id)
+                    ->where('id', $loanId)
+                    ->firstOrFail();
 
-    $cycleCalculation = null;
+            } elseif (in_array($user->role, ['broker', 'teller'])) {
 
-    if ($activeCycle) {
-        $cycleCalculation = $this->loanCalculator
-            ->calculateCycleBalance($loan, $activeCycle);
-    }
+                $loan = $loanQuery
+                    ->findOrFail($loanId);
 
-    // Always work with an array
-    $cycleCalculation = $cycleCalculation ?? [];
+            } elseif ($user->role === 'borrower') {
 
-    // ============================================================
-    // CYCLE CALCULATED VALUES
-    // ============================================================
+                $loan = $loanQuery
+                    ->where('id', $loanId)
+                    ->where('user_id', $user->id)
+                    ->whereIn('status', ['approved', 'disbursed'])
+                    ->firstOrFail();
 
-    $cycleNumber = $cycleCalculation['cycle_number'] ?? $activeCycle?->cycle_number ?? 1;
-    $newCycleBalance = $cycleCalculation['new_balance'] ?? 0;
-    $cycleInterest = $cycleCalculation['interest'] ?? 0;
-    $cycleRepayments = $cycleCalculation['total_repayments'] ?? 0;
-    $outstandingAfterRepayments = $cycleCalculation['outstanding_after_repayments'] ?? 0;
-    $cyclePenalty = $cycleCalculation['penalty'] ?? 0;
-    $cycleOutstanding = $cycleCalculation['final_outstanding'] ?? 0;
-    $cycleDaysOverdue = $cycleCalculation['days_overdue'] ?? 0;
-    $cycleGraceDaysRemaining = $loan->getRemainingGraceDays();
-    $cycleGraceDaysBalance = $loan->grace_days_balance ?? 0;
-    $isFullyPaid = $cycleOutstanding <= 0;
-    $cycleBalanceFull = $cycleCalculation['new_balance'] ?? $metrics['principal_plus_interest'] ?? 0;
+            } else {
 
-    // ============================================================
-    // PENALTY VALUES
-    // ============================================================
-
-    $penaltyAmount = $cycleCalculation['penalty'] ?? $metrics['penalty_amount'] ?? 0;
-    $outstandingAtDue = $cycleCalculation['outstanding_at_due'] ?? $metrics['outstanding_at_due'] ?? 0;
-    $daysSubjectToPenalty = $cycleCalculation['days_subject_to_penalty'] ?? 0;
-    $penaltyRate = $cycleCalculation['penalty_rate'] ?? $metrics['base_penalty_rate'] ?? 0;
-
-    // ============================================================
-    // GET CLIENT TYPE
-    // ============================================================
-    $borrower = $loan->user->borrower;
-    $broker = $borrower->broker ?? null;
-    $client_type = $borrower->client_type ?? 0;
-
-    // ============================================================
-    // GET BROKER FEES
-    // ============================================================
-    $is_brokered = $loan->broker_status == 1;
-    $brokerRate = 0;
-    $penalty_rate = 0;
-    $total_broker_fees = 0;
-
-    if ($is_brokered && $broker) {
-
-        $clientType = $borrower->client_type ?? 0;
-
-        $brokerRate = ($clientType == 0)
-            ? ($broker->interest_client ?? 0)
-            : ($broker->interest_broker ?? 0);
-
-        $penalty_rate = ($clientType == 0)
-            ? ($broker->penalty_client ?? 0)
-            : ($broker->penalty_broker ?? 0);
-
-        $total_broker_fees =
-            $metrics['total_broker_fees'] ?? 0;
-    }
-
-    // ============================================================
-    // SIGNATURE STATUS
-    // ============================================================
-    $signatureStatus = $this->signatureService->checkSignature($loan->user);
-    $hasSignature = $signatureStatus['hasSignature'] ?? false;
-    $signatureUrl = $signatureStatus['signatureUrl'] ?? null;
-
-    // ============================================================
-    // DEFAULT STATUS
-    // ============================================================
-    $is_defaulted =
-        $loan->isDefaulted()
-        || ($metrics['is_defaulted'] ?? false);
-
-    $days_overdue =
-        $metrics['days_overdue'] ?? 0;
-
-    $penalty_amount = $metrics['penalty_amount'] ?? 0;
-
-    $default_threshold_days = $metrics['default_threshold_days'] ?? 30;
-
-    // ============================================================
-    // CASES / RECOVERY MODAL DATA
-    // ============================================================
-    $statuses = \App\Models\RecoveryStatus::all();
-    $priorities = \App\Models\RecoveryPriority::all();
-    $officers = User::whereIn('role', [
-        'admin',
-        'teller'
-    ])->get();
-
-    $actionTypes = \App\Models\ActionType::all();
-
-    // ============================================================
-    // ALL BORROWERS
-    // ============================================================
-    $allBorrowers = User::borrowers()
-        ->with([
-            'borrower',
-            'loans' => function ($q) {
-                $q->whereIn('status', [
-                    'disbursed',
-                    'approved',
-                    'overdue',
-                    'defaulted'
-                ])
-                ->with([
-                    'loanType',
-                    'repayments'
-                ]);
+                abort(403, 'Unauthorized role');
             }
-        ])
-        ->get();
 
-    // ============================================================
-    // RECOVERY CASE
-    // ============================================================
-    $recoveryCase = DebtRecoveryCase::where(
-        'loan_id',
-        $loan->id
-    )->first();
+        } catch (ModelNotFoundException $e) {
 
-    // ============================================================
-    // INTEREST RATE AND PERIOD
-    // ============================================================
-    $interest_rate =
-        $metrics['interest_rate']
-        ?? $loan->loanType->interest_rate
-        ?? 0;
+            return response()->json([
+                'error' => 'Loan not found'
+            ], 404);
+        }
 
-    $period =
-        $metrics['period']
-        ?? $loan->loanType->period
-        ?? 0;
+        // ============================================================
+        // VALIDATE LOAN TYPE
+        // ============================================================
+        if (!$loan->loanType) {
+            abort(422, 'Loan type is not defined for this loan');
+        }
 
-    $period_unit =
-        $metrics['period_unit']
-        ?? $loan->loanType->unit
-        ?? 'days';
+        // ============================================================
+        // LOAN CALCULATOR SERVICE
+        // ============================================================
+        $metrics = $this->loanCalculator->calculateLoanMetrics($loan);
 
-    // ============================================================
-    // DUE DATE
-    // ============================================================
-    $due_date =
-        $metrics['due_date'] ?? null;
+        // ============================================================
+        // GET ACTIVE CYCLE
+        // ============================================================
+        $activeCycle = $this->loanCalculator->getActiveCycle($loan);
 
-    $days_late =
-        $metrics['days_late'] ?? 0;
+        $cycleCalculation = null;
 
-    // ============================================================
-    // FINANCIAL METRICS
-    // ============================================================
-    $principal =
-        $metrics['principal']
-        ?? $loan->amount;
+        if ($activeCycle) {
+            $cycleCalculation = $this->loanCalculator
+                ->calculateCycleBalance($loan, $activeCycle);
+        }
 
-    $interest =
-        $metrics['interest']
-        ?? 0;
+        // Always work with an array
+        $cycleCalculation = $cycleCalculation ?? [];
 
-    $base_penalty_rate =
-        $metrics['base_penalty_rate']
-        ?? 0;
+        // ============================================================
+        // CYCLE CALCULATED VALUES
+        // ============================================================
 
-    $outstanding_at_due =
-        $metrics['outstanding_at_due']
-        ?? 0;
+        $cycleNumber = $cycleCalculation['cycle_number'] ?? $activeCycle?->cycle_number ?? 1;
+        $newCycleBalance = $cycleCalculation['new_balance'] ?? 0;
+        $cycleInterest = $cycleCalculation['interest'] ?? 0;
+        $cycleRepayments = $cycleCalculation['total_repayments'] ?? 0;
+        $outstandingAfterRepayments = $cycleCalculation['outstanding_after_repayments'] ?? 0;
+        $cyclePenalty = $cycleCalculation['penalty'] ?? 0;
+        $cycleOutstanding = $cycleCalculation['final_outstanding'] ?? 0;
+        $cycleDaysOverdue = $cycleCalculation['days_overdue'] ?? 0;
+        $cycleGraceDaysRemaining = $loan->getRemainingGraceDays();
+        $cycleGraceDaysBalance = $loan->grace_days_balance ?? 0;
+        $isFullyPaid = $cycleOutstanding <= 0;
+        $cycleBalanceFull = $cycleCalculation['new_balance'] ?? $metrics['principal_plus_interest'] ?? 0;
 
-    // ============================================================
-    // RETURN VIEW
-    // ============================================================
-    return view('loans.show', compact(
+        // ============================================================
+        // PENALTY VALUES
+        // ============================================================
 
-        // Loan
-        'loan',
+        $penaltyAmount = $cycleCalculation['penalty'] ?? $metrics['penalty_amount'] ?? 0;
+        $outstandingAtDue = $cycleCalculation['outstanding_at_due'] ?? $metrics['outstanding_at_due'] ?? 0;
+        $daysSubjectToPenalty = $cycleCalculation['days_subject_to_penalty'] ?? 0;
+        $penaltyRate = $cycleCalculation['penalty_rate'] ?? $metrics['base_penalty_rate'] ?? 0;
 
-        // General data
-        'brokers',
-        'borrowers',
-        'broker',
-        'today',
+        // ============================================================
+        // GET CLIENT TYPE
+        // ============================================================
+        $borrower = $loan->user->borrower;
+        $broker = $borrower->broker ?? null;
+        $client_type = $borrower->client_type ?? 0;
 
-        // Signature
-        'signatureStatus',
-        'hasSignature',
-        'signatureUrl',
+        // ============================================================
+        // GET BROKER FEES
+        // ============================================================
+        $is_brokered = $loan->broker_status == 1;
+        $brokerRate = 0;
+        $penalty_rate = 0;
+        $total_broker_fees = 0;
 
-        // Recovery / cases
-        'statuses',
-        'priorities',
-        'officers',
-        'actionTypes',
-        'allBorrowers',
-        'recoveryCase',
+        if ($is_brokered && $broker) {
 
-        // Calculator
-        'metrics',
-        'activeCycle',
-        'cycleCalculation',
+            $clientType = $borrower->client_type ?? 0;
 
-        // Cycle
-        'cycleNumber',
-        'newCycleBalance',
-        'cycleInterest',
-        'cycleRepayments',
-        'outstandingAfterRepayments',
-        'cyclePenalty',
-        'cycleOutstanding',
-        'cycleDaysOverdue',
-        'cycleGraceDaysRemaining',
-        'cycleGraceDaysBalance',
-        'isFullyPaid',
-        'cycleBalanceFull',
+            $brokerRate = ($clientType == 0)
+                ? ($broker->interest_client ?? 0)
+                : ($broker->interest_broker ?? 0);
 
-        // Penalty
-        'outstandingAtDue',
-        'penaltyAmount',
-        'daysSubjectToPenalty',
-        'penaltyRate',
+            $penalty_rate = ($clientType == 0)
+                ? ($broker->penalty_client ?? 0)
+                : ($broker->penalty_broker ?? 0);
 
-        // Client / broker
-        'client_type',
-        'is_brokered',
-        'brokerRate',
-        'penalty_rate',
-        'total_broker_fees',
+            $total_broker_fees =
+                $metrics['total_broker_fees'] ?? 0;
+        }
 
-        // Default
-        'is_defaulted',
-        'days_overdue',
-        'penalty_amount',
-        'default_threshold_days',
+        // ============================================================
+        // SIGNATURE STATUS
+        // ============================================================
+        $signatureStatus = $this->signatureService->checkSignature($loan->user);
+        $hasSignature = $signatureStatus['hasSignature'] ?? false;
+        $signatureUrl = $signatureStatus['signatureUrl'] ?? null;
 
-        // Financial metrics
-        'interest_rate',
-        'period',
-        'period_unit',
-        'due_date',
-        'days_late',
-        'principal',
-        'interest',
-        'base_penalty_rate'
-    ));
-}
+        // ============================================================
+        // DEFAULT STATUS
+        // ============================================================
+        $is_defaulted =
+            $loan->isDefaulted()
+            || ($metrics['is_defaulted'] ?? false);
+
+        $days_overdue =
+            $metrics['days_overdue'] ?? 0;
+
+        $penalty_amount = $metrics['penalty_amount'] ?? 0;
+
+        $default_threshold_days = $metrics['default_threshold_days'] ?? 30;
+
+        // ============================================================
+        // CASES / RECOVERY MODAL DATA
+        // ============================================================
+        $statuses = \App\Models\RecoveryStatus::all();
+        $priorities = \App\Models\RecoveryPriority::all();
+        $officers = User::whereIn('role', [
+            'admin',
+            'teller'
+        ])->get();
+
+        $actionTypes = \App\Models\ActionType::all();
+
+        // ============================================================
+        // ALL BORROWERS
+        // ============================================================
+        $allBorrowers = User::borrowers()
+            ->with([
+                'borrower',
+                'loans' => function ($q) {
+                    $q->whereIn('status', [
+                        'disbursed',
+                        'approved',
+                        'overdue',
+                        'defaulted'
+                    ])
+                    ->with([
+                        'loanType',
+                        'repayments'
+                    ]);
+                }
+            ])
+            ->get();
+
+        // ============================================================
+        // RECOVERY CASE
+        // ============================================================
+        $recoveryCase = DebtRecoveryCase::where(
+            'loan_id',
+            $loan->id
+        )->first();
+
+        // ============================================================
+        // INTEREST RATE AND PERIOD
+        // ============================================================
+        $interest_rate =
+            $metrics['interest_rate']
+            ?? $loan->loanType->interest_rate
+            ?? 0;
+
+        $period =
+            $metrics['period']
+            ?? $loan->loanType->period
+            ?? 0;
+
+        $period_unit =
+            $metrics['period_unit']
+            ?? $loan->loanType->unit
+            ?? 'days';
+
+        // ============================================================
+        // DUE DATE
+        // ============================================================
+        $due_date =
+            $metrics['due_date'] ?? null;
+
+        $days_late =
+            $metrics['days_late'] ?? 0;
+
+        // ============================================================
+        // FINANCIAL METRICS
+        // ============================================================
+        $principal =
+            $metrics['principal']
+            ?? $loan->amount;
+
+        $interest =
+            $metrics['interest']
+            ?? 0;
+
+        $base_penalty_rate =
+            $metrics['base_penalty_rate']
+            ?? 0;
+
+        $outstanding_at_due =
+            $metrics['outstanding_at_due']
+            ?? 0;
+
+        // ============================================================
+        // RETURN VIEW
+        // ============================================================
+        return view('loans.show', compact(
+
+            // Loan
+            'loan',
+
+            // General data
+            'brokers',
+            'borrowers',
+            'broker',
+            'today',
+
+            // Signature
+            'signatureStatus',
+            'hasSignature',
+            'signatureUrl',
+
+            // Recovery / cases
+            'statuses',
+            'priorities',
+            'officers',
+            'actionTypes',
+            'allBorrowers',
+            'recoveryCase',
+
+            // Calculator
+            'metrics',
+            'activeCycle',
+            'cycleCalculation',
+
+            // Cycle
+            'cycleNumber',
+            'newCycleBalance',
+            'cycleInterest',
+            'cycleRepayments',
+            'outstandingAfterRepayments',
+            'cyclePenalty',
+            'cycleOutstanding',
+            'cycleDaysOverdue',
+            'cycleGraceDaysRemaining',
+            'cycleGraceDaysBalance',
+            'isFullyPaid',
+            'cycleBalanceFull',
+
+            // Penalty
+            'outstandingAtDue',
+            'penaltyAmount',
+            'daysSubjectToPenalty',
+            'penaltyRate',
+
+            // Client / broker
+            'client_type',
+            'is_brokered',
+            'brokerRate',
+            'penalty_rate',
+            'total_broker_fees',
+
+            // Default
+            'is_defaulted',
+            'days_overdue',
+            'penalty_amount',
+            'default_threshold_days',
+
+            // Financial metrics
+            'interest_rate',
+            'period',
+            'period_unit',
+            'due_date',
+            'days_late',
+            'principal',
+            'interest',
+            'base_penalty_rate'
+        ));
+    }
 
     /**
      * Show the create loan form
@@ -896,6 +897,153 @@ public function show($id, $loanId = null)
         return redirect()->route('loans.index');
     }
 
+    // ============ PAYMENT PLAN METHODS ============
+
+    public function getPaymentPlanPreview(Loan $loan, Request $request)
+    {
+        try {
+            $activeCycle = $this->loanCalculator->getActiveCycle($loan);
+            
+            if (!$activeCycle) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active cycle found for this loan'
+                ], 404);
+            }
+
+            $cycleCalculation = $this->loanCalculator->calculateCycleBalance($loan, $activeCycle);
+            
+            // Current cycle figures
+            $principal = $activeCycle->previous_balance > 0 ? $activeCycle->previous_balance : $loan->amount;
+            $interestRate = (float) $activeCycle->interest_rate;
+            $interest = $principal * ($interestRate / 100);
+            $fullBalance = $principal + $interest;
+            $cycleRepayments = $loan->repayments()->where('loan_cycle_id', $activeCycle->id)->sum('amount');
+            $outstanding = max(0, $fullBalance - $cycleRepayments);
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    // Current cycle figures
+                    'current_principal' => $principal,
+                    'current_interest_rate' => $interestRate,
+                    'current_interest' => $interest,
+                    'current_balance' => $fullBalance,
+                    'current_repayments' => $cycleRepayments,
+                    'current_penalty' => $cycleCalculation['penalty'] ?? 0,
+                    'current_total' => $cycleCalculation['final_outstanding'] ?? 0,
+                    'days_overdue' => $cycleCalculation['days_overdue'] ?? 0,
+                    'current_cycle' => $activeCycle->cycle_number,
+                    'current_due_date' => $activeCycle->due_date->format('M d, Y'),
+                    'outstanding' => $outstanding,
+                    
+                    // Default settings
+                    'interest_rate' => $loan->loanType->interest_rate ?? 20,
+                    'period_days' => $loan->loanType->period ?? 30,
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Payment plan preview error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Create or update a payment plan
+     */
+    public function createPaymentPlan(Loan $loan, Request $request)
+    {
+        try {
+            $request->validate([
+                'interest_rate' => 'required|numeric|min:0|max:100',
+                'period_days' => 'required|integer|min:1',
+                'notes' => 'nullable|string|max:500',
+                'plan_type' => 'nullable|in:standard,manual',
+                'manual_new_balance' => 'nullable|numeric|min:0',
+            ]);
+
+            $interestRate = $request->input('interest_rate');
+            $periodDays = $request->input('period_days');
+            $notes = $request->input('notes', '');
+            $planType = $request->input('plan_type', 'standard');
+            $manualNewBalance = $request->input('manual_new_balance');
+
+            // Check if this is an edit or create
+            $isEdit = $request->input('_method') === 'PUT' || $request->input('edit_mode') === 'true';
+            
+            if ($isEdit) {
+                // Handle edit - update the existing payment plan cycle
+                // This would update the cycle with new terms
+                $cycleId = $request->input('cycle_id');
+                $cycle = LoanCycle::findOrFail($cycleId);
+                
+                $cycle->update([
+                    'interest_rate' => $interestRate,
+                    'due_date' => now()->addDays($periodDays),
+                    'notes' => ($cycle->notes ?? '') . "\n" . "Updated: {$notes}",
+                ]);
+                
+                // Update loan
+                $loan->forbearance_until = now()->addDays($periodDays);
+                $loan->calculated_due_date = now()->addDays($periodDays);
+                $loan->due_date = now()->addDays($periodDays);
+                $loan->save();
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Payment plan updated successfully!',
+                    'data' => ['cycle' => $cycle]
+                ]);
+            }
+
+            // ============ CREATE NEW PAYMENT PLAN ============
+            if ($planType === 'manual' && $manualNewBalance !== null) {
+                $newCycle = $loan->manualBalanceAdjustment($manualNewBalance, $notes);
+                $message = 'Manual balance adjustment applied successfully! New balance: KES ' . number_format($manualNewBalance, 2);
+            } else {
+                $newCycle = $loan->startPaymentPlan($interestRate, $periodDays);
+                $message = 'Payment plan created successfully! Penalties have been waived.';
+            }
+
+            // Add additional notes
+            if ($notes && $planType !== 'manual') {
+                $newCycle->notes = ($newCycle->notes ? $newCycle->notes . "\n" : '') . $notes;
+                $newCycle->save();
+            }
+
+            Log::info('Payment plan created for loan #' . $loan->id, [
+                'interest_rate' => $interestRate,
+                'period_days' => $periodDays,
+                'plan_type' => $planType,
+                'manual_balance' => $manualNewBalance,
+                'new_cycle' => $newCycle->cycle_number,
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'cycle' => $newCycle,
+                    'new_balance' => $newCycle->new_balance,
+                    'cycle_number' => $newCycle->cycle_number,
+                    'due_date' => $newCycle->due_date->format('Y-m-d'),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Payment plan creation error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     // ============ ROLLOVER METHODS ============
 
     /**
@@ -914,6 +1062,9 @@ public function show($id, $loanId = null)
         $validator = Validator::make($request->all(), [
             'notes' => 'nullable|string|max:500',
             'interest_type' => 'required|in:simple,compound',
+            'interest_rate' => 'nullable|numeric|min:0|max:100',
+            'period_days' => 'nullable|integer|min:1',
+            'waive_penalty' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -938,6 +1089,9 @@ public function show($id, $loanId = null)
             $result = $this->loanCalculator->executeRollover($loan, [
                 'interest_type' => $request->interest_type ?? 'compound',
                 'notes' => $request->notes,
+                'interest_rate' => $request->interest_rate,
+                'period_days' => $request->period_days,
+                'waive_penalty' => $request->waive_penalty,
             ]);
 
             // Log the result
@@ -1026,12 +1180,13 @@ public function show($id, $loanId = null)
                     'interest_capitalized' => $cycle->interest_capitalized,
                     'new_balance' => $cycle->new_balance,
                     'interest_rate' => $cycle->interest_rate,
-                    'start_date' => $cycle->start_date ? $cycle->start_date->format('Y-m-d') : null,
-                    'due_date' => $cycle->due_date ? $cycle->due_date->format('Y-m-d') : null,
+                    'start_date' => $cycle->start_date->format('Y-m-d'),
+                    'due_date' => $cycle->due_date->format('Y-m-d'),
                     'status' => $cycle->status,
                     'status_label' => $cycle->status_label,
-                    'days_in_cycle' => $cycle->days_in_cycle,
                     'notes' => $cycle->notes,
+                    'is_overdue' => $cycle->isOverdue(),
+                    'days_in_cycle' => $cycle->days_in_cycle,
                 ];
             }),
             'total_cycles' => $cycles->count(),
@@ -1044,53 +1199,36 @@ public function show($id, $loanId = null)
 
     // ============ FORBEARANCE METHODS ============
 
-    /**
-     * Grant forbearance to a loan
-     */
-    public function grantForbearance(Request $request, Loan $loan)
+
+    public function grantForbearance(Loan $loan, Request $request)
     {
-        if (!in_array(auth()->user()->role, ['admin', 'teller'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized action.'
-            ], 403);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'days' => 'required|integer|min:1|max:90',
-            'reason' => 'required|string|max:500',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
-            if (!$loan->isOverdue() && $loan->status !== 'overdue') {
-                throw new \Exception('This loan is not overdue. Forbearance is only for overdue loans.');
-            }
+            $request->validate([
+                'days' => 'required|integer|min:1|max:90',
+                'reason' => 'nullable|string|max:500',
+            ]);
 
-            if ($loan->isDefaulted()) {
-                throw new \Exception('This loan is defaulted. Cannot grant forbearance.');
-            }
+            $days = $request->input('days', 30);
+            $reason = $request->input('reason', 'Granted forbearance');
 
-            if ($loan->isInForbearance()) {
-                throw new \Exception('This loan is already in forbearance.');
-            }
+            $loan->grantForbearance($days, $reason);
 
-            $loan->grantForbearance($request->days, $request->reason);
-            
+            Log::info('Forbearance granted for loan #' . $loan->id, [
+                'days' => $days,
+                'reason' => $reason,
+                'user_id' => auth()->id()
+            ]);
+
             return response()->json([
                 'success' => true,
-                'message' => "Forbearance granted for {$request->days} days."
+                'message' => 'Forbearance granted for ' . $days . ' days.',
+                'data' => [
+                    'forbearance_until' => $loan->forbearance_until,
+                ]
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Forbearance grant failed: ' . $e->getMessage());
+            Log::error('Grant forbearance error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
@@ -1098,32 +1236,22 @@ public function show($id, $loanId = null)
         }
     }
 
-    /**
-     * End forbearance
-     */
-    public function endForbearance(Loan $loan)
+    public function endForbearance(Loan $loan, Request $request)
     {
-        if (!in_array(auth()->user()->role, ['admin', 'teller'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized action.'
-            ], 403);
-        }
-
         try {
-            if (!$loan->isInForbearance()) {
-                throw new \Exception('This loan is not in forbearance.');
-            }
-
             $loan->endForbearance();
-            
+
+            Log::info('Forbearance ended for loan #' . $loan->id, [
+                'user_id' => auth()->id()
+            ]);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Forbearance ended successfully.'
+                'message' => 'Forbearance ended successfully.',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('End forbearance failed: ' . $e->getMessage());
+            Log::error('End forbearance error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
@@ -1136,39 +1264,28 @@ public function show($id, $loanId = null)
     /**
      * Start recovery process for a loan
      */
-    public function startRecovery(Loan $loan)
+    public function startRecovery(Loan $loan, Request $request)
     {
-        if (!in_array(auth()->user()->role, ['admin', 'teller'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized action.'
-            ], 403);
-        }
-
         try {
-            if (!$loan->isDefaulted()) {
-                throw new \Exception('This loan is not defaulted. Cannot start recovery.');
-            }
-
-            if ($loan->isInRecovery()) {
-                throw new \Exception('This loan is already in recovery.');
-            }
-
             $loan->startRecovery();
-            
+
+            Log::info('Recovery started for loan #' . $loan->id, [
+                'user_id' => auth()->id()
+            ]);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Recovery process started successfully.'
+                'message' => 'Recovery process started successfully.',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Start recovery failed: ' . $e->getMessage());
+            Log::error('Start recovery error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
             ], 500);
         }
-    }
+    } 
 
     /**
      * Create recovery case from a defaulted loan
