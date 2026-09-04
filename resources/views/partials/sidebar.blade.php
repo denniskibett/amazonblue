@@ -322,7 +322,7 @@
           <!-- Menu Item My Recovery Status -->
           <li>
             <a
-              href="{{ route('recovery.cases.my') }}"
+              href="{{ route('cases.index') }}"
               @click="selected = (selected === 'MyRecovery' ? '':'MyRecovery')"
               class="menu-item group"
               :class=" (selected === 'MyRecovery') || (page === 'my-recovery') ? 'menu-item-active' : 'menu-item-inactive'"
@@ -343,17 +343,25 @@
                 />
               </svg>
 
-              <span
-                class="menu-item-text"
-                :class="sidebarToggle ? 'lg:hidden' : ''"
+              <div
+                  x-data="{
+                      recoveryCount: @js(Auth::user()->debtRecoveryCases()->open()->count())
+                  }"
               >
-                My Recovery Status
-                @if($user->debtRecoveryCases()->open()->count() > 0)
-                <span class="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
-                  {{ $user->debtRecoveryCases()->open()->count() }}
-                </span>
-                @endif
-              </span>
+                  <span class="menu-item-text"
+                        :class="sidebarToggle ? 'lg:hidden' : ''">
+
+                      My Recovery Status
+
+                      <template x-if="recoveryCount > 0">
+                          <span
+                              class="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white"
+                              x-text="recoveryCount"
+                          ></span>
+                      </template>
+
+                  </span>
+              </div>
             </a>
           </li>
           <!-- Menu Item My Recovery Status -->
@@ -432,7 +440,7 @@
       </div>
 
       <!-- Reports Group (for admin only) -->
-      @if(Auth::user()->role === 'admin')
+      @if(Auth::user()->role === 'admin' || Auth::user()->role === 'teller')
       <div>
         <h3 class="mb-4 text-xs uppercase leading-[20px] text-gray-400">
           <span

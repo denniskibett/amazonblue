@@ -107,15 +107,25 @@ class LoanCalculator
     /**
      * Calculate the next due date for a rollover
      * CRITICAL: This adds ONE period from loan_types to the ACTIVE cycle's due date
+     * 
+     * @param Loan $loan
+     * @param int|null $customPeriodDays - Optional custom period in days
+     * @return Carbon
      */
-    public function calculateRolloverDueDate(Loan $loan): Carbon
+    public function calculateRolloverDueDate(Loan $loan, ?int $customPeriodDays = null): Carbon
     {
         if (!$loan->loanType) {
             throw new \Exception('Loan type not found for loan #' . $loan->id);
         }
 
-        $period = (int) $loan->loanType->period;
-        $unit = $loan->loanType->unit;
+        // Use custom period if provided, otherwise use loan type period
+        if ($customPeriodDays !== null) {
+            $period = $customPeriodDays;
+            $unit = 'days';
+        } else {
+            $period = (int) $loan->loanType->period;
+            $unit = $loan->loanType->unit;
+        }
         
         // Get the active cycle's due date
         $previousDueDate = $this->getPreviousDueDate($loan);
@@ -124,15 +134,19 @@ class LoanCalculator
         
         // Add one period from loan_types to the previous due date
         switch ($unit) {
+            case 'day':
             case 'days':
                 $newDueDate->addDays($period);
                 break;
+            case 'week':
             case 'weeks':
                 $newDueDate->addWeeks($period);
                 break;
+            case 'month':
             case 'months':
                 $newDueDate->addMonths($period);
                 break;
+            case 'year':
             case 'years':
                 $newDueDate->addYears($period);
                 break;
@@ -611,7 +625,9 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
      * Execute a loan rollover
      * This creates a new cycle and marks the previous one as completed
      * 
-     * FIXED: Uses previous_balance as the principal for the new cycle
+     * FIXED: 
+     * - Start date = previous cycle's due date (not today)
+     * - Previous balance = previous cycle's new_balance
      */
     public function executeRollover(Loan $loan, array $options = []): array
     {
@@ -647,8 +663,8 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
         // ============ CALCULATE THE FINAL OUTSTANDING ============
         $cycleCalculation = $this->calculateCycleBalance($loan, $activeCycle);
         
-        // ============ NEW PRINCIPAL = FINAL OUTSTANDING ============
-        $newPrincipal = $cycleCalculation['final_outstanding'];
+        // ============ FIX: NEW PRINCIPAL = PREVIOUS CYCLE'S NEW_BALANCE ============
+        $newPrincipal = $activeCycle->new_balance;
         
         // If the loan is fully repaid, mark it as such
         if ($newPrincipal <= 0) {
@@ -674,15 +690,41 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
         $interest = $newPrincipal * ($interestRate / 100);
         $newBalance = $newPrincipal + $interest;
         
+        // ============ FIX: START DATE = PREVIOUS CYCLE'S DUE DATE ============
+        $newStartDate = $customStartDate 
+            ? Carbon::parse($customStartDate) 
+            : Carbon::parse($activeCycle->due_date);
+        
         // ============ CALCULATE NEW DUE DATE ============
         if ($customDueDate) {
             $newDueDate = Carbon::parse($customDueDate);
         } else {
-            $newDueDate = $this->calculateRolloverDueDate($loan, $customPeriodDays);
+            // Add the period to the start date (which is the previous due date)
+            $period = $customPeriodDays ?? (int) $loanType->period;
+            $unit = $loanType->unit;
+            
+            $newDueDate = $newStartDate->copy();
+            switch ($unit) {
+                case 'day':
+                case 'days':
+                    $newDueDate->addDays($period);
+                    break;
+                case 'week':
+                case 'weeks':
+                    $newDueDate->addWeeks($period);
+                    break;
+                case 'month':
+                case 'months':
+                    $newDueDate->addMonths($period);
+                    break;
+                case 'year':
+                case 'years':
+                    $newDueDate->addYears($period);
+                    break;
+                default:
+                    $newDueDate->addDays($period);
+            }
         }
-        
-        // ============ START DATE ============
-        $newStartDate = $customStartDate ? Carbon::parse($customStartDate) : Carbon::parse($activeCycle->due_date);
         
         // ============ MARK ACTIVE CYCLE AS COMPLETED ============
         $activeCycle->update(['status' => 'completed']);
@@ -733,10 +775,12 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
             'previous_balance' => $newPrincipal,
             'interest_calculated' => $interest,
             'new_balance' => $newBalance,
+            'start_date' => $newStartDate->format('Y-m-d'),
             'new_due_date' => $newDueDate->format('Y-m-d'),
             'waive_penalty' => $waivePenalty,
         ]);
 
+        // ============ FIX: Include period and period_unit in return ============
         return [
             'success' => true,
             'message' => "Loan rolled over successfully. New balance: KES " . number_format($newBalance, 2),
@@ -753,6 +797,10 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
                 'previous_balance' => $newPrincipal,
                 'waive_penalty' => $waivePenalty,
                 'cycle_calculation' => $cycleCalculation,
+                // ============ ADD THESE TWO LINES ============
+                'period' => (int) $loanType->period,
+                'period_unit' => $loanType->unit,
+                // ============ END ADD ============
             ]
         ];
     }

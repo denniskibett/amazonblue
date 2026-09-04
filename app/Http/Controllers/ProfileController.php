@@ -30,9 +30,9 @@ class ProfileController extends Controller
         $missingFields = $user->getMissingBiodataFields();
         
         // Check if profile is locked
-        $isProfileLocked = $user->shouldShowLock();
+        $lockedFields = $this->getLockedFields($user);
+        $isProfileLocked = !empty($lockedFields);
         $loanStatusMessage = $user->getLoanStatusMessage();
-        $lockedFields = $user->getLockedFields();
         
         return view('profile.show', compact(
             'user', 
@@ -44,14 +44,25 @@ class ProfileController extends Controller
         ));
     }
 
+    /**
+     * Show the form for editing the profile.
+     */
     public function edit(Request $request): View
     {
         $user = $request->user()->load(['broker', 'borrower', 'teller']);
         
-        // Check if profile is locked
-        $isProfileLocked = $user->shouldShowLock();
-        $loanStatusMessage = $user->getLoanStatusMessage();
-        $lockedFields = $user->getLockedFields();
+        // Get locked fields
+        $lockedFields = $this->getLockedFields($user);
+        $isProfileLocked = !empty($lockedFields);
+        
+        // Get loan status message
+        $loanStatusMessage = null;
+        if ($isProfileLocked) {
+            $hasEverTakenLoan = $user->loans()->exists();
+            if ($hasEverTakenLoan) {
+                $loanStatusMessage = "You have previously taken a loan. Your KYC information is locked for security and compliance. Only non-critical fields can be updated.";
+            }
+        }
         
         // Get categories for dropdowns
         $religions = Category::where('category_type', 'religion')->orderBy('name')->get();
@@ -116,82 +127,58 @@ class ProfileController extends Controller
         ));
     }
 
+    /**
+     * Update the user's profile.
+     * Only updates fields that are NOT locked
+     */
     public function update(Request $request)
     {
         $user = $request->user();
         
-        // Check if profile is locked - prevent updates if locked
-        if ($user->shouldShowLock()) {
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Your profile is locked because you have an active loan. Please contact support for assistance.',
-                ], 403);
-            }
-            
-            return redirect()->route('profile.show')
-                ->withErrors(['error' => 'Your profile is locked because you have an active loan. Please contact support for assistance.']);
-        }
+        // Get locked fields
+        $lockedFields = $this->getLockedFields($user);
         
-        // Basic validation rules
-        $rules = [
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,'.$user->id,
-            'phone' => 'required|string|max:20|unique:users,phone,'.$user->id,
-            'gender' => 'required|in:male,female,other',
-            'dob' => 'required|date_format:d/m/Y|before:today|after:01/01/1900',
-            'nationality' => 'required|string|size:2',
-            'marital_status' => 'required|in:single,married,divorced,widowed',
-            'religion' => 'nullable|string|max:100',
-            'education' => 'nullable|string|max:100',
-            'disability' => 'boolean',
-            
-            // Identification fields
-            'id_type' => 'required|in:national_id,passport,drivers_license',
-            'id_number' => 'required|string|max:50',
-            'id_front_path' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'id_back_path' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            
-            // Next of kin fields
-            'kin_name' => 'required|string|max:255',
-            'kin_email' => 'required|email',
-            'kin_phone' => 'required|string|max:20',
-            'kin_occupation' => 'required|string|max:255',
-            'kin_relation' => 'required|string|max:100',
-            'kin_id_type' => 'required|in:national_id,passport',
-            'kin_id_number' => 'required|string|max:50',
-        ];
+        // Build validation rules - only for non-locked fields
+        $rules = [];
         
-        // Add borrower-specific validation rules
+        // ============ UNLOCKED FIELDS (Can always be edited) ============
+        // Personal (non-KYC)
+        $rules['marital_status'] = 'sometimes|in:single,married,divorced,widowed';
+        $rules['religion'] = 'nullable|string|max:100';
+        $rules['education'] = 'nullable|string|max:100';
+        $rules['disability'] = 'boolean';
+        $rules['profile_photo'] = 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048';
+        
+        // Employment (for borrowers)
         if ($user->role === 'borrower') {
-            $rules = array_merge($rules, [
-                'income_type' => 'required|string|max:50',
-                'gross_salary' => 'nullable|numeric|min:0',
-                'net_salary' => 'nullable|numeric|min:0',
-                'job_title' => 'nullable|string|max:255',
-                'workplace' => 'nullable|string|max:255',
-                'employer_name' => 'nullable|string|max:255',
-                'employer_email' => 'nullable|email',
-                'employer_title' => 'nullable|string|max:255',
-                'department' => 'nullable|string|max:255',
-                'client_type' => 'required|in:0,1',
-                'status' => 'required|in:0,1',
-            ]);
+            $rules['income_type'] = 'sometimes|string|max:50';
+            $rules['gross_salary'] = 'nullable|numeric|min:0';
+            $rules['net_salary'] = 'nullable|numeric|min:0';
+            $rules['job_title'] = 'nullable|string|max:255';
+            $rules['workplace'] = 'nullable|string|max:255';
+            $rules['employer_name'] = 'nullable|string|max:255';
+            $rules['employer_email'] = 'nullable|email';
+            $rules['employer_title'] = 'nullable|string|max:255';
+            $rules['department'] = 'nullable|string|max:255';
         }
         
-        // Add other role-specific validation rules
+        // Broker rates (if broker)
         if ($user->role === 'broker') {
-            $rules = array_merge($rules, [
-                'cert_no' => 'required|string|max:255|unique:brokers,cert_no,'.($user->broker ? $user->broker->id : 'NULL'),
-                'interest_client' => 'required|numeric|min:0',
-                'interest_broker' => 'required|numeric|min:0',
-                'penalty_client' => 'required|numeric|min:0',
-                'penalty_broker' => 'required|numeric|min:0',
-            ]);
-        } elseif ($user->role === 'teller') {
-            $rules = array_merge($rules, [
-                'branch' => 'required|string|max:255',
-            ]);
+            $rules['interest_client'] = 'sometimes|numeric|min:0';
+            $rules['interest_broker'] = 'sometimes|numeric|min:0';
+            $rules['penalty_client'] = 'sometimes|numeric|min:0';
+            $rules['penalty_broker'] = 'sometimes|numeric|min:0';
+        }
+        
+        // Teller branch (if teller)
+        if ($user->role === 'teller') {
+            $rules['branch'] = 'sometimes|string|max:255';
+        }
+        
+        // ============ LOCKED FIELDS (Removed from validation) ============
+        // Remove all locked fields from request data
+        foreach ($lockedFields as $field) {
+            $request->request->remove($field);
         }
         
         $validatedData = $request->validate($rules);
@@ -202,98 +189,59 @@ class ProfileController extends Controller
             $validatedData['profile_photo_path'] = $profilePhotoPath;
         }
         
-        if ($request->hasFile('id_front_path')) {
-            $idFrontPath = $request->file('id_front_path')->store('id-documents', 'public');
-            $validatedData['id_front_path'] = $idFrontPath;
-        }
-        
-        if ($request->hasFile('id_back_path')) {
-            $idBackPath = $request->file('id_back_path')->store('id-documents', 'public');
-            $validatedData['id_back_path'] = $idBackPath;
-        }
-        
         // Convert disability to boolean
-        $validatedData['disability'] = $request->has('disability');
+        if (isset($validatedData['disability'])) {
+            $validatedData['disability'] = $request->has('disability');
+        }
         
-        // Parse DOB from DD/MM/YYYY to YYYY-MM-DD for database
-        if (!empty($validatedData['dob'])) {
-            try {
-                $validatedData['dob'] = Carbon::createFromFormat('d/m/Y', $validatedData['dob'])->format('Y-m-d');
-            } catch (\Exception $e) {
-                try {
-                    $validatedData['dob'] = Carbon::parse($validatedData['dob'])->format('Y-m-d');
-                } catch (\Exception $e2) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'dob' => ['Invalid date format. Please use DD/MM/YYYY.']
-                    ]);
-                }
+        // Update basic user info (only unlocked fields)
+        $userData = [];
+        $unlockedUserFields = ['marital_status', 'religion', 'education', 'disability'];
+        foreach ($unlockedUserFields as $field) {
+            if (isset($validatedData[$field])) {
+                $userData[$field] = $validatedData[$field];
             }
         }
         
-        // Update basic user info
-        $userData = $validatedData;
-        $dob = $userData['dob'] ?? null;
-        unset($userData['dob']);
-        
-        $user->fill($userData);
-        if ($dob) {
-            $user->dob = $dob;
+        if (!empty($userData)) {
+            $user->fill($userData);
+            $user->save();
         }
-        
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
-        
-        $user->save();
         
         // Update role-specific info
-        if ($user->role === 'broker') {
-            if ($user->broker) {
-                $user->broker->update([
-                    'cert_no' => $validatedData['cert_no'],
-                    'interest_client' => $validatedData['interest_client'],
-                    'interest_broker' => $validatedData['interest_broker'],
-                    'penalty_client' => $validatedData['penalty_client'],
-                    'penalty_broker' => $validatedData['penalty_broker'],
-                ]);
-            } else {
-                $user->broker()->create([
-                    'cert_no' => $validatedData['cert_no'],
-                    'interest_client' => $validatedData['interest_client'],
-                    'interest_broker' => $validatedData['interest_broker'],
-                    'penalty_client' => $validatedData['penalty_client'],
-                    'penalty_broker' => $validatedData['penalty_broker'],
-                ]);
+        if ($user->role === 'broker' && $user->broker) {
+            $brokerData = [];
+            $brokerFields = ['interest_client', 'interest_broker', 'penalty_client', 'penalty_broker'];
+            foreach ($brokerFields as $field) {
+                if (isset($validatedData[$field])) {
+                    $brokerData[$field] = $validatedData[$field];
+                }
+            }
+            if (!empty($brokerData)) {
+                $user->broker->update($brokerData);
             }
         } elseif ($user->role === 'borrower') {
-            $borrowerData = [
-                'client_type' => $validatedData['client_type'],
-                'status' => $validatedData['status'],
-                'income_type' => $validatedData['income_type'] ?? null,
-                'gross_salary' => $validatedData['gross_salary'] ?? null,
-                'net_salary' => $validatedData['net_salary'] ?? null,
-                'job_title' => $validatedData['job_title'] ?? null,
-                'workplace' => $validatedData['workplace'] ?? null,
-                'employer_name' => $validatedData['employer_name'] ?? null,
-                'employer_email' => $validatedData['employer_email'] ?? null,
-                'employer_title' => $validatedData['employer_title'] ?? null,
-                'department' => $validatedData['department'] ?? null,
-            ];
-            
-            if ($user->borrower) {
-                $user->borrower->update($borrowerData);
-            } else {
-                $user->borrower()->create($borrowerData);
+            $borrowerData = [];
+            $borrowerFields = ['income_type', 'gross_salary', 'net_salary', 'job_title', 'workplace', 
+                               'employer_name', 'employer_email', 'employer_title', 'department'];
+            foreach ($borrowerFields as $field) {
+                if (isset($validatedData[$field])) {
+                    $borrowerData[$field] = $validatedData[$field];
+                }
             }
-        } elseif ($user->role === 'teller') {
+            
+            if (!empty($borrowerData)) {
+                if ($user->borrower) {
+                    $user->borrower->update($borrowerData);
+                } else {
+                    $user->borrower()->create($borrowerData);
+                }
+            }
+        } elseif ($user->role === 'teller' && isset($validatedData['branch'])) {
             if ($user->teller) {
-                $user->teller->update([
-                    'branch' => $validatedData['branch'],
-                ]);
+                $user->teller->update(['branch' => $validatedData['branch']]);
             } else {
-                $user->teller()->create([
-                    'branch' => $validatedData['branch'],
-                ]);
+                $user->teller()->create(['branch' => $validatedData['branch']]);
             }
         }
         
@@ -310,6 +258,9 @@ class ProfileController extends Controller
             ->with('success', 'Profile updated successfully!');
     }
 
+    /**
+     * Update the user's password.
+     */
     public function updatePassword(Request $request)
     {
         $request->validate([
@@ -326,6 +277,9 @@ class ProfileController extends Controller
         return redirect()->route('profile.edit')->with('status', 'password-updated');
     }
 
+    /**
+     * Update password (legacy method).
+     */
     public function password(Request $request)
     {
         $request->validate([
@@ -344,6 +298,9 @@ class ProfileController extends Controller
         return back()->with('status', 'password-updated');
     }
 
+    /**
+     * Delete the user's account.
+     */
     public function destroy(Request $request)
     {
         $request->validateWithBag('userDeletion', [
@@ -366,14 +323,19 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 
-    public function saveSignature(Request $request, SignatureService $signatureService): JsonResponse    {
+    /**
+     * Save the user's digital signature.
+     */
+    public function saveSignature(Request $request, SignatureService $signatureService): JsonResponse
+    {
         $user = $request->user();
         
-        // Check if profile is locked
-        if ($user->shouldShowLock()) {
+        // Check if user has ever taken a loan
+        $hasEverTakenLoan = $user->loans()->exists();
+        if ($hasEverTakenLoan) {
             return response()->json([
                 'success' => false,
-                'message' => 'Your profile is locked because you have an active loan. Please contact support for assistance.',
+                'message' => 'Signature cannot be changed once you have taken a loan. Please contact support for assistance.',
             ], 403);
         }
         
@@ -398,15 +360,19 @@ class ProfileController extends Controller
         ], 500);
     }
 
+    /**
+     * Delete the user's digital signature.
+     */
     public function deleteSignature(Request $request, SignatureService $signatureService): JsonResponse
     {
         $user = $request->user();
         
-        // Check if profile is locked
-        if ($user->shouldShowLock()) {
+        // Check if user has ever taken a loan
+        $hasEverTakenLoan = $user->loans()->exists();
+        if ($hasEverTakenLoan) {
             return response()->json([
                 'success' => false,
-                'message' => 'Your profile is locked because you have an active loan. Please contact support for assistance.',
+                'message' => 'Signature cannot be changed once you have taken a loan. Please contact support for assistance.',
             ], 403);
         }
         
@@ -425,30 +391,30 @@ class ProfileController extends Controller
         ], 500);
     }
 
+    /**
+     * Auto-save the profile (for AJAX autosave functionality).
+     */
     public function autoSave(Request $request)
     {
         $user = $request->user();
         
-        // Check if profile is locked
-        if ($user->shouldShowLock()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your profile is locked because you have an active loan. Please contact support for assistance.',
-            ], 403);
+        // Get locked fields
+        $lockedFields = $this->getLockedFields($user);
+        
+        $rules = [];
+        
+        // Only non-locked fields can be auto-saved
+        $unlockedFields = ['marital_status', 'religion', 'education', 'disability'];
+        foreach ($unlockedFields as $field) {
+            if (!in_array($field, $lockedFields)) {
+                $rules[$field] = 'sometimes|nullable|string|max:255';
+            }
         }
         
-        $rules = [
-            'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|email|unique:users,email,'.$user->id,
-            'phone' => 'sometimes|required|string|max:20',
-            'gender' => 'sometimes|required|in:male,female,other',
-            'dob' => 'sometimes|required|date',
-            'nationality' => 'sometimes|required|string|max:100',
-            'marital_status' => 'sometimes|required|in:single,married,divorced,widowed',
-            'religion' => 'sometimes|nullable|string|max:100',
-            'education' => 'sometimes|nullable|string|max:100',
-            'disability' => 'sometimes|boolean',
-        ];
+        // Remove locked fields from request
+        foreach ($lockedFields as $field) {
+            $request->request->remove($field);
+        }
         
         $validatedData = $request->validate($rules);
         
@@ -462,60 +428,104 @@ class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Get locked fields based on loan history.
+     * 
+     * Once a user has ever taken a loan, KYC fields are permanently locked.
+     */
+    private function getLockedFields($user): array
+    {
+        // Check if user has EVER taken a loan
+        $hasEverTakenLoan = $user->loans()->exists();
+
+        if (!$hasEverTakenLoan) {
+            return [];
+        }
+
+        // ALL KYC-critical fields are permanently locked once a loan has been taken
+        return [
+            // ============ PERMANENTLY LOCKED FIELDS ============
+            
+            // Personal Information (KYC critical)
+            'name',
+            'email',
+            'phone',
+            'gender',
+            'dob',
+            'nationality',
+            
+            // Identification (KYC critical)
+            'id_type',
+            'id_number',
+            'id_front_path',
+            'id_back_path',
+            
+            // Next of Kin (emergency contact - locked for consistency)
+            'kin_name',
+            'kin_email',
+            'kin_phone',
+            'kin_occupation',
+            'kin_relation',
+            'kin_id_type',
+            'kin_id_number',
+            
+            // Borrower account (system-managed)
+            'client_type',
+            'status',
+            
+            // Broker certificate (legal requirement)
+            'cert_no',
+            
+            // Signature (legal requirement)
+            'signature',
+            
+            // Profile photo (identity verification)
+            'profile_photo_path',
+        ];
+    }
+
+    /**
+     * Get section completion counts for the profile edit page.
+     */
     private function getSectionCompletionCounts($user)
     {
+        // Get locked fields
+        $lockedFields = $this->getLockedFields($user);
+        
         $sections = [
             'basic' => [
                 'name' => 'Basic Information',
-                'fields' => [
-                    'user' => ['name', 'email', 'phone', 'gender', 'dob', 'nationality', 'marital_status'],
-                    'borrower' => []
-                ],
+                'fields' => ['name', 'email', 'phone', 'gender', 'dob', 'nationality', 'marital_status'],
                 'filled' => 0,
                 'total' => 7
             ],
             'identification' => [
                 'name' => 'Identification',
-                'fields' => [
-                    'user' => ['id_type', 'id_number', 'id_front_path', 'id_back_path'],
-                    'borrower' => []
-                ],
+                'fields' => ['id_type', 'id_number', 'id_front_path', 'id_back_path'],
                 'filled' => 0,
                 'total' => 4
             ],
             'next-of-kin' => [
                 'name' => 'Next of Kin',
-                'fields' => [
-                    'user' => ['kin_name', 'kin_email', 'kin_phone', 'kin_occupation', 'kin_relation', 'kin_id_type', 'kin_id_number'],
-                    'borrower' => []
-                ],
+                'fields' => ['kin_name', 'kin_email', 'kin_phone', 'kin_occupation', 'kin_relation', 'kin_id_type', 'kin_id_number'],
                 'filled' => 0,
                 'total' => 7
             ],
             'additional' => [
                 'name' => 'Additional Information',
-                'fields' => [
-                    'user' => ['religion', 'education'],
-                    'borrower' => []
-                ],
+                'fields' => ['religion', 'education'],
                 'filled' => 0,
                 'total' => 2
             ],
             'employment' => [
                 'name' => 'Employment Information',
-                'fields' => [
-                    'user' => [],
-                    'borrower' => ['income_type', 'gross_salary', 'net_salary', 'job_title', 'workplace', 'employer_name', 'employer_email', 'employer_title', 'department']
-                ],
+                'fields' => ['income_type', 'gross_salary', 'net_salary', 'job_title', 'workplace', 'employer_name', 'employer_email', 'employer_title', 'department'],
                 'filled' => 0,
                 'total' => 9
             ],
             'borrower-info' => [
                 'name' => 'Borrower Details',
-                'fields' => [
-                    'user' => [],
-                    'borrower' => ['client_type', 'status']
-                ],
+                'fields' => ['client_type', 'status'],
                 'filled' => 0,
                 'total' => 2
             ]
@@ -523,26 +533,22 @@ class ProfileController extends Controller
 
         foreach ($sections as $key => &$section) {
             $filled = 0;
-            $total = 0;
+            $total = $section['total'];
             
-            // Count user fields
-            foreach ($section['fields']['user'] as $field) {
-                $total++;
-                if (!empty($user->$field)) {
+            foreach ($section['fields'] as $field) {
+                // Check if field exists on user
+                if (property_exists($user, $field) && !empty($user->$field)) {
                     $filled++;
-                }
-            }
-            
-            // Count borrower fields
-            foreach ($section['fields']['borrower'] as $field) {
-                $total++;
-                if ($user->borrower && !empty($user->borrower->$field)) {
+                } 
+                // Check if field exists on borrower
+                elseif ($user->borrower && property_exists($user->borrower, $field) && !empty($user->borrower->$field)) {
                     $filled++;
                 }
             }
             
             $section['filled'] = $filled;
             $section['total'] = $total;
+            $section['locked_fields'] = array_intersect($section['fields'], $lockedFields);
         }
 
         return $sections;

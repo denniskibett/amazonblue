@@ -10,6 +10,7 @@ use App\Models\Repayment;
 use App\Models\Disbursement;
 use App\Models\DebtRecoveryCase;
 use App\Models\RecoveryAction;
+use App\Models\LoanType;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -56,204 +57,273 @@ class DashboardController extends Controller
         }
         $data['nplRecoveryRate'] = $nplTotal > 0 ? round(($nplRecovered / $nplTotal) * 100, 2) : 0;
 
-        switch ($user->role) {
-            case 'admin':
-                $data = array_merge($data, [
-                    // Loan Metrics
-                    'totalLoans' => Loan::count(),
-                    'loansThisMonth' => Loan::where('created_at', '>=', $currentMonthStart)->count(),
-                    'completedLoans' => Loan::repaid()->count(), // Changed from completed() to repaid()
-                    'completedThisMonth' => Loan::repaid() // Changed from completed() to repaid()
-                                            ->where('updated_at', '>=', $currentMonthStart)
-                                            ->count(),
-
-                    // Financial Metrics
-                    'totalDisbursements' => Disbursement::sum('amount') ?? 0,
-                    'disbursementsThisMonth' => Disbursement::where('disburse_date', '>=', $currentMonthStart)
-                                                        ->sum('amount') ?? 0,
-                    'totalRepayments' => Repayment::sum('amount') ?? 0,
-                    'repaymentsThisMonth' => Repayment::where('created_at', '>=', $currentMonthStart)
-                                                    ->sum('amount') ?? 0,
-
-                    // User Metrics
-                    'borrowerCount' => User::borrowers()->count(),
-                    'newBorrowersThisMonth' => User::borrowers()
-                                                ->where('created_at', '>=', $currentMonthStart)
-                                                ->count(),
-                    'brokerCount' => User::brokers()->count(),
-                    'tellerCount' => User::tellers()->count(),
-
-                    // Additional Data
-                    'chartData' => $chartData,
-                    'monthlyData' => $monthlyData,
-                    'recentLoans' => Loan::with(['user', 'loanType'])->latest()->take(5)->get(),
-                    'dueLoans' => $dueLoans,
-                    'todayTransactions' => Repayment::whereDate('created_at', today())->count(),
-
-                    'loanStatusData' => [
-                        'pending' => Loan::where('status', 'pending')->count(),
-                        'disbursed' => Loan::where('status', 'disbursed')->count(),
-                        'approved' => Loan::where('status', 'approved')->count(),
-                        'rejected' => Loan::where('status', 'rejected')->count(),
-                        'repaid' => Loan::where('status', 'repaid')->count(),
-                        'overdue' => Loan::where('status', 'overdue')->count(),
-                        'defaulted' => Loan::where('status', 'defaulted')->count(),
-                        'recovery' => Loan::where('status', 'recovery')->count(),
-                        'forbearance' => Loan::where('status', 'forbearance')->count(),
-                    ],
-                    'disbursementTrends' => $this->getDisbursementTrends(),
-                ]);
-                break;
-
-            case 'borrower':
-                // Get biodata completion data
-                $biodataComplete = $user->hasCompleteBiodata();
-                $missingFields = $user->getMissingBiodataFields();
-                $completionPercentage = $user->getBiodataCompletionPercentage();
-                
-                // Get borrower recovery data
-                $myRecoveryCases = $user->debtRecoveryCases()->with(['status', 'priority'])->get();
-                $activeRecoveryCount = $user->debtRecoveryCases()->open()->count();
-                $hasActiveRecovery = $activeRecoveryCount > 0;
-                
-                $data = array_merge($data, [
-                    'totalLoans' => $user->loans()->count(),
-                    'loansThisMonth' => $user->loans()
-                                            ->where('created_at', '>=', $currentMonthStart)
-                                            ->count(),
-                    'totalRepayments' => $user->repayments()->sum('repayments.amount') ?? 0,
-                    'repaymentsThisMonth' => $user->repayments()
-                                                ->where('repayments.created_at', '>=', $currentMonthStart)
-                                                ->sum('repayments.amount') ?? 0,
-                    'totalDisbursements' => $user->disbursements()->sum('disbursements.amount') ?? 0,
-                    'disbursementsThisMonth' => $user->disbursements()
-                                                    ->where('disbursements.created_at', '>=', $currentMonthStart)
-                                                    ->sum('disbursements.amount') ?? 0,
-                    'totalBorrowed' => $user->loans()->sum('amount') ?? 0,
-                    'borrowedThisMonth' => $user->loans()
-                                            ->where('borrow_date', '>=', $currentMonthStart)
-                                            ->sum('amount') ?? 0,
-                    'dueLoans' => $dueLoans,
-                    'chartData' => $chartData,
-                    'monthlyData' => $monthlyData,
-                    'biodataComplete' => $biodataComplete,
-                    'missingBiodataFields' => $missingFields,
-                    'biodataCompletionPercentage' => $completionPercentage,
-                    // Recovery data for borrower
-                    'myRecoveryCases' => $myRecoveryCases,
-                    'hasActiveRecovery' => $hasActiveRecovery,
-                    'activeRecoveryCount' => $activeRecoveryCount,
-                ]);
-                break;
-
-            case 'broker':
-                $broker = $user->broker()->first();
-
-                if (!$broker) {
-                    abort(403, 'Broker profile not found');
-                }
-
-                $borrowerIds = $broker->borrowers()->pluck('user_id');
-
-                $data = array_merge($data, [
-                    'broker' => $broker,
-                    'clients' => $broker->borrowers()->count(),
-                    'newClientsThisMonth' => $broker->borrowers()
-                                                ->where('created_at', '>=', $currentMonthStart)
-                                                ->count(),
-                    'activeLoans' => Loan::whereIn('user_id', $borrowerIds)
-                                    ->where('broker_status', 1)
-                                    ->active()
-                                    ->count(),
-                    'totalInterest' => $this->calculateBrokerEarnings($broker, 'interest') ?? 0,
-                    'totalPenalty' => $this->calculateBrokerEarnings($broker, 'penalty') ?? 0,
-                    'dueLoans' => $dueLoans,
-                    'overdueLoans' => $dueLoans->filter(function($loan) {
-                        return $loan->status === 'overdue';
-                    }),
-                    'chartData' => $chartData,
-                    'monthlyData' => $monthlyData,
-                ]);
-                break;
-
-            case 'teller':
-                $data = array_merge($data, [
-                    'todaysDisbursements' => Disbursement::whereDate('disburse_date', today())
-                                                    ->sum('amount') ?? 0,
-                    'monthDisbursements' => Disbursement::where('disburse_date', '>=', $currentMonthStart)
-                                                    ->sum('amount') ?? 0,
-                    'collectedRepayments' => Repayment::sum('amount') ?? 0,
-                    'monthRepayments' => Repayment::where('created_at', '>=', $currentMonthStart)
-                                            ->sum('amount') ?? 0,
-                    'dueLoans' => $dueLoans,
-                    'chartData' => $chartData,
-                    'monthlyData' => $monthlyData,
-                ]);
-                break;
-            
-            default:
-                $data = array_merge($data, [
-                    'dueLoans' => $dueLoans,
-                    'chartData' => $chartData,
-                    'monthlyData' => $monthlyData,
-                ]);
-                break;
+        // ============================================================
+        // ROLE-BASED DATA
+        // ============================================================
+        if ($user->hasRole('admin')) {
+            $data = array_merge($data, $this->getAdminData($user, $currentMonthStart));
+        } elseif ($user->hasRole('borrower')) {
+            $data = array_merge($data, $this->getBorrowerData($user, $currentMonthStart));
+        } elseif ($user->hasRole('broker')) {
+            $data = array_merge($data, $this->getBrokerData($user, $currentMonthStart));
+        } elseif ($user->hasRole('teller')) {
+            $data = array_merge($data, $this->getTellerData($user, $currentMonthStart));
         }
 
-        // Ensure all required variables exist for the view
-        $data = array_merge([
-            'totalLoans' => 0,
-            'loansThisMonth' => 0,
-            'completedLoans' => 0,
-            'completedThisMonth' => 0,
-            'totalDisbursements' => 0,
-            'disbursementsThisMonth' => 0,
-            'totalRepayments' => 0,
-            'repaymentsThisMonth' => 0,
-            'borrowerCount' => 0,
-            'newBorrowersThisMonth' => 0,
-            'brokerCount' => 0,
-            'tellerCount' => 0,
-            'totalBorrowed' => 0,
-            'borrowedThisMonth' => 0,
-            'chartData' => ['months' => [], 'loans' => [], 'disbursements' => [], 'repayments' => []],
-            'monthlyData' => ['labels' => [], 'loanData' => [], 'disbursementData' => [], 'repaymentData' => []],
-            'recentLoans' => collect(),
-            'dueLoans' => collect(),
-            'todayTransactions' => 0,
-            'loanStatusData' => ['pending' => 0, 'disbursed' => 0, 'approved' => 0, 'rejected' => 0, 'repaid' => 0],
-            'disbursementTrends' => [],
-            'biodataComplete' => false,
-            'biodataCompletionPercentage' => 0,
-            'missingBiodataFields' => [],
-            'broker' => null,
-            'clients' => 0,
-            'newClientsThisMonth' => 0,
-            'activeLoans' => 0,
-            'totalInterest' => 0,
-            'totalPenalty' => 0,
-            'overdueLoans' => collect(),
-            'todaysDisbursements' => 0,
-            'monthDisbursements' => 0,
-            'collectedRepayments' => 0,
-            'monthRepayments' => 0,
-            // Recovery defaults
-            'activeRecoveryCases' => 0,
-            'totalRecoveryDebt' => 0,
-            'urgentRecoveryCases' => 0,
-            'recoveryRate' => 0,
-            'recoveryCases' => collect(),
-            'myRecoveryCases' => collect(),
-            'hasActiveRecovery' => false,
-            'activeRecoveryCount' => 0,
-            // NPL defaults
-            'nplCount' => 0,
-            'nplTotalDebt' => 0,
-            'overdueCount' => 0,
-            'nplRecoveryRate' => 0,
-        ], $data);
+        // Merge common data
+        $data['dueLoans'] = $dueLoans;
+        $data['chartData'] = $chartData;
+        $data['monthlyData'] = $monthlyData;
+        $data['defaultLoanType'] = $this->getDefaultLoanType();
 
         return view('dashboard', $data);
+    }
+
+    // ================================================================
+    // ADMIN DASHBOARD DATA
+    // ================================================================
+    private function getAdminData($user, $currentMonthStart)
+    {
+        return [
+            // Loan Metrics
+            'totalLoans' => Loan::count(),
+            'loansThisMonth' => Loan::where('created_at', '>=', $currentMonthStart)->count(),
+            'completedLoans' => Loan::where('status', Loan::STATUS_REPAID)->count(),
+            'completedThisMonth' => Loan::where('status', Loan::STATUS_REPAID)
+                                        ->where('updated_at', '>=', $currentMonthStart)
+                                        ->count(),
+
+            // Financial Metrics
+            'totalDisbursements' => Disbursement::sum('amount') ?? 0,
+            'disbursementsThisMonth' => Disbursement::where('disburse_date', '>=', $currentMonthStart)
+                                                ->sum('amount') ?? 0,
+            'totalRepayments' => Repayment::sum('amount') ?? 0,
+            'repaymentsThisMonth' => Repayment::where('created_at', '>=', $currentMonthStart)
+                                            ->sum('amount') ?? 0,
+
+            // User Metrics
+            'borrowerCount' => User::role('borrower')->count(),
+            'newBorrowersThisMonth' => User::role('borrower')
+                                        ->where('created_at', '>=', $currentMonthStart)
+                                        ->count(),
+            'brokerCount' => User::role('broker')->count(),
+            'tellerCount' => User::role('teller')->count(),
+
+            // Additional Data
+            'recentLoans' => Loan::with(['user', 'loanType'])->latest()->take(5)->get(),
+            'todayTransactions' => Repayment::whereDate('created_at', today())->count(),
+
+            'loanStatusData' => [
+                'pending' => Loan::where('status', Loan::STATUS_PENDING)->count(),
+                'approved' => Loan::where('status', Loan::STATUS_APPROVED)->count(),
+                'disbursed' => Loan::where('status', Loan::STATUS_DISBURSED)->count(),
+                'active' => Loan::where('status', Loan::STATUS_ACTIVE)->count(),
+                'overdue' => Loan::where('status', Loan::STATUS_OVERDUE)->count(),
+                'defaulted' => Loan::where('status', Loan::STATUS_DEFAULTED)->count(),
+                'repaid' => Loan::where('status', Loan::STATUS_REPAID)->count(),
+                'recovery' => Loan::where('status', Loan::STATUS_RECOVERY)->count(),
+                'forbearance' => Loan::where('status', Loan::STATUS_FORBEARANCE)->count(),
+                'rejected' => Loan::where('status', Loan::STATUS_REJECTED)->count(),
+            ],
+            'disbursementTrends' => $this->getDisbursementTrends(),
+        ];
+    }
+
+    // ================================================================
+    // BORROWER DASHBOARD DATA - Clean and Simple
+    // ================================================================
+    private function getBorrowerData($user, $currentMonthStart)
+    {
+        // Get all borrower loans with relationships
+        $loans = Loan::with(['loanType', 'repayments', 'cycles'])
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get active loan (if any)
+        $activeLoan = $loans->whereIn('status', [Loan::STATUS_DISBURSED, Loan::STATUS_ACTIVE, Loan::STATUS_OVERDUE])->first();
+
+        // Calculate loan stats
+        $totalBorrowed = $loans->sum('amount');
+        $completedLoans = $loans->where('status', Loan::STATUS_REPAID)->count();
+        $activeLoans = $loans->whereIn('status', [Loan::STATUS_DISBURSED, Loan::STATUS_ACTIVE])->count();
+
+        // Get recent transactions
+        $recentTransactions = $this->getBorrowerRecentTransactions($loans);
+
+        // Get biodata completion data
+        $biodataComplete = $this->checkBiodataComplete($user);
+        $missingFields = $this->getMissingBiodataFields($user);
+        $completionPercentage = $this->getBiodataCompletionPercentage($user);
+
+        // Get borrower recovery data
+        $myRecoveryCases = $user->debtRecoveryCases()->with(['status', 'priority'])->get();
+        $activeRecoveryCount = $user->debtRecoveryCases()->open()->count();
+        $hasActiveRecovery = $activeRecoveryCount > 0;
+
+        return [
+            // Borrower specific
+            'activeLoan' => $activeLoan,
+            'totalBorrowed' => $totalBorrowed,
+            'completedLoans' => $completedLoans,
+            'activeLoans' => $activeLoans,
+            'recentTransactions' => $recentTransactions,
+            'biodataComplete' => $biodataComplete,
+            'missingBiodataFields' => $missingFields,
+            'biodataCompletionPercentage' => $completionPercentage,
+            'myRecoveryCases' => $myRecoveryCases,
+            'hasActiveRecovery' => $hasActiveRecovery,
+            'activeRecoveryCount' => $activeRecoveryCount,
+
+            // Defaults for other sections (not shown to borrowers)
+            'totalLoans' => $loans->count(),
+            'loansThisMonth' => $loans->where('created_at', '>=', $currentMonthStart)->count(),
+            'totalRepayments' => $user->repayments()->sum('repayments.amount') ?? 0,
+            'repaymentsThisMonth' => $user->repayments()
+                                        ->where('repayments.created_at', '>=', $currentMonthStart)
+                                        ->sum('repayments.amount') ?? 0,
+            'totalDisbursements' => $user->disbursements()->sum('disbursements.amount') ?? 0,
+            'disbursementsThisMonth' => $user->disbursements()
+                                            ->where('disbursements.created_at', '>=', $currentMonthStart)
+                                            ->sum('disbursements.amount') ?? 0,
+            'borrowedThisMonth' => $loans->where('borrow_date', '>=', $currentMonthStart)->sum('amount') ?? 0,
+            'totalInterest' => 0,
+            'totalPenalty' => 0,
+        ];
+    }
+
+    // ================================================================
+    // BROKER DASHBOARD DATA
+    // ================================================================
+    private function getBrokerData($user, $currentMonthStart)
+    {
+        $broker = $user->broker()->first();
+
+        if (!$broker) {
+            abort(403, 'Broker profile not found');
+        }
+
+        $borrowerIds = $broker->borrowers()->pluck('user_id');
+
+        return [
+            'broker' => $broker,
+            'clients' => $broker->borrowers()->count(),
+            'newClientsThisMonth' => $broker->borrowers()
+                                        ->where('created_at', '>=', $currentMonthStart)
+                                        ->count(),
+            'activeLoans' => Loan::whereIn('user_id', $borrowerIds)
+                            ->where('broker_status', 1)
+                            ->whereIn('status', [Loan::STATUS_DISBURSED, Loan::STATUS_ACTIVE])
+                            ->count(),
+            'totalInterest' => $this->calculateBrokerEarnings($broker, 'interest') ?? 0,
+            'totalPenalty' => $this->calculateBrokerEarnings($broker, 'penalty') ?? 0,
+            'overdueLoans' => Loan::whereIn('user_id', $borrowerIds)
+                            ->where('status', Loan::STATUS_OVERDUE)
+                            ->get(),
+        ];
+    }
+
+    // ================================================================
+    // TELLER DASHBOARD DATA
+    // ================================================================
+    private function getTellerData($user, $currentMonthStart)
+    {
+        return [
+            'todaysDisbursements' => Disbursement::whereDate('disburse_date', today())
+                                            ->sum('amount') ?? 0,
+            'monthDisbursements' => Disbursement::where('disburse_date', '>=', $currentMonthStart)
+                                            ->sum('amount') ?? 0,
+            'collectedRepayments' => Repayment::sum('amount') ?? 0,
+            'monthRepayments' => Repayment::where('created_at', '>=', $currentMonthStart)
+                                    ->sum('amount') ?? 0,
+        ];
+    }
+
+    // ================================================================
+    // HELPER METHODS
+    // ================================================================
+
+    private function getDefaultLoanType()
+    {
+        $loanType = LoanType::where('period', 20)
+            ->orWhere('name', 'like', '%emergency%')
+            ->orWhere('name', 'like', '%quick%')
+            ->first();
+
+        if (!$loanType) {
+            $loanType = LoanType::first();
+        }
+
+        return $loanType;
+    }
+
+    private function getBorrowerRecentTransactions($loans)
+    {
+        $transactions = collect();
+
+        // Get disbursements
+        $disbursements = Disbursement::whereIn('loan_id', $loans->pluck('id'))
+            ->select('disburse_date as date', DB::raw("'Disbursement' as type"), 'amount', DB::raw("'completed' as status"))
+            ->get();
+
+        // Get repayments
+        $repayments = Repayment::whereIn('loan_id', $loans->pluck('id'))
+            ->select('repayment_date as date', DB::raw("'Repayment' as type"), 'amount', DB::raw("'completed' as status"))
+            ->get();
+
+        return $disbursements->merge($repayments)
+            ->sortByDesc('date')
+            ->take(5);
+    }
+
+    private function checkBiodataComplete($user)
+    {
+        $borrower = $user->borrower;
+        if (!$borrower) {
+            return false;
+        }
+
+        $requiredFields = ['phone', 'email', 'id_number', 'date_of_birth', 'gender', 'nationality'];
+        foreach ($requiredFields as $field) {
+            if (empty($borrower->$field) && empty($user->$field)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private function getBiodataCompletionPercentage($user)
+    {
+        $borrower = $user->borrower;
+        if (!$borrower) {
+            return 0;
+        }
+
+        $fields = ['phone', 'email', 'id_number', 'date_of_birth', 'gender', 'nationality'];
+        $filled = 0;
+        foreach ($fields as $field) {
+            if (!empty($borrower->$field) || !empty($user->$field)) {
+                $filled++;
+            }
+        }
+        return round(($filled / count($fields)) * 100);
+    }
+
+    private function getMissingBiodataFields($user)
+    {
+        $borrower = $user->borrower;
+        if (!$borrower) {
+            return ['phone', 'email', 'id_number', 'date_of_birth', 'gender', 'nationality'];
+        }
+
+        $fields = ['phone', 'email', 'id_number', 'date_of_birth', 'gender', 'nationality'];
+        $missing = [];
+        foreach ($fields as $field) {
+            if (empty($borrower->$field) && empty($user->$field)) {
+                $missing[] = $field;
+            }
+        }
+        return $missing;
     }
 
     private function prepareMonthlyData($chartData)
@@ -429,138 +499,110 @@ class DashboardController extends Controller
         });
     }
 
-private function getDueLoans($user)
-{
-    $baseQuery = Loan::with(['user', 'loanType', 'cycles'])
-        ->whereIn('status', ['disbursed', 'approved', 'active'])
-        ->join('loan_types', 'loans.loan_type_id', '=', 'loan_types.id')
-        ->select('loans.*');
+    private function getDueLoans($user)
+    {
+        $baseQuery = Loan::with(['user', 'loanType', 'cycles'])
+            ->whereIn('status', ['disbursed', 'approved', 'active'])
+            ->join('loan_types', 'loans.loan_type_id', '=', 'loan_types.id')
+            ->select('loans.*');
 
-    // Role-based filtering...
-    switch ($user->role) {
-        case 'admin':
-        case 'teller':
-            break;
-        case 'borrower':
+        // Role-based filtering
+        if ($user->hasRole('admin') || $user->hasRole('teller')) {
+            // Show all loans
+        } elseif ($user->hasRole('borrower')) {
             $baseQuery->where('loans.user_id', $user->id);
-            break;
-        case 'broker':
+        } elseif ($user->hasRole('broker')) {
             $currentBrokerId = $user->broker->id ?? null;
             if ($currentBrokerId) {
                 $borrowerIds = Borrower::where('broker_id', $currentBrokerId)->pluck('user_id');
                 $baseQuery->whereIn('loans.user_id', $borrowerIds);
             }
-            break;
-        default:
-            $baseQuery->where('loans.user_id', $user->id);
-            break;
-    }
-
-    $loans = $baseQuery->get();
-
-    return $loans->map(function ($loan) {
-        // ============ CRITICAL FIX: Get ACTIVE cycle ============
-        $activeCycle = $loan->cycles()
-            ->where('status', 'active')
-            ->first();
-        
-        // If there's no active cycle, get the latest cycle
-        if (!$activeCycle) {
-            $activeCycle = $loan->cycles()
-                ->orderBy('cycle_number', 'desc')
-                ->first();
-        }
-
-        $today = Carbon::now()->startOfDay();
-
-        if ($activeCycle && $activeCycle->due_date) {
-            // ============ USE ACTIVE CYCLE DATA ============
-            $dueDate = Carbon::parse($activeCycle->due_date)->startOfDay();
-            $startDate = Carbon::parse($activeCycle->start_date)->startOfDay();
-            
-            // Calculate remaining days
-            $remainingDays = $today->diffInDays($dueDate, false);
-            
-            // Use the active cycle's balance as the current amount
-            $loanAmount = $activeCycle->new_balance;
-            
-            // Get repayments for this specific cycle
-            $cycleRepayments = $loan->repayments()
-                ->where('loan_cycle_id', $activeCycle->id)
-                ->sum('amount');
-            
-            $loan->total_repayments = $cycleRepayments;
-            
-            // Update loan with cycle data
-            $loan->due_date = $dueDate;
-            $loan->cycle_start_date = $startDate;
-            $loan->remaining_days = $remainingDays;
-            $loan->cycle_number = $activeCycle->cycle_number;
-            $loan->new_balance = $activeCycle->new_balance;
-            
-            // Determine status based on remaining days
-            if ($remainingDays < 0) {
-                $loan->status = 'overdue';
-                $loan->overdue_days = abs($remainingDays);
-                $interval = $today->diff($dueDate);
-                $loan->overdue_period = [
-                    'months' => $interval->m,
-                    'days' => $interval->d
-                ];
-            } else {
-                // If loan is not overdue, use its actual status
-                $loan->status = $loan->status;
-                $loan->overdue_days = 0;
-                $loan->overdue_period = ['months' => 0, 'days' => 0];
-            }
-            
-            // Log for debugging
-            \Log::info('Due loan with cycle', [
-                'loan_id' => $loan->id,
-                'cycle' => $activeCycle->cycle_number,
-                'due_date' => $dueDate->format('Y-m-d'),
-                'remaining_days' => $remainingDays,
-                'status' => $loan->status
-            ]);
-            
         } else {
-            // ============ FALLBACK: No cycles found ============
-            // Calculate from borrow_date (legacy/new loans without cycles)
-            $borrowDate = Carbon::parse($loan->borrow_date)->startOfDay();
-            $dueDate = $borrowDate->copy();
-            
-            switch ($loan->loanType->unit ?? 'days') {
-                case 'days':
-                    $dueDate->addDays($loan->loanType->period ?? 30);
-                    break;
-                case 'weeks':
-                    $dueDate->addWeeks($loan->loanType->period ?? 4);
-                    break;
-                case 'months':
-                    $dueDate->addMonths($loan->loanType->period ?? 1);
-                    break;
-                default:
-                    $dueDate->addDays(30);
-                    break;
-            }
-            
-            $remainingDays = $today->diffInDays($dueDate, false);
-            $loan->due_date = $dueDate;
-            $loan->remaining_days = $remainingDays;
-            $loan->cycle_number = 1;
-            
-            if ($remainingDays < 0) {
-                $loan->status = 'overdue';
-                $loan->overdue_days = abs($remainingDays);
-                $interval = $today->diff($dueDate);
-                $loan->overdue_period = [
-                    'months' => $interval->m,
-                    'days' => $interval->d
-                ];
-            }
+            $baseQuery->where('loans.user_id', $user->id);
         }
 
-        return $loan;
-    })->sortBy('remaining_days')->values();
-}
+        $loans = $baseQuery->get();
+
+        return $loans->map(function ($loan) {
+            // Get ACTIVE cycle
+            $activeCycle = $loan->cycles()
+                ->where('status', 'active')
+                ->first();
+            
+            if (!$activeCycle) {
+                $activeCycle = $loan->cycles()
+                    ->orderBy('cycle_number', 'desc')
+                    ->first();
+            }
+
+            $today = Carbon::now()->startOfDay();
+
+            if ($activeCycle && $activeCycle->due_date) {
+                // Use active cycle data
+                $dueDate = Carbon::parse($activeCycle->due_date)->startOfDay();
+                $startDate = Carbon::parse($activeCycle->start_date)->startOfDay();
+                
+                $remainingDays = $today->diffInDays($dueDate, false);
+                $cycleRepayments = $loan->repayments()
+                    ->where('loan_cycle_id', $activeCycle->id)
+                    ->sum('amount');
+                
+                $loan->total_repayments = $cycleRepayments;
+                $loan->due_date = $dueDate;
+                $loan->cycle_start_date = $startDate;
+                $loan->remaining_days = $remainingDays;
+                $loan->cycle_number = $activeCycle->cycle_number;
+                $loan->new_balance = $activeCycle->new_balance;
+                
+                if ($remainingDays < 0) {
+                    $loan->status = 'overdue';
+                    $loan->overdue_days = abs($remainingDays);
+                    $interval = $today->diff($dueDate);
+                    $loan->overdue_period = [
+                        'months' => $interval->m,
+                        'days' => $interval->d
+                    ];
+                } else {
+                    $loan->overdue_days = 0;
+                    $loan->overdue_period = ['months' => 0, 'days' => 0];
+                }
+            } else {
+                // Fallback: calculate from borrow_date
+                $borrowDate = Carbon::parse($loan->borrow_date)->startOfDay();
+                $dueDate = $borrowDate->copy();
+                
+                switch ($loan->loanType->unit ?? 'days') {
+                    case 'days':
+                        $dueDate->addDays($loan->loanType->period ?? 30);
+                        break;
+                    case 'weeks':
+                        $dueDate->addWeeks($loan->loanType->period ?? 4);
+                        break;
+                    case 'months':
+                        $dueDate->addMonths($loan->loanType->period ?? 1);
+                        break;
+                    default:
+                        $dueDate->addDays(30);
+                        break;
+                }
+                
+                $remainingDays = $today->diffInDays($dueDate, false);
+                $loan->due_date = $dueDate;
+                $loan->remaining_days = $remainingDays;
+                $loan->cycle_number = 1;
+                
+                if ($remainingDays < 0) {
+                    $loan->status = 'overdue';
+                    $loan->overdue_days = abs($remainingDays);
+                    $interval = $today->diff($dueDate);
+                    $loan->overdue_period = [
+                        'months' => $interval->m,
+                        'days' => $interval->d
+                    ];
+                }
+            }
+
+            return $loan;
+        })->sortBy('remaining_days')->values();
+    }
 }

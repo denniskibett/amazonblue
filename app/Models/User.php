@@ -7,17 +7,18 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes, HasRoles;
 
     protected $fillable = [
         'name', 
         'email', 
         'password', 
         'phone', 
-        'role',
+        'role', // Keep for backward compatibility during migration
         'avatar', 
         'profile_photo_path',
         'gender',
@@ -59,6 +60,82 @@ class User extends Authenticatable
             'disability' => 'boolean',
             'password_changed_at' => 'datetime',
         ];
+    }
+
+    // ============ LEGACY ROLE HELPER (FOR BACKWARDS COMPATIBILITY) ============
+    
+    /**
+     * Get the legacy role from the database (temporary)
+     * This is only needed during migration from enum to Spatie roles
+     */
+    public function getLegacyRoleAttribute()
+    {
+        return $this->attributes['role'] ?? null;
+    }
+
+    /**
+     * Check if user is an admin (legacy compatibility)
+     * Uses Spatie's hasRole method
+     */
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin') || $this->hasRole('super-admin');
+    }
+
+    /**
+     * Check if user is a super admin
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('super-admin');
+    }
+
+    /**
+     * Check if user is a broker (legacy compatibility)
+     */
+    public function isBroker(): bool
+    {
+        return $this->hasRole('broker');
+    }
+
+    /**
+     * Check if user is a teller (legacy compatibility)
+     */
+    public function isTeller(): bool
+    {
+        return $this->hasRole('teller');
+    }
+
+    /**
+     * Check if user is a borrower (legacy compatibility)
+     */
+    public function isBorrower(): bool
+    {
+        return $this->hasRole('borrower');
+    }
+
+    /**
+     * Check if user is a partner (legacy compatibility)
+     */
+    public function isPartner(): bool
+    {
+        return $this->hasRole('partner');
+    }
+
+    /**
+     * Check if user is active
+     */
+    public function isActive(): bool
+    {
+        return $this->status === 0; // Assuming 0 = active
+    }
+
+    /**
+     * Get user role names as string
+     */
+    public function getRoleNamesAttribute(): string
+    {
+        return $this->roles->pluck('name')->implode(', ');
     }
 
     // ============ RELATIONSHIPS ============
@@ -234,22 +311,37 @@ class User extends Authenticatable
 
     public function scopeBorrowers($query)
     {
-        return $query->where('role', 'borrower');
+        return $query->whereHas('roles', function ($q) {
+            $q->where('name', 'borrower');
+        });
     }
 
     public function scopeBrokers($query)
     {
-        return $query->where('role', 'broker');
+        return $query->whereHas('roles', function ($q) {
+            $q->where('name', 'broker');
+        });
     }
 
     public function scopeTellers($query)
     {
-        return $query->where('role', 'teller');
+        return $query->whereHas('roles', function ($q) {
+            $q->where('name', 'teller');
+        });
     }
 
     public function scopeAdmins($query)
     {
-        return $query->where('role', 'admin');
+        return $query->whereHas('roles', function ($q) {
+            $q->where('name', 'admin');
+        });
+    }
+
+    public function scopeSuperAdmins($query)
+    {
+        return $query->whereHas('roles', function ($q) {
+            $q->where('name', 'super-admin');
+        });
     }
 
     public function scopeActive($query)
@@ -518,7 +610,7 @@ class User extends Authenticatable
         ];
 
         // Add employment section for borrowers
-        if ($this->role === 'borrower' && $this->borrower) {
+        if ($this->isBorrower() && $this->borrower) {
             $sections['employment'] = [
                 'name' => 'Employment',
                 'fields' => ['income_type', 'net_salary', 'job_title', 'employer_name'],
@@ -547,7 +639,7 @@ class User extends Authenticatable
                 $value = null;
                 
                 // Check if field is in borrower relationship
-                if ($this->role === 'borrower' && $this->borrower && isset($this->borrower->$field)) {
+                if ($this->isBorrower() && $this->borrower && isset($this->borrower->$field)) {
                     $value = $this->borrower->$field;
                 } elseif (isset($this->$field)) {
                     $value = $this->$field;
@@ -612,8 +704,6 @@ class User extends Authenticatable
 
     /**
      * Check if user has any active or pending loan applications
-     * 
-     * @return bool
      */
     public function hasActiveLoanApplication(): bool
     {
@@ -624,8 +714,6 @@ class User extends Authenticatable
 
     /**
      * Check if user has any loan in the application pipeline
-     * 
-     * @return bool
      */
     public function hasLoanInPipeline(): bool
     {
@@ -636,8 +724,6 @@ class User extends Authenticatable
 
     /**
      * Check if user's profile is locked (has active loans or applications)
-     * 
-     * @return bool
      */
     public function isProfileLocked(): bool
     {
@@ -646,8 +732,6 @@ class User extends Authenticatable
 
     /**
      * Get the user's current loan status message
-     * 
-     * @return string|null
      */
     public function getLoanStatusMessage(): ?string
     {
@@ -677,36 +761,22 @@ class User extends Authenticatable
 
     /**
      * Check if a specific field is locked
-     * 
-     * @param string $field
-     * @return bool
      */
     public function isFieldLocked(string $field): bool
     {
-        // If no active loans, nothing is locked
         if (!$this->hasLoanInPipeline()) {
             return false;
         }
         
-        // Fields that should be locked when a loan is active
         $lockedFields = [
-            // Basic personal info
             'name', 'email', 'phone', 'gender', 'dob', 'nationality', 'marital_status',
-            // Identification
             'id_type', 'id_number', 'id_front_path', 'id_back_path',
-            // Next of kin
             'kin_name', 'kin_email', 'kin_phone', 'kin_occupation', 'kin_relation', 
             'kin_id_type', 'kin_id_number',
-            // Employment (borrower fields)
             'income_type', 'gross_salary', 'net_salary', 'job_title', 'workplace',
             'employer_name', 'employer_email', 'employer_title', 'department',
-            // Borrower account
             'client_type', 'status',
-            // Signature
-            'signature',
-            // Religion, education, disability
-            'religion', 'education', 'disability',
-            // Profile photo
+            'signature', 'religion', 'education', 'disability',
             'profile_photo_path', 'avatar'
         ];
         
@@ -715,8 +785,6 @@ class User extends Authenticatable
 
     /**
      * Get the locked field names with user-friendly labels
-     * 
-     * @return array
      */
     public function getLockedFields(): array
     {
@@ -770,8 +838,6 @@ class User extends Authenticatable
 
     /**
      * Get the current loan that's causing the profile lock
-     * 
-     * @return \App\Models\Loan|null
      */
     public function getLockingLoan()
     {
@@ -783,11 +849,9 @@ class User extends Authenticatable
 
     /**
      * Check if profile lock should be shown
-     * 
-     * @return bool
      */
     public function shouldShowLock(): bool
     {
-        return $this->role === 'borrower' && $this->isProfileLocked();
+        return $this->isBorrower() && $this->isProfileLocked();
     }
 }

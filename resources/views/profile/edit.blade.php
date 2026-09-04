@@ -40,6 +40,40 @@
             </nav>
         </div>
 
+        <!-- ============================================================ -->
+        <!-- PROFILE LOCKED NOTIFICATION                                   -->
+        <!-- ============================================================ -->
+        @if($isProfileLocked)
+        <div class="mb-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm dark:border-yellow-800 dark:bg-yellow-900/20">
+            <div class="flex items-start gap-4">
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-300">
+                        🔒 Profile Locked
+                    </h3>
+                    <p class="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+                        You have previously taken a loan. Your KYC information is locked for security and compliance.
+                        Only non-critical fields can be updated.
+                    </p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        @foreach($lockedFields as $field)
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300">
+                            🔒 {{ ucfirst(str_replace('_', ' ', $field)) }}
+                        </span>
+                        @endforeach
+                    </div>
+                    <p class="mt-2 text-xs text-yellow-600 dark:text-yellow-500">
+                        To modify these fields, please contact support. Other fields remain editable.
+                    </p>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Quick Navigation with Section Counts -->
         <div class="mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
             <div class="flex flex-wrap gap-3 justify-between items-center">
@@ -113,7 +147,10 @@
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-semibold">Edit Profile</h3>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                    Press <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Ctrl + S</kbd> to save
+                    @if($isProfileLocked)
+                        <span class="text-yellow-600 dark:text-yellow-400">🔒 Some fields are locked</span>
+                    @endif
+                    <span class="ml-2">Press <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Ctrl + S</kbd> to save</span>
                 </div>
             </div>
 
@@ -130,6 +167,9 @@
                             <span class="text-2xl">👤</span>
                             <h5 class="text-lg font-medium">Personal Information</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
+                            @if($isProfileLocked)
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Partially Locked</span>
+                            @endif
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['basic']['filled'] }}/{{ $sectionCounts['basic']['total'] }}</span>
@@ -143,53 +183,114 @@
                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Basic personal details including contact information and demographics.</p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {{-- NAME - LOCKED if loan exists --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Full Name <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                Full Name <span class="text-red-500">*</span>
+                                @if(in_array('name', $lockedFields))
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                @endif
+                            </label>
                             <input type="text" name="name" value="{{ old('name', $user->name) }}" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                   @if(in_array('name', $lockedFields)) bg-gray-100 dark:bg-gray-700 cursor-not-allowed @endif"
+                                   @if(in_array('name', $lockedFields)) readonly disabled @endif
                                    required>
                             @error('name')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            @if(in_array('name', $lockedFields))
+                                <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
+                            @endif
                         </div>
+
+                        {{-- EMAIL - LOCKED if loan exists --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Email Address <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                Email Address <span class="text-red-500">*</span>
+                                @if(in_array('email', $lockedFields))
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                @endif
+                            </label>
                             <input type="email" name="email" value="{{ old('email', $user->email) }}" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                   @if(in_array('email', $lockedFields)) bg-gray-100 dark:bg-gray-700 cursor-not-allowed @endif"
+                                   @if(in_array('email', $lockedFields)) readonly disabled @endif
                                    required>
                             @error('email')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            @if(in_array('email', $lockedFields))
+                                <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
+                            @endif
                         </div>
+
+                        {{-- PHONE - LOCKED if loan exists --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Phone Number <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                Phone Number <span class="text-red-500">*</span>
+                                @if(in_array('phone', $lockedFields))
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                @endif
+                            </label>
                             <input type="tel" name="phone" value="{{ old('phone', $user->phone) }}" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                   @if(in_array('phone', $lockedFields)) bg-gray-100 dark:bg-gray-700 cursor-not-allowed @endif"
+                                   @if(in_array('phone', $lockedFields)) readonly disabled @endif
                                    required>
                             @error('phone')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            @if(in_array('phone', $lockedFields))
+                                <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
+                            @endif
                         </div>
+
+                        {{-- GENDER - LOCKED if loan exists --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Gender <span class="text-red-500">*</span></label>
-                            <select name="gender" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <label class="block mb-2 text-sm font-medium">
+                                Gender <span class="text-red-500">*</span>
+                                @if(in_array('gender', $lockedFields))
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                @endif
+                            </label>
+                            <select name="gender" 
+                                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                    @if(in_array('gender', $lockedFields)) bg-gray-100 dark:bg-gray-700 cursor-not-allowed @endif"
+                                    @if(in_array('gender', $lockedFields)) disabled @endif
+                                    required>
                                 <option value="">Select Gender</option>
                                 <option value="male" {{ old('gender', $user->gender) == 'male' ? 'selected' : '' }}>Male</option>
                                 <option value="female" {{ old('gender', $user->gender) == 'female' ? 'selected' : '' }}>Female</option>
                                 <option value="other" {{ old('gender', $user->gender) == 'other' ? 'selected' : '' }}>Other</option>
                             </select>
+                            @if(in_array('gender', $lockedFields))
+                                <input type="hidden" name="gender" value="{{ old('gender', $user->gender) }}">
+                            @endif
                             @error('gender')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            @if(in_array('gender', $lockedFields))
+                                <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
+                            @endif
                         </div>
+
+                        {{-- DATE OF BIRTH - LOCKED if loan exists --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Date of Birth <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                Date of Birth <span class="text-red-500">*</span>
+                                @if(in_array('dob', $lockedFields))
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                @endif
+                            </label>
                             <div class="relative">
                                 <input type="text" name="dob" 
                                        value="{{ old('dob', $user->dob ? \Carbon\Carbon::parse($user->dob)->format('d/m/Y') : '') }}"
                                        placeholder="DD/MM/YYYY"
-                                       class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 datepicker"
-                                       required readonly>
+                                       class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 datepicker
+                                       @if(in_array('dob', $lockedFields)) bg-gray-100 dark:bg-gray-700 cursor-not-allowed @endif"
+                                       @if(in_array('dob', $lockedFields)) readonly disabled @endif
+                                       required>
                                 <span class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 dark:text-gray-400">
                                     <svg class="fill-current" width="20" height="20" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" clip-rule="evenodd" d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"/>
@@ -200,10 +301,24 @@
                             @error('dob')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            @if(in_array('dob', $lockedFields))
+                                <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
+                            @endif
                         </div>
+
+                        {{-- NATIONALITY - LOCKED if loan exists --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Nationality <span class="text-red-500">*</span></label>
-                            <select name="nationality" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <label class="block mb-2 text-sm font-medium">
+                                Nationality <span class="text-red-500">*</span>
+                                @if(in_array('nationality', $lockedFields))
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                @endif
+                            </label>
+                            <select name="nationality" 
+                                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                    @if(in_array('nationality', $lockedFields)) bg-gray-100 dark:bg-gray-700 cursor-not-allowed @endif"
+                                    @if(in_array('nationality', $lockedFields)) disabled @endif
+                                    required>
                                 <option value="">Select Nationality</option>
                                 @foreach($countries as $country)
                                     <option value="{{ $country['code'] }}" 
@@ -212,10 +327,18 @@
                                     </option>
                                 @endforeach
                             </select>
+                            @if(in_array('nationality', $lockedFields))
+                                <input type="hidden" name="nationality" value="{{ old('nationality', $user->nationality ?? '') }}">
+                            @endif
                             @error('nationality')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            @if(in_array('nationality', $lockedFields))
+                                <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
+                            @endif
                         </div>
+
+                        {{-- MARITAL STATUS - UNLOCKED (can always edit) --}}
                         <div>
                             <label class="block mb-2 text-sm font-medium">Marital Status <span class="text-red-500">*</span></label>
                             <select name="marital_status" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
@@ -229,6 +352,8 @@
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
+
+                        {{-- RELIGION - UNLOCKED --}}
                         <div>
                             <label class="block mb-2 text-sm font-medium">Religion</label>
                             <select name="religion" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -243,6 +368,8 @@
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
+
+                        {{-- EDUCATION - UNLOCKED --}}
                         <div>
                             <label class="block mb-2 text-sm font-medium">Education Level</label>
                             <select name="education" id="education-select" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -263,6 +390,8 @@
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
+
+                        {{-- DISABILITY - UNLOCKED --}}
                         <div class="md:col-span-2">
                             <label class="flex items-center">
                                 <input type="checkbox" name="disability" value="1" {{ old('disability', $user->disability) ? 'checked' : '' }} 
@@ -270,6 +399,8 @@
                                 <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">I have a disability (Optional)</span>
                             </label>
                         </div>
+
+                        {{-- PROFILE PHOTO - UNLOCKED --}}
                         <div>
                             <label class="block mb-2 text-sm font-medium">Profile Photo</label>
                             <input type="file" name="profile_photo" accept="image/*" 
@@ -288,7 +419,7 @@
                 </div>
 
                 <!-- ============================================ -->
-                <!-- BUCKET 2: IDENTIFICATION                      -->
+                <!-- BUCKET 2: IDENTIFICATION - ALL LOCKED        -->
                 <!-- ============================================ -->
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="identification">
                     <div class="flex items-center justify-between mb-4">
@@ -296,6 +427,9 @@
                             <span class="text-2xl">🪪</span>
                             <h5 class="text-lg font-medium">Identification Documents</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
+                            @if($isProfileLocked)
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 All fields locked</span>
+                            @endif
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['identification']['filled'] }}/{{ $sectionCounts['identification']['total'] }}</span>
@@ -310,30 +444,46 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block mb-2 text-sm font-medium">ID Type <span class="text-red-500">*</span></label>
-                            <select name="id_type" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <label class="block mb-2 text-sm font-medium">
+                                ID Type <span class="text-red-500">*</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                            </label>
+                            <select name="id_type" 
+                                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    disabled>
                                 <option value="">Select ID Type</option>
                                 <option value="national_id" {{ old('id_type', $user->id_type) == 'national_id' ? 'selected' : '' }}>National ID</option>
                                 <option value="passport" {{ old('id_type', $user->id_type) == 'passport' ? 'selected' : '' }}>Passport</option>
                                 <option value="drivers_license" {{ old('id_type', $user->id_type) == 'drivers_license' ? 'selected' : '' }}>Driver's License</option>
                             </select>
+                            <input type="hidden" name="id_type" value="{{ old('id_type', $user->id_type) }}">
                             @error('id_type')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
                         </div>
                         <div>
-                            <label class="block mb-2 text-sm font-medium">ID Number <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                ID Number <span class="text-red-500">*</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                            </label>
                             <input type="text" name="id_number" value="{{ old('id_number', $user->id_number) }}" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                   required>
+                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   readonly disabled>
+                            <input type="hidden" name="id_number" value="{{ old('id_number', $user->id_number) }}">
                             @error('id_number')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
                         </div>
                         <div>
-                            <label class="block mb-2 text-sm font-medium">ID Front Photo <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                ID Front Photo <span class="text-red-500">*</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                            </label>
                             <input type="file" name="id_front_path" accept="image/*" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   disabled>
                             @if($user->id_front_path)
                             <p class="mt-1 text-sm text-green-600">Current file uploaded</p>
                             <div class="mt-2">
@@ -343,11 +493,16 @@
                             @error('id_front_path')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
                         </div>
                         <div>
-                            <label class="block mb-2 text-sm font-medium">ID Back Photo <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                ID Back Photo <span class="text-red-500">*</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                            </label>
                             <input type="file" name="id_back_path" accept="image/*" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   disabled>
                             @if($user->id_back_path)
                             <p class="mt-1 text-sm text-green-600">Current file uploaded</p>
                             <div class="mt-2">
@@ -357,12 +512,13 @@
                             @error('id_back_path')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- ============================================ -->
-                <!-- BUCKET 3: FAMILY & NEXT OF KIN                -->
+                <!-- BUCKET 3: NEXT OF KIN - ALL LOCKED           -->
                 <!-- ============================================ -->
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="next-of-kin">
                     <div class="flex items-center justify-between mb-4">
@@ -370,6 +526,9 @@
                             <span class="text-2xl">👨‍👩‍👧‍👦</span>
                             <h5 class="text-lg font-medium">Family & Next of Kin</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
+                            @if($isProfileLocked)
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 All fields locked</span>
+                            @endif
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['next-of-kin']['filled'] }}/{{ $sectionCounts['next-of-kin']['total'] }}</span>
@@ -383,81 +542,48 @@
                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Emergency contact and next of kin details for security and contact purposes.</p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach(['kin_name', 'kin_email', 'kin_phone', 'kin_occupation', 'kin_relation', 'kin_id_type', 'kin_id_number'] as $field)
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Full Name <span class="text-red-500">*</span></label>
-                            <input type="text" name="kin_name" value="{{ old('kin_name', $user->kin_name) }}" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                   required>
-                            @error('kin_name')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Email <span class="text-red-500">*</span></label>
-                            <input type="email" name="kin_email" value="{{ old('kin_email', $user->kin_email) }}" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                   required>
-                            @error('kin_email')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Phone Number <span class="text-red-500">*</span></label>
-                            <input type="tel" name="kin_phone" value="{{ old('kin_phone', $user->kin_phone) }}" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                   required>
-                            @error('kin_phone')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Occupation <span class="text-red-500">*</span></label>
-                            <input type="text" name="kin_occupation" value="{{ old('kin_occupation', $user->kin_occupation) }}" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                   required>
-                            @error('kin_occupation')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Relationship <span class="text-red-500">*</span></label>
-                            <select name="kin_relation" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                                <option value="">Select Relationship</option>
-                                @foreach($relationships as $relationship)
-                                <option value="{{ $relationship->name }}" {{ old('kin_relation', $user->kin_relation) == $relationship->name ? 'selected' : '' }}>
-                                    {{ $relationship->name }}
-                                </option>
-                                @endforeach
-                            </select>
-                            @error('kin_relation')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Kin's ID Type <span class="text-red-500">*</span></label>
-                            <select name="kin_id_type" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <label class="block mb-2 text-sm font-medium">
+                                {{ ucfirst(str_replace('_', ' ', str_replace('kin_', '', $field))) }} <span class="text-red-500">*</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                            </label>
+                            @if(str_contains($field, 'kin_id_type'))
+                            <select name="{{ $field }}" 
+                                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    disabled>
                                 <option value="">Select ID Type</option>
-                                <option value="national_id" {{ old('kin_id_type', $user->kin_id_type) == 'national_id' ? 'selected' : '' }}>National ID</option>
-                                <option value="passport" {{ old('kin_id_type', $user->kin_id_type) == 'passport' ? 'selected' : '' }}>Passport</option>
+                                <option value="national_id" {{ old($field, $user->$field) == 'national_id' ? 'selected' : '' }}>National ID</option>
+                                <option value="passport" {{ old($field, $user->$field) == 'passport' ? 'selected' : '' }}>Passport</option>
                             </select>
-                            @error('kin_id_type')
+                            <input type="hidden" name="{{ $field }}" value="{{ old($field, $user->$field) }}">
+                            @elseif(str_contains($field, 'kin_email'))
+                            <input type="email" name="{{ $field }}" value="{{ old($field, $user->$field) }}" 
+                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   readonly disabled>
+                            <input type="hidden" name="{{ $field }}" value="{{ old($field, $user->$field) }}">
+                            @elseif(str_contains($field, 'kin_phone'))
+                            <input type="tel" name="{{ $field }}" value="{{ old($field, $user->$field) }}" 
+                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   readonly disabled>
+                            <input type="hidden" name="{{ $field }}" value="{{ old($field, $user->$field) }}">
+                            @else
+                            <input type="text" name="{{ $field }}" value="{{ old($field, $user->$field) }}" 
+                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   readonly disabled>
+                            <input type="hidden" name="{{ $field }}" value="{{ old($field, $user->$field) }}">
+                            @endif
+                            @error($field)
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
                         </div>
-                        <div>
-                            <label class="block mb-2 text-sm font-medium">Kin's ID Number <span class="text-red-500">*</span></label>
-                            <input type="text" name="kin_id_number" value="{{ old('kin_id_number', $user->kin_id_number) }}" 
-                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                   required>
-                            @error('kin_id_number')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
+                        @endforeach
                     </div>
                 </div>
 
                 <!-- ============================================ -->
-                <!-- BUCKET 4: EMPLOYMENT & FINANCIAL (Borrowers)  -->
+                <!-- BUCKET 4: EMPLOYMENT - UNLOCKED               -->
                 <!-- ============================================ -->
                 @if($user->role === 'borrower')
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="employment">
@@ -466,6 +592,7 @@
                             <span class="text-2xl">💼</span>
                             <h5 class="text-lg font-medium">Employment & Financial Information</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
+                            <span class="text-xs text-green-600 dark:text-green-400">✅ Editable</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['employment']['filled'] }}/{{ $sectionCounts['employment']['total'] }}</span>
@@ -558,16 +685,19 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
                 <!-- ============================================ -->
-                <!-- BUCKET 5: BORROWER ACCOUNT                    -->
+                <!-- BUCKET 5: BORROWER ACCOUNT - LOCKED          -->
                 <!-- ============================================ -->
+                @if($user->role === 'borrower')
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="borrower-info">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
                             <span class="text-2xl">🏦</span>
                             <h5 class="text-lg font-medium">Borrower Account</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
+                            <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['borrower-info']['filled'] }}/{{ $sectionCounts['borrower-info']['total'] }}</span>
@@ -582,31 +712,45 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Client Type <span class="text-red-500">*</span></label>
-                            <select name="client_type" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <label class="block mb-2 text-sm font-medium">
+                                Client Type <span class="text-red-500">*</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                            </label>
+                            <select name="client_type" 
+                                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    disabled>
                                 <option value="0" {{ old('client_type', $user->borrower->client_type ?? '') == '0' ? 'selected' : '' }}>Individual</option>
                                 <option value="1" {{ old('client_type', $user->borrower->client_type ?? '') == '1' ? 'selected' : '' }}>Business</option>
                             </select>
+                            <input type="hidden" name="client_type" value="{{ old('client_type', $user->borrower->client_type ?? 0) }}">
                             @error('client_type')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
                         </div>
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Account Status <span class="text-red-500">*</span></label>
-                            <select name="status" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <label class="block mb-2 text-sm font-medium">
+                                Account Status <span class="text-red-500">*</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                            </label>
+                            <select name="status" 
+                                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    disabled>
                                 <option value="1" {{ old('status', $user->borrower->status ?? '') == '1' ? 'selected' : '' }}>Active</option>
                                 <option value="0" {{ old('status', $user->borrower->status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
                             </select>
+                            <input type="hidden" name="status" value="{{ old('status', $user->borrower->status ?? 1) }}">
                             @error('status')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
                         </div>
                     </div>
                 </div>
                 @endif
 
                 <!-- ============================================ -->
-                <!-- BUCKET 6: BROKER INFORMATION (Brokers)        -->
+                <!-- BUCKET 6: BROKER - Certificate Locked, Rates Unlocked -->
                 <!-- ============================================ -->
                 @if($user->role === 'broker')
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="broker-info">
@@ -615,6 +759,10 @@
                             <span class="text-2xl">🤝</span>
                             <h5 class="text-lg font-medium">Broker Information</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
+                            @if($isProfileLocked)
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Certificate locked</span>
+                            @endif
+                            <span class="text-xs text-green-600 dark:text-green-400">✅ Rates editable</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['broker-info']['filled'] ?? 0 }}/{{ $sectionCounts['broker-info']['total'] ?? 5 }}</span>
@@ -623,40 +771,71 @@
                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Broker certification and commission rates.</p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {{-- Certificate Number - LOCKED if loan exists --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Certificate Number <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                Certificate Number <span class="text-red-500">*</span>
+                                @if(in_array('cert_no', $lockedFields))
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                @endif
+                            </label>
                             <input type="text" name="cert_no" value="{{ old('cert_no', $user->broker->cert_no ?? '') }}" 
-                                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                   @if(in_array('cert_no', $lockedFields)) bg-gray-100 dark:bg-gray-700 cursor-not-allowed @endif"
+                                   @if(in_array('cert_no', $lockedFields)) readonly disabled @endif
+                                   required>
+                            @if(in_array('cert_no', $lockedFields))
+                                <input type="hidden" name="cert_no" value="{{ old('cert_no', $user->broker->cert_no ?? '') }}">
+                            @endif
                             @error('cert_no')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            @if(in_array('cert_no', $lockedFields))
+                                <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">Contact support to change this field</p>
+                            @endif
                         </div>
+
+                        {{-- Client Interest Rate - UNLOCKED --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Client Interest Rate (%) <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                Client Interest Rate (%) <span class="text-red-500">*</span>
+                            </label>
                             <input type="number" step="0.01" name="interest_client" value="{{ old('interest_client', $user->broker->interest_client ?? '') }}" 
                                 class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                             @error('interest_client')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
+
+                        {{-- Broker Interest Rate - UNLOCKED --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Broker Interest Rate (%) <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                Broker Interest Rate (%) <span class="text-red-500">*</span>
+                            </label>
                             <input type="number" step="0.01" name="interest_broker" value="{{ old('interest_broker', $user->broker->interest_broker ?? '') }}" 
                                 class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                             @error('interest_broker')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
+
+                        {{-- Client Penalty Rate - UNLOCKED --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Client Penalty Rate (%) <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                Client Penalty Rate (%) <span class="text-red-500">*</span>
+                            </label>
                             <input type="number" step="0.01" name="penalty_client" value="{{ old('penalty_client', $user->broker->penalty_client ?? '') }}" 
                                 class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                             @error('penalty_client')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
+
+                        {{-- Broker Penalty Rate - UNLOCKED --}}
                         <div>
-                            <label class="block mb-2 text-sm font-medium">Broker Penalty Rate (%) <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 text-sm font-medium">
+                                Broker Penalty Rate (%) <span class="text-red-500">*</span>
+                            </label>
                             <input type="number" step="0.01" name="penalty_broker" value="{{ old('penalty_broker', $user->broker->penalty_broker ?? '') }}" 
                                 class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                             @error('penalty_broker')
@@ -668,7 +847,7 @@
                 @endif
 
                 <!-- ============================================ -->
-                <!-- BUCKET 7: TELLER INFORMATION (Tellers)        -->
+                <!-- BUCKET 7: TELLER - UNLOCKED                   -->
                 <!-- ============================================ -->
                 @if($user->role === 'teller')
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="teller-info">
@@ -677,6 +856,7 @@
                             <span class="text-2xl">🏧</span>
                             <h5 class="text-lg font-medium">Teller Information</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
+                            <span class="text-xs text-green-600 dark:text-green-400">✅ Editable</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['teller-info']['filled'] ?? 0 }}/{{ $sectionCounts['teller-info']['total'] ?? 1 }}</span>
@@ -712,12 +892,17 @@
             </form>
         </div>
 
-        <!-- Signature Section -->
+        <!-- ============================================ -->
+        <!-- SIGNATURE SECTION                            -->
+        <!-- ============================================ -->
         <div class="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center gap-3">
                     <span class="text-2xl">✍️</span>
                     <h3 class="text-lg font-semibold">Digital Signature</h3>
+                    @if($isProfileLocked)
+                        <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                    @endif
                 </div>
                 <div class="flex items-center gap-2">
                     @if($user->signature)
@@ -735,117 +920,143 @@
                 </div>
             </div>
 
-            @if($user->signature)
-            <div id="existing-signature-display" class="mb-6">
-                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                        <div class="flex-shrink-0">
-                            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-green-200 dark:border-green-700 shadow-sm">
-                                <div class="w-32 h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded">
-                                    <img src="{{ asset('storage/' . $user->signature) }}?v={{ time() }}"
-                                        alt="Signature of {{ $user->name }}"
-                                        class="max-w-full max-h-full object-contain"
-                                        onerror="this.style.display='none';">
-                                </div>
+            @if($isProfileLocked && $user->signature)
+            <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div class="flex-shrink-0">
+                        <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700 shadow-sm">
+                            <div class="w-32 h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded">
+                                <img src="{{ asset('storage/' . $user->signature) }}?v={{ time() }}"
+                                    alt="Signature of {{ $user->name }}"
+                                    class="max-w-full max-h-full object-contain"
+                                    onerror="this.style.display='none';">
                             </div>
                         </div>
-                        <div class="flex-1">
-                            <h4 class="font-semibold text-green-800 dark:text-green-300 text-lg">
-                                {{ $user->name }}
-                            </h4>
-                            <p class="text-green-700 dark:text-green-400 text-sm mb-2">
-                                ✅ Signature Found
-                            </p>
-                            <button type="button" @click="showSignaturePad = true" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 transition-colors">
-                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                                </svg>
-                                Update Signature
-                            </button>
-                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-yellow-800 dark:text-yellow-300 text-lg">
+                            {{ $user->name }}
+                        </h4>
+                        <p class="text-yellow-700 dark:text-yellow-400 text-sm">
+                            🔒 Signature is locked. Contact support to update it.
+                        </p>
                     </div>
                 </div>
             </div>
-            @endif
-
-            <div id="signature-creation-section" class="@if($user->signature) border-t border-gray-200 dark:border-gray-700 pt-6 @endif">
-                <h4 class="text-md font-medium mb-4 text-gray-700 dark:text-gray-300">
-                    @if($user->signature)
-                        Update Your Signature
-                    @else
-                        Create Your Digital Signature
-                    @endif
-                </h4>
-                
-                <div id="signature-section" x-show="showSignaturePad || !{{ $user->signature ? 'true' : 'false' }}">
-                    <div class="mb-4">
-                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                            @if($user->signature)
-                                Draw a new signature below to replace the existing one
-                            @else
-                                Draw Your Signature in the Square Below
-                            @endif
-                        </label>
-                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white dark:bg-gray-900">
-                            <div class="flex justify-center">
-                                <div id="signature-pad" class="signature-pad relative">
-                                    <canvas class="border border-gray-300 rounded-lg bg-white" 
-                                            style="touch-action: none; width: 400px; height: 400px; max-width: 100%;"></canvas>
-                                    <div class="absolute inset-0 pointer-events-none border-2 border-dashed border-blue-200 rounded-lg m-2"></div>
-                                    <div class="absolute top-1/2 left-0 right-0 h-px bg-blue-100 pointer-events-none"></div>
-                                    <div class="absolute left-1/2 top-0 bottom-0 w-px bg-blue-100 pointer-events-none"></div>
+            @elseif(!$isProfileLocked)
+                <!-- Existing signature pad code -->
+                @if($user->signature)
+                <div id="existing-signature-display" class="mb-6">
+                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                            <div class="flex-shrink-0">
+                                <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-green-200 dark:border-green-700 shadow-sm">
+                                    <div class="w-32 h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded">
+                                        <img src="{{ asset('storage/' . $user->signature) }}?v={{ time() }}"
+                                            alt="Signature of {{ $user->name }}"
+                                            class="max-w-full max-h-full object-contain"
+                                            onerror="this.style.display='none';">
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <div class="mt-4 flex flex-col sm:flex-row gap-2 justify-center items-center">
-                                <button type="button" id="clear-signature" class="px-4 py-2 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
-                                    Clear Signature
-                                </button>
-                                <button type="button" id="save-signature" class="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                                    @if($user->signature)
-                                        Save New Signature
-                                    @else
-                                        Save Signature
-                                    @endif
-                                </button>
-                                <div class="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-left">
-                                    @if($user->signature)
-                                        This will replace your existing signature
-                                    @else
-                                        Draw your signature to fill the square area
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                        <div id="signature-status" class="mt-2 text-sm text-center"></div>
-                        
-                        <div id="signature-preview-container" class="mt-6 hidden">
-                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">
-                                    @if($user->signature)
-                                        New Signature Preview
-                                    @else
-                                        Signature Preview
-                                    @endif
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-green-800 dark:text-green-300 text-lg">
+                                    {{ $user->name }}
                                 </h4>
-                                <div class="flex flex-col items-center gap-4">
-                                    <div class="flex-shrink-0">
-                                        <div class="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm">
-                                            <div id="signature-preview" class="w-64 h-64 flex items-center justify-center bg-transparent"></div>
-                                        </div>
+                                <p class="text-green-700 dark:text-green-400 text-sm mb-2">
+                                    ✅ Signature Found
+                                </p>
+                                <button type="button" @click="showSignaturePad = true" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 transition-colors">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                    </svg>
+                                    Update Signature
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <div id="signature-creation-section" class="@if($user->signature) border-t border-gray-200 dark:border-gray-700 pt-6 @endif">
+                    <h4 class="text-md font-medium mb-4 text-gray-700 dark:text-gray-300">
+                        @if($user->signature)
+                            Update Your Signature
+                        @else
+                            Create Your Digital Signature
+                        @endif
+                    </h4>
+                    
+                    <div id="signature-section" x-show="showSignaturePad || !{{ $user->signature ? 'true' : 'false' }}">
+                        <div class="mb-4">
+                            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                @if($user->signature)
+                                    Draw a new signature below to replace the existing one
+                                @else
+                                    Draw Your Signature in the Square Below
+                                @endif
+                            </label>
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white dark:bg-gray-900">
+                                <div class="flex justify-center">
+                                    <div id="signature-pad" class="signature-pad relative">
+                                        <canvas class="border border-gray-300 rounded-lg bg-white" 
+                                                style="touch-action: none; width: 400px; height: 400px; max-width: 100%;"></canvas>
+                                        <div class="absolute inset-0 pointer-events-none border-2 border-dashed border-blue-200 rounded-lg m-2"></div>
+                                        <div class="absolute top-1/2 left-0 right-0 h-px bg-blue-100 pointer-events-none"></div>
+                                        <div class="absolute left-1/2 top-0 bottom-0 w-px bg-blue-100 pointer-events-none"></div>
                                     </div>
-                                    <div class="text-center">
-                                        <p class="text-sm text-gray-600 dark:text-gray-400">
-                                            <strong>File name:</strong> <span id="signature-filename">signature_{{ preg_replace('/[^a-zA-Z0-9]/', '_', $user->name) }}.png</span>
-                                        </p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-500 mt-1 max-w-md">
-                                            Your signature will be saved as a square transparent PNG.
-                                        </p>
-                                        <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                            </svg>
-                                            Ready to save
+                                </div>
+                                
+                                <div class="mt-4 flex flex-col sm:flex-row gap-2 justify-center items-center">
+                                    <button type="button" id="clear-signature" class="px-4 py-2 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                                        Clear Signature
+                                    </button>
+                                    <button type="button" id="save-signature" class="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                        @if($user->signature)
+                                            Save New Signature
+                                        @else
+                                            Save Signature
+                                        @endif
+                                    </button>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-left">
+                                        @if($user->signature)
+                                            This will replace your existing signature
+                                        @else
+                                            Draw your signature to fill the square area
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="signature-status" class="mt-2 text-sm text-center"></div>
+                            
+                            <div id="signature-preview-container" class="mt-6 hidden">
+                                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">
+                                        @if($user->signature)
+                                            New Signature Preview
+                                        @else
+                                            Signature Preview
+                                        @endif
+                                    </h4>
+                                    <div class="flex flex-col items-center gap-4">
+                                        <div class="flex-shrink-0">
+                                            <div class="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm">
+                                                <div id="signature-preview" class="w-64 h-64 flex items-center justify-center bg-transparent"></div>
+                                            </div>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                                <strong>File name:</strong> <span id="signature-filename">signature_{{ preg_replace('/[^a-zA-Z0-9]/', '_', $user->name) }}.png</span>
+                                            </p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-500 mt-1 max-w-md">
+                                                Your signature will be saved as a square transparent PNG.
+                                            </p>
+                                            <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                                </svg>
+                                                Ready to save
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -853,7 +1064,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            @endif
         </div>
 
         <!-- Password Section -->

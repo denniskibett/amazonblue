@@ -330,6 +330,7 @@ document.addEventListener('alpine:init', function() {
             interestRate: 0,
             graceDaysBalance: 0,
             originalPrincipal: 0,
+            waivePenalty: false,
             // Simple Interest
             simpleInterest: 0,
             simpleNewBalance: 0,
@@ -363,6 +364,7 @@ document.addEventListener('alpine:init', function() {
                 this.interestRate = data.interestRate || 0;
                 this.graceDaysBalance = data.graceDaysBalance || 0;
                 this.originalPrincipal = data.originalPrincipal || data.currentBalance || 0;
+                this.waivePenalty = false; // Reset waive penalty on modal open
                 // Simple Interest
                 this.simpleInterest = data.simple_interest || 0;
                 this.simpleNewBalance = data.simple_new_balance || 0;

@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\CheckRole;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,7 +12,20 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // ============ REGISTER MIDDLEWARE ALIASES ============
+        $middleware->alias([
+            // Spatie Permission Middleware
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            
+            // Custom Middleware
+            'check.role' => CheckRole::class,
+        ]);
+        
+        // ============ ADD GLOBAL MIDDLEWARE ============
+        // If you need to add global middleware, use:
+        // $middleware->append(App\Http\Middleware\ApplySystemSettings::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

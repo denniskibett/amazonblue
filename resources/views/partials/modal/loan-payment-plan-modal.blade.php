@@ -190,7 +190,7 @@
                             <input type="number" x-model="manualNewBalance" step="0.01" min="0"
                                 class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 @input="calculateManualPreview()"
-                                required>
+                                x-bind:required="planType === 'manual'">>  
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                 Enter the new principal amount. Interest will be calculated on this amount.
                             </p>
