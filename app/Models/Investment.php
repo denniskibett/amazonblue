@@ -11,8 +11,10 @@ class Investment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
         'name', 'type', 'sector', 'sub_sector',
+        'facility_type',
+        'duration_days',
+        'interest_rate',
         'country', 'region', 'city', 'address',
         'company_name', 'registration_number', 'incorporation_date', 'legal_structure',
         'ebitda_pre_investment', 'revenue_pre_investment', 'net_profit_pre_investment',
@@ -48,6 +50,8 @@ class Investment extends Model
         'irr' => 'decimal:2',
         'break_even_point' => 'decimal:2',
         'total_funding_raised' => 'decimal:2',
+        'interest_rate' => 'decimal:2',
+        'duration_days' => 'integer',
         'risk_factors' => 'array',
         'stakeholders' => 'array',
         'legal_docs' => 'array',
@@ -64,11 +68,6 @@ class Investment extends Model
 
     // ============ RELATIONSHIPS ============
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function disbursements()
     {
         return $this->hasMany(Disbursement::class);
@@ -84,6 +83,32 @@ class Investment extends Model
         return $this->hasMany(PartnerTransaction::class);
     }
 
+    /**
+     * NEW: pivot rows — one investment can be funded by many partners.
+     */
+    public function fundings()
+    {
+        return $this->hasMany(InvestmentFunding::class);
+    }
+
+    /**
+     * NEW: many-to-many with partners through investment_fundings.
+     */
+    public function fundedPartners()
+    {
+        return $this->belongsToMany(Partner::class, 'investment_fundings')
+            ->withPivot([
+                'id',
+                'partner_transaction_id',
+                'amount_committed',
+                'amount_disbursed',
+                'amount_returned',
+                'status',
+                'notes',
+            ])
+            ->withTimestamps();
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -94,7 +119,117 @@ class Investment extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    // ============ ACCESSORS ============
+    // ============ FACILITY TYPE ============
+
+    public function getIsShortTermAttribute(): bool
+    {
+        return $this->facility_type === 'short_term';
+    }
+
+    public function getIsLongTermAttribute(): bool
+    {
+        return $this->facility_type === 'long_term';
+    }
+
+    public function getFacilityTypeLabelAttribute(): string
+    {
+        return $this->facility_type === 'short_term'
+            ? 'Short-Term Facility'
+            : 'Long-Term Investment';
+    }
+
+    public function scopeShortTerm($query)
+    {
+        return $query->where('facility_type', 'short_term');
+    }
+
+    public function scopeLongTerm($query)
+    {
+        return $query->where('facility_type', 'long_term');
+    }
+
+    /**
+     * Get the Partner models that are funding this investment
+     * (either via the new pivot or the legacy funding_partners JSON).
+     */
+    public function fundingPartnerModels()
+    {
+        // Prefer the new pivot
+        $pivotPartners = $this->fundedPartners()->get();
+        if ($pivotPartners->isNotEmpty()) {
+            return $pivotPartners;
+        }
+
+        // Fallback to legacy JSON
+        $partnerIds = collect($this->funding_partners ?? [])
+            ->pluck('partner_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($partnerIds->isEmpty()) {
+            return Partner::whereRaw('1 = 0')->get();
+        }
+
+        return Partner::whereIn('id', $partnerIds)->get();
+    }
+
+    // ============ AGGREGATE ACCESSORS ============
+
+    public function getTotalFundingAttribute()
+    {
+        // Prefer disbursements (real money out)
+        return $this->disbursements()->sum('amount');
+    }
+
+    /**
+     * Total committed by all partners.
+     */
+    public function getCommittedAmountAttribute(): float
+    {
+        // 1. Prefer pivot
+        $pivotSum = (float) $this->fundings()->sum('amount_committed');
+        if ($pivotSum > 0) {
+            return $pivotSum;
+        }
+
+        // 2. Fallback to legacy JSON
+        $legacySum = (float) collect($this->funding_partners ?? [])->sum('amount');
+        if ($legacySum > 0) {
+            return $legacySum;
+        }
+
+        // 3. Ultimate fallback: initial amount
+        return (float) $this->initial_amount;
+    }
+
+    /**
+     * Total disbursed against this investment.
+     */
+    public function getDisbursedAmountAttribute(): float
+    {
+        return (float) $this->disbursements()->sum('amount');
+    }
+
+    /**
+     * Remaining amount that can still be disbursed from the facility.
+     */
+    public function getRemainingAmountAttribute(): float
+    {
+        return max(0, $this->committed_amount - $this->disbursed_amount);
+    }
+
+    public function getTotalReturnsAttribute()
+    {
+        return $this->repayments()->sum('amount');
+    }
+
+    public function getNetReturnAttribute()
+    {
+        return $this->total_returns - $this->total_funding;
+    }
+
+    // ============ OTHER ACCESSORS ============
 
     public function getReturnPercentageAttribute()
     {
@@ -145,21 +280,6 @@ class Investment extends Model
         return $this->stakeholders['directors'];
     }
 
-    public function getTotalFundingAttribute()
-    {
-        return $this->disbursements()->sum('amount');
-    }
-
-    public function getTotalReturnsAttribute()
-    {
-        return $this->repayments()->sum('amount');
-    }
-
-    public function getNetReturnAttribute()
-    {
-        return $this->total_returns - $this->total_funding;
-    }
-
     public function getLatestNotesAttribute()
     {
         if (!$this->notes) return [];
@@ -205,28 +325,100 @@ class Investment extends Model
         $this->save();
     }
 
-    public function addPartnerFunding(int $partnerId, float $amount, string $transactionId = null): void
+    /**
+     * Add partner funding via the NEW pivot.
+     */
+    public function addPartnerFunding(int $partnerId, float $amount, string $transactionId = null): InvestmentFunding
     {
         $partner = Partner::find($partnerId);
-        if ($partner) {
-            $partnerTransaction = $partner->addContribution($amount, $transactionId, "Investment funding for {$this->name}");
-            
-            $fundingPartners = $this->funding_partners ?? [];
-            $fundingPartners[] = [
-                'partner_id' => $partnerId,
-                'amount' => $amount,
-                'date' => now()->toDateString(),
-                'transaction_id' => $partnerTransaction->id
-            ];
-            $this->funding_partners = $fundingPartners;
-            $this->total_funding_raised += $amount;
-            $this->save();
+        if (!$partner) {
+            throw new \Exception('Partner not found');
+        }
+
+        $partnerTransaction = $partner->addContribution(
+            $amount,
+            $transactionId,
+            "Investment funding for {$this->name}"
+        );
+
+        $funding = InvestmentFunding::create([
+            'investment_id' => $this->id,
+            'partner_id' => $partnerId,
+            'partner_transaction_id' => $partnerTransaction->id,
+            'amount_committed' => $amount,
+            'amount_disbursed' => 0,
+            'amount_returned' => 0,
+            'status' => 'active',
+            'notes' => "Funding added for {$this->name}",
+        ]);
+
+        // Keep totals in sync (legacy column)
+        $this->total_funding_raised = ($this->total_funding_raised ?? 0) + $amount;
+        $this->save();
+
+        // Also mirror in legacy funding_partners JSON for backward compatibility
+        $fundingPartners = $this->funding_partners ?? [];
+        $fundingPartners[] = [
+            'partner_id' => $partnerId,
+            'amount' => $amount,
+            'date' => now()->toDateString(),
+            'transaction_id' => $partnerTransaction->id,
+            'funding_id' => $funding->id,
+        ];
+        $this->funding_partners = $fundingPartners;
+        $this->save();
+
+        return $funding;
+    }
+
+    /**
+     * Record a disbursement against a specific funding row (proportional accounting).
+     * Falls back to the first active funding if $partnerId is null.
+     */
+    public function recordFundingDisbursement(float $amount, ?int $partnerId = null): void
+    {
+        $query = $this->fundings()->active();
+
+        if ($partnerId) {
+            $query->where('partner_id', $partnerId);
+        }
+
+        $funding = $query->first();
+
+        if ($funding) {
+            $funding->amount_disbursed = (float) $funding->amount_disbursed + $amount;
+
+            // Auto-settle if fully disbursed
+            if ($funding->amount_disbursed >= $funding->amount_committed) {
+                $funding->status = 'settled';
+            }
+
+            $funding->save();
+        }
+    }
+
+    /**
+     * Record a repayment return against a specific funding row.
+     */
+    public function recordFundingReturn(float $amount, ?int $partnerId = null): void
+    {
+        $query = $this->fundings()->active();
+
+        if ($partnerId) {
+            $query->where('partner_id', $partnerId);
+        }
+
+        $funding = $query->first();
+
+        if ($funding) {
+            $funding->amount_returned = (float) $funding->amount_returned + $amount;
+            $funding->save();
         }
     }
 
     public function fundDisbursement(float $amount, string $fundingSource = 'internal', ?int $partnerTransactionId = null): Disbursement
     {
-        return $this->disbursements()->create([
+        $disbursement = $this->disbursements()->create([
             'loan_id' => null,
             'amount' => $amount,
             'transaction' => 'INV-DISB-' . strtoupper(uniqid()),
@@ -235,21 +427,43 @@ class Investment extends Model
             'payment_date' => now(),
             'partner_transaction_id' => $partnerTransactionId,
             'funding_source' => $fundingSource,
-            'investment_id' => $this->id
+            'investment_id' => $this->id,
         ]);
+
+        // Update the pivot for whatever partner(s) are funding this
+        if ($partnerTransactionId) {
+            $pt = PartnerTransaction::find($partnerTransactionId);
+            if ($pt) {
+                $this->recordFundingDisbursement($amount, $pt->partner_id);
+            }
+        } else {
+            $this->recordFundingDisbursement($amount);
+        }
+
+        return $disbursement;
     }
 
     public function recordRepayment(float $amount, string $mode = 'bank_transfer', ?int $partnerTransactionId = null): Repayment
     {
-        return $this->repayments()->create([
+        $repayment = $this->repayments()->create([
             'loan_id' => null,
             'amount' => $amount,
             'transaction' => 'INV-REP-' . strtoupper(uniqid()),
             'repayment_date' => now(),
             'mode' => $mode,
             'partner_transaction_id' => $partnerTransactionId,
-            'investment_id' => $this->id
+            'investment_id' => $this->id,
         ]);
+
+        // Track the return against the pivot
+        if ($partnerTransactionId) {
+            $pt = PartnerTransaction::find($partnerTransactionId);
+            if ($pt) {
+                $this->recordFundingReturn($amount, $pt->partner_id);
+            }
+        }
+
+        return $repayment;
     }
 
     // ============ SCOPES ============

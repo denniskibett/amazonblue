@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
     {
         // Seed all lookup tables first
         $this->call(LookupTablesSeeder::class);
+        $this->call(HouseAccountsSeeder::class);
 
         // Create admin user
         \App\Models\User::factory()->create([

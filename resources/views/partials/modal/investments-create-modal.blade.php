@@ -95,6 +95,120 @@
                                     </template>
                                 </div>
 
+                                <!-- ============ FACILITY TYPE TOGGLE ============ -->
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                        Facility Type <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                                        <button type="button"
+                                                @click="setFacilityType('short_term')"
+                                                :class="formData.facility_type === 'short_term'
+                                                    ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400 font-semibold'
+                                                    : 'text-gray-600 dark:text-gray-400'"
+                                                class="py-2 px-3 text-xs rounded-md transition-all">
+                                            Short-Term
+                                        </button>
+                                        <button type="button"
+                                                @click="setFacilityType('long_term')"
+                                                :class="formData.facility_type === 'long_term'
+                                                    ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400 font-semibold'
+                                                    : 'text-gray-600 dark:text-gray-400'"
+                                                class="py-2 px-3 text-xs rounded-md transition-all">
+                                            Long-Term
+                                        </button>
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <span x-show="formData.facility_type === 'short_term'">Short-term facility (days to weeks) — tied to a partner</span>
+                                        <span x-show="formData.facility_type === 'long_term'">Long-term structured investment (months to years)</span>
+                                    </p>
+                                </div>
+
+                                <!-- ============ SHORT-TERM QUICK SETUP ============ -->
+                                <template x-if="formData.facility_type === 'short_term'">
+                                    <div class="col-span-1 sm:col-span-2">
+                                        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 space-y-4">
+                                            <h5 class="text-sm font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                </svg>
+                                                Quick Short-Term Setup
+                                            </h5>
+
+                                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                                <div>
+                                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                                        Amount (KES) <span class="text-red-500">*</span>
+                                                    </label>
+                                                    <input type="number" step="0.01" min="0"
+                                                           x-model="formData.initial_amount"
+                                                           @input="autoSave(); syncShortTermToCurrentValue()"
+                                                           class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
+                                                           placeholder="50000">
+                                                </div>
+
+                                                <div>
+                                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                                        Duration (days) <span class="text-red-500">*</span>
+                                                    </label>
+                                                    <input type="number" min="1"
+                                                           x-model="formData.duration_days"
+                                                           @input="autoSave(); calculateShortTermMaturity()"
+                                                           class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
+                                                           placeholder="30">
+                                                </div>
+
+                                                <div>
+                                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                                        Interest Rate (%) <span class="text-red-500">*</span>
+                                                    </label>
+                                                    <input type="number" step="0.01" min="0" max="100"
+                                                           x-model="formData.interest_rate"
+                                                           @input="autoSave(); syncShortTermToCurrentValue()"
+                                                           class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
+                                                           placeholder="10">
+                                                </div>
+
+                                                <div>
+                                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                                        Start Date
+                                                    </label>
+                                                    <input type="date"
+                                                           x-model="formData.purchase_date"
+                                                           @change="autoSave(); calculateShortTermMaturity()"
+                                                           class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500">
+                                                </div>
+
+                                                <div>
+                                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                                        Maturity Date
+                                                    </label>
+                                                    <input type="date"
+                                                           x-model="formData.maturity_date"
+                                                           @change="autoSave()"
+                                                           class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500">
+                                                </div>
+                                            </div>
+
+                                            <!-- Quick Summary -->
+                                            <div x-show="formData.initial_amount && formData.interest_rate"
+                                                 class="p-3 bg-white dark:bg-gray-800 rounded-md border border-blue-200 dark:border-blue-700">
+                                                <div class="flex items-center justify-between text-sm">
+                                                    <span class="text-gray-600 dark:text-gray-400">Expected Interest:</span>
+                                                    <span class="font-semibold text-green-600 dark:text-green-400"
+                                                          x-text="'KES ' + calculateExpectedInterest().toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                                                </div>
+                                                <div class="flex items-center justify-between text-sm mt-1">
+                                                    <span class="text-gray-600 dark:text-gray-400">Expected Return:</span>
+                                                    <span class="font-semibold text-blue-600 dark:text-blue-400"
+                                                          x-text="'KES ' + calculateExpectedTotal().toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Investment Type -->
                                 <div>
                                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                                         Investment Type <span class="text-red-500">*</span>
@@ -114,9 +228,6 @@
                                         <option value="energy">Energy</option>
                                         <option value="other">Other</option>
                                     </select>
-                                    <template x-if="errors.type">
-                                        <p class="mt-1 text-sm text-red-500" x-text="errors.type[0]"></p>
-                                    </template>
                                 </div>
                                 
                                 <div>
@@ -139,162 +250,270 @@
                             </div>
                         </div>
 
-                        <!-- ============ LOCATION ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Location</h4>
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                        Country <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           x-model="formData.country" 
-                                           @input="autoSave()"
-                                           class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                                           placeholder="e.g., Kenya" required>
-                                    <template x-if="errors.country">
-                                        <p class="mt-1 text-sm text-red-500" x-text="errors.country[0]"></p>
-                                    </template>
+                        <!-- ============ LONG-TERM ONLY: LOCATION ============ -->
+                        <template x-if="formData.facility_type === 'long_term'">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Location</h4>
+                                <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                                    <div>
+                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                            Country <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" 
+                                               x-model="formData.country" 
+                                               @input="autoSave()"
+                                               class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                               placeholder="e.g., Kenya">
+                                        <template x-if="errors.country">
+                                            <p class="mt-1 text-sm text-red-500" x-text="errors.country[0]"></p>
+                                        </template>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Region</label>
+                                        <input type="text" 
+                                               x-model="formData.region" 
+                                               @input="autoSave()"
+                                               class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                               placeholder="e.g., East Africa">
+                                    </div>
+                                    <div>
+                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">City</label>
+                                        <input type="text" 
+                                               x-model="formData.city" 
+                                               @input="autoSave()"
+                                               class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                               placeholder="e.g., Nairobi">
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Region</label>
-                                    <input type="text" 
-                                           x-model="formData.region" 
-                                           @input="autoSave()"
-                                           class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                                           placeholder="e.g., East Africa">
-                                </div>
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">City</label>
-                                    <input type="text" 
-                                           x-model="formData.city" 
-                                           @input="autoSave()"
-                                           class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                                           placeholder="e.g., Nairobi">
+                                <div class="mt-4">
+                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Full Address</label>
+                                    <textarea x-model="formData.address" 
+                                              @input="autoSave()"
+                                              rows="2" 
+                                              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                              placeholder="P.O. Box 12345, Nairobi, Kenya"></textarea>
                                 </div>
                             </div>
-                            <div class="mt-4">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Full Address</label>
-                                <textarea x-model="formData.address" 
-                                          @input="autoSave()"
-                                          rows="2" 
-                                          class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                                          placeholder="P.O. Box 12345, Nairobi, Kenya"></textarea>
-                            </div>
-                        </div>
+                        </template>
 
-                        <!-- ============ COMPANY DETAILS ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Company Details</h4>
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Company Name</label>
-                                    <input type="text" 
-                                           x-model="formData.company_name" 
-                                           @input="autoSave()"
-                                           class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                                           placeholder="e.g., ABC Technologies Ltd">
-                                </div>
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Registration Number</label>
-                                    <input type="text" 
-                                           x-model="formData.registration_number" 
-                                           @input="autoSave()"
-                                           class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                                           placeholder="e.g., PVT-2024-001">
-                                </div>
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Incorporation Date</label>
-                                    <input type="date" 
-                                           x-model="formData.incorporation_date" 
-                                           @change="autoSave()"
-                                           class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                </div>
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Legal Structure</label>
-                                    <select x-model="formData.legal_structure" 
-                                            @change="autoSave()"
-                                            class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                        <option value="">Select Legal Structure</option>
-                                        <option value="sole_proprietorship">Sole Proprietorship</option>
-                                        <option value="partnership">Partnership</option>
-                                        <option value="llc">LLC</option>
-                                        <option value="corporation">Corporation</option>
-                                        <option value="non_profit">Non-Profit</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ============ PRE-INVESTMENT FINANCIALS ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Pre-Investment Financials</h4>
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                                <!-- ... same as before ... -->
-                            </div>
-                        </div>
-
-                        <!-- ============ INVESTMENT DETAILS ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Investment Details</h4>
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                                <!-- ... same as before ... -->
-                            </div>
-                        </div>
-
-                        <!-- ============ INVESTMENT METRICS ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Investment Metrics</h4>
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                                <!-- ... same as before ... -->
-                            </div>
-                        </div>
-
-                        <!-- ============ DATES ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Dates</h4>
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                                <!-- ... same as before ... -->
-                            </div>
-                        </div>
-
-                        <!-- ============ RISK ASSESSMENT ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Risk Assessment</h4>
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Risk Rating</label>
-                                    <select x-model="formData.risk_rating" 
-                                            @change="autoSave()"
-                                            class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                        <option value="">Select Rating</option>
-                                        <option value="AAA">AAA - Lowest Risk</option>
-                                        <option value="AA">AA - Very Low Risk</option>
-                                        <option value="A">A - Low Risk</option>
-                                        <option value="BBB">BBB - Moderate Risk</option>
-                                        <option value="BB">BB - High Risk</option>
-                                        <option value="B">B - Very High Risk</option>
-                                        <option value="C">C - Highest Risk</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Stage</label>
-                                    <select x-model="formData.stage" 
-                                            @change="autoSave()"
-                                            class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                        <option value="">Select Stage</option>
-                                        <option value="ideation">Ideation</option>
-                                        <option value="seed">Seed</option>
-                                        <option value="startup">Startup</option>
-                                        <option value="growth">Growth</option>
-                                        <option value="expansion">Expansion</option>
-                                        <option value="mature">Mature</option>
-                                    </select>
+                        <!-- ============ LONG-TERM ONLY: COMPANY DETAILS ============ -->
+                        <template x-if="formData.facility_type === 'long_term'">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Company Details</h4>
+                                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                    <div>
+                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Company Name</label>
+                                        <input type="text" 
+                                               x-model="formData.company_name" 
+                                               @input="autoSave()"
+                                               class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                               placeholder="e.g., ABC Technologies Ltd">
+                                    </div>
+                                    <div>
+                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Registration Number</label>
+                                        <input type="text" 
+                                               x-model="formData.registration_number" 
+                                               @input="autoSave()"
+                                               class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                               placeholder="e.g., PVT-2024-001">
+                                    </div>
+                                    <div>
+                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Incorporation Date</label>
+                                        <input type="date" 
+                                               x-model="formData.incorporation_date" 
+                                               @change="autoSave()"
+                                               class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                    </div>
+                                    <div>
+                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Legal Structure</label>
+                                        <select x-model="formData.legal_structure" 
+                                                @change="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                            <option value="">Select Legal Structure</option>
+                                            <option value="sole_proprietorship">Sole Proprietorship</option>
+                                            <option value="partnership">Partnership</option>
+                                            <option value="llc">LLC</option>
+                                            <option value="corporation">Corporation</option>
+                                            <option value="non_profit">Non-Profit</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </template>
 
-                        <!-- ============ RISK FACTORS ============ -->
+                        <!-- ============ LONG-TERM ONLY: FINANCIALS, METRICS, DATES, RISK ============ -->
+                        <template x-if="formData.facility_type === 'long_term'">
+                            <div>
+                                <!-- PRE-INVESTMENT FINANCIALS -->
+                                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                    <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Pre-Investment Financials</h4>
+                                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">EBITDA (Pre)</label>
+                                            <input type="number" step="0.01" x-model="formData.ebitda_pre_investment" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Revenue (Pre)</label>
+                                            <input type="number" step="0.01" x-model="formData.revenue_pre_investment" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Net Profit (Pre)</label>
+                                            <input type="number" step="0.01" x-model="formData.net_profit_pre_investment" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Total Assets (Pre)</label>
+                                            <input type="number" step="0.01" x-model="formData.total_assets_pre_investment" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Total Liabilities (Pre)</label>
+                                            <input type="number" step="0.01" x-model="formData.total_liabilities_pre_investment" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- INVESTMENT DETAILS -->
+                                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                    <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Investment Details</h4>
+                                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                                Initial Amount <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="number" step="0.01" x-model="formData.initial_amount" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                                Current Value
+                                            </label>
+                                            <input type="number" step="0.01" x-model="formData.current_value" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Expected Return (%)</label>
+                                            <input type="number" step="0.01" min="0" max="100" x-model="formData.expected_return" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Revenue (Current)</label>
+                                            <input type="number" step="0.01" x-model="formData.revenue_current" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Profit (Current)</label>
+                                            <input type="number" step="0.01" x-model="formData.profit_current" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Valuation (Current)</label>
+                                            <input type="number" step="0.01" x-model="formData.valuation_current" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- INVESTMENT METRICS -->
+                                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                    <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Investment Metrics</h4>
+                                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">IRR (%)</label>
+                                            <input type="number" step="0.01" x-model="formData.irr" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Payback Period (months)</label>
+                                            <input type="number" x-model="formData.payback_period_months" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Break-Even Point</label>
+                                            <input type="number" step="0.01" x-model="formData.break_even_point" @input="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- DATES -->
+                                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                    <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Dates</h4>
+                                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                                                Purchase Date <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="date" x-model="formData.purchase_date" @change="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Maturity Date</label>
+                                            <input type="date" x-model="formData.maturity_date" @change="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Exit Date</label>
+                                            <input type="date" x-model="formData.exit_date" @change="autoSave()"
+                                                class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- RISK ASSESSMENT -->
+                                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                    <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Risk Assessment</h4>
+                                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Risk Rating</label>
+                                            <select x-model="formData.risk_rating" @change="autoSave()"
+                                                    class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                                <option value="">Select Rating</option>
+                                                <option value="AAA">AAA - Lowest Risk</option>
+                                                <option value="AA">AA - Very Low Risk</option>
+                                                <option value="A">A - Low Risk</option>
+                                                <option value="BBB">BBB - Moderate Risk</option>
+                                                <option value="BB">BB - High Risk</option>
+                                                <option value="B">B - Very High Risk</option>
+                                                <option value="C">C - Highest Risk</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Stage</label>
+                                            <select x-model="formData.stage" @change="autoSave()"
+                                                    class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                                <option value="">Select Stage</option>
+                                                <option value="ideation">Ideation</option>
+                                                <option value="seed">Seed</option>
+                                                <option value="startup">Startup</option>
+                                                <option value="growth">Growth</option>
+                                                <option value="expansion">Expansion</option>
+                                                <option value="mature">Mature</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- ============ RISK FACTORS (SHARED) ============ -->
                         <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-md font-semibold text-gray-800 dark:text-white/90">Risk Factors</h4>
@@ -355,331 +574,389 @@
                             <input type="hidden" x-model="formData.risk_factors">
                         </div>
 
-                        <!-- ============ STAKEHOLDERS ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-md font-semibold text-gray-800 dark:text-white/90">Stakeholders</h4>
-                                <button type="button" 
-                                        @click="addStakeholder()" 
-                                        class="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                    Add Stakeholder
-                                </button>
-                            </div>
-                            
-                            <div class="space-y-3">
-                                <template x-for="(stakeholder, index) in stakeholders" :key="index">
-                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
-                                            <select x-model="stakeholder.type" 
-                                                    @change="autoSave(); updateStakeholdersJSON()"
-                                                    class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500">
-                                                <option value="director">Director</option>
-                                                <option value="board">Board Member</option>
-                                                <option value="advisor">Advisor</option>
-                                                <option value="partner">Partner</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
-                                            <input type="text" 
-                                                   x-model="stakeholder.name" 
-                                                   @input="autoSave(); updateStakeholdersJSON()"
-                                                   class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
-                                                   placeholder="Full name">
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Title / Role</label>
-                                            <input type="text" 
-                                                   x-model="stakeholder.title" 
-                                                   @input="autoSave(); updateStakeholdersJSON()"
-                                                   class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
-                                                   placeholder="e.g., CEO">
-                                        </div>
-                                        <div class="flex items-end gap-2">
-                                            <div class="flex-1">
-                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Shareholding (%)</label>
-                                                <input type="number" 
-                                                       step="0.01" 
-                                                       x-model="stakeholder.shareholding" 
-                                                       @input="autoSave(); updateStakeholdersJSON()"
-                                                       class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
-                                                       placeholder="0.00">
-                                            </div>
-                                            <button type="button" 
-                                                    @click="removeStakeholder(index)" 
-                                                    class="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </template>
-                                <p x-show="stakeholders.length === 0" class="text-sm text-gray-500 dark:text-gray-400 italic">No stakeholders added. Click "Add Stakeholder" to start.</p>
-                            </div>
-                            <input type="hidden" x-model="formData.stakeholders">
-                        </div>
-
-                        <!-- ============ SWOT ANALYSIS (Enhanced with Points) ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-md font-semibold text-gray-800 dark:text-white/90">SWOT Analysis</h4>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                                        <span x-text="swotTotalPoints"></span> points total
-                                    </span>
+                        <!-- ============ LONG-TERM ONLY: STAKEHOLDERS ============ -->
+                        <template x-if="formData.facility_type === 'long_term'">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-md font-semibold text-gray-800 dark:text-white/90">Stakeholders</h4>
+                                    <button type="button" 
+                                            @click="addStakeholder()" 
+                                            class="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
+                                        Add Stakeholder
+                                    </button>
                                 </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <!-- Strengths -->
-                                <div class="border border-green-200 dark:border-green-800 rounded-lg overflow-hidden">
-                                    <div class="bg-green-50 dark:bg-green-900/20 px-3 py-2 border-b border-green-200 dark:border-green-800 flex items-center justify-between">
-                                        <h5 class="text-sm font-medium text-green-700 dark:text-green-300">Strengths</h5>
-                                        <button type="button" 
-                                                @click="addSwotPoint('strengths')" 
-                                                class="text-xs text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300">
-                                            + Add
-                                        </button>
-                                    </div>
-                                    <div class="p-2 space-y-2">
-                                        <template x-for="(point, index) in swotData.strengths" :key="'strength-'+index">
-                                            <div class="flex items-start gap-2 group">
-                                                <span class="text-green-500 mt-1">●</span>
-                                                <input type="text" 
-                                                       x-model="point.text" 
-                                                       @input="autoSave(); updateSwotJSON()"
-                                                       class="flex-1 text-sm bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none dark:text-gray-300"
-                                                       placeholder="Enter strength...">
-                                                <button type="button" 
-                                                        @click="removeSwotPoint('strengths', index)" 
-                                                        class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs transition-opacity">
-                                                    ×
-                                                </button>
-                                            </div>
-                                        </template>
-                                        <p x-show="swotData.strengths.length === 0" class="text-xs text-gray-400 dark:text-gray-500 italic px-2">No strengths added</p>
-                                    </div>
-                                </div>
-
-                                <!-- Weaknesses -->
-                                <div class="border border-red-200 dark:border-red-800 rounded-lg overflow-hidden">
-                                    <div class="bg-red-50 dark:bg-red-900/20 px-3 py-2 border-b border-red-200 dark:border-red-800 flex items-center justify-between">
-                                        <h5 class="text-sm font-medium text-red-700 dark:text-red-300">Weaknesses</h5>
-                                        <button type="button" 
-                                                @click="addSwotPoint('weaknesses')" 
-                                                class="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
-                                            + Add
-                                        </button>
-                                    </div>
-                                    <div class="p-2 space-y-2">
-                                        <template x-for="(point, index) in swotData.weaknesses" :key="'weakness-'+index">
-                                            <div class="flex items-start gap-2 group">
-                                                <span class="text-red-500 mt-1">●</span>
-                                                <input type="text" 
-                                                       x-model="point.text" 
-                                                       @input="autoSave(); updateSwotJSON()"
-                                                       class="flex-1 text-sm bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none dark:text-gray-300"
-                                                       placeholder="Enter weakness...">
-                                                <button type="button" 
-                                                        @click="removeSwotPoint('weaknesses', index)" 
-                                                        class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs transition-opacity">
-                                                    ×
-                                                </button>
-                                            </div>
-                                        </template>
-                                        <p x-show="swotData.weaknesses.length === 0" class="text-xs text-gray-400 dark:text-gray-500 italic px-2">No weaknesses added</p>
-                                    </div>
-                                </div>
-
-                                <!-- Opportunities -->
-                                <div class="border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden">
-                                    <div class="bg-blue-50 dark:bg-blue-900/20 px-3 py-2 border-b border-blue-200 dark:border-blue-800 flex items-center justify-between">
-                                        <h5 class="text-sm font-medium text-blue-700 dark:text-blue-300">Opportunities</h5>
-                                        <button type="button" 
-                                                @click="addSwotPoint('opportunities')" 
-                                                class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
-                                            + Add
-                                        </button>
-                                    </div>
-                                    <div class="p-2 space-y-2">
-                                        <template x-for="(point, index) in swotData.opportunities" :key="'opportunity-'+index">
-                                            <div class="flex items-start gap-2 group">
-                                                <span class="text-blue-500 mt-1">●</span>
-                                                <input type="text" 
-                                                       x-model="point.text" 
-                                                       @input="autoSave(); updateSwotJSON()"
-                                                       class="flex-1 text-sm bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none dark:text-gray-300"
-                                                       placeholder="Enter opportunity...">
-                                                <button type="button" 
-                                                        @click="removeSwotPoint('opportunities', index)" 
-                                                        class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs transition-opacity">
-                                                    ×
-                                                </button>
-                                            </div>
-                                        </template>
-                                        <p x-show="swotData.opportunities.length === 0" class="text-xs text-gray-400 dark:text-gray-500 italic px-2">No opportunities added</p>
-                                    </div>
-                                </div>
-
-                                <!-- Threats -->
-                                <div class="border border-yellow-200 dark:border-yellow-800 rounded-lg overflow-hidden">
-                                    <div class="bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 border-b border-yellow-200 dark:border-yellow-800 flex items-center justify-between">
-                                        <h5 class="text-sm font-medium text-yellow-700 dark:text-yellow-300">Threats</h5>
-                                        <button type="button" 
-                                                @click="addSwotPoint('threats')" 
-                                                class="text-xs text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300">
-                                            + Add
-                                        </button>
-                                    </div>
-                                    <div class="p-2 space-y-2">
-                                        <template x-for="(point, index) in swotData.threats" :key="'threat-'+index">
-                                            <div class="flex items-start gap-2 group">
-                                                <span class="text-yellow-500 mt-1">●</span>
-                                                <input type="text" 
-                                                       x-model="point.text" 
-                                                       @input="autoSave(); updateSwotJSON()"
-                                                       class="flex-1 text-sm bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none dark:text-gray-300"
-                                                       placeholder="Enter threat...">
-                                                <button type="button" 
-                                                        @click="removeSwotPoint('threats', index)" 
-                                                        class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs transition-opacity">
-                                                    ×
-                                                </button>
-                                            </div>
-                                        </template>
-                                        <p x-show="swotData.threats.length === 0" class="text-xs text-gray-400 dark:text-gray-500 italic px-2">No threats added</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <input type="hidden" x-model="formData.swot_analysis">
-                        </div>
-
-                        <!-- ============ RESEARCH & ANALYSIS ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Research & Analysis</h4>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Market Research</label>
-                                    <textarea x-model="formData.market_research" 
-                                              @input="autoSave()"
-                                              rows="2" 
-                                              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                                              placeholder="Market research findings..."></textarea>
-                                </div>
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Competitive Landscape</label>
-                                    <textarea x-model="formData.competitive_landscape" 
-                                              @input="autoSave()"
-                                              rows="2" 
-                                              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                                              placeholder="Competitive landscape analysis..."></textarea>
-                                </div>
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Key Assumptions</label>
-                                    <textarea x-model="formData.key_assumptions" 
-                                              @input="autoSave()"
-                                              rows="2" 
-                                              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                                              placeholder="Key assumptions..."></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ============ MILESTONES ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-md font-semibold text-gray-800 dark:text-white/90">Milestones</h4>
-                                <button type="button" 
-                                        @click="addMilestone()" 
-                                        class="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                    Add Milestone
-                                </button>
-                            </div>
-                            
-                            <div class="space-y-3">
-                                <template x-for="(milestone, index) in milestones" :key="index">
-                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
-                                            <input type="date" 
-                                                   x-model="milestone.date" 
-                                                   @change="autoSave(); updateMilestonesJSON()"
-                                                   class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500">
-                                        </div>
-                                        <div class="sm:col-span-2">
-                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-                                            <input type="text" 
-                                                   x-model="milestone.description" 
-                                                   @input="autoSave(); updateMilestonesJSON()"
-                                                   class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
-                                                   placeholder="e.g., Complete pilot project">
-                                        </div>
-                                        <div class="flex items-end gap-2">
-                                            <div class="flex-1">
-                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                                                <select x-model="milestone.status" 
-                                                        @change="autoSave(); updateMilestonesJSON()"
+                                
+                                <div class="space-y-3">
+                                    <template x-for="(stakeholder, index) in stakeholders" :key="index">
+                                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+                                                <select x-model="stakeholder.type" 
+                                                        @change="autoSave(); updateStakeholdersJSON()"
                                                         class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500">
-                                                    <option value="pending">Pending</option>
-                                                    <option value="in_progress">In Progress</option>
-                                                    <option value="completed">Completed</option>
-                                                    <option value="cancelled">Cancelled</option>
+                                                    <option value="director">Director</option>
+                                                    <option value="board">Board Member</option>
+                                                    <option value="advisor">Advisor</option>
+                                                    <option value="partner">Partner</option>
                                                 </select>
                                             </div>
-                                            <button type="button" 
-                                                    @click="removeMilestone(index)" 
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                                                <input type="text" 
+                                                       x-model="stakeholder.name" 
+                                                       @input="autoSave(); updateStakeholdersJSON()"
+                                                       class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
+                                                       placeholder="Full name">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Title / Role</label>
+                                                <input type="text" 
+                                                       x-model="stakeholder.title" 
+                                                       @input="autoSave(); updateStakeholdersJSON()"
+                                                       class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
+                                                       placeholder="e.g., CEO">
+                                            </div>
+                                            <div class="flex items-end gap-2">
+                                                <div class="flex-1">
+                                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Shareholding (%)</label>
+                                                    <input type="number" 
+                                                           step="0.01" 
+                                                           x-model="stakeholder.shareholding" 
+                                                           @input="autoSave(); updateStakeholdersJSON()"
+                                                           class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
+                                                           placeholder="0.00">
+                                                </div>
+                                                <button type="button" 
+                                                        @click="removeStakeholder(index)" 
+                                                        class="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <p x-show="stakeholders.length === 0" class="text-sm text-gray-500 dark:text-gray-400 italic">No stakeholders added. Click "Add Stakeholder" to start.</p>
+                                </div>
+                                <input type="hidden" x-model="formData.stakeholders">
+                            </div>
+                        </template>
+
+                        <!-- ============ LONG-TERM ONLY: SWOT ============ -->
+                        <template x-if="formData.facility_type === 'long_term'">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-md font-semibold text-gray-800 dark:text-white/90">SWOT Analysis</h4>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">
+                                            <span x-text="swotTotalPoints"></span> points total
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <!-- Strengths -->
+                                    <div class="border border-green-200 dark:border-green-800 rounded-lg overflow-hidden">
+                                        <div class="bg-green-50 dark:bg-green-900/20 px-3 py-2 border-b border-green-200 dark:border-green-800 flex items-center justify-between">
+                                            <h5 class="text-sm font-medium text-green-700 dark:text-green-300">Strengths</h5>
+                                            <button type="button" @click="addSwotPoint('strengths')" class="text-xs text-green-600 hover:text-green-800 dark:text-green-400">
+                                                + Add
+                                            </button>
+                                        </div>
+                                        <div class="p-2 space-y-2">
+                                            <template x-for="(point, index) in swotData.strengths" :key="'strength-'+index">
+                                                <div class="flex items-start gap-2 group">
+                                                    <span class="text-green-500 mt-1">●</span>
+                                                    <input type="text" x-model="point.text" @input="autoSave(); updateSwotJSON()"
+                                                           class="flex-1 text-sm bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none dark:text-gray-300"
+                                                           placeholder="Enter strength...">
+                                                    <button type="button" @click="removeSwotPoint('strengths', index)" class="opacity-0 group-hover:opacity-100 text-red-500 text-xs">×</button>
+                                                </div>
+                                            </template>
+                                            <p x-show="swotData.strengths.length === 0" class="text-xs text-gray-400 italic px-2">No strengths added</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Weaknesses -->
+                                    <div class="border border-red-200 dark:border-red-800 rounded-lg overflow-hidden">
+                                        <div class="bg-red-50 dark:bg-red-900/20 px-3 py-2 border-b border-red-200 dark:border-red-800 flex items-center justify-between">
+                                            <h5 class="text-sm font-medium text-red-700 dark:text-red-300">Weaknesses</h5>
+                                            <button type="button" @click="addSwotPoint('weaknesses')" class="text-xs text-red-600 hover:text-red-800 dark:text-red-400">
+                                                + Add
+                                            </button>
+                                        </div>
+                                        <div class="p-2 space-y-2">
+                                            <template x-for="(point, index) in swotData.weaknesses" :key="'weakness-'+index">
+                                                <div class="flex items-start gap-2 group">
+                                                    <span class="text-red-500 mt-1">●</span>
+                                                    <input type="text" x-model="point.text" @input="autoSave(); updateSwotJSON()"
+                                                           class="flex-1 text-sm bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none dark:text-gray-300"
+                                                           placeholder="Enter weakness...">
+                                                    <button type="button" @click="removeSwotPoint('weaknesses', index)" class="opacity-0 group-hover:opacity-100 text-red-500 text-xs">×</button>
+                                                </div>
+                                            </template>
+                                            <p x-show="swotData.weaknesses.length === 0" class="text-xs text-gray-400 italic px-2">No weaknesses added</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Opportunities -->
+                                    <div class="border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden">
+                                        <div class="bg-blue-50 dark:bg-blue-900/20 px-3 py-2 border-b border-blue-200 dark:border-blue-800 flex items-center justify-between">
+                                            <h5 class="text-sm font-medium text-blue-700 dark:text-blue-300">Opportunities</h5>
+                                            <button type="button" @click="addSwotPoint('opportunities')" class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                                + Add
+                                            </button>
+                                        </div>
+                                        <div class="p-2 space-y-2">
+                                            <template x-for="(point, index) in swotData.opportunities" :key="'opportunity-'+index">
+                                                <div class="flex items-start gap-2 group">
+                                                    <span class="text-blue-500 mt-1">●</span>
+                                                    <input type="text" x-model="point.text" @input="autoSave(); updateSwotJSON()"
+                                                           class="flex-1 text-sm bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none dark:text-gray-300"
+                                                           placeholder="Enter opportunity...">
+                                                    <button type="button" @click="removeSwotPoint('opportunities', index)" class="opacity-0 group-hover:opacity-100 text-red-500 text-xs">×</button>
+                                                </div>
+                                            </template>
+                                            <p x-show="swotData.opportunities.length === 0" class="text-xs text-gray-400 italic px-2">No opportunities added</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Threats -->
+                                    <div class="border border-yellow-200 dark:border-yellow-800 rounded-lg overflow-hidden">
+                                        <div class="bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 border-b border-yellow-200 dark:border-yellow-800 flex items-center justify-between">
+                                            <h5 class="text-sm font-medium text-yellow-700 dark:text-yellow-300">Threats</h5>
+                                            <button type="button" @click="addSwotPoint('threats')" class="text-xs text-yellow-600 hover:text-yellow-800 dark:text-yellow-400">
+                                                + Add
+                                            </button>
+                                        </div>
+                                        <div class="p-2 space-y-2">
+                                            <template x-for="(point, index) in swotData.threats" :key="'threat-'+index">
+                                                <div class="flex items-start gap-2 group">
+                                                    <span class="text-yellow-500 mt-1">●</span>
+                                                    <input type="text" x-model="point.text" @input="autoSave(); updateSwotJSON()"
+                                                           class="flex-1 text-sm bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none dark:text-gray-300"
+                                                           placeholder="Enter threat...">
+                                                    <button type="button" @click="removeSwotPoint('threats', index)" class="opacity-0 group-hover:opacity-100 text-red-500 text-xs">×</button>
+                                                </div>
+                                            </template>
+                                            <p x-show="swotData.threats.length === 0" class="text-xs text-gray-400 italic px-2">No threats added</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" x-model="formData.swot_analysis">
+                            </div>
+                        </template>
+
+                        <!-- ============ LONG-TERM ONLY: RESEARCH ============ -->
+                        <template x-if="formData.facility_type === 'long_term'">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Research & Analysis</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Market Research</label>
+                                        <textarea x-model="formData.market_research" @input="autoSave()" rows="2" 
+                                                  class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                  placeholder="Market research findings..."></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Competitive Landscape</label>
+                                        <textarea x-model="formData.competitive_landscape" @input="autoSave()" rows="2" 
+                                                  class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                  placeholder="Competitive landscape analysis..."></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Key Assumptions</label>
+                                        <textarea x-model="formData.key_assumptions" @input="autoSave()" rows="2" 
+                                                  class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                                  placeholder="Key assumptions..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- ============ LONG-TERM ONLY: MILESTONES ============ -->
+                        <template x-if="formData.facility_type === 'long_term'">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-md font-semibold text-gray-800 dark:text-white/90">Milestones</h4>
+                                    <button type="button" @click="addMilestone()" 
+                                            class="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
+                                        Add Milestone
+                                    </button>
+                                </div>
+                                
+                                <div class="space-y-3">
+                                    <template x-for="(milestone, index) in milestones" :key="index">
+                                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+                                                <input type="date" x-model="milestone.date" @change="autoSave(); updateMilestonesJSON()"
+                                                       class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm">
+                                            </div>
+                                            <div class="sm:col-span-2">
+                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                                                <input type="text" x-model="milestone.description" @input="autoSave(); updateMilestonesJSON()"
+                                                       class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm"
+                                                       placeholder="e.g., Complete pilot project">
+                                            </div>
+                                            <div class="flex items-end gap-2">
+                                                <div class="flex-1">
+                                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                                                    <select x-model="milestone.status" @change="autoSave(); updateMilestonesJSON()"
+                                                            class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm">
+                                                        <option value="pending">Pending</option>
+                                                        <option value="in_progress">In Progress</option>
+                                                        <option value="completed">Completed</option>
+                                                        <option value="cancelled">Cancelled</option>
+                                                    </select>
+                                                </div>
+                                                <button type="button" @click="removeMilestone(index)" class="p-1.5 text-red-600 hover:text-red-800">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <p x-show="milestones.length === 0" class="text-sm text-gray-500 dark:text-gray-400 italic">No milestones added. Click "Add Milestone" to start.</p>
+                                </div>
+                                <input type="hidden" x-model="formData.milestones">
+                            </div>
+                        </template>
+
+                        <!-- ============ PARTNER FUNDING (MULTI-PARTNER PIVOT) ============ -->
+                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h4 class="text-md font-semibold text-gray-800 dark:text-white/90">Partner Funding</h4>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Add one or more partners funding this facility. Totals are tracked per partner.
+                                    </p>
+                                </div>
+                                <button type="button"
+                                        @click="addFunding()"
+                                        class="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    Add Partner Funding
+                                </button>
+                            </div>
+
+                            <!-- Fundings list -->
+                            <div class="space-y-3">
+                                <template x-for="(funding, index) in fundings" :key="index">
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-12 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                                        <!-- Partner -->
+                                        <div class="sm:col-span-4">
+                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Partner <span class="text-red-500">*</span>
+                                            </label>
+                                            <select x-model="funding.partner_id"
+                                                    @change="autoSave()"
+                                                    class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500">
+                                                <option value="">Select Partner</option>
+                                                @foreach($partners as $partner)
+                                                    <option value="{{ $partner->id }}">{{ $partner->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <!-- Amount committed -->
+                                        <div class="sm:col-span-3">
+                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Amount Committed (KES) <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="number" step="0.01" min="0"
+                                                   x-model="funding.amount_committed"
+                                                   @input="autoSave()"
+                                                   class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
+                                                   placeholder="0.00">
+                                        </div>
+
+                                        <!-- Amount disbursed (read-only) -->
+                                        <div class="sm:col-span-2">
+                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Disbursed
+                                            </label>
+                                            <div class="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300">
+                                                <span x-text="'KES ' + Number(funding.amount_disbursed || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Status -->
+                                        <div class="sm:col-span-2">
+                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Status
+                                            </label>
+                                            <select x-model="funding.status"
+                                                    @change="autoSave()"
+                                                    class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500">
+                                                <option value="active">Active</option>
+                                                <option value="settled">Settled</option>
+                                                <option value="cancelled">Cancelled</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Remove -->
+                                        <div class="sm:col-span-1 flex sm:items-end justify-end sm:justify-center pb-1">
+                                            <button type="button"
+                                                    @click="removeFunding(index)"
                                                     class="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
                                             </button>
                                         </div>
+
+                                        <!-- Notes (full width) -->
+                                        <div class="sm:col-span-12">
+                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Notes
+                                            </label>
+                                            <input type="text"
+                                                   x-model="funding.notes"
+                                                   @input="autoSave()"
+                                                   class="w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:border-blue-500 focus:ring-blue-500"
+                                                   placeholder="e.g., 50% of total commitment">
+                                        </div>
                                     </div>
                                 </template>
-                                <p x-show="milestones.length === 0" class="text-sm text-gray-500 dark:text-gray-400 italic">No milestones added. Click "Add Milestone" to start.</p>
-                            </div>
-                            <input type="hidden" x-model="formData.milestones">
-                        </div>
 
-                        <!-- ============ PARTNER FUNDING ============ -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Partner Funding</h4>
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Partner</label>
-                                    <select x-model="formData.funding_partner_id" 
-                                            @change="autoSave()"
-                                            class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                        <option value="">Select Partner (Optional)</option>
-                                        @foreach($partners as $partner)
-                                            <option value="{{ $partner->id }}">{{ $partner->name }} ({{ $partner->email }})</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Funding Amount</label>
-                                    <div class="relative">
-                                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm">KES</span>
-                                        <input type="number" 
-                                               step="0.01" 
-                                               x-model="formData.funding_amount" 
-                                               @input="autoSave()"
-                                               class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pl-14 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                                               placeholder="0.00">
+                                <p x-show="fundings.length === 0" class="text-sm text-gray-500 dark:text-gray-400 italic">
+                                    No partner funding added yet. Click "Add Partner Funding" to start.
+                                </p>
+                            </div>
+
+                            <!-- Totals summary -->
+                            <div x-show="fundings.length > 0" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <div class="grid grid-cols-3 gap-3 text-center">
+                                    <div>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400">Total Committed</p>
+                                        <p class="text-sm font-semibold text-blue-700 dark:text-blue-300"
+                                           x-text="'KES ' + totalCommitted().toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400">Total Disbursed</p>
+                                        <p class="text-sm font-semibold text-purple-700 dark:text-purple-300"
+                                           x-text="'KES ' + totalDisbursed().toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400">Remaining</p>
+                                        <p class="text-sm font-semibold text-green-700 dark:text-green-300"
+                                           x-text="'KES ' + totalRemaining().toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- ============ NOTES ============ -->
+                        <!-- ============ NOTES (SHARED) ============ -->
                         <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                             <h4 class="text-md font-semibold text-gray-800 dark:text-white/90 mb-4">Notes</h4>
                             <textarea x-model="formData.notes" 
@@ -694,19 +971,15 @@
                 <!-- Footer -->
                 <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900">
                     <div class="flex items-center gap-3">
-                        <button type="button" 
-                                @click="restoreDraft()" 
-                                x-show="hasDraft"
-                                class="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                        <button type="button" @click="restoreDraft()" x-show="hasDraft"
+                                class="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                             Restore Draft
                         </button>
-                        <button type="button" 
-                                @click="clearDraft()" 
-                                x-show="hasDraft"
-                                class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                        <button type="button" @click="clearDraft()" x-show="hasDraft"
+                                class="text-sm text-red-600 hover:text-red-800 dark:text-red-400">
                             Clear Draft
                         </button>
                     </div>
@@ -715,8 +988,7 @@
                                 class="flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
                             Cancel
                         </button>
-                        <button type="submit" form="investmentForm"
-                                :disabled="isSubmitting"
+                        <button type="submit" form="investmentForm" :disabled="isSubmitting"
                                 class="flex justify-center px-4 py-2.5 text-sm font-medium text-white rounded-lg bg-blue-600 shadow-theme-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                             <span x-show="!isSubmitting" x-text="submitButtonText">Create Investment</span>
                             <span x-show="isSubmitting" class="flex items-center">
@@ -754,6 +1026,7 @@ document.addEventListener('alpine:init', function() {
             riskFactors: [],
             stakeholders: [],
             milestones: [],
+            fundings: [],                       // ← multi-partner pivot array
             swotData: {
                 strengths: [],
                 weaknesses: [],
@@ -765,9 +1038,12 @@ document.addEventListener('alpine:init', function() {
                 id: null,
                 name: '',
                 type: '',
+                facility_type: 'long_term',
+                duration_days: '',
+                interest_rate: '',
                 sector: '',
                 sub_sector: '',
-                country: '',
+                country: 'Kenya',
                 region: '',
                 city: '',
                 address: '',
@@ -805,7 +1081,8 @@ document.addEventListener('alpine:init', function() {
                 milestones: '',
                 notes: '',
                 funding_partner_id: '',
-                funding_amount: ''
+                funding_amount: '',
+                fundings: []
             },
 
             get swotTotalPoints() {
@@ -816,15 +1093,24 @@ document.addEventListener('alpine:init', function() {
             },
 
             get modalTitle() {
-                return this.isEditMode ? 'Edit Investment' : 'Create New Investment';
+                if (this.isEditMode) return 'Edit Investment';
+                return this.formData.facility_type === 'short_term'
+                    ? 'Create Short-Term Facility'
+                    : 'Create New Investment';
             },
 
             get modalSubtitle() {
-                return this.isEditMode ? 'Update investment details' : 'Add a new investment opportunity to your portfolio';
+                if (this.isEditMode) return 'Update investment details';
+                return this.formData.facility_type === 'short_term'
+                    ? 'Quick setup for partner-backed short-term facility'
+                    : 'Add a new investment opportunity to your portfolio';
             },
 
             get submitButtonText() {
-                return this.isEditMode ? 'Update Investment' : 'Create Investment';
+                if (this.isEditMode) return 'Update Investment';
+                return this.formData.facility_type === 'short_term'
+                    ? 'Create Facility'
+                    : 'Create Investment';
             },
 
             get loadingText() {
@@ -841,9 +1127,106 @@ document.addEventListener('alpine:init', function() {
                 return this.isEditMode ? 'PUT' : 'POST';
             },
 
-            // ============ AUTO-SAVE METHODS ============
+            // ============ FACILITY TYPE ============
+            setFacilityType(type) {
+                this.formData.facility_type = type;
+
+                if (type === 'short_term') {
+                    if (!this.formData.status) this.formData.status = 'active';
+                    if (!this.formData.country) this.formData.country = 'Kenya';
+                    if (!this.formData.purchase_date) {
+                        this.formData.purchase_date = new Date().toISOString().split('T')[0];
+                    }
+                    if (this.formData.interest_rate && !this.formData.expected_return) {
+                        this.formData.expected_return = this.formData.interest_rate;
+                    }
+                    if (this.formData.initial_amount && !this.formData.current_value) {
+                        this.formData.current_value = this.formData.initial_amount;
+                    }
+                    this.calculateShortTermMaturity();
+                } else {
+                    if (!this.formData.status || this.formData.status === 'active') {
+                        this.formData.status = 'pipeline';
+                    }
+                }
+
+                this.autoSave();
+            },
+
+            onShortTermPartnerChange() {
+                this.autoSave();
+            },
+
+            syncShortTermToCurrentValue() {
+                if (this.formData.facility_type !== 'short_term') return;
+
+                if (this.formData.initial_amount) {
+                    this.formData.current_value = this.formData.initial_amount;
+                }
+                if (this.formData.interest_rate) {
+                    this.formData.expected_return = this.formData.interest_rate;
+                }
+            },
+
+            calculateShortTermMaturity() {
+                if (this.formData.facility_type !== 'short_term') return;
+
+                if (this.formData.purchase_date && this.formData.duration_days) {
+                    const start = new Date(this.formData.purchase_date);
+                    const days = parseInt(this.formData.duration_days) || 0;
+                    if (!isNaN(start.getTime()) && days > 0) {
+                        const maturity = new Date(start);
+                        maturity.setDate(maturity.getDate() + days);
+                        this.formData.maturity_date = maturity.toISOString().split('T')[0];
+                    }
+                }
+                this.autoSave();
+            },
+
+            calculateExpectedInterest() {
+                const amount = parseFloat(this.formData.initial_amount) || 0;
+                const rate = parseFloat(this.formData.interest_rate) || 0;
+                return amount * (rate / 100);
+            },
+
+            calculateExpectedTotal() {
+                return (parseFloat(this.formData.initial_amount) || 0) + this.calculateExpectedInterest();
+            },
+
+            // ============ FUNDINGS (PIVOT) ============
+            addFunding() {
+                this.fundings.push({
+                    id: null,
+                    partner_id: '',
+                    amount_committed: '',
+                    amount_disbursed: 0,
+                    amount_returned: 0,
+                    status: 'active',
+                    notes: '',
+                });
+                this.autoSave();
+            },
+
+            removeFunding(index) {
+                this.fundings.splice(index, 1);
+                this.autoSave();
+            },
+
+            totalCommitted() {
+                return this.fundings.reduce((sum, f) => sum + (parseFloat(f.amount_committed) || 0), 0);
+            },
+
+            totalDisbursed() {
+                return this.fundings.reduce((sum, f) => sum + (parseFloat(f.amount_disbursed) || 0), 0);
+            },
+
+            totalRemaining() {
+                return Math.max(0, this.totalCommitted() - this.totalDisbursed());
+            },
+
+            // ============ AUTO-SAVE ============
             autoSave() {
-                if (this.isEditMode) return; // Don't auto-save edits
+                if (this.isEditMode) return;
                 
                 clearTimeout(this.autoSaveTimeout);
                 this.showAutoSave = true;
@@ -860,6 +1243,7 @@ document.addEventListener('alpine:init', function() {
                         riskFactors: this.riskFactors,
                         stakeholders: this.stakeholders,
                         milestones: this.milestones,
+                        fundings: this.fundings,
                         swotData: this.swotData,
                         timestamp: new Date().toISOString()
                     };
@@ -885,9 +1269,9 @@ document.addEventListener('alpine:init', function() {
                         this.riskFactors = data.riskFactors || [];
                         this.stakeholders = data.stakeholders || [];
                         this.milestones = data.milestones || [];
+                        this.fundings = data.fundings || [];
                         this.swotData = data.swotData || { strengths: [], weaknesses: [], opportunities: [], threats: [] };
                         
-                        // Update JSON fields
                         this.updateRiskFactorsJSON();
                         this.updateStakeholdersJSON();
                         this.updateMilestonesJSON();
@@ -905,13 +1289,9 @@ document.addEventListener('alpine:init', function() {
                 this.hasDraft = false;
             },
 
-            // ============ RISK FACTORS METHODS ============
+            // ============ RISK FACTORS ============
             addRiskFactor() {
-                this.riskFactors.push({
-                    factor: '',
-                    severity: 'Medium',
-                    mitigation: ''
-                });
+                this.riskFactors.push({ factor: '', severity: 'Medium', mitigation: '' });
                 this.updateRiskFactorsJSON();
                 this.autoSave();
             },
@@ -926,14 +1306,9 @@ document.addEventListener('alpine:init', function() {
                 this.formData.risk_factors = JSON.stringify(this.riskFactors);
             },
 
-            // ============ STAKEHOLDER METHODS ============
+            // ============ STAKEHOLDERS ============
             addStakeholder() {
-                this.stakeholders.push({
-                    type: 'director',
-                    name: '',
-                    title: '',
-                    shareholding: ''
-                });
+                this.stakeholders.push({ type: 'director', name: '', title: '', shareholding: '' });
                 this.updateStakeholdersJSON();
                 this.autoSave();
             },
@@ -945,20 +1320,10 @@ document.addEventListener('alpine:init', function() {
             },
 
             updateStakeholdersJSON() {
-                const grouped = {
-                    directors: [],
-                    board: [],
-                    advisors: [],
-                    partners: []
-                };
+                const grouped = { directors: [], board: [], advisors: [], partners: [] };
                 
                 this.stakeholders.forEach(s => {
-                    const typeMap = {
-                        'director': 'directors',
-                        'board': 'board',
-                        'advisor': 'advisors',
-                        'partner': 'partners'
-                    };
+                    const typeMap = { 'director': 'directors', 'board': 'board', 'advisor': 'advisors', 'partner': 'partners' };
                     const key = typeMap[s.type] || 'directors';
                     grouped[key].push({
                         name: s.name,
@@ -974,7 +1339,7 @@ document.addEventListener('alpine:init', function() {
                 this.formData.stakeholders = JSON.stringify(grouped);
             },
 
-            // ============ SWOT METHODS ============
+            // ============ SWOT ============
             addSwotPoint(category) {
                 if (this.swotData[category]) {
                     this.swotData[category].push({ text: '' });
@@ -999,7 +1364,7 @@ document.addEventListener('alpine:init', function() {
                 this.formData.swot_analysis = JSON.stringify(swot);
             },
 
-            // ============ MILESTONE METHODS ============
+            // ============ MILESTONES ============
             addMilestone() {
                 this.milestones.push({
                     date: new Date().toISOString().split('T')[0],
@@ -1026,17 +1391,14 @@ document.addEventListener('alpine:init', function() {
                 
                 this.draftKey = 'investment_draft_' + (this.isEditMode ? 'edit_' + (this.formData.id || '') : 'new');
                 
-                // Check for existing draft
                 const draft = localStorage.getItem(this.draftKey);
                 this.hasDraft = !!draft;
                 
                 window.addEventListener('open-investment-create', () => {
-                    console.log('Received open-investment-create event');
                     this.openCreate();
                 });
 
                 window.addEventListener('edit-investment', (event) => {
-                    console.log('Received edit-investment event');
                     this.openEdit(event.detail.investment);
                 });
             },
@@ -1046,9 +1408,12 @@ document.addEventListener('alpine:init', function() {
                     id: null,
                     name: '',
                     type: '',
+                    facility_type: 'long_term',
+                    duration_days: '',
+                    interest_rate: '',
                     sector: '',
                     sub_sector: '',
-                    country: '',
+                    country: 'Kenya',
                     region: '',
                     city: '',
                     address: '',
@@ -1086,23 +1451,23 @@ document.addEventListener('alpine:init', function() {
                     milestones: '',
                     notes: '',
                     funding_partner_id: '',
-                    funding_amount: ''
+                    funding_amount: '',
+                    fundings: []
                 };
             },
 
             openCreate() {
-                console.log('Opening create modal');
                 this.isEditMode = false;
                 this.isOpen = true;
                 this.errors = {};
                 this.riskFactors = [];
                 this.stakeholders = [];
                 this.milestones = [];
+                this.fundings = [];
                 this.swotData = { strengths: [], weaknesses: [], opportunities: [], threats: [] };
                 this.formData = this.defaultFormData();
                 this.draftKey = 'investment_draft_new';
                 
-                // Check for existing draft
                 const draft = localStorage.getItem(this.draftKey);
                 if (draft) {
                     this.hasDraft = true;
@@ -1120,34 +1485,22 @@ document.addEventListener('alpine:init', function() {
                 this.isOpen = true;
                 this.errors = {};
                 this.draftKey = 'investment_draft_edit_' + investment.id;
-                
-                // Parse JSON data
+
                 const parseJSON = (value) => {
                     if (typeof value === 'string') {
-                        try {
-                            return JSON.parse(value);
-                        } catch (e) {
-                            return value;
-                        }
+                        try { return JSON.parse(value); } catch (e) { return value; }
                     }
                     return value;
                 };
 
-                // Parse risk factors
                 const riskFactors = parseJSON(investment.risk_factors);
                 this.riskFactors = Array.isArray(riskFactors) ? riskFactors : [];
-                
-                // Parse stakeholders
+
                 const stakeholders = parseJSON(investment.stakeholders);
                 if (stakeholders && typeof stakeholders === 'object') {
                     const flat = [];
                     Object.keys(stakeholders).forEach(key => {
-                        const typeMap = {
-                            'directors': 'director',
-                            'board': 'board',
-                            'advisors': 'advisor',
-                            'partners': 'partner'
-                        };
+                        const typeMap = { 'directors': 'director', 'board': 'board', 'advisors': 'advisor', 'partners': 'partner' };
                         const type = typeMap[key] || 'director';
                         stakeholders[key].forEach(item => {
                             flat.push({
@@ -1162,12 +1515,10 @@ document.addEventListener('alpine:init', function() {
                 } else {
                     this.stakeholders = [];
                 }
-                
-                // Parse milestones
+
                 const milestones = parseJSON(investment.milestones);
                 this.milestones = Array.isArray(milestones) ? milestones : [];
-                
-                // Parse SWOT
+
                 const swot = parseJSON(investment.swot_analysis);
                 this.swotData = {
                     strengths: (swot && swot.strengths) ? swot.strengths.map(t => ({ text: t })) : [],
@@ -1175,14 +1526,34 @@ document.addEventListener('alpine:init', function() {
                     opportunities: (swot && swot.opportunities) ? swot.opportunities.map(t => ({ text: t })) : [],
                     threats: (swot && swot.threats) ? swot.threats.map(t => ({ text: t })) : []
                 };
-                
+
+                // Load fundings from pivot
+                this.fundings = Array.isArray(investment.fundings)
+                    ? investment.fundings.map(f => ({
+                        id: f.id || null,
+                        partner_id: f.partner_id || '',
+                        amount_committed: f.amount_committed || '',
+                        amount_disbursed: f.amount_disbursed || 0,
+                        amount_returned: f.amount_returned || 0,
+                        status: f.status || 'active',
+                        notes: f.notes || '',
+                    }))
+                    : [];
+
+                const normalizedFacilityType = (investment.facility_type === 'short_term' || investment.facility_type === 'long_term')
+                    ? investment.facility_type
+                    : 'long_term';
+
                 this.formData = {
                     id: investment.id,
                     name: investment.name || '',
                     type: investment.type || '',
+                    facility_type: normalizedFacilityType,
+                    duration_days: investment.duration_days || '',
+                    interest_rate: investment.interest_rate || '',
                     sector: investment.sector || '',
                     sub_sector: investment.sub_sector || '',
-                    country: investment.country || '',
+                    country: investment.country || 'Kenya',
                     region: investment.region || '',
                     city: investment.city || '',
                     address: investment.address || '',
@@ -1205,7 +1576,7 @@ document.addEventListener('alpine:init', function() {
                     irr: investment.irr || '',
                     payback_period_months: investment.payback_period_months || '',
                     break_even_point: investment.break_even_point || '',
-                    purchase_date: investment.purchase_date || '',
+                    purchase_date: investment.purchase_date || new Date().toISOString().split('T')[0],
                     maturity_date: investment.maturity_date || '',
                     exit_date: investment.exit_date || '',
                     risk_rating: investment.risk_rating || '',
@@ -1220,18 +1591,18 @@ document.addEventListener('alpine:init', function() {
                     milestones: investment.milestones || '',
                     notes: typeof investment.notes === 'object' ? JSON.stringify(investment.notes) : (investment.notes || ''),
                     funding_partner_id: '',
-                    funding_amount: ''
+                    funding_amount: '',
+                    fundings: this.fundings
                 };
-                
-                // Update JSON fields
+
                 this.updateRiskFactorsJSON();
                 this.updateStakeholdersJSON();
                 this.updateMilestonesJSON();
                 this.updateSwotJSON();
-                
+
                 this.hasDraft = false;
                 localStorage.removeItem(this.draftKey);
-                
+
                 document.body.style.overflow = 'hidden';
             },
 
@@ -1246,17 +1617,39 @@ document.addEventListener('alpine:init', function() {
                 this.errors = {};
 
                 try {
-                    // Ensure all JSON fields are updated
                     this.updateRiskFactorsJSON();
                     this.updateStakeholdersJSON();
                     this.updateMilestonesJSON();
                     this.updateSwotJSON();
                     
-                    // Clear draft on successful submit
                     localStorage.removeItem(this.draftKey);
                     this.hasDraft = false;
+
+                    // Pre-populate for short-term
+                    if (this.formData.facility_type === 'short_term') {
+                        if (!this.formData.country) this.formData.country = 'Kenya';
+                        if (!this.formData.purchase_date) {
+                            this.formData.purchase_date = new Date().toISOString().split('T')[0];
+                        }
+                        if (!this.formData.status) this.formData.status = 'active';
+                        if (!this.formData.current_value && this.formData.initial_amount) {
+                            this.formData.current_value = this.formData.initial_amount;
+                        }
+                        if (!this.formData.expected_return && this.formData.interest_rate) {
+                            this.formData.expected_return = this.formData.interest_rate;
+                        }
+                    }
+
+                    // Filter & normalize fundings
+                    this.formData.fundings = this.fundings
+                        .filter(f => f.partner_id && parseFloat(f.amount_committed) > 0)
+                        .map(f => ({
+                            id: f.id || null,
+                            partner_id: f.partner_id,
+                            amount_committed: parseFloat(f.amount_committed),
+                            notes: f.notes || null,
+                        }));
                     
-                    console.log('Submitting form to:', this.submitUrl);
                     const response = await fetch(this.submitUrl, {
                         method: this.method,
                         headers: {

@@ -3,24 +3,27 @@
 
 namespace App\Models;
 
+use Bavix\Wallet\Traits\HasWallets;
+use Bavix\Wallet\Traits\CanPay;
+use Bavix\Wallet\Interfaces\Wallet;
+use Bavix\Wallet\Interfaces\Customer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Partner extends Model
+class Partner extends Model implements Wallet, Customer
 {
-    use HasFactory;
+    use HasFactory, HasWallets, CanPay;
 
     protected $fillable = [
         'user_id',
+        'type',              
+        'is_house_account',  
         'name',
         'email',
         'phone',
         'company_name',
         'registration_number',
-        'type',
         'status',
-        'total_contribution',
-        'total_withdrawn',
         'current_balance',
         'profit_share_rate',
         'max_loan_to_value',
@@ -34,11 +37,10 @@ class Partner extends Model
     ];
 
     protected $casts = [
-        'total_contribution' => 'decimal:2',
-        'total_withdrawn' => 'decimal:2',
         'current_balance' => 'decimal:2',
         'profit_share_rate' => 'decimal:2',
-        'max_loan_to_value' => 'decimal:2'
+        'max_loan_to_value' => 'decimal:2',
+        'is_house_account' => 'boolean'
     ];
 
     // ============ RELATIONSHIPS ============
@@ -48,7 +50,7 @@ class Partner extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function transactions()
+    public function ledgerEntries()
     {
         return $this->hasMany(PartnerTransaction::class);
     }
@@ -77,6 +79,32 @@ class Partner extends Model
         );
     }
 
+    /**
+     * NEW: pivot rows — one partner can fund many investments.
+     */
+    public function fundings()
+    {
+        return $this->hasMany(InvestmentFunding::class);
+    }
+
+    /**
+     * NEW: many-to-many with investments through investment_fundings.
+     */
+    public function fundedInvestments()
+    {
+        return $this->belongsToMany(Investment::class, 'investment_fundings')
+            ->withPivot([
+                'id',
+                'partner_transaction_id',
+                'amount_committed',
+                'amount_disbursed',
+                'amount_returned',
+                'status',
+                'notes',
+            ])
+            ->withTimestamps();
+    }
+
     // ============ ACCESSORS ============
 
     public function getAvailableBalanceAttribute()
@@ -86,7 +114,7 @@ class Partner extends Model
             ->sum('amount') - $this->transactions()
             ->where('type', 'repayment')
             ->sum('amount');
-        
+
         return $this->current_balance - $used;
     }
 
@@ -109,9 +137,33 @@ class Partner extends Model
         return $this->total_returned - $this->total_invested;
     }
 
+    /**
+     * Sum of all committed amounts across all pivot fundings.
+     */
+    public function getTotalCommittedAttribute(): float
+    {
+        return (float) $this->fundings()->sum('amount_committed');
+    }
+
+    /**
+     * Sum of all disbursed amounts across all pivot fundings.
+     */
+    public function getTotalDisbursedAttribute(): float
+    {
+        return (float) $this->fundings()->sum('amount_disbursed');
+    }
+
+    /**
+     * Sum of all returned amounts across all pivot fundings.
+     */
+    public function getTotalFundingReturnedAttribute(): float
+    {
+        return (float) $this->fundings()->sum('amount_returned');
+    }
+
     // ============ METHODS ============
 
-    public function addContribution(float $amount, string $reference = null, string $notes = null): PartnerTransaction
+    public function addContribution(float $amount, ?string $reference = null, ?string $notes = null)
     {
         $this->total_contribution += $amount;
         $this->current_balance += $amount;
@@ -127,7 +179,7 @@ class Partner extends Model
         ]);
     }
 
-    public function withdraw(float $amount, string $reference = null, string $notes = null): PartnerTransaction
+    public function withdrawPartnerBalance(float $amount, ?string $reference = null, ?string $notes = null)
     {
         if ($amount > $this->current_balance) {
             throw new \Exception('Insufficient balance');
@@ -152,8 +204,9 @@ class Partner extends Model
         $this->current_balance += $amount;
         $this->save();
 
-        return $this->transactions()->create([
+        return PartnerTransaction::create([
             'type' => 'repayment',
+            'partner_id' => $this->id,
             'amount' => $amount,
             'balance_after' => $this->current_balance,
             'reference' => $repayment->transaction,
@@ -164,12 +217,13 @@ class Partner extends Model
         ]);
     }
 
-    public function distributeProfit(float $amount, string $notes = null): PartnerTransaction
+    public function distributeProfit(float $amount, ?string $notes = null): PartnerTransaction
     {
         $this->current_balance += $amount;
         $this->save();
 
-        return $this->transactions()->create([
+        return PartnerTransaction::create([
+            'partner_id' => $this->id,
             'type' => 'profit_distribution',
             'amount' => $amount,
             'balance_after' => $this->current_balance,
@@ -189,4 +243,43 @@ class Partner extends Model
     {
         return $query->where('type', $type);
     }
+
+    public function scopeHouseAccounts($query)
+    {
+        return $query->where('is_house_account', true);
+    }
+
+    public function scopeExternal($query)
+    {
+        return $query->whereIn('type', ['partner', 'business', 'investor']);
+    }
+
+    public function scopeOfType($query, string $type)
+    {
+        return $query->where('type', $type);
+    }
+
+    public function getIsHousePrincipalAttribute(): bool
+    {
+        return $this->is_house_account
+            && $this->getWallet('principal') !== null;
+    }
+
+    public function getIsHouseInterestAttribute(): bool
+    {
+        return $this->is_house_account
+            && $this->getWallet('interest') !== null;
+    }
+
+    public function getTypeLabelAttribute(): string
+    {
+        return match($this->type) {
+            'partner' => 'External Partner',
+            'business' => 'Affiliated Business',
+            'company' => 'Company',
+            'investor' => 'Equity Investor',
+            default => ucfirst($this->type),
+        };
+    }
+
 }

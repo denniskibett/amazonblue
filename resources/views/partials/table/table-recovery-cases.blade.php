@@ -116,10 +116,37 @@
                         </div>
                     </td>
                     <td class="px-4 py-3">
-                        @include('partials.recovery.status-badge', ['status' => $case->status])
+                        @php
+                            $statusColors = [
+                                'open' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+                                'in_progress' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                                'negotiation' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+                                'legal' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                                'recovered' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                                'written_off' => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                                'closed' => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                            ];
+                            $statusSlug = $case->status->slug ?? 'open';
+                            $statusClass = $statusColors[$statusSlug] ?? $statusColors['open'];
+                        @endphp
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClass }}">
+                            {{ $case->status->name ?? 'Open' }}
+                        </span>
                     </td>
                     <td class="px-4 py-3">
-                        @include('partials.recovery.priority-badge', ['priority' => $case->priority])
+                        @php
+                            $priorityColors = [
+                                'critical' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                                'high' => 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+                                'medium' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                                'low' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                            ];
+                            $prioritySlug = $case->priority->slug ?? 'medium';
+                            $priorityClass = $priorityColors[$prioritySlug] ?? $priorityColors['medium'];
+                        @endphp
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $priorityClass }}">
+                            {{ $case->priority->name ?? 'Medium' }}
+                        </span>
                     </td>
                     <td class="px-4 py-3">
                         <span class="text-sm {{ $case->days_in_default > 90 ? 'text-red-600 font-bold' : ($case->days_in_default > 30 ? 'text-orange-500' : 'text-gray-600') }}">

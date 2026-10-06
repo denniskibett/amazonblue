@@ -40,8 +40,40 @@
             <div>
                 <div class="flex items-center gap-3 flex-wrap">
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="case.case_number"></h1>
-                    @include('partials.recovery.status-badge', ['status' => $caseData->status])
-                    @include('partials.recovery.priority-badge', ['priority' => $caseData->priority])
+                    
+                    <!-- Status Badge -->
+                    @php
+                        $statusColors = [
+                            'open' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+                            'in_progress' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                            'negotiation' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+                            'legal' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                            'recovered' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                            'written_off' => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                            'closed' => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                        ];
+                        $statusSlug = $caseData->status->slug ?? 'open';
+                        $statusClass = $statusColors[$statusSlug] ?? $statusColors['open'];
+                    @endphp
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClass }}">
+                        {{ $caseData->status->name ?? 'Open' }}
+                    </span>
+
+                    <!-- Priority Badge -->
+                    @php
+                        $priorityColors = [
+                            'critical' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                            'high' => 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+                            'medium' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                            'low' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                        ];
+                        $prioritySlug = $caseData->priority->slug ?? 'medium';
+                        $priorityClass = $priorityColors[$prioritySlug] ?? $priorityColors['medium'];
+                    @endphp
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $priorityClass }}">
+                        {{ $caseData->priority->name ?? 'Medium' }}
+                    </span>
+
                     @if($caseData->loan && $caseData->loan->is_non_performing)
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
                             NPL Loan
@@ -179,7 +211,131 @@
                     <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Activity Timeline</h3>
                     <span class="text-sm text-gray-500 dark:text-gray-400" x-text="case.actions_count + ' actions'"></span>
                 </div>
-                @include('partials.recovery.action-timeline', ['actions' => $caseData->actions])
+                
+                <!-- Action Timeline - Inline -->
+                <div class="flow-root">
+                    @if($caseData->actions && $caseData->actions->count() > 0)
+                        <ul class="-mb-8">
+                            @foreach($caseData->actions as $action)
+                                @php
+                                    $actionColors = [
+                                        'call' => 'bg-blue-500',
+                                        'email' => 'bg-purple-500',
+                                        'meeting' => 'bg-green-500',
+                                        'letter' => 'bg-yellow-500',
+                                        'payment' => 'bg-green-500',
+                                        'reminder' => 'bg-orange-500',
+                                        'negotiation' => 'bg-indigo-500',
+                                        'legal' => 'bg-red-500',
+                                        'note' => 'bg-gray-500',
+                                        'other' => 'bg-gray-500',
+                                    ];
+                                    $actionType = $action->type ?? 'other';
+                                    $actionColor = $actionColors[$actionType] ?? $actionColors['other'];
+                                    
+                                    $typeLabels = [
+                                        'call' => 'Call',
+                                        'email' => 'Email',
+                                        'meeting' => 'Meeting',
+                                        'letter' => 'Letter',
+                                        'payment' => 'Payment',
+                                        'reminder' => 'Reminder',
+                                        'negotiation' => 'Negotiation',
+                                        'legal' => 'Legal',
+                                        'note' => 'Note',
+                                        'other' => 'Other',
+                                    ];
+                                    $typeLabel = $typeLabels[$actionType] ?? 'Other';
+                                @endphp
+                                <li>
+                                    <div class="relative pb-8">
+                                        @if(!$loop->last)
+                                            <span class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true"></span>
+                                        @endif
+                                        <div class="relative flex space-x-3">
+                                            <div>
+                                                <span class="h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-gray-800 {{ $actionColor }}">
+                                                    <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        @if($actionType === 'call')
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                                        @elseif($actionType === 'email')
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                                        @elseif($actionType === 'payment')
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                        @elseif($actionType === 'meeting')
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                                        @elseif($actionType === 'legal')
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                                        @else
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                                        @endif
+                                                    </svg>
+                                                </span>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                                    <div>
+                                                        <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                                            {{ $typeLabel }}
+                                                            @if($action->user)
+                                                                <span class="text-xs font-normal text-gray-500 dark:text-gray-400">
+                                                                    by {{ $action->user->name }}
+                                                                </span>
+                                                            @endif
+                                                        </p>
+                                                        @if($action->description)
+                                                            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ $action->description }}</p>
+                                                        @endif
+                                                        @if($action->notes)
+                                                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $action->notes }}</p>
+                                                        @endif
+                                                        @if($action->amount > 0)
+                                                            <p class="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
+                                                                Amount: KES {{ number_format($action->amount, 2) }}
+                                                            </p>
+                                                        @endif
+                                                    </div>
+                                                    <div class="flex-shrink-0 text-right">
+                                                        <time class="text-xs text-gray-500 dark:text-gray-400">
+                                                            {{ $action->created_at->format('M d, Y') }}
+                                                            <span class="block text-xs">{{ $action->created_at->format('h:i A') }}</span>
+                                                        </time>
+                                                        @if($action->status)
+                                                            <span class="mt-1 inline-flex px-2 py-0.5 rounded-full text-xs font-medium
+                                                                {{ $action->status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                                                                   ($action->status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' : 
+                                                                   ($action->status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 
+                                                                   'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300')) }}">
+                                                                {{ ucfirst($action->status) }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <div class="text-center py-8">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <h4 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No activities recorded</h4>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Start tracking recovery actions for this case</p>
+                            @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
+                                <button @click="openAddActionModal()" 
+                                        class="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                    Add First Action
+                                </button>
+                            @endif
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
 

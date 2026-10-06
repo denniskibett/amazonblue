@@ -628,6 +628,8 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
      * FIXED: 
      * - Start date = previous cycle's due date (not today)
      * - Previous balance = previous cycle's new_balance
+     * - NEW: If the cycle was settled AFTER the due date, use the last repayment date
+     *        as the start of the new cycle (since penalties were already paid for those days)
      */
     public function executeRollover(Loan $loan, array $options = []): array
     {
@@ -690,16 +692,53 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
         $interest = $newPrincipal * ($interestRate / 100);
         $newBalance = $newPrincipal + $interest;
         
-        // ============ FIX: START DATE = PREVIOUS CYCLE'S DUE DATE ============
-        $newStartDate = $customStartDate 
-            ? Carbon::parse($customStartDate) 
-            : Carbon::parse($activeCycle->due_date);
+        // ============ DETERMINE NEW START DATE ============
+        // Priority:
+        //   1. Custom start date from options (if provided)
+        //   2. Last repayment date IF the cycle was settled AFTER the due date
+        //   3. Previous cycle's due date (default)
+        //
+        // Rationale for (2): The client already paid penalties for the late days.
+        // Starting the new cycle from the payment date is fair and avoids
+        // double-charging for the same days.
+        
+        $previousDueDate = Carbon::parse($activeCycle->due_date);
+        
+        // Get the last repayment for this specific cycle
+        $lastRepayment = $loan->repayments()
+            ->where('loan_cycle_id', $activeCycle->id)
+            ->orderBy('repayment_date', 'desc')
+            ->first();
+        
+        $lastRepaymentDate = $lastRepayment
+            ? Carbon::parse($lastRepayment->repayment_date)
+            : null;
+        
+        // Determine if the cycle was fully settled (no remaining outstanding)
+        $isFullySettled = ($cycleCalculation['final_outstanding'] ?? 0) <= 0;
+        
+        // Decide the new start date
+        if ($customStartDate) {
+            // 1. Manual override wins
+            $newStartDate = Carbon::parse($customStartDate);
+            $startDateReason = 'custom_start_date';
+            
+        } elseif ($isFullySettled && $lastRepaymentDate && $lastRepaymentDate->gt($previousDueDate)) {
+            // 2. Late payment — use the payment date
+            $newStartDate = $lastRepaymentDate->copy()->startOfDay();
+            $startDateReason = 'late_payment_uses_payment_date';
+            
+        } else {
+            // 3. On-time payment or no repayment — use the previous due date
+            $newStartDate = $previousDueDate->copy();
+            $startDateReason = 'on_time_uses_due_date';
+        }
         
         // ============ CALCULATE NEW DUE DATE ============
         if ($customDueDate) {
             $newDueDate = Carbon::parse($customDueDate);
         } else {
-            // Add the period to the start date (which is the previous due date)
+            // Add the period to the new start date
             $period = $customPeriodDays ?? (int) $loanType->period;
             $unit = $loanType->unit;
             
@@ -726,6 +765,18 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
             }
         }
         
+        // ============ LOG THE START DATE DECISION ============
+        Log::info('Rollover start date decision', [
+            'loan_id' => $loan->id,
+            'cycle_id' => $activeCycle->id,
+            'cycle_number' => $activeCycle->cycle_number,
+            'previous_due_date' => $previousDueDate->format('Y-m-d'),
+            'last_repayment_date' => $lastRepaymentDate?->format('Y-m-d'),
+            'is_fully_settled' => $isFullySettled,
+            'chosen_start_date' => $newStartDate->format('Y-m-d'),
+            'reason' => $startDateReason,
+        ]);
+        
         // ============ MARK ACTIVE CYCLE AS COMPLETED ============
         $activeCycle->update(['status' => 'completed']);
         
@@ -739,6 +790,9 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
         }
         if ($waivePenalty) {
             $cycleNotes .= ' - PENALTIES WAIVED (Payment Plan)';
+        }
+        if ($startDateReason === 'late_payment_uses_payment_date') {
+            $cycleNotes .= ' (Start date = last payment date ' . $newStartDate->format('Y-m-d') . ')';
         }
         
         // ============ CREATE NEW CYCLE ============
@@ -776,11 +830,11 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
             'interest_calculated' => $interest,
             'new_balance' => $newBalance,
             'start_date' => $newStartDate->format('Y-m-d'),
+            'start_date_reason' => $startDateReason,
             'new_due_date' => $newDueDate->format('Y-m-d'),
             'waive_penalty' => $waivePenalty,
         ]);
 
-        // ============ FIX: Include period and period_unit in return ============
         return [
             'success' => true,
             'message' => "Loan rolled over successfully. New balance: KES " . number_format($newBalance, 2),
@@ -792,15 +846,17 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
                 'due_date_formatted' => $newDueDate->format('M d, Y'),
                 'start_date' => $newStartDate->format('Y-m-d'),
                 'start_date_formatted' => $newStartDate->format('M d, Y'),
+                'start_date_reason' => $startDateReason, // Useful for debugging / preview
+                'previous_due_date' => $previousDueDate->format('Y-m-d'),
+                'last_repayment_date' => $lastRepaymentDate?->format('Y-m-d'),
+                'is_fully_settled' => $isFullySettled,
                 'interest_capitalized' => $interest,
                 'interest_rate_used' => $interestRate,
                 'previous_balance' => $newPrincipal,
                 'waive_penalty' => $waivePenalty,
                 'cycle_calculation' => $cycleCalculation,
-                // ============ ADD THESE TWO LINES ============
                 'period' => (int) $loanType->period,
                 'period_unit' => $loanType->unit,
-                // ============ END ADD ============
             ]
         ];
     }

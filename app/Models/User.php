@@ -8,17 +8,20 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Permission\Traits\HasRoles;
+use Bavix\Wallet\Interfaces\Wallet;
+use Bavix\Wallet\Traits\HasWallet;
+use Bavix\Wallet\Traits\HasWallets;
 
-class User extends Authenticatable
+class User extends Authenticatable implements Wallet
 {
-    use HasFactory, Notifiable, SoftDeletes, HasRoles;
+    use HasFactory, Notifiable, SoftDeletes, HasRoles, HasWallet, HasWallets;
 
     protected $fillable = [
         'name', 
         'email', 
         'password', 
         'phone', 
-        'role', // Keep for backward compatibility during migration
+        'role', 
         'avatar', 
         'profile_photo_path',
         'gender',

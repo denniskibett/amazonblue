@@ -218,42 +218,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [InvestmentController::class, 'index'])
             ->name('index')
             ->middleware('permission:view investments');
-        
-        Route::get('/{investment}', [InvestmentController::class, 'show'])
-            ->name('show')
-            ->middleware('permission:view investments');
-        
-        Route::post('/store', [InvestmentController::class, 'store'])
-            ->name('store')
-            ->middleware('permission:create investments');
-        
-        Route::put('/update/{investment}', [InvestmentController::class, 'update'])
-            ->name('update')
-            ->middleware('permission:edit investments');
-        
-        Route::delete('/destroy/{investment}', [InvestmentController::class, 'destroy'])
-            ->name('destroy')
-            ->middleware('permission:delete investments');
-        
-        Route::post('/{investment}/note', [InvestmentController::class, 'addNote'])
-            ->name('note.add')
-            ->middleware('permission:edit investments');
-        
-        Route::post('/{investment}/milestone', [InvestmentController::class, 'addMilestone'])
-            ->name('milestone.add')
-            ->middleware('permission:edit investments');
-        
-        Route::post('/{investment}/funding', [InvestmentController::class, 'addFunding'])
-            ->name('funding.add')
-            ->middleware('permission:edit investments');
-        
+
+        // ============ STATIC ROUTES FIRST (before /{investment}) ============
         Route::get('/data', [InvestmentController::class, 'getData'])
             ->name('data')
             ->middleware('permission:view investments');
-        
+
         Route::get('/stats', [InvestmentController::class, 'getStats'])
             ->name('stats')
             ->middleware('permission:view investments');
+
+        // ============ THEN the catch-all dynamic route ============
+        Route::get('/{investment}', [InvestmentController::class, 'show'])
+            ->name('show')
+            ->middleware('permission:view investments');
+
+        Route::post('/store', [InvestmentController::class, 'store'])
+            ->name('store')
+            ->middleware('permission:create investments');
+
+        Route::put('/update/{investment}', [InvestmentController::class, 'update'])
+            ->name('update')
+            ->middleware('permission:edit investments');
+
+        Route::delete('/destroy/{investment}', [InvestmentController::class, 'destroy'])
+            ->name('destroy')
+            ->middleware('permission:delete investments');
+
+        Route::post('/{investment}/note', [InvestmentController::class, 'addNote'])
+            ->name('note.add')
+            ->middleware('permission:edit investments');
+
+        Route::post('/{investment}/milestone', [InvestmentController::class, 'addMilestone'])
+            ->name('milestone.add')
+            ->middleware('permission:edit investments');
+
+        Route::post('/{investment}/funding', [InvestmentController::class, 'addFunding'])
+            ->name('funding.add')
+            ->middleware('permission:edit investments');
     });
 
     // ============ PARTNERS ============
@@ -261,42 +263,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [PartnerController::class, 'index'])
             ->name('index')
             ->middleware('permission:view partners');
-        
-        Route::get('/{partner}', [PartnerController::class, 'show'])
-            ->name('show')
-            ->middleware('permission:view partners');
-        
-        Route::post('/store', [PartnerController::class, 'store'])
-            ->name('store')
-            ->middleware('permission:create partners');
-        
-        Route::put('/update/{partner}', [PartnerController::class, 'update'])
-            ->name('update')
-            ->middleware('permission:edit partners');
-        
-        Route::delete('/destroy/{partner}', [PartnerController::class, 'destroy'])
-            ->name('destroy')
-            ->middleware('permission:delete partners');
-        
-        Route::post('/{partner}/contribution', [PartnerController::class, 'addContribution'])
-            ->name('contribution.add')
-            ->middleware('permission:edit partners');
-        
-        Route::post('/{partner}/withdraw', [PartnerController::class, 'withdraw'])
-            ->name('withdraw')
-            ->middleware('permission:edit partners');
-        
-        Route::post('/{partner}/profit', [PartnerController::class, 'distributeProfit'])
-            ->name('profit.distribute')
-            ->middleware('permission:edit partners');
-        
+
+        // ============ STATIC ROUTES FIRST ============
         Route::get('/data', [PartnerController::class, 'getData'])
             ->name('data')
             ->middleware('permission:view partners');
-        
+
         Route::get('/stats', [PartnerController::class, 'getStats'])
             ->name('stats')
             ->middleware('permission:view partners');
+
+        // ============ THEN dynamic ============
+        Route::get('/{partner}', [PartnerController::class, 'show'])
+            ->name('show')
+            ->middleware('permission:view partners');
+
+        Route::post('/store', [PartnerController::class, 'store'])
+            ->name('store')
+            ->middleware('permission:create partners');
+
+        Route::put('/update/{partner}', [PartnerController::class, 'update'])
+            ->name('update')
+            ->middleware('permission:edit partners');
+
+        Route::delete('/destroy/{partner}', [PartnerController::class, 'destroy'])
+            ->name('destroy')
+            ->middleware('permission:delete partners');
+
+        Route::post('/{partner}/contribution', [PartnerController::class, 'addContribution'])
+            ->name('contribution.add')
+            ->middleware('permission:edit partners');
+
+        Route::post('/{partner}/withdraw', [PartnerController::class, 'withdraw'])
+            ->name('withdraw')
+            ->middleware('permission:edit partners');
+
+        Route::post('/{partner}/profit', [PartnerController::class, 'distributeProfit'])
+            ->name('profit.distribute')
+            ->middleware('permission:edit partners');
     });
 
     // ============ SYSTEM SETTINGS ============
