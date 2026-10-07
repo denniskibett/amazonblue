@@ -74,31 +74,35 @@
                             </div>
                         </div>
 
-                        <!-- Financial Summary -->
+                        <!-- Wallet Balances (replaces Financial Summary) -->
                         <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                            <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Financial Summary</h5>
+                            <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Wallet Balances</h5>
                             <div class="space-y-2">
                                 <div class="flex justify-between">
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">Total Contribution</span>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="formatCurrency(partner.total_contribution || 0)"></span>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">Principal</span>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="formatCurrency(partner.principal_balance || 0)"></span>
                                 </div>
                                 <div class="flex justify-between">
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">Current Balance</span>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="formatCurrency(partner.current_balance || 0)"></span>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">Interest</span>
+                                    <span class="text-sm font-medium text-blue-600 dark:text-blue-400" x-text="formatCurrency(partner.interest_balance || 0)"></span>
                                 </div>
                                 <div class="flex justify-between">
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">Total Invested</span>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="formatCurrency(partner.total_invested || 0)"></span>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">Broker Fee</span>
+                                    <span class="text-sm font-medium text-green-600 dark:text-green-400" x-text="formatCurrency(partner.broker_fee_balance || 0)"></span>
                                 </div>
                                 <div class="flex justify-between">
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">Total Returned</span>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="formatCurrency(partner.total_returned || 0)"></span>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">Investment Tracker</span>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="formatCurrency(partner.tracker_balance || 0)"></span>
                                 </div>
                                 <div class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
-                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Net Position</span>
-                                    <span class="text-sm font-bold" 
-                                          :class="(partner.total_invested - partner.total_returned) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
-                                          x-text="formatCurrency((partner.total_invested || 0) - (partner.total_returned || 0))"></span>
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Total</span>
+                                    <span class="text-sm font-bold text-gray-900 dark:text-white"
+                                          x-text="formatCurrency(
+                                              (partner.principal_balance || 0) +
+                                              (partner.interest_balance || 0) +
+                                              (partner.broker_fee_balance || 0) +
+                                              (partner.tracker_balance || 0)
+                                          )"></span>
                                 </div>
                             </div>
                         </div>
@@ -129,13 +133,17 @@
                             </div>
                         </div>
 
-                        <!-- Risk Settings -->
+                        <!-- Financial Settings -->
                         <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                            <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Risk Settings</h5>
+                            <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Financial Settings</h5>
                             <div class="space-y-2">
                                 <div class="flex justify-between">
                                     <span class="text-sm text-gray-500 dark:text-gray-400">Profit Share Rate</span>
                                     <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="partner.profit_share_rate ? partner.profit_share_rate + '%' : 'N/A'"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">Broker Rate</span>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="partner.broker_rate ? partner.broker_rate + '%' : '40%'"></span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-sm text-gray-500 dark:text-gray-400">Max LTV</span>
@@ -168,6 +176,57 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Journal Entries -->
+                <div class="mt-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300">Recent Journal Entries</h5>
+                        <span class="text-xs text-gray-500 dark:text-gray-400" 
+                              x-text="(partner.transactions?.length || 0) + ' entries'"></span>
+                    </div>
+                    <div class="overflow-x-auto max-h-64 overflow-y-auto">
+                        <table class="min-w-full text-xs">
+                            <thead class="bg-gray-100 dark:bg-gray-700/50 sticky top-0">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-gray-600 dark:text-gray-300 font-medium">Date</th>
+                                    <th class="px-3 py-2 text-left text-gray-600 dark:text-gray-300 font-medium">Wallet</th>
+                                    <th class="px-3 py-2 text-left text-gray-600 dark:text-gray-300 font-medium">Type</th>
+                                    <th class="px-3 py-2 text-right text-gray-600 dark:text-gray-300 font-medium">Amount</th>
+                                    <th class="px-3 py-2 text-right text-gray-600 dark:text-gray-300 font-medium">Balance</th>
+                                    <th class="px-3 py-2 text-left text-gray-600 dark:text-gray-300 font-medium">Reference</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <template x-for="(t, idx) in (partner.transactions || [])" :key="t.id || idx">
+                                    <tr class="hover:bg-gray-100 dark:hover:bg-gray-700/30">
+                                        <td class="px-3 py-2 text-gray-700 dark:text-gray-300" x-text="t.transaction_date || t.created_at || ''"></td>
+                                        <td class="px-3 py-2 text-gray-700 dark:text-gray-300">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs"
+                                                  :class="{
+                                                      'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300': t.wallet_slug === 'principal',
+                                                      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': t.wallet_slug === 'interest',
+                                                      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300': t.wallet_slug === 'broker_fee',
+                                                      'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300': t.wallet_slug === 'investment_tracker'
+                                                  }"
+                                                  x-text="(t.wallet_slug || '').replace('_', ' ')"></span>
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-700 dark:text-gray-300" x-text="(t.type || '').replace(/_/g, ' ')"></td>
+                                        <td class="px-3 py-2 text-right font-medium"
+                                            :class="parseFloat(t.amount) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                            x-text="formatCurrency(t.amount)"></td>
+                                        <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-300" x-text="formatCurrency(t.balance_after)"></td>
+                                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400 font-mono text-[10px]" x-text="t.reference || '—'"></td>
+                                    </tr>
+                                </template>
+                                <tr x-show="!partner.transactions || partner.transactions.length === 0">
+                                    <td colspan="6" class="px-3 py-6 text-center text-gray-500 dark:text-gray-400 italic">
+                                        No journal entries yet
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

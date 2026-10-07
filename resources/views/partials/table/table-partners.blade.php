@@ -13,17 +13,20 @@
         Partners Overview
       </h3>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-        Showing <span id="showingStart">1</span> to <span id="showingEnd">10</span> of <span id="totalCount">{{ count($partners) }}</span> entries
+        Showing <span x-text="startIndex + 1"></span> to <span x-text="endIndex"></span> of <span x-text="filteredData.length"></span> entries
       </p>
     </div>
-    
+
     <div class="flex flex-wrap items-center gap-3">
       <div class="flex items-center">
         <label for="entriesPerPage" class="text-sm text-gray-500 dark:text-gray-400 mr-2 hidden sm:inline">Show:</label>
         <div class="relative">
-          <select id="entriesPerPage" class="appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 pr-8">
+          <select id="entriesPerPage"
+                  x-model.number="perPage"
+                  @change="currentPage = 1; updateTable()"
+                  class="appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 pr-8">
             <option value="5">5</option>
-            <option value="10" selected>10</option>
+            <option value="10">10</option>
             <option value="25">25</option>
             <option value="50">50</option>
             <option value="100">100</option>
@@ -35,9 +38,13 @@
           </div>
         </div>
       </div>
-      
+
       <div class="relative flex-1 min-w-[150px]">
-        <input type="text" id="partnerSearch" placeholder="Search partners..." class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 pl-10">
+        <input type="text"
+               x-model="searchTerm"
+               @input="filterTable()"
+               placeholder="Search partners..."
+               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 pl-10">
         <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -45,7 +52,7 @@
         </div>
       </div>
 
-      <button 
+      <button
           @click="window.dispatchEvent(new CustomEvent('open-partner-create'))"
           class="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-theme-sm font-medium text-gray-500 shadow-theme-xs ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03]">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -60,7 +67,7 @@
     <table class="min-w-full" id="partnersTable">
       <thead class="hidden sm:table-header-group">
         <tr class="border-gray-100 border-y dark:border-gray-800">
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.partnerTableInstance?.sortTable(0)">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('name')">
             <div class="flex items-center justify-between">
               <span>Partner</span>
               <span class="sort-icon text-gray-400">
@@ -70,7 +77,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.partnerTableInstance?.sortTable(1)">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('type')">
             <div class="flex items-center justify-between">
               <span>Type</span>
               <span class="sort-icon text-gray-400">
@@ -80,7 +87,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.partnerTableInstance?.sortTable(2)">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('status')">
             <div class="flex items-center justify-between">
               <span>Status</span>
               <span class="sort-icon text-gray-400">
@@ -90,9 +97,9 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.partnerTableInstance?.sortTable(3)">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('principal_balance')">
             <div class="flex items-center justify-between">
-              <span>Balance</span>
+              <span>Principal</span>
               <span class="sort-icon text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
@@ -100,9 +107,9 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.partnerTableInstance?.sortTable(4)">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('interest_balance')">
             <div class="flex items-center justify-between">
-              <span>Invested</span>
+              <span>Interest</span>
               <span class="sort-icon text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
@@ -110,9 +117,19 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.partnerTableInstance?.sortTable(5)">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('broker_fee_balance')">
             <div class="flex items-center justify-between">
-              <span>Net Return</span>
+              <span>Broker Fee</span>
+              <span class="sort-icon text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+              </span>
+            </div>
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('tracker_balance')">
+            <div class="flex items-center justify-between">
+              <span>Tracker</span>
               <span class="sort-icon text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
@@ -123,127 +140,142 @@
           <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
-      
+
       <thead class="sm:hidden">
         <tr class="border-gray-100 border-y dark:border-gray-800">
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Broker Fee</th>
           <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
 
       <tbody class="divide-y divide-gray-100 dark:divide-gray-800" id="partnersTableBody">
-        @forelse($partners as $partner)
-        <tr class="partner-row hover:bg-gray-50 transition duration-150" data-partner-id="{{ $partner['id'] }}">
-          <td class="py-3 hidden sm:table-cell">
-            <div class="flex items-center gap-3">
-              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <span class="text-blue-600 font-medium">{{ ucfirst(substr($partner['name'], 0, 1)) }}</span>
+        <template x-for="partner in paginatedData" :key="partner.id">
+          <tr class="partner-row hover:bg-gray-50 transition duration-150">
+            <td class="py-3 hidden sm:table-cell">
+              <div class="flex items-center gap-3">
+                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <span class="text-blue-600 font-medium" x-text="(partner.name || '?').charAt(0).toUpperCase()"></span>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90" x-text="partner.name"></p>
+                  <span class="text-gray-500 text-theme-xs dark:text-gray-400" x-text="partner.email"></span>
+                </div>
               </div>
-              <div>
-                <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">{{ $partner['name'] }}</p>
-                <span class="text-gray-500 text-theme-xs dark:text-gray-400">{{ $partner['email'] }}</span>
+            </td>
+
+            <td class="py-3 hidden sm:table-cell">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    :class="{
+                      'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300': partner.type === 'partner',
+                      'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300': partner.type === 'business',
+                      'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300': partner.type === 'company',
+                      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': partner.type === 'investor'
+                    }"
+                    x-text="partner.type ? partner.type.charAt(0).toUpperCase() + partner.type.slice(1) : 'N/A'">
+              </span>
+            </td>
+
+            <td class="py-3 hidden sm:table-cell">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    :class="{
+                      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': partner.status === 'active',
+                      'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': partner.status === 'inactive',
+                      'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300': partner.status === 'suspended'
+                    }"
+                    x-text="partner.status ? partner.status.charAt(0).toUpperCase() + partner.status.slice(1) : 'N/A'">
+              </span>
+            </td>
+
+            <td class="py-3 hidden sm:table-cell">
+              <p class="font-medium text-theme-sm dark:text-white/90"
+                 :class="(partner.principal_balance || 0) > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
+                 x-text="formatCurrency(partner.principal_balance || 0)"></p>
+            </td>
+
+            <td class="py-3 hidden sm:table-cell">
+              <p class="font-medium text-theme-sm dark:text-white/90"
+                 :class="(partner.interest_balance || 0) > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'"
+                 x-text="formatCurrency(partner.interest_balance || 0)"></p>
+            </td>
+
+            <td class="py-3 hidden sm:table-cell">
+              <p class="font-medium text-theme-sm dark:text-white/90"
+                 :class="(partner.broker_fee_balance || 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'"
+                 x-text="formatCurrency(partner.broker_fee_balance || 0)"></p>
+            </td>
+
+            <td class="py-3 hidden sm:table-cell">
+              <p class="font-medium text-theme-sm dark:text-white/90"
+                 :class="(partner.tracker_balance || 0) > 0 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 dark:text-gray-400'"
+                 x-text="formatCurrency(partner.tracker_balance || 0)"></p>
+            </td>
+
+            <td class="py-3 text-right">
+              <div class="flex justify-end space-x-3">
+                <button @click="showPartner(partner.id)" class="text-blue-600 hover:text-blue-900" title="View">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                  </svg>
+                </button>
+
+                <button @click="editPartner(partner.id)" class="text-green-600 hover:text-green-900" title="Edit">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                  </svg>
+                </button>
+
+                <button @click="deletePartner(partner.id, partner.name)" class="text-red-600 hover:text-red-900" title="Delete">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                  </svg>
+                </button>
               </div>
-            </div>
-          </td>
+            </td>
 
-          <td class="py-3 hidden sm:table-cell">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  :class="'{{ $partner['type'] }}' === 'individual' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' : 
-                          '{{ $partner['type'] }}' === 'corporate' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' : 
-                          'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'">
-              {{ ucfirst($partner['type']) }}
-            </span>
-          </td>
+            <!-- Mobile View -->
+            <td class="py-3 sm:hidden">
+              <div class="flex items-center gap-3">
+                <div class="h-[40px] w-[40px] overflow-hidden rounded-md bg-blue-100 flex items-center justify-center">
+                  <span class="text-blue-600 font-medium" x-text="(partner.name || '?').charAt(0).toUpperCase()"></span>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90" x-text="partner.name"></p>
+                  <span class="text-gray-500 text-theme-xs dark:text-gray-400" x-text="formatCurrency(partner.broker_fee_balance || 0)"></span>
+                </div>
+              </div>
+            </td>
 
-          <td class="py-3 hidden sm:table-cell">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  :class="'{{ $partner['status'] }}' === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
-                          '{{ $partner['status'] }}' === 'inactive' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' : 
-                          'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'">
-              {{ ucfirst($partner['status']) }}
-            </span>
-          </td>
+            <td class="py-3 sm:hidden">
+              <span class="font-medium text-gray-800 text-theme-sm dark:text-white/90" x-text="formatCurrency(partner.broker_fee_balance || 0)"></span>
+            </td>
 
-          <td class="py-3 hidden sm:table-cell">
-            <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">KES {{ number_format($partner['current_balance'], 2) }}</p>
-          </td>
-
-          <td class="py-3 hidden sm:table-cell">
-            <p class="text-gray-800 text-theme-sm dark:text-white/90">KES {{ number_format($partner['total_contribution'], 2) }}</p>
-          </td>
-
-          <td class="py-3 hidden sm:table-cell">
-            <span class="font-medium text-theme-sm" 
-                  :class="'{{ $partner['net_position'] }}' >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-              KES {{ number_format($partner['net_position'], 2) }}
-            </span>
-          </td>
-
-          <td class="py-3 text-right">
-            <div class="flex justify-end space-x-3">
-              <button @click="showPartner({{ $partner['id'] }})" class="text-blue-600 hover:text-blue-900" title="View">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <td class="py-3 sm:hidden text-right">
+              <button @click="showPartner(partner.id)" class="text-blue-600 hover:text-blue-900 inline-block mr-2" title="View">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                 </svg>
               </button>
 
-              <button @click="editPartner({{ $partner['id'] }})" class="text-green-600 hover:text-green-900" title="Edit">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <button @click="editPartner(partner.id)" class="text-green-600 hover:text-green-900 inline-block mr-2" title="Edit">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
                 </svg>
               </button>
 
-              <button @click="deletePartner({{ $partner['id'] }}, '{{ addslashes($partner['name']) }}')" class="text-red-600 hover:text-red-900" title="Delete">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <button @click="deletePartner(partner.id, partner.name)" class="text-red-600 hover:text-red-900 inline-block mr-2" title="Delete">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                 </svg>
               </button>
-            </div>
-          </td>
+            </td>
+          </tr>
+        </template>
 
-          <!-- Mobile View -->
-          <td class="py-3 sm:hidden">
-            <div class="flex items-center gap-3">
-              <div class="h-[40px] w-[40px] overflow-hidden rounded-md bg-blue-100 flex items-center justify-center">
-                <span class="text-blue-600 font-medium">{{ ucfirst(substr($partner['name'], 0, 1)) }}</span>
-              </div>
-              <div>
-                <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">{{ $partner['name'] }}</p>
-                <span class="text-gray-500 text-theme-xs dark:text-gray-400">KES {{ number_format($partner['current_balance'], 2) }}</span>
-              </div>
-            </div>
-          </td>
-
-          <td class="py-3 sm:hidden">
-            <span class="font-medium text-gray-800 text-theme-sm dark:text-white/90">KES {{ number_format($partner['current_balance'], 2) }}</span>
-          </td>
-
-          <td class="py-3 sm:hidden text-right">
-            <button @click="showPartner({{ $partner['id'] }})" class="text-blue-600 hover:text-blue-900 inline-block mr-2" title="View">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-              </svg>
-            </button>
-          
-            <button @click="editPartner({{ $partner['id'] }})" class="text-green-600 hover:text-green-900 inline-block mr-2" title="Edit">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-              </svg>
-            </button>
-          
-            <button @click="deletePartner({{ $partner['id'] }}, '{{ addslashes($partner['name']) }}')" class="text-red-600 hover:text-red-900 inline-block mr-2" title="Delete">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-              </svg>
-            </button>
-          </td>
-        </tr>
-      @empty
-        <tr>
-          <td colspan="7" class="py-8 text-center">
+        <tr x-show="filteredData.length === 0">
+          <td colspan="9" class="py-8 text-center">
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -251,35 +283,45 @@
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria</p>
           </td>
         </tr>
-      @endforelse
-    </tbody>
-  </table>
+      </tbody>
+    </table>
 
     <div class="flex flex-col items-center justify-between px-2 py-4 sm:flex-row sm:px-0">
       <div class="hidden sm:flex">
         <p class="text-sm text-gray-700 dark:text-gray-400">
-          Showing <span id="paginationStart">1</span> to <span id="paginationEnd">10</span> of <span id="paginationTotal">{{ count($partners) }}</span> results
+          Showing <span x-text="filteredData.length === 0 ? 0 : startIndex + 1"></span>
+          to <span x-text="endIndex"></span>
+          of <span x-text="filteredData.length"></span> results
         </p>
       </div>
       <div class="flex-1 flex justify-between sm:justify-end">
-        <button id="prevPage" class="relative inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+        <button @click="prevPage()" :disabled="currentPage === 1"
+                class="relative inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
           Previous
         </button>
-        <div id="paginationNumbers" class="hidden sm:flex"></div>
-        <button id="nextPage" class="relative ml-3 inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+        <div class="hidden sm:flex items-center ml-3 mr-3">
+          <template x-for="page in totalPages" :key="page">
+            <button @click="goToPage(page)"
+                    class="mx-0.5 px-3 py-1 rounded text-sm transition-colors"
+                    :class="currentPage === page ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                    x-text="page"></button>
+          </template>
+        </div>
+        <button @click="nextPage()" :disabled="currentPage === totalPages || totalPages === 0"
+                class="relative ml-3 inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
           Next
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Create/Edit Modal -->
+  {{-- Create/Edit Modal --}}
   @include('partials.modal.partners-create-modal', ['users' => $users ?? []])
 
-  <!-- Show Modal -->
+  {{-- Show Modal --}}
   @include('partials.modal.partners-show-modal')
 
-  <!-- Alert Modal -->
+  {{-- Alert Modal --}}
   @include('partials.modal.alert-modal')
 </div>
 
@@ -298,7 +340,7 @@ function partnerTable() {
             status: '',
             type: ''
         },
-        
+
         get startIndex() {
             return (this.currentPage - 1) * this.perPage;
         },
@@ -306,54 +348,55 @@ function partnerTable() {
             return Math.min(this.startIndex + this.perPage, this.filteredData.length);
         },
         get totalPages() {
-            return Math.ceil(this.filteredData.length / this.perPage);
+            return Math.max(1, Math.ceil(this.filteredData.length / this.perPage));
         },
-        
+
         init() {
             this.allData = @json($partners);
             this.filteredData = [...this.allData];
             this.updateTable();
-            
-            // Listen for refresh events
+
+            window.partnerTableInstance = this;
+
             window.addEventListener('refresh-partners', () => {
                 this.refreshData();
             });
         },
-        
+
         updateTable() {
             const start = this.startIndex;
             const end = this.endIndex;
             this.paginatedData = this.filteredData.slice(start, end);
         },
-        
+
         filterTable() {
             let data = [...this.allData];
-            
+
             if (this.searchTerm.trim()) {
                 const term = this.searchTerm.toLowerCase().trim();
-                data = data.filter(item => {
-                    return Object.values(item).some(value => 
+                data = data.filter(item =>
+                    Object.values(item).some(value =>
                         String(value).toLowerCase().includes(term)
-                    );
-                });
+                    )
+                );
             }
-            
+
             if (this.filters.status) {
                 data = data.filter(item => item.status === this.filters.status);
             }
             if (this.filters.type) {
                 data = data.filter(item => item.type === this.filters.type);
             }
-            
+
             this.filteredData = data;
             this.currentPage = 1;
             this.updateTable();
         },
-        
+
         applyFilters() {
             this.filterTable();
         },
-        
+
         sortBy(field) {
             if (this.sortField === field) {
                 this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -361,47 +404,53 @@ function partnerTable() {
                 this.sortField = field;
                 this.sortDirection = 'asc';
             }
-            
+
             this.filteredData.sort((a, b) => {
                 const valA = a[field] ?? '';
                 const valB = b[field] ?? '';
-                const isNumeric = !isNaN(valA) && !isNaN(valB);
-                
+                const isNumeric = !isNaN(valA) && !isNaN(valB) && valA !== '' && valB !== '';
+
                 if (isNumeric) {
-                    return this.sortDirection === 'asc' ? valA - valB : valB - valA;
+                    return this.sortDirection === 'asc'
+                        ? Number(valA) - Number(valB)
+                        : Number(valB) - Number(valA);
                 }
-                return this.sortDirection === 'asc' 
+                return this.sortDirection === 'asc'
                     ? String(valA).localeCompare(String(valB))
                     : String(valB).localeCompare(String(valA));
             });
-            
+
             this.currentPage = 1;
             this.updateTable();
         },
-        
+
         prevPage() {
             if (this.currentPage > 1) {
                 this.currentPage--;
                 this.updateTable();
             }
         },
-        
+
         nextPage() {
             if (this.currentPage < this.totalPages) {
                 this.currentPage++;
                 this.updateTable();
             }
         },
-        
+
         goToPage(page) {
             this.currentPage = page;
             this.updateTable();
         },
-        
+
         formatCurrency(value) {
-            return 'KES ' + parseFloat(value || 0).toLocaleString();
+            const num = parseFloat(value || 0);
+            return 'KES ' + num.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
         },
-        
+
         showPartner(id) {
             const partner = this.allData.find(item => item.id === id);
             if (partner) {
@@ -410,7 +459,7 @@ function partnerTable() {
                 }));
             }
         },
-        
+
         editPartner(id) {
             const partner = this.allData.find(item => item.id === id);
             if (partner) {
@@ -419,13 +468,13 @@ function partnerTable() {
                 }));
             }
         },
-        
+
         deletePartner(id, name) {
             window.dispatchEvent(new CustomEvent('delete-partner', {
                 detail: { id, name }
             }));
         },
-        
+
         refreshData() {
             fetch('{{ route("partners.data") }}')
                 .then(response => response.json())
@@ -440,9 +489,7 @@ function partnerTable() {
     };
 }
 
-window.partnerTableInstance = null;
-
 document.addEventListener('DOMContentLoaded', () => {
-    if (typeof Alpine === 'undefined') console.warn('Alpine.js is not loaded.');
+    if (typeof Alpine === 'is not loaded.') console.warn('Alpine.js is not loaded.');
 });
 </script>

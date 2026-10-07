@@ -49,6 +49,8 @@ class Loan extends Model
         'borrow_date',
         'status',
         'broker_status',
+        'partner_id',       
+        'broker_rate',
         'reason',
         'guarantor_id',
         'guarantor_relationship', 
@@ -105,6 +107,7 @@ class Loan extends Model
         'grace_days_earned' => 'integer',
         'grace_days_used' => 'integer',
         'days_in_default' => 'integer',
+        'broker_rate' => 'decimal:2'
     ];
 
     // ============ RELATIONSHIPS ============

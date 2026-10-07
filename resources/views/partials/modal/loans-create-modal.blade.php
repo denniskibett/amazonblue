@@ -193,12 +193,45 @@
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Transaction Type
                         </label>
-                        <select x-model="brokerStatus"
+                        <select x-model="brokerStatus" @change="onBrokerStatusChange()"
                             class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
                             <option value="0">Direct Transaction</option>
                             <option value="1">Broker Transaction</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- Partner picker — shown only when brokerStatus === '1' -->
+                <div x-show="brokerStatus === '1'" class="mt-4">
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Broker / Partner <span class="text-red-500">*</span>
+                    </label>
+                    <select x-model="form.partner_id" @change="onPartnerChange()"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                        <option value="">-- Select Partner --</option>
+                        @foreach(($partners ?? []) as $p)
+                            <option value="{{ $p->id }}" data-broker-rate="{{ $p->broker_rate ?? 40 }}">
+                                {{ $p->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p x-show="!form.partner_id" class="mt-1 text-xs text-red-500">
+                        Partner is required for brokered loans.
+                    </p>
+                </div>
+
+                <!-- Broker rate override — shown only when brokerStatus === '1' -->
+                <div x-show="brokerStatus === '1'" class="mt-4">
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Broker Rate (%)
+                    </label>
+                    <input type="number" step="0.01" min="0" max="100"
+                        x-model="form.broker_rate"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        placeholder="40.00">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Auto-fills from the selected partner. Override for this loan only.
+                    </p>
                 </div>
 
                 <!-- Reason -->
@@ -254,20 +287,17 @@
                     </select>
                 </div>
 
-                <!-- Digital Signature Section -->
+                <!-- Digital Signature Section (unchanged) -->
                 <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
                     <h4 class="text-lg font-medium mb-4 text-gray-700 dark:text-white/90">Digital Signature</h4>
-                    
-                    <!-- Existing Signature Found -->
+
                     <div x-show="hasExistingSignature" class="mb-4">
                         <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
                             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                                 <div class="flex-shrink-0">
                                     <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-green-200 dark:border-green-700 shadow-sm">
                                         <div class="w-24 h-24 flex items-center justify-center bg-transparent">
-                                            <img :src="existingSignatureUrl" 
-                                                alt="Existing signature"
-                                                class="max-w-full max-h-full object-contain">
+                                            <img :src="existingSignatureUrl" alt="Existing signature" class="max-w-full max-h-full object-contain">
                                         </div>
                                     </div>
                                 </div>
@@ -286,7 +316,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="mt-4 flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                             <div>
                                 <p class="text-sm font-medium text-blue-800 dark:text-blue-300">Use existing signature?</p>
@@ -299,7 +329,6 @@
                         </div>
                     </div>
 
-                    <!-- No Signature Found -->
                     <div x-show="!hasExistingSignature" class="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                         <div class="flex items-start gap-3">
                             <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -312,7 +341,6 @@
                         </div>
                     </div>
 
-                    <!-- Signature Pad -->
                     <div class="mt-4" id="signature-section">
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             <span x-text="hasExistingSignature ? 'Draw New Signature (Optional - Will Replace Existing)' : 'Draw Your Signature'"></span>
@@ -325,7 +353,7 @@
                                             style="touch-action: none; width: 400px; height: 200px; max-width: 100%;"></canvas>
                                 </div>
                             </div>
-                            
+
                             <div class="mt-4 flex flex-col sm:flex-row gap-2 justify-center items-center">
                                 <button type="button" @click="clearSignature()" class="px-4 py-2 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">Clear Signature</button>
                                 <button type="button" @click="saveSignature()" class="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
@@ -336,8 +364,7 @@
                         <div id="signature-status-modal" class="mt-2 text-sm text-center" 
                              :class="signatureStatus.includes('⚠️') ? 'text-red-500' : (signatureStatus.includes('✅') ? 'text-green-500' : 'text-gray-500')"
                              x-text="signatureStatus"></div>
-                        
-                        <!-- Signature Preview -->
+
                         <div x-show="showSignaturePreview" class="mt-4">
                             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                                 <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">Signature Preview</h4>
@@ -405,19 +432,19 @@ function loansCreateModal() {
         method: 'POST',
         editId: null,
         isSubmitting: false,
-        
+
         // User selection
         selectedUserId: '',
         selectedUserName: '',
         showUserSelection: true,
         borrowerName: '',
-        
+
         // Loan data
         loanId: null,
         brokerStatus: '0',
         dueDateDisplay: '',
         showConsentError: false,
-        
+
         // Signature
         signaturePad: null,
         signatureData: '',
@@ -428,7 +455,7 @@ function loansCreateModal() {
         hasExistingSignature: false,
         existingSignatureUrl: '',
         canvasSize: 200,
-        
+
         // Form data
         form: {
             amount: '',
@@ -441,9 +468,11 @@ function loansCreateModal() {
             loan_officer_id: '',
             consent: false,
             due_date: '',
-            signature_data: ''
+            signature_data: '',
+            partner_id: '',
+            broker_rate: '40',
         },
-        
+
         // Computed
         get isAdminOrTeller() {
             const role = '{{ auth()->user()->role }}';
@@ -456,9 +485,7 @@ function loansCreateModal() {
                     this.$nextTick(() => {
                         this.initDatepickers();
                         this.initSignaturePad();
-                        // Check for existing signature after a slight delay to ensure user data is loaded
                         setTimeout(() => {
-                            // Only check via AJAX if we don't already have signature data from parent
                             if (!this.hasExistingSignature && !this.existingSignatureUrl) {
                                 this.checkExistingSignature();
                             }
@@ -467,9 +494,25 @@ function loansCreateModal() {
                 }
             });
 
-            // Initialize the modal globally
             window.openLoansCreateModal = (data) => this.openModal(data);
             window.closeLoansCreateModal = () => this.close();
+        },
+
+        // ============ PARTNER HANDLERS ============
+        onPartnerChange() {
+            const select = document.querySelector('select[x-model="form.partner_id"]');
+            if (select && select.selectedIndex > 0) {
+                const rate = select.options[select.selectedIndex].dataset.brokerRate;
+                if (rate) this.form.broker_rate = rate;
+            }
+        },
+
+        onBrokerStatusChange() {
+            // When switching to Direct, clear partner fields
+            if (this.brokerStatus === '0') {
+                this.form.partner_id = '';
+                this.form.broker_rate = '40';
+            }
         },
 
         initDatepickers() {
@@ -495,7 +538,7 @@ function loansCreateModal() {
         initSignaturePad() {
             const canvas = document.querySelector('#signature-canvas-modal');
             if (!canvas) return;
-            
+
             if (this.signaturePad) {
                 this.signaturePad.clear();
                 return;
@@ -505,7 +548,7 @@ function loansCreateModal() {
             canvas.height = this.canvasSize;
             canvas.style.width = this.canvasSize * 2 + 'px';
             canvas.style.height = this.canvasSize + 'px';
-            
+
             this.signaturePad = new SignaturePad(canvas, {
                 backgroundColor: 'rgba(255, 255, 255, 0)',
                 penColor: 'rgb(0, 0, 0)',
@@ -514,7 +557,7 @@ function loansCreateModal() {
                 throttle: 16,
                 velocityFilterWeight: 0.7
             });
-            
+
             canvas.addEventListener('mouseup', () => {
                 if (this.signaturePad && !this.signaturePad.isEmpty()) {
                     this.signatureData = this.getFullSignature();
@@ -527,14 +570,12 @@ function loansCreateModal() {
             });
         },
 
-        // ============ FIX: Check signature using data passed from parent ============
         checkExistingSignature() {
             const userId = this.selectedUserId || '{{ isset($user) ? $user->id : '' }}';
-            
+
             console.log('checkExistingSignature called with userId:', userId);
-            
+
             if (!userId) {
-                console.log('No userId found, setting hasExistingSignature to false');
                 this.hasExistingSignature = false;
                 this.existingSignatureUrl = '';
                 this.useExistingSignature = false;
@@ -542,40 +583,28 @@ function loansCreateModal() {
                 return;
             }
 
-            // Check if we already have signature data from the parent (passed via openModal)
             if (this._signatureDataFromParent) {
-                console.log('Using signature data from parent:', this._signatureDataFromParent);
                 this.hasExistingSignature = this._signatureDataFromParent.hasSignature || false;
                 this.existingSignatureUrl = this._signatureDataFromParent.signatureUrl || '';
                 this.useExistingSignature = this.hasExistingSignature;
-                this._signatureDataFromParent = null; // Clear after use
-                
-                if (this.hasExistingSignature) {
-                    this.signatureStatus = '✅ Existing signature found - using it for this loan';
-                } else {
-                    this.signatureStatus = '⚠️ No signature found - please draw your signature';
-                }
+                this._signatureDataFromParent = null;
+                this.signatureStatus = this.hasExistingSignature
+                    ? '✅ Existing signature found - using it for this loan'
+                    : '⚠️ No signature found - please draw your signature';
                 return;
             }
 
-            // Fallback: Try to get signature data from the user object in the page
-            // This is for cases where the modal is opened from a different context
             try {
-                // Look for user data on the page
                 const userDataElement = document.querySelector('[data-user-signature]');
                 if (userDataElement) {
                     const userData = JSON.parse(userDataElement.dataset.userSignature || '{}');
                     if (userData && userData.userId == userId) {
-                        console.log('Found user signature data on page:', userData);
                         this.hasExistingSignature = userData.hasSignature || false;
                         this.existingSignatureUrl = userData.signatureUrl || '';
                         this.useExistingSignature = this.hasExistingSignature;
-                        
-                        if (this.hasExistingSignature) {
-                            this.signatureStatus = '✅ Existing signature found - using it for this loan';
-                        } else {
-                            this.signatureStatus = '⚠️ No signature found - please draw your signature';
-                        }
+                        this.signatureStatus = this.hasExistingSignature
+                            ? '✅ Existing signature found - using it for this loan'
+                            : '⚠️ No signature found - please draw your signature';
                         return;
                     }
                 }
@@ -583,7 +612,6 @@ function loansCreateModal() {
                 console.log('Error reading user data from page:', e);
             }
 
-            // Last resort: Try AJAX call (but this will likely fail if route doesn't exist)
             fetch(`/users/${userId}/signature-check`, {
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -591,30 +619,19 @@ function loansCreateModal() {
                 }
             })
             .then(response => {
-                console.log('Signature check response status:', response.status);
-                if (!response.ok) {
-                    throw new Error('Signature check failed');
-                }
+                if (!response.ok) throw new Error('Signature check failed');
                 return response.json();
             })
             .then(data => {
-                console.log('Signature check data:', data);
                 this.hasExistingSignature = data.hasSignature || false;
                 this.existingSignatureUrl = data.signatureUrl || '';
                 this.useExistingSignature = data.hasSignature || false;
-                
-                if (this.hasExistingSignature) {
-                    console.log('Existing signature found:', this.existingSignatureUrl);
-                    this.signatureStatus = '✅ Existing signature found - using it for this loan';
-                } else {
-                    console.log('No existing signature found');
-                    this.signatureStatus = '⚠️ No signature found - please draw your signature';
-                }
+                this.signatureStatus = this.hasExistingSignature
+                    ? '✅ Existing signature found - using it for this loan'
+                    : '⚠️ No signature found - please draw your signature';
             })
             .catch((error) => {
                 console.error('Error checking signature:', error);
-                // Don't set to false - user might have a signature but the check failed
-                // If we already have a signature URL from parent, keep it
                 if (!this.existingSignatureUrl) {
                     this.hasExistingSignature = false;
                     this.existingSignatureUrl = '';
@@ -632,11 +649,9 @@ function loansCreateModal() {
             } else {
                 this.selectedUserName = '';
             }
-            // Check for existing signature when user changes
             this.checkExistingSignature();
         },
 
-        // ============ FIX: openModal now accepts signature data ============
         openModal(data = null) {
             this.resetForm();
             this.open = true;
@@ -644,30 +659,25 @@ function loansCreateModal() {
 
             const userRole = '{{ auth()->user()->role }}';
             this.showUserSelection = userRole === 'admin' || userRole === 'teller' || userRole === 'broker';
-            
+
             const isEdit = data && data.edit;
-            
-            // ============ FIX: Store signature data from parent ============
+
             if (data && data.hasSignature !== undefined) {
                 this._signatureDataFromParent = {
                     hasSignature: data.hasSignature,
                     signatureUrl: data.signatureUrl || ''
                 };
-                console.log('Received signature data from parent:', this._signatureDataFromParent);
             } else {
                 this._signatureDataFromParent = null;
             }
-            
+
             if (isEdit) {
-                console.log('EDIT MODE - Received data:', data);
-                
                 this.title = 'Edit Loan';
                 this.submitText = 'Update Loan';
                 this.method = 'PUT';
                 this.editId = data.edit.id;
                 this.loanId = data.edit.id;
-                
-                // Set user info - this will show the locked user field
+
                 if (data.userId) {
                     this.selectedUserId = data.userId;
                     this.borrowerName = data.userName || '';
@@ -677,13 +687,11 @@ function loansCreateModal() {
                 } else if (data.edit.user_name) {
                     this.borrowerName = data.edit.user_name;
                 }
-                
-                // IMPORTANT: Make sure selectedUserId is set for the hidden input
+
                 if (!this.selectedUserId && data.edit.user_id) {
                     this.selectedUserId = data.edit.user_id;
                 }
-                
-                // Populate ALL form fields
+
                 this.form.amount = data.edit.amount || '';
                 this.form.borrow_date = data.edit.borrow_date || '';
                 this.form.loan_type_id = data.edit.loan_type_id || '';
@@ -694,26 +702,25 @@ function loansCreateModal() {
                 this.form.loan_officer_id = data.edit.loan_officer_id || '';
                 this.form.consent = data.edit.consent !== undefined ? data.edit.consent : true;
                 this.form.due_date = data.edit.due_date || '';
-                this.brokerStatus = data.edit.broker_status || '0';
-                
-                // Check if the loan already has a signature (from the edit data)
+                this.brokerStatus = data.edit.broker_status ? '1' : '0';
+
+                // ============ NEW: hydrate partner fields for edit ============
+                this.form.partner_id = data.edit.partner_id || '';
+                this.form.broker_rate = data.edit.broker_rate || '40';
+
                 if (data.edit.has_signature !== undefined) {
-                    console.log('Signature data from edit:', data.edit.has_signature, data.edit.signature_url);
                     this.hasExistingSignature = data.edit.has_signature;
                     this.existingSignatureUrl = data.edit.signature_url || '';
                     this.useExistingSignature = this.hasExistingSignature;
-                    // Clear parent data since we have it from edit
                     this._signatureDataFromParent = null;
                 }
-                
-                // Set due date display
+
                 if (this.form.due_date) {
                     this.dueDateDisplay = this.form.due_date;
                 } else {
                     this.calculateDueDate();
                 }
-                
-                // Set the datepicker value
+
                 if (this.form.borrow_date) {
                     this.$nextTick(() => {
                         const input = this.$refs.datepicker;
@@ -722,13 +729,11 @@ function loansCreateModal() {
                         }
                     });
                 }
-                
-                // Check for existing signature (will set hasExistingSignature)
+
                 this.$nextTick(() => {
                     this.checkExistingSignature();
                 });
-                
-                // Set loan type in select
+
                 if (data.edit.loan_type_id) {
                     this.$nextTick(() => {
                         const select = document.querySelector('select[x-model="form.loan_type_id"]');
@@ -739,50 +744,48 @@ function loansCreateModal() {
                         }
                     });
                 }
-                
-                // Set guarantor in select
+
                 if (data.edit.guarantor_id) {
                     this.$nextTick(() => {
                         const select = document.querySelector('select[x-model="form.guarantor_id"]');
-                        if (select) {
-                            select.value = data.edit.guarantor_id;
-                        }
+                        if (select) select.value = data.edit.guarantor_id;
                     });
                 }
-                
-                // Set loan officer in select
+
                 if (data.edit.loan_officer_id) {
                     this.$nextTick(() => {
                         const select = document.querySelector('select[x-model="form.loan_officer_id"]');
-                        if (select) {
-                            select.value = data.edit.loan_officer_id;
-                        }
+                        if (select) select.value = data.edit.loan_officer_id;
                     });
                 }
-                
-                console.log('Edit mode - Form data set:', this.form);
-                
+
+                // Set partner select after options render
+                if (this.form.partner_id) {
+                    this.$nextTick(() => {
+                        const select = document.querySelector('select[x-model="form.partner_id"]');
+                        if (select) select.value = this.form.partner_id;
+                    });
+                }
             } else {
-                // === CREATE MODE ===
                 this.title = 'Create New Loan';
                 this.submitText = 'Create Loan';
                 this.method = 'POST';
                 this.editId = null;
                 this.loanId = null;
-                
-                // Set user from data or role
+
                 if (data && data.userId) {
                     this.selectedUserId = data.userId;
                     this.borrowerName = data.userName || '';
                     this.showUserSelection = false;
-                    
-                    // ============ FIX: Use signature data from parent ============
+
                     if (data.hasSignature !== undefined) {
                         this.hasExistingSignature = data.hasSignature;
                         this.existingSignatureUrl = data.signatureUrl || '';
                         this.useExistingSignature = data.hasSignature;
-                        this._signatureDataFromParent = null; // Clear after use
-                        this.signatureStatus = data.hasSignature ? '✅ Existing signature found - using it for this loan' : '⚠️ No signature found - please draw your signature';
+                        this._signatureDataFromParent = null;
+                        this.signatureStatus = data.hasSignature
+                            ? '✅ Existing signature found - using it for this loan'
+                            : '⚠️ No signature found - please draw your signature';
                     }
                 } else if (data && data.user) {
                     this.selectedUserId = data.user.id;
@@ -796,22 +799,17 @@ function loansCreateModal() {
                     this.borrowerName = '{{ auth()->user()->name }}';
                 }
 
-                // Set default borrow date to today
                 const now = new Date();
                 this.form.borrow_date = now;
                 this.$nextTick(() => {
                     const input = this.$refs.datepicker;
-                    if (input && input._flatpickr) {
-                        input._flatpickr.setDate(now);
-                    }
+                    if (input && input._flatpickr) input._flatpickr.setDate(now);
                 });
 
-                // Set broker status based on user role
                 if (userRole === 'broker') {
                     this.brokerStatus = '1';
                 }
-                
-                // Check for existing signature if not already set from parent
+
                 this.$nextTick(() => {
                     if (!this.hasExistingSignature && !this.existingSignatureUrl) {
                         this.checkExistingSignature();
@@ -838,7 +836,9 @@ function loansCreateModal() {
                 loan_officer_id: '',
                 consent: false,
                 due_date: '',
-                signature_data: ''
+                signature_data: '',
+                partner_id: '',
+                broker_rate: '40',
             };
             this.dueDateDisplay = '';
             this.signatureData = '';
@@ -852,7 +852,8 @@ function loansCreateModal() {
             this.hasExistingSignature = false;
             this.existingSignatureUrl = '';
             this._signatureDataFromParent = null;
-            
+            this.brokerStatus = '0';
+
             if (this.signaturePad) {
                 this.signaturePad.clear();
             }
@@ -865,10 +866,10 @@ function loansCreateModal() {
                 this.form.due_date = '';
                 return;
             }
-            
+
             let period = 10;
             let unit = 'days';
-            
+
             if (this.form.loan_type_id) {
                 const select = document.querySelector('select[x-model="form.loan_type_id"]');
                 if (select && select.selectedIndex > 0) {
@@ -877,13 +878,13 @@ function loansCreateModal() {
                     unit = selectedOption.dataset.unit || 'days';
                 }
             }
-            
+
             const dueDate = new Date(borrowDate);
             if (unit === 'days') dueDate.setDate(dueDate.getDate() + period);
             else if (unit === 'weeks') dueDate.setDate(dueDate.getDate() + (period * 7));
             else if (unit === 'months') dueDate.setMonth(dueDate.getMonth() + period);
             else if (unit === 'years') dueDate.setFullYear(dueDate.getFullYear() + period);
-            
+
             this.dueDateDisplay = dueDate.toISOString().split('T')[0];
             this.form.due_date = this.dueDateDisplay;
         },
@@ -899,7 +900,7 @@ function loansCreateModal() {
                 this.form.signature_data = '';
                 this.signatureStatus = 'Signature cleared';
                 this.showSignaturePreview = false;
-                
+
                 if (this.hasExistingSignature) {
                     this.useExistingSignature = true;
                     this.signatureStatus = '✅ Using existing signature';
@@ -914,7 +915,7 @@ function loansCreateModal() {
                 this.signatureStatus = '⚠️ Please provide a signature first';
                 return;
             }
-            
+
             this.signatureData = this.getFullSignature();
             this.form.signature_data = this.signatureData;
             this.useExistingSignature = false;
@@ -929,12 +930,9 @@ function loansCreateModal() {
                 this.form.signature_data = '';
                 this.showSignaturePreview = false;
                 this.signatureStatus = '✅ Using existing signature';
-                if (this.signaturePad) {
-                    this.signaturePad.clear();
-                }
+                if (this.signaturePad) this.signaturePad.clear();
             } else {
                 this.signatureStatus = '⚠️ Please draw a new signature';
-                // If there's already a signature in the pad, keep it
                 if (this.signaturePad && !this.signaturePad.isEmpty()) {
                     this.signatureData = this.getFullSignature();
                     this.form.signature_data = this.signatureData;
@@ -951,29 +949,31 @@ function loansCreateModal() {
         },
 
         async submitForm() {
-            // Validate consent
             if (!this.form.consent) {
                 this.showConsentError = true;
                 return;
             }
             this.showConsentError = false;
 
-            // ============ FIX: Signature Validation ============
-            // If using existing signature, we don't need a new one
+            // Validate partner when broker_status === '1'
+            if (this.brokerStatus === '1' && !this.form.partner_id) {
+                if (typeof window.showAlert === 'function') {
+                    window.showAlert('error', 'Validation Error', 'Please select a partner for brokered loans.');
+                } else {
+                    alert('Please select a partner for brokered loans.');
+                }
+                return;
+            }
+
             if (this.useExistingSignature && this.hasExistingSignature) {
-                // Valid - using existing signature
                 this.signatureStatus = '✅ Using existing signature';
-            } 
-            // If not using existing, we need a new signature
-            else if (!this.useExistingSignature) {
+            } else if (!this.useExistingSignature) {
                 if (!this.signatureData || this.signatureData === '') {
                     this.signatureStatus = '⚠️ Please draw your signature first';
                     return;
                 }
                 this.signatureStatus = '✅ New signature captured';
-            }
-            // If no existing signature and not drawing one
-            else if (!this.hasExistingSignature && !this.signatureData) {
+            } else if (!this.hasExistingSignature && !this.signatureData) {
                 this.signatureStatus = '⚠️ Please provide a signature';
                 return;
             }
@@ -983,7 +983,7 @@ function loansCreateModal() {
             try {
                 const formData = new FormData();
                 const action = this.editId ? `/loans/${this.editId}` : '{{ route("loans.store") }}';
-                
+
                 formData.append('_method', this.method);
                 formData.append('user_id', this.selectedUserId || '{{ auth()->id() }}');
                 formData.append('loan_type_id', this.form.loan_type_id);
@@ -991,18 +991,18 @@ function loansCreateModal() {
                 formData.append('borrow_date', this.formatDate(this.form.borrow_date));
                 formData.append('status', this.form.status);
                 formData.append('broker_status', this.brokerStatus);
+                formData.append('partner_id', this.form.partner_id || '');
+                formData.append('broker_rate', this.form.broker_rate || '40');
                 formData.append('reason', this.form.reason);
                 formData.append('guarantor_id', this.form.guarantor_id || '');
                 formData.append('guarantor_relationship', this.form.guarantor_relationship || '');
                 formData.append('loan_officer_id', this.form.loan_officer_id || '');
                 formData.append('consent', this.form.consent ? '1' : '0');
                 formData.append('due_date', this.form.due_date || '');
-                
-                // Add signature if using new one (not using existing)
+
                 if (!this.useExistingSignature && this.signatureData) {
                     formData.append('signature_data', this.signatureData);
                 } else if (this.useExistingSignature && this.hasExistingSignature) {
-                    // We're using existing signature, no need to send new data
                     formData.append('use_existing_signature', '1');
                 }
 
@@ -1027,7 +1027,6 @@ function loansCreateModal() {
                     this.close();
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    // Handle validation errors
                     if (response.status === 422 && data.errors) {
                         let errorMsg = Object.values(data.errors).flat().join('\n');
                         if (typeof window.showAlert === 'function') {
@@ -1036,13 +1035,11 @@ function loansCreateModal() {
                             alert('Validation Error: ' + errorMsg);
                         }
                     } else if (data.duplicate && data.active_loans) {
-                        // Handle duplicate loans
-                        let loanList = data.active_loans.map(l => 
+                        let loanList = data.active_loans.map(l =>
                             `• ${l.borrower_name}: KES ${l.amount.toLocaleString()} (${l.status_display})`
                         ).join('\n');
-                        
+
                         if (confirm(`This borrower has ${data.active_loans.length} active loan(s):\n\n${loanList}\n\nDo you want to create another loan anyway?`)) {
-                            // Retry with force create
                             formData.append('X-Force-Create', 'true');
                             const retryResponse = await fetch(action, {
                                 method: 'POST',
@@ -1054,7 +1051,7 @@ function loansCreateModal() {
                                 },
                                 body: formData
                             });
-                            
+
                             const retryData = await retryResponse.json();
                             if (retryResponse.ok && retryData.success) {
                                 if (typeof window.showAlert === 'function') {

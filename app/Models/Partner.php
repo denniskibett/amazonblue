@@ -16,6 +16,7 @@ class Partner extends Model implements Wallet, Customer
 
     protected $fillable = [
         'user_id',
+        'wallet_slug',
         'type',              
         'is_house_account',  
         'name',
@@ -26,6 +27,7 @@ class Partner extends Model implements Wallet, Customer
         'status',
         'current_balance',
         'profit_share_rate',
+        'broker_rate',
         'max_loan_to_value',
         'risk_tolerance',
         'bank_account_name',
@@ -40,7 +42,8 @@ class Partner extends Model implements Wallet, Customer
         'current_balance' => 'decimal:2',
         'profit_share_rate' => 'decimal:2',
         'max_loan_to_value' => 'decimal:2',
-        'is_house_account' => 'boolean'
+        'is_house_account' => 'boolean',
+        'broker_rate' => 'decimal:2'
     ];
 
     // ============ RELATIONSHIPS ============

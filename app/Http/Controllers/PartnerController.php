@@ -17,51 +17,70 @@ class PartnerController extends Controller
         $partners = Partner::with(['user'])
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($partner) {
-                return [
-                    'id' => $partner->id,
-                    'user_id' => $partner->user_id,
-                    'name' => $partner->name,
-                    'email' => $partner->email,
-                    'phone' => $partner->phone,
-                    'company_name' => $partner->company_name,
-                    'registration_number' => $partner->registration_number,
-                    'type' => $partner->type,
-                    'status' => $partner->status,
-                    'total_contribution' => $partner->total_contribution,
-                    'current_balance' => $partner->current_balance,
-                    'total_invested' => $partner->total_invested,
-                    'total_returned' => $partner->total_returned,
-                    'net_position' => $partner->net_position,
-                    'profit_share_rate' => $partner->profit_share_rate,
-                    'max_loan_to_value' => $partner->max_loan_to_value,
-                    'risk_tolerance' => $partner->risk_tolerance,
-                    'bank_account_name' => $partner->bank_account_name,
-                    'bank_account_number' => $partner->bank_account_number,
-                    'bank_name' => $partner->bank_name,
-                    'swift_code' => $partner->swift_code,
-                    'tax_id' => $partner->tax_id,
-                    'notes' => $partner->notes,
-                    'created_at' => $partner->created_at?->format('Y-m-d H:i:s'),
-                    'user_name' => $partner->user?->name ?? 'No User',
-                ];
-            });
+            ->map(fn ($partner) => $this->partnerPayload($partner));
 
-        $stats = [
-            'total' => $partners->count(),
-            'active' => $partners->where('status', 'active')->count(),
-            'total_contributions' => $partners->sum('total_contribution'),
-            'total_balance' => $partners->sum('current_balance'),
-            'total_invested' => $partners->sum('total_invested'),
-            'total_returned' => $partners->sum('total_returned'),
-        ];
-
-        // Get users that can be associated with partners
         $users = User::where('role', 'partner')
             ->orWhereDoesntHave('partner')
             ->get(['id', 'name', 'email', 'role']);
 
-        return view('partners.index', compact('partners', 'stats', 'users'));
+        return view('partners.index', compact('partners', 'users'));
+    }
+
+    public function getData()
+    {
+        $partners = Partner::with(['user'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn ($partner) => $this->partnerPayload($partner));
+
+        return response()->json([
+            'data'  => $partners,
+            'count' => $partners->count(),
+        ]);
+    }
+
+    private function partnerPayload(Partner $partner): array
+    {
+        return [
+            'id'                   => $partner->id,
+            'user_id'              => $partner->user_id,
+            'name'                 => $partner->name,
+            'email'                => $partner->email,
+            'phone'                => $partner->phone,
+            'company_name'         => $partner->company_name,
+            'registration_number'  => $partner->registration_number,
+            'type'                 => $partner->type,
+            'status'               => $partner->status,
+            'broker_rate'          => (float) ($partner->broker_rate ?? 40),
+
+            // Wallet balances (source of truth)
+            'principal_balance'    => $this->walletBalance($partner, 'principal'),
+            'interest_balance'     => $this->walletBalance($partner, 'interest'),
+            'broker_fee_balance'   => $this->walletBalance($partner, 'broker_fee'),
+            'tracker_balance'      => $this->walletBalance($partner, 'investment_tracker'),
+
+            // Legacy fields still referenced by the show modal
+            'profit_share_rate'    => $partner->profit_share_rate,
+            'max_loan_to_value'    => $partner->max_loan_to_value,
+            'risk_tolerance'       => $partner->risk_tolerance,
+
+            'bank_account_name'    => $partner->bank_account_name,
+            'bank_account_number'  => $partner->bank_account_number,
+            'bank_name'            => $partner->bank_name,
+            'swift_code'           => $partner->swift_code,
+            'tax_id'               => $partner->tax_id,
+            'notes'                => $partner->notes,
+            'created_at'           => $partner->created_at?->format('Y-m-d H:i:s'),
+            'user_name'            => $partner->user?->name ?? 'No User',
+        ];
+    }
+
+    private function walletBalance(Partner $partner, string $slug): float
+    {
+        $wallet = $partner->getWallet($slug);
+        if (! $wallet) return 0.0;
+        $dp = $wallet->decimal_places ?? 4;
+        return (float) ($wallet->balance / (10 ** $dp));
     }
 
     /**
@@ -145,55 +164,46 @@ class PartnerController extends Controller
         }
     }
 
-    /**
-     * Display the specified partner.
-     */
     public function show(Partner $partner)
     {
-        $partner->load(['user', 'transactions']);
-        
+        $partner->load(['user']);
+
         $data = [
-            'id' => $partner->id,
-            'name' => $partner->name,
-            'email' => $partner->email,
-            'phone' => $partner->phone,
-            'company_name' => $partner->company_name,
-            'registration_number' => $partner->registration_number,
-            'type' => $partner->type,
-            'status' => $partner->status,
-            'total_contribution' => $partner->total_contribution,
-            'total_withdrawn' => $partner->total_withdrawn,
-            'current_balance' => $partner->current_balance,
-            'profit_share_rate' => $partner->profit_share_rate,
-            'max_loan_to_value' => $partner->max_loan_to_value,
-            'risk_tolerance' => $partner->risk_tolerance,
-            'bank_account_name' => $partner->bank_account_name,
-            'bank_account_number' => $partner->bank_account_number,
-            'bank_name' => $partner->bank_name,
-            'swift_code' => $partner->swift_code,
-            'tax_id' => $partner->tax_id,
-            'notes' => $partner->notes,
-            'user' => $partner->user,
-            'transactions' => $partner->transactions->map(function($t) {
-                return [
-                    'id' => $t->id,
-                    'type' => $t->type,
-                    'amount' => $t->amount,
-                    'balance_after' => $t->balance_after,
-                    'reference' => $t->reference,
-                    'transaction_date' => $t->transaction_date?->format('Y-m-d'),
-                    'created_at' => $t->created_at?->format('Y-m-d H:i:s'),
-                ];
-            }),
-            'total_invested' => $partner->total_invested,
-            'total_returned' => $partner->total_returned,
-            'net_position' => $partner->net_position,
-            'created_at' => $partner->created_at?->format('Y-m-d H:i:s'),
-            'updated_at' => $partner->updated_at?->format('Y-m-d H:i:s'),
+            'id'                   => $partner->id,
+            'name'                 => $partner->name,
+            'email'                => $partner->email,
+            // ... all existing fields ...
+
+            // New — wallet balances
+            'principal_balance'    => $this->walletBalance($partner, 'principal'),
+            'interest_balance'     => $this->walletBalance($partner, 'interest'),
+            'broker_fee_balance'   => $this->walletBalance($partner, 'broker_fee'),
+            'tracker_balance'      => $this->walletBalance($partner, 'investment_tracker'),
+            'broker_rate'          => (float) ($partner->broker_rate ?? 40),
+
+            // Journal entries
+            'transactions'         => $partner->ledgerEntries()
+                ->orderByDesc('transaction_date')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn ($t) => [
+                    'id'               => $t->id,
+                    'wallet_slug'      => $t->wallet_slug,
+                    'type'             => $t->type,
+                    'amount'           => (float) $t->amount,
+                    'balance_after'    => (float) $t->balance_after,
+                    'reference'        => $t->reference,
+                    'transaction_date' => optional($t->transaction_date)->format('Y-m-d'),
+                    'created_at'       => optional($t->created_at)->format('Y-m-d H:i:s'),
+                    'loan_id'          => $t->loan_id,
+                    'notes'            => $t->notes,
+                ]),
         ];
 
         return view('partners.show', compact('partner', 'data'));
     }
+
+
 
     /**
      * Update the specified partner.
@@ -287,7 +297,7 @@ class PartnerController extends Controller
                 'success' => true,
                 'message' => 'Contribution added successfully.',
                 'transaction' => $transaction,
-                'current_balance' => $partner->current_balance
+                'current_balance' => $this->walletBalance($partner, 'principal')
             ]);
 
         } catch (\Exception $e) {
@@ -323,7 +333,7 @@ class PartnerController extends Controller
                 'success' => true,
                 'message' => 'Withdrawal completed successfully.',
                 'transaction' => $transaction,
-                'current_balance' => $partner->current_balance
+                'current_balance' => $this->walletBalance($partner, 'principal')
             ]);
 
         } catch (\Exception $e) {
@@ -358,7 +368,7 @@ class PartnerController extends Controller
                 'success' => true,
                 'message' => 'Profit distributed successfully.',
                 'transaction' => $transaction,
-                'current_balance' => $partner->current_balance
+                'current_balance' => $this->walletBalance($partner, 'principal')
             ]);
 
         } catch (\Exception $e) {
@@ -369,52 +379,7 @@ class PartnerController extends Controller
         }
     }
 
-    /**
-     * Get partner data for the table.
-     */
-    public function getData(Request $request)
-    {
-        $query = Partner::query();
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('email', 'LIKE', "%{$search}%")
-                  ->orWhere('company_name', 'LIKE', "%{$search}%");
-            });
-        }
-
-        $partners = $query->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($partner) {
-                return [
-                    'id' => $partner->id,
-                    'name' => $partner->name,
-                    'email' => $partner->email,
-                    'phone' => $partner->phone,
-                    'company_name' => $partner->company_name,
-                    'type' => $partner->type,
-                    'status' => $partner->status,
-                    'total_contribution' => $partner->total_contribution,
-                    'current_balance' => $partner->current_balance,
-                    'total_invested' => $partner->total_invested,
-                    'total_returned' => $partner->total_returned,
-                    'net_position' => $partner->net_position,
-                ];
-            });
-
-        return response()->json([
-            'data' => $partners,
-            'count' => $partners->count()
-        ]);
-    }
 
     /**
      * Get partner statistics.

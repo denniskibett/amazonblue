@@ -130,9 +130,10 @@
                                 <div class="relative z-20 bg-transparent">
                                     <select x-model="formData.type" 
                                             class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                                        <option value="individual">Individual</option>
-                                        <option value="corporate">Corporate</option>
-                                        <option value="institutional">Institutional</option>
+                                        <option value="partner">Partner</option>
+                                        <option value="business">Business</option>
+                                        <option value="company">Company</option>
+                                        <option value="investor">Investor</option>
                                     </select>
                                 </div>
                                 <template x-if="errors.type">
@@ -162,6 +163,13 @@
                     <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
                         <h5 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">Financial Settings</h5>
                         <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                            <div>
+                                <label>Broker Rate (%)</label>
+                                <input type="number" step="0.01" min="0" max="100"
+                                    x-model="formData.broker_rate"
+                                    placeholder="40.00">
+                                <p class="mt-1 text-xs text-gray-500">Fee share when this partner brokers a loan. Default 40%.</p>
+                            </div>
                             <div>
                                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Profit Share Rate (%)</label>
                                 <input type="number" 
