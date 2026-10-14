@@ -58,10 +58,6 @@ module.exports = {
           50: "#fff7ed",
           500: "#f97316", // Add more shades if needed
         },
-        brand: {
-          50: "#f5faff",
-          500: "#1e40af",
-        },
         orange: {
           50: "#FFF7ED",
           100: "#FFEDD5",
@@ -98,19 +94,20 @@ module.exports = {
           800: "#991b1b",
           900: "#7f1d1d",
         },
+        // Aimzone royal blue (secondary brand colour, matches --royal on the website)
         brand: {
-          25: "#F2F7FF",
-          50: "#ECF3FF",
-          100: "#DDE9FF",
-          200: "#C2D6FF",
-          300: "#9CB9FF",
-          400: "#7592FF",
-          500: "#465FFF",
-          600: "#3641F5",
-          700: "#2A31D8",
-          800: "#252DAE",
-          900: "#262E89",
-          950: "#161950",
+          25: "#F3F6FE",
+          50: "#E6ECFC",
+          100: "#D0DBFA",
+          200: "#A9BCF4",
+          300: "#7D98EC",
+          400: "#5373E2",
+          500: "#2B4FD8",
+          600: "#2140B3",
+          700: "#1B3492",
+          800: "#172B75",
+          900: "#14255F",
+          950: "#0C163A",
         },
         "blue-light": {
           25: "#F5FBFF",

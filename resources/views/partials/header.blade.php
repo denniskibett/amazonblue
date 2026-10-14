@@ -66,11 +66,11 @@
       <!-- Hamburger Toggle BTN -->
 
       <a href="{{ route('dashboard') }}" class="lg:hidden">
-        <img class="dark:hidden" src="{{ asset('images/logo/logo.svg') }}" alt="{{ Auth::user()->name ?? 'User' }}" />
+        <img class="h-6 w-auto dark:hidden" src="{{ \App\Helpers\SystemHelper::logoUrl() }}" alt="{{ \App\Helpers\SystemHelper::appName() }}" />
         <img
-          class="hidden dark:block"
-          src="{{ asset('images/logo/logo-dark.svg') }}"
-          alt="{{ Auth::user()->name ?? 'User' }}"
+          class="h-6 w-auto hidden dark:block"
+          src="{{ \App\Helpers\SystemHelper::logoUrl('dark') }}"
+          alt="{{ \App\Helpers\SystemHelper::appName() }}"
         />
       </a>
 

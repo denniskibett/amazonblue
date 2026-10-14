@@ -11,8 +11,8 @@
       {{-- Expanded Logo --}}
       <span class="logo" :class="sidebarToggle ? 'hidden' : 'flex items-center'">
           @if(file_exists(public_path('images/logo/logo.svg')))
-              <img class="h-10 dark:hidden" src="{{ asset('images/logo/logo.svg') }}" alt="AmazonBlue Capital">
-              <img class="h-10 hidden dark:block" src="{{ asset('images/logo/logo-dark.svg') }}" alt="AmazonBlue Capital">
+              <img class="h-7 w-auto dark:hidden" src="{{ \App\Helpers\SystemHelper::logoUrl() }}" alt="{{ \App\Helpers\SystemHelper::appName() }}">
+              <img class="h-7 w-auto hidden dark:block" src="{{ \App\Helpers\SystemHelper::logoUrl('dark') }}" alt="{{ \App\Helpers\SystemHelper::appName() }}">
           @else
               <span class="flex items-center">
                   <span class="text-xl font-bold text-blue-600 font-heading">AmazonBlue</span>
@@ -24,7 +24,7 @@
       {{-- Collapsed Icon --}}
       <span class="logo-icon" :class="sidebarToggle ? 'lg:block' : 'hidden'">
           @if(file_exists(public_path('images/logo/logo-icon.svg')))
-              <img class="h-8" src="{{ asset('images/logo/logo-icon.svg') }}" alt="AmazonBlue Capital">
+              <img class="h-9 w-9" src="{{ \App\Helpers\SystemHelper::logoUrl('icon') }}" alt="{{ \App\Helpers\SystemHelper::appName() }}">
           @else
               <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600">
                   <span class="text-sm font-bold text-white">AB</span>

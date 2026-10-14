@@ -15,11 +15,25 @@ use App\Http\Controllers\InvestmentController;
 use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\CaseController;
 
-// Public Routes
+// Public Routes (Aimzone Ventures website)
 Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/portfolio', [HomeController::class, 'portfolio'])->name('portfolio');
-Route::get('/blog', [HomeController::class, 'blog'])->name('blog');
-Route::get('/contact', [HomeController::class, 'contact'])->name('contact');
+Route::get('/{page}', [HomeController::class, 'page'])
+    ->whereIn('page', HomeController::PAGES)
+    ->name('site.page');
+
+// ============ BORROWER KYC (individual onboarding) ============
+Route::middleware(['auth', 'role:borrower'])->prefix('kyc')->name('kyc.')->controller(HomeController::class)->group(function () {
+    Route::get('/', fn () => redirect()->route('kyc.personal'))->name('start');
+    Route::get('/personal', 'kycPersonal')->name('personal');
+    Route::post('/personal', 'storeKycPersonal')->name('personal.store');
+    Route::get('/documents', 'kycDocuments')->name('documents');
+    Route::post('/documents', 'storeKycDocuments')->name('documents.store');
+    Route::get('/income', 'kycIncome')->name('income');
+    Route::post('/income', 'storeKycIncome')->name('income.store');
+    Route::get('/review', 'kycReview')->name('review');
+    Route::post('/review', 'submitKyc')->name('submit');
+    Route::get('/submitted', 'kycSubmitted')->name('submitted');
+});
 
 // Google Auth
 Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('login.google');

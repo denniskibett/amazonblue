@@ -16,16 +16,34 @@ class RegistrationTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_new_users_can_register(): void
+    public function test_new_users_register_as_individual_borrowers(): void
     {
         $response = $this->post('/register', [
+            'account_type' => 'individual',
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'phone' => '0712345678',
             'password' => 'password',
-            'password_confirmation' => 'password',
+            'terms' => '1',
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertTrue(auth()->user()->hasRole('borrower'));
+        $response->assertRedirect(route('kyc.personal', absolute: false));
+    }
+
+    public function test_business_registration_is_not_open_yet(): void
+    {
+        $response = $this->post('/register', [
+            'account_type' => 'business',
+            'name' => 'Test Business',
+            'email' => 'biz@example.com',
+            'phone' => '0712345679',
+            'password' => 'password',
+            'terms' => '1',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors('account_type');
     }
 }

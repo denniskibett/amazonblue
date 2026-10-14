@@ -16,10 +16,12 @@
         <meta name="keywords" content="{{ \App\Helpers\SystemHelper::metaKeywords() }}">
     @endif
 
-    {{-- Dynamic Favicon --}}
-    <link rel="icon" type="image/x-icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}">
-    <link rel="shortcut icon" type="image/x-icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}">
-    <link rel="apple-touch-icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}">
+    {{-- Favicons (an icon uploaded in System settings still takes over the .ico) --}}
+    <link rel="icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}" sizes="any">
+    <link rel="icon" href="{{ asset('assets/images/logo/favicon.svg') }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ asset('assets/images/logo/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset('assets/images/logo/site.webmanifest') }}">
+    <meta name="theme-color" content="#1B2B6B">
 
     {{-- Fonts --}}
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">

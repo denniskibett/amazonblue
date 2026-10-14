@@ -42,11 +42,13 @@ class User extends Authenticatable implements Wallet
         'signature',
         'id_type',
         'id_number', 
+        'kra_pin',
         'id_front_path',
         'id_back_path',
         'status',
         'social',
-        'password_changed_at'
+        'password_changed_at',
+        'kyc_submitted_at',
     ];
 
     protected $hidden = [
@@ -62,6 +64,7 @@ class User extends Authenticatable implements Wallet
             'dob' => 'date',
             'disability' => 'boolean',
             'password_changed_at' => 'datetime',
+            'kyc_submitted_at' => 'datetime',
         ];
     }
 
