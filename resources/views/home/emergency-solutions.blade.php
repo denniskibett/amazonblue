@@ -2,10 +2,11 @@
   'title' => 'Emergency Solutions — Aimzone Ventures',
   'description' => 'When payroll is due, a supplier won\'t wait or a client pays late, our bridge facility closes the gap fast, with complete discretion.',
   'active' => 'services',
+  'variant' => 'on-photo',
 ])
 
 @section('content')
-  <section class="page-hero">
+  <section class="page-hero page-hero-photo">
     <div class="wrap split">
       <div class="stack stack-lg">
         <span class="tag"
@@ -33,7 +34,8 @@
           alt="Upper Hill skyline, Nairobi"
           width="1600"
           height="1200"
-          loading="lazy"
+          loading="eager"
+          fetchpriority="high"
           decoding="async"
         />
       </figure>
@@ -94,7 +96,7 @@
   <section class="section section-tint">
     <div class="wrap">
       <div class="section-head reveal"><h2>How it works</h2></div>
-      <div class="grid g4">
+      <div class="grid g4" data-carousel="step" aria-label="How it works">
         <div class="step">
           <span class="n">01</span>
           <h3>Apply online</h3>
@@ -165,7 +167,7 @@
   <section class="section section-tint">
     <div class="wrap">
       <div class="section-head reveal"><h2>Other services</h2></div>
-      <div class="grid g3">
+      <div class="grid g3" data-carousel="service" aria-label="Other services">
         <a class="card" href="{{ route('site.page', 'asset-finance') }}"
           ><span class="chip sand"
             ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">

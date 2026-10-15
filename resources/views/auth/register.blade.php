@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    @include('home.partials.head', ['title' => 'Create your account — Aimzone Ventures', 'description' => 'Create your Aimzone Ventures account'])
+    @include('home.partials.head', ['title' => 'Create your account — Aimzone Ventures', 'description' => 'Create your Aimzone Ventures account', 'noindex' => true])
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
@@ -70,7 +70,7 @@
               <h1>Create your account</h1>
               <p class="muted">Individual accounts borrow in your own name. Business accounts are coming soon.</p>
               @if ($errors->any())
-                <div class="kyc-note warn" role="alert">
+                <div class="kyc-note error" role="alert">
                   <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5M12 16h.01M12 3l10 18H2z" /></svg>
                   <div><b>Please check your details</b><span>{{ $errors->first() }}</span></div>
                 </div>

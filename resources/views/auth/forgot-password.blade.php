@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    @include('home.partials.head', ['title' => 'Forgot password — Aimzone Ventures', 'description' => 'Your Aimzone Ventures account'])
+    @include('home.partials.head', ['title' => 'Forgot password — Aimzone Ventures', 'description' => 'Your Aimzone Ventures account', 'noindex' => true])
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
@@ -28,7 +28,7 @@
             <div class="kyc-note ok"><div><b>{{ session('status') }}</b></div></div>
           @endif
           @if ($errors->any())
-            <div class="kyc-note warn" role="alert"><div><b>{{ $errors->first() }}</b></div></div>
+            <div class="kyc-note error" role="alert"><div><b>{{ $errors->first() }}</b></div></div>
           @endif
           <form method="POST" action="{{ route('password.email') }}" data-validate data-server novalidate class="auth2-form">
             @csrf

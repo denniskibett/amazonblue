@@ -17,9 +17,14 @@ use App\Http\Controllers\CaseController;
 
 // Public Routes (Aimzone Ventures website)
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/robots.txt', [HomeController::class, 'robots'])->name('robots');
+Route::get('/sitemap.xml', [HomeController::class, 'sitemap'])->name('sitemap');
 Route::get('/{page}', [HomeController::class, 'page'])
     ->whereIn('page', HomeController::PAGES)
     ->name('site.page');
+Route::post('/contact', [HomeController::class, 'storeEnquiry'])
+    ->middleware('throttle:6,1')
+    ->name('enquiry.store');
 
 // ============ BORROWER KYC (individual onboarding) ============
 Route::middleware(['auth', 'role:borrower'])->prefix('kyc')->name('kyc.')->controller(HomeController::class)->group(function () {

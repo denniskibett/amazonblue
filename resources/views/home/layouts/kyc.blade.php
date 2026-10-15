@@ -17,6 +17,7 @@
     @include('home.partials.head', [
       'title' => $title . ' — Aimzone Ventures',
       'description' => 'Verify your Aimzone Ventures account',
+      'noindex' => true,
     ])
   </head>
   <body>
@@ -63,7 +64,7 @@
             </div>
           @endif
           @if ($errors->any())
-            <div class="kyc-note warn" role="alert">
+            <div class="kyc-note error" role="alert">
               <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5M12 16h.01M12 3l10 18H2z" /></svg>
               <div>
                 <b>Please check the highlighted fields</b>

@@ -5,19 +5,22 @@ namespace App\Http\Controllers;
 use App\Models\Address;
 use App\Models\Borrower;
 use App\Models\Employment;
+use App\Models\Enquiry;
 use App\Models\PaymentMethod;
 use App\Models\User;
 use App\Services\SignatureService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * Public side of the app: the Aimzone website (welcome + pages in resources/views/home)
- * and self-service KYC for individual borrowers (personal details, identity documents,
+ * Public side of the app: the Aimzone website (welcome + pages in resources/views/home),
+ * the contact page's enquiry form, and self-service KYC for individual borrowers (personal details, identity documents,
  * income & payout, then review and submit). Each KYC step saves straight to the borrower's records.
  */
 class HomeController extends Controller
@@ -55,6 +58,113 @@ class HomeController extends Controller
     public function page(string $page): View
     {
         return view('home.' . $page);
+    }
+
+    // ============ SEARCH ENGINES ============
+
+    public function robots(): Response
+    {
+        $lines = [
+            'User-agent: *',
+            'Disallow: /dashboard',
+            'Disallow: /kyc',
+            'Disallow: /login',
+            'Disallow: /register',
+            'Disallow: /forgot-password',
+            'Disallow: /reset-password',
+            '',
+            'Sitemap: ' . route('sitemap'),
+        ];
+
+        return response(implode("\n", $lines) . "\n", 200, ['Content-Type' => 'text/plain']);
+    }
+
+    public function sitemap(): Response
+    {
+        $urls = array_merge([route('home')], array_map(fn ($page) => route('site.page', $page), self::PAGES));
+
+        return response()->view('home.sitemap', ['urls' => $urls], 200, ['Content-Type' => 'application/xml']);
+    }
+
+    // ============ CONTACT: CONFIDENTIAL ENQUIRY ============
+
+    /**
+     * Save an enquiry from the contact page. The same person (matched by email or phone)
+     * can enquire about every topic, but only once per topic; a repeat is not saved and
+     * the visitor is shown their existing reference instead.
+     */
+    public function storeEnquiry(Request $request): RedirectResponse
+    {
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email'))),
+            'phone' => Enquiry::normalisePhone($request->input('phone')),
+        ]);
+
+        $data = $request->validate([
+            'topic' => ['required', Rule::in(array_keys(Enquiry::TOPICS))],
+            'name' => ['required', 'string', 'max:255'],
+            'organisation' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'regex:/^\d{9,15}$/'],
+            'investor_type' => ['nullable', 'string', 'max:100'],
+            'allocation' => ['nullable', 'string', 'max:100'],
+            'message' => ['required', 'string', 'max:5000'],
+            'consent' => ['accepted'],
+        ], [
+            'phone.regex' => 'Enter a phone number we can call, e.g. +254 712 345 678.',
+            'consent.accepted' => 'Please confirm so we can contact you.',
+        ]);
+
+        $back = redirect()->to(route('site.page', 'contact') . '#message');
+
+        $existing = $this->findEnquiry($data['topic'], $data['email'], $data['phone']);
+        if ($existing) {
+            return $back->with('enquiry', ['duplicate' => true] + $this->enquiryFlash($existing));
+        }
+
+        $isInvestment = $data['topic'] === 'investment';
+        try {
+            $enquiry = Enquiry::create([
+                'topic' => $data['topic'],
+                'name' => $data['name'],
+                'organisation' => $data['organisation'] ?? null,
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'investor_type' => $isInvestment ? ($data['investor_type'] ?? null) : null,
+                'allocation' => $isInvestment ? ($data['allocation'] ?? null) : null,
+                'message' => $data['message'],
+                'route_to' => Enquiry::TOPICS[$data['topic']][1], // decided here, not by the browser
+                'consented_at' => now(),
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 255),
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            // a second submit landed at the same moment; the database kept only the first
+            $existing = $this->findEnquiry($data['topic'], $data['email'], $data['phone']);
+
+            return $back->with('enquiry', ['duplicate' => true] + $this->enquiryFlash($existing));
+        }
+
+        return $back->with('enquiry', ['duplicate' => false] + $this->enquiryFlash($enquiry));
+    }
+
+    private function findEnquiry(string $topic, string $email, string $phone): ?Enquiry
+    {
+        return Enquiry::where('topic', $topic)
+            ->where(fn ($q) => $q->where('email', $email)->orWhere('phone', $phone))
+            ->oldest('id')
+            ->first();
+    }
+
+    private function enquiryFlash(Enquiry $enquiry): array
+    {
+        return [
+            'reference' => $enquiry->reference,
+            'topic' => $enquiry->topic_label,
+            'name' => strtok($enquiry->name, ' '),
+            'date' => $enquiry->created_at->format('j M Y'),
+            'desk' => $enquiry->route_to,
+        ];
     }
 
     // ============ KYC: PERSONAL ============

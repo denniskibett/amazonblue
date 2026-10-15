@@ -32,8 +32,9 @@
       </ul>
     </div>
   </section>
-  <section class="section pt-md">
+  <section class="section pt-md" aria-labelledby="desks-h">
     <div class="wrap">
+      <h2 class="sr-only" id="desks-h">Our desks</h2>
       <div class="grid g3 desks">
         <a class="desk" href="#message" data-topic="bridge"
           ><span class="desk-top"
@@ -128,11 +129,17 @@
         <form
           class="form-card"
           id="message"
+          method="POST"
+          action="{{ route('enquiry.store') }}"
           data-validate
-          data-success="Thank you. Your enquiry has been received and the right desk will be in touch."
+          data-server
           novalidate
         >
+          @csrf
           <input type="hidden" id="c-route" name="route_to" value="clients@aimzoneventures.com" />
+          @if ($errors->any())
+            <div class="kyc-note error" role="alert"><div><b>Please check the highlighted fields</b><span>{{ $errors->first() }}</span></div></div>
+          @endif
           <div class="form-head">
             <span class="kicker">Confidential enquiry</span>
             <h2 class="h-form" data-form-title>Funding enquiry</h2>
@@ -141,89 +148,85 @@
             <label for="c-svc">Enquiry type</label
             ><select class="input" id="c-svc" name="topic">
               <optgroup label="Funding">
-                <option value="bridge" data-route="clients@aimzoneventures.com">Emergency Bridge Finance</option>
-                <option value="asset" data-route="clients@aimzoneventures.com">Asset-Backed Lending</option>
-                <option value="crb" data-route="clients@aimzoneventures.com">CRB Resolution</option>
-                <option value="trade" data-route="clients@aimzoneventures.com">Trade Finance</option>
+                <option value="bridge" @selected(old('topic') === 'bridge') data-route="clients@aimzoneventures.com">Emergency Bridge Finance</option>
+                <option value="asset" @selected(old('topic') === 'asset') data-route="clients@aimzoneventures.com">Asset-Backed Lending</option>
+                <option value="crb" @selected(old('topic') === 'crb') data-route="clients@aimzoneventures.com">CRB Resolution</option>
+                <option value="trade" @selected(old('topic') === 'trade') data-route="clients@aimzoneventures.com">Trade Finance</option>
               </optgroup>
               <optgroup label="Investors and partners">
-                <option value="investment" data-route="investors@aimzoneventures.com">
+                <option value="investment" @selected(old('topic') === 'investment') data-route="investors@aimzoneventures.com">
                   Investment opportunities
                 </option>
-                <option value="partnership" data-route="partnerships@aimzoneventures.com">Partnership</option>
+                <option value="partnership" @selected(old('topic') === 'partnership') data-route="partnerships@aimzoneventures.com">Partnership</option>
               </optgroup>
               <optgroup label="Other">
-                <option value="other" data-route="hello@aimzoneventures.com">Media or general enquiry</option>
+                <option value="other" @selected(old('topic') === 'other') data-route="hello@aimzoneventures.com">Media or general enquiry</option>
               </optgroup>
             </select>
           </div>
           <div class="form-row">
-            <div class="field">
+            <div class="field @error('name') invalid @enderror">
               <label for="c-name">Full name</label
-              ><input class="input" id="c-name" name="name" autocomplete="name" required /><span class="error"
-                >Enter your name.</span
-              >
+              ><input class="input" id="c-name" name="name" autocomplete="name" value="{{ old('name') }}" required /><span class="error">{{ $errors->first('name') ?: 'Enter your name.' }}</span>
             </div>
             <div class="field">
               <label for="c-org">Organisation <span class="muted">(optional)</span></label
-              ><input class="input" id="c-org" name="organisation" autocomplete="organization" />
+              ><input class="input" id="c-org" name="organisation" autocomplete="organization" value="{{ old('organisation') }}" />
             </div>
           </div>
           <div class="form-row">
-            <div class="field">
+            <div class="field @error('email') invalid @enderror">
               <label for="c-email">Email</label
-              ><input class="input" id="c-email" name="email" type="email" autocomplete="email" required /><span
-                class="error"
-                >Enter a valid email address.</span
-              >
+              ><input class="input" id="c-email" name="email" type="email" autocomplete="email" value="{{ old('email') }}" required /><span class="error">{{ $errors->first('email') ?: 'Enter a valid email address.' }}</span>
             </div>
-            <div class="field">
+            <div class="field @error('phone') invalid @enderror">
               <label for="c-phone">Phone</label
               ><input
                 class="input"
                 id="c-phone"
                 name="phone"
+                value="{{ old('phone') }}"
                 type="tel"
                 autocomplete="tel"
                 placeholder="+254 7XX XXX XXX"
                 required
-              /><span class="error">Enter a phone number we can call.</span>
+              /><span class="error">{{ $errors->first('phone') ?: 'Enter a phone number we can call.' }}</span>
             </div>
           </div>
           <div class="form-row" data-show-for="investment" hidden>
             <div class="field">
               <label for="c-investor">Investing as</label
               ><select class="input" id="c-investor" name="investor_type">
-                <option>Qualified individual</option>
-                <option>Family office</option>
-                <option>Fund or asset manager</option>
-                <option>Bank or DFI</option>
-                <option>Corporate</option>
+                <option @selected(old('investor_type') === 'Qualified individual')>Qualified individual</option>
+                <option @selected(old('investor_type') === 'Family office')>Family office</option>
+                <option @selected(old('investor_type') === 'Fund or asset manager')>Fund or asset manager</option>
+                <option @selected(old('investor_type') === 'Bank or DFI')>Bank or DFI</option>
+                <option @selected(old('investor_type') === 'Corporate')>Corporate</option>
               </select>
             </div>
             <div class="field">
               <label for="c-ticket">Indicative allocation</label
               ><select class="input" id="c-ticket" name="allocation">
-                <option>Prefer to discuss</option>
-                <option>Under USD 100,000</option>
-                <option>USD 100,000 – 500,000</option>
-                <option>USD 500,000 – 2 million</option>
-                <option>Above USD 2 million</option>
+                <option @selected(old('allocation') === 'Prefer to discuss')>Prefer to discuss</option>
+                <option @selected(old('allocation') === 'Under USD 100,000')>Under USD 100,000</option>
+                <option @selected(old('allocation') === 'USD 100,000 – 500,000')>USD 100,000 – 500,000</option>
+                <option @selected(old('allocation') === 'USD 500,000 – 2 million')>USD 500,000 – 2 million</option>
+                <option @selected(old('allocation') === 'Above USD 2 million')>Above USD 2 million</option>
               </select>
             </div>
           </div>
-          <div class="field">
+          <div class="field @error('message') invalid @enderror">
             <label for="c-msg">Your enquiry</label
-            ><textarea class="input" id="c-msg" name="message" rows="5" required></textarea
-            ><span class="error">Tell us a little about what you need.</span>
+            ><textarea class="input" id="c-msg" name="message" rows="5" required>{{ old('message') }}</textarea
+            ><span class="error">{{ $errors->first('message') ?: 'Tell us a little about what you need.' }}</span>
           </div>
-          <div class="field">
+          <div class="field @error('consent') invalid @enderror">
             <label class="check"
-              ><input type="checkbox" id="c-consent" name="consent" required /><span
+              ><input type="checkbox" id="c-consent" name="consent" value="1" @checked(old('consent')) required /><span
                 >I agree that Aimzone Ventures may contact me about this enquiry and process my details under its
                 <a href="{{ route('site.page', 'privacy') }}">privacy policy</a>.</span
               ></label
-            ><span class="error">Please confirm so we can contact you.</span>
+            ><span class="error">{{ $errors->first('consent') ?: 'Please confirm so we can contact you.' }}</span>
           </div>
           <button class="btn btn-primary btn-block" type="submit">Submit enquiry</button>
           <p class="secure">
@@ -277,3 +280,46 @@
     </div>
   </section>
 @endsection
+
+@if ($enquiry = session('enquiry'))
+  @push('scripts')
+    <dialog class="modal" id="enquiry-modal" aria-labelledby="enquiry-modal-title">
+      @if ($enquiry['duplicate'])
+        <span class="chip sand big"
+          ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5M12 16h.01M12 3l10 18H2z" /></svg
+        ></span>
+        <h2 id="enquiry-modal-title">You've already asked us about {{ $enquiry['topic'] }}</h2>
+        <p class="muted">
+          We received your enquiry on {{ $enquiry['date'] }}, so we haven't logged it twice. The desk is on it. To add
+          details, email <a href="mailto:{{ $enquiry['desk'] }}?subject={{ rawurlencode($enquiry['reference']) }}">{{ $enquiry['desk'] }}</a>
+          quoting your reference.
+        </p>
+      @else
+        <span class="chip sage big"
+          ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg
+        ></span>
+        <h2 id="enquiry-modal-title">Thank you, {{ $enquiry['name'] }}. Your enquiry is in.</h2>
+        <p class="muted">
+          The {{ $enquiry['topic'] }} desk will acknowledge it within one business hour and a named officer will be in
+          touch.
+        </p>
+      @endif
+      <div class="modal-ref">
+        <div><span>Reference</span><b class="num">{{ $enquiry['reference'] }}</b></div>
+        <div><span>Topic</span><b>{{ $enquiry['topic'] }}</b></div>
+      </div>
+      <p class="modal-hint">You can send one enquiry for each topic, so feel free to ask about something else.</p>
+      <form method="dialog"><button class="btn btn-primary btn-block" autofocus>Close</button></form>
+    </dialog>
+    <script>
+      (function () {
+        var d = document.getElementById('enquiry-modal');
+        if (d && d.showModal) d.showModal();
+        // click on the dimmed backdrop closes it too
+        d.addEventListener('click', function (e) {
+          if (e.target === d) d.close();
+        });
+      })();
+    </script>
+  @endpush
+@endif

@@ -7,7 +7,7 @@
   <section class="page-hero">
     <div class="wrap">
       <h1>Terms of service</h1>
-      <p class="muted">Last updated: [date] · Applies in Kenya</p>
+      <p class="muted">Last updated: 15 October 2026 · Applies in Kenya</p>
       <div class="pills">
         <a class="pill" href="{{ route('site.page', 'privacy') }}"
           ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">

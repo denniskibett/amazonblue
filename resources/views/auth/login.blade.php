@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    @include('home.partials.head', ['title' => 'Sign in — Aimzone Ventures', 'description' => 'Your Aimzone Ventures account'])
+    @include('home.partials.head', ['title' => 'Sign in — Aimzone Ventures', 'description' => 'Your Aimzone Ventures account', 'noindex' => true])
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
@@ -28,7 +28,7 @@
             <div class="kyc-note ok"><div><b>{{ session('status') }}</b></div></div>
           @endif
           @if ($errors->any())
-            <div class="kyc-note warn" role="alert"><div><b>{{ $errors->first() }}</b></div></div>
+            <div class="kyc-note error" role="alert"><div><b>{{ $errors->first() }}</b></div></div>
           @endif
           <form method="POST" action="{{ route('login') }}" data-validate data-server novalidate class="auth2-form">
             @csrf
@@ -71,7 +71,6 @@
             <button class="btn btn-primary btn-block" type="submit">Sign In</button>
           </form>
           <p class="switch">Don't have an account? <a href="{{ route('register') }}">Sign Up</a></p>
-          <p class="switch">Signed up but not verified? <a href="{{ route('kyc.personal') }}">Continue verification</a></p>
         </div>
       </main>
     </div>

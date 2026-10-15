@@ -2,10 +2,11 @@
   'title' => 'Asset Finance — Aimzone Ventures',
   'description' => 'Borrow against a vehicle, property or machinery, and keep using it while you repay. We value the asset quickly and lend up to 70% of its value.',
   'active' => 'services',
+  'variant' => 'on-photo',
 ])
 
 @section('content')
-  <section class="page-hero">
+  <section class="page-hero page-hero-photo">
     <div class="wrap split">
       <div class="stack stack-lg">
         <span class="tag sand"
@@ -36,7 +37,8 @@
           alt="Container truck at the Port of Mombasa"
           width="1600"
           height="1200"
-          loading="lazy"
+          loading="eager"
+          fetchpriority="high"
           decoding="async"
         />
       </figure>
@@ -100,7 +102,7 @@
   <section class="section section-tint">
     <div class="wrap">
       <div class="section-head reveal"><h2>How it works</h2></div>
-      <div class="grid g4">
+      <div class="grid g4" data-carousel="step" aria-label="How it works">
         <div class="step">
           <span class="n">01</span>
           <h3>Tell us about the asset</h3>
@@ -171,7 +173,7 @@
   <section class="section section-tint">
     <div class="wrap">
       <div class="section-head reveal"><h2>Other services</h2></div>
-      <div class="grid g3">
+      <div class="grid g3" data-carousel="service" aria-label="Other services">
         <a class="card" href="{{ route('site.page', 'emergency-solutions') }}"
           ><span class="chip"
             ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 14h6l-1 7 8-11h-6z" /></svg

@@ -241,10 +241,12 @@
     });
   }
 
-  // testimonials: on phones the grid becomes a one-at-a-time carousel that advances on its own,
-  // swipes by hand, and pauses after a touch or while off screen
+  // card rows marked data-carousel (testimonials, how-it-works steps, other services): on phones the
+  // grid becomes a one-at-a-time carousel that advances on its own, swipes by hand, and pauses after a
+  // touch or while off screen. data-carousel="step" names the cards for the dot buttons.
   document.querySelectorAll('[data-carousel]').forEach(function (track) {
-    var cards = [].slice.call(track.children),
+    var label = track.getAttribute('data-carousel') || 'testimonial',
+      cards = [].slice.call(track.children),
       mq = window.matchMedia('(max-width: 760px)'),
       dotsWrap = document.createElement('div'),
       k = 0,
@@ -256,7 +258,7 @@
     var dots = cards.map(function (c, n) {
       var d = document.createElement('button');
       d.type = 'button';
-      d.setAttribute('aria-label', 'Show testimonial ' + (n + 1));
+      d.setAttribute('aria-label', 'Show ' + label + ' ' + (n + 1));
       d.addEventListener('click', function () {
         hold();
         show(n);

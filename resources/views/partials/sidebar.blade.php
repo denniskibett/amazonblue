@@ -8,28 +8,16 @@
     class="flex items-center gap-2 pt-8 sidebar-header pb-7"
   >
   <a href="{{ route('dashboard') }}" class="flex items-center">
-      {{-- Expanded Logo --}}
+      {{-- Expanded logo (Aimzone wordmark; white version in dark mode) --}}
       <span class="logo" :class="sidebarToggle ? 'hidden' : 'flex items-center'">
-          @if(file_exists(public_path('images/logo/logo.svg')))
-              <img class="h-7 w-auto dark:hidden" src="{{ \App\Helpers\SystemHelper::logoUrl() }}" alt="{{ \App\Helpers\SystemHelper::appName() }}">
-              <img class="h-7 w-auto hidden dark:block" src="{{ \App\Helpers\SystemHelper::logoUrl('dark') }}" alt="{{ \App\Helpers\SystemHelper::appName() }}">
-          @else
-              <span class="flex items-center">
-                  <span class="text-xl font-bold text-blue-600 font-heading">AmazonBlue</span>
-                  <span class="text-xl font-bold text-blue-400 ml-1">Capital</span>
-              </span>
-          @endif
+          <img class="h-7 w-auto dark:hidden" src="{{ asset('assets/images/logo/aimzone-horizontal-blue.svg') }}" alt="Aimzone Ventures">
+          <img class="h-7 w-auto hidden dark:block" src="{{ asset('assets/images/logo/aimzone-horizontal-white.svg') }}" alt="Aimzone Ventures">
       </span>
 
-      {{-- Collapsed Icon --}}
+      {{-- Collapsed sidebar: icon logo --}}
       <span class="logo-icon" :class="sidebarToggle ? 'lg:block' : 'hidden'">
-          @if(file_exists(public_path('images/logo/logo-icon.svg')))
-              <img class="h-9 w-9" src="{{ \App\Helpers\SystemHelper::logoUrl('icon') }}" alt="{{ \App\Helpers\SystemHelper::appName() }}">
-          @else
-              <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600">
-                  <span class="text-sm font-bold text-white">AB</span>
-              </span>
-          @endif
+          <img class="h-9 w-9 dark:hidden" src="{{ asset('assets/images/logo/aimzone-icon-blue.svg') }}" alt="Aimzone Ventures">
+          <img class="h-9 w-9 hidden dark:block" src="{{ asset('assets/images/logo/aimzone-icon-white.svg') }}" alt="Aimzone Ventures">
       </span>
   </a>
   </div>

@@ -1,3 +1,12 @@
+@php
+  // Social profile URLs: an icon only shows once its URL is filled in (WhatsApp is always shown)
+  $socials = [
+    'linkedin' => null,   // e.g. 'https://www.linkedin.com/company/aimzone-ventures'
+    'x' => null,
+    'instagram' => null,
+    'facebook' => null,
+  ];
+@endphp
 <footer class="site-footer">
   <div class="wrap">
     <div class="footer-top">
@@ -32,17 +41,17 @@
       </div>
       <div class="footer-cols">
         <div class="footer-col">
-          <h4>Services</h4>
+          <h2 class="footer-h">Services</h2>
           <a href="{{ route('site.page', 'emergency-solutions') }}">Emergency Solutions</a><a href="{{ route('site.page', 'crb-solutions') }}">CRB Solutions</a
           ><a href="{{ route('site.page', 'asset-finance') }}">Asset Finance</a><a href="{{ route('site.page', 'commodities') }}">Commodities</a>
         </div>
         <div class="footer-col">
-          <h4>Company</h4>
+          <h2 class="footer-h">Company</h2>
           <a href="{{ route('site.page', 'company') }}">About us</a><a href="{{ route('site.page', 'company') }}#how">How we work</a
           ><a href="{{ route('site.page', 'careers') }}">Careers</a><a href="{{ route('site.page', 'company') }}#invest">Invest with us</a>
         </div>
         <div class="footer-col footer-connect">
-          <h4>Connect</h4>
+          <h2 class="footer-h">Connect</h2>
           <a href="{{ route('site.page', 'contact') }}">Contact us</a><a href="tel:+254701607959">24/7 support</a
           ><a href="{{ route('login') }}">Client login</a>
         </div>
@@ -56,38 +65,46 @@
           ><a href="{{ route('site.page', 'disclaimer') }}">Disclaimer</a>
         </nav>
         <ul class="socials" aria-label="Follow us">
-          <li>
-            <a href="#" aria-label="Aimzone Ventures on LinkedIn"
-              ><svg class="si" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"
-                /></svg
-            ></a>
-          </li>
-          <li>
-            <a href="#" aria-label="Aimzone Ventures on X"
-              ><svg class="si" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M18.9 2H22l-7.5 8.6L23.3 22h-6.9l-5.4-7-6.2 7H1.7l8-9.2L1.3 2h7l4.9 6.5L18.9 2zm-1.2 18h1.9L7.4 3.9H5.4L17.7 20z"
-                /></svg
-            ></a>
-          </li>
-          <li>
-            <a href="#" aria-label="Aimzone Ventures on Instagram"
-              ><svg class="si" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M12 2.2c3.2 0 3.6 0 4.8.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-3.3-.1-4.8-1.7-4.9-4.9C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8C2.4 3.9 3.9 2.4 7.2 2.3 8.4 2.2 8.8 2.2 12 2.2zm0 4.9a4.9 4.9 0 1 0 0 9.8 4.9 4.9 0 0 0 0-9.8zm0 8.1a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.1-9.4a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3z"
-                /></svg
-            ></a>
-          </li>
-          <li>
-            <a href="#" aria-label="Aimzone Ventures on Facebook"
-              ><svg class="si" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M14 8.5V6.6c0-.8.2-1.3 1.4-1.3H17V2.2c-.3 0-1.3-.2-2.5-.2-2.5 0-4.2 1.5-4.2 4.3v2.2H7.6V12h2.7v10h3.7V12h2.8l.4-3.5H14z"
-                /></svg
-            ></a>
-          </li>
+          @if ($socials['linkedin'])
+            <li>
+              <a href="{{ $socials['linkedin'] }}" target="_blank" rel="noopener" aria-label="Aimzone Ventures on LinkedIn"
+                ><svg class="si" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"
+                  /></svg
+              ></a>
+            </li>
+          @endif
+          @if ($socials['x'])
+            <li>
+              <a href="{{ $socials['x'] }}" target="_blank" rel="noopener" aria-label="Aimzone Ventures on X"
+                ><svg class="si" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M18.9 2H22l-7.5 8.6L23.3 22h-6.9l-5.4-7-6.2 7H1.7l8-9.2L1.3 2h7l4.9 6.5L18.9 2zm-1.2 18h1.9L7.4 3.9H5.4L17.7 20z"
+                  /></svg
+              ></a>
+            </li>
+          @endif
+          @if ($socials['instagram'])
+            <li>
+              <a href="{{ $socials['instagram'] }}" target="_blank" rel="noopener" aria-label="Aimzone Ventures on Instagram"
+                ><svg class="si" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M12 2.2c3.2 0 3.6 0 4.8.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-3.3-.1-4.8-1.7-4.9-4.9C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8C2.4 3.9 3.9 2.4 7.2 2.3 8.4 2.2 8.8 2.2 12 2.2zm0 4.9a4.9 4.9 0 1 0 0 9.8 4.9 4.9 0 0 0 0-9.8zm0 8.1a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.1-9.4a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3z"
+                  /></svg
+              ></a>
+            </li>
+          @endif
+          @if ($socials['facebook'])
+            <li>
+              <a href="{{ $socials['facebook'] }}" target="_blank" rel="noopener" aria-label="Aimzone Ventures on Facebook"
+                ><svg class="si" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M14 8.5V6.6c0-.8.2-1.3 1.4-1.3H17V2.2c-.3 0-1.3-.2-2.5-.2-2.5 0-4.2 1.5-4.2 4.3v2.2H7.6V12h2.7v10h3.7V12h2.8l.4-3.5H14z"
+                  /></svg
+              ></a>
+            </li>
+          @endif
           <li>
             <a
               href="https://wa.me/254701607959"

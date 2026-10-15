@@ -41,7 +41,9 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            // relative on purpose: uploads load from whatever address the site is opened on
+            // (localhost, 127.0.0.1:8000, the live domain) instead of depending on APP_URL
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

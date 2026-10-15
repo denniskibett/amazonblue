@@ -66,12 +66,8 @@
       <!-- Hamburger Toggle BTN -->
 
       <a href="{{ route('dashboard') }}" class="lg:hidden">
-        <img class="h-6 w-auto dark:hidden" src="{{ \App\Helpers\SystemHelper::logoUrl() }}" alt="{{ \App\Helpers\SystemHelper::appName() }}" />
-        <img
-          class="h-6 w-auto hidden dark:block"
-          src="{{ \App\Helpers\SystemHelper::logoUrl('dark') }}"
-          alt="{{ \App\Helpers\SystemHelper::appName() }}"
-        />
+        <img class="h-6 w-auto dark:hidden" src="{{ asset('assets/images/logo/aimzone-horizontal-blue.svg') }}" alt="Aimzone Ventures" />
+        <img class="h-6 w-auto hidden dark:block" src="{{ asset('assets/images/logo/aimzone-horizontal-white.svg') }}" alt="Aimzone Ventures" />
       </a>
 
       <!-- Application nav menu button -->

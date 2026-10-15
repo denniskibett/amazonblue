@@ -3,304 +3,262 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\ContactType;
-use App\Models\AddressType;
-use App\Models\AssetType;
-use App\Models\ResidenceType;
-use App\Models\PaymentMethodType;
-use App\Models\EmploymentType;
-use App\Models\RiskCategory;
-use App\Models\RecoveryStatus;
-use App\Models\RecoveryPriority;
-use App\Models\DocumentType;
-use App\Models\DocumentStatus;
-use App\Models\ActionType;
-use App\Models\LegalProceedingType;
-use App\Models\CommunicationType;
-use App\Models\CommunicationStatus;
-use App\Models\HardshipReason;
-use App\Models\BureauName;
-use App\Models\EventType;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * Lookup values the app's forms and reports rely on (types, statuses, dropdown categories, loan products).
+ * Taken from the live data. Safe to run any time: rows are matched on their natural key and only
+ * missing ones are added, so existing values (and anything edited in the app) are never overwritten.
+ */
 class LookupTablesSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        $this->command->info('Seeding lookup tables...');
+        $this->seed('contact_types', 'slug', [
+            ['id' => 1, 'name' => 'Parent', 'slug' => 'parent', 'description' => null, 'is_active' => 1, 'sort_order' => 10],
+            ['id' => 2, 'name' => 'Sibling', 'slug' => 'sibling', 'description' => null, 'is_active' => 1, 'sort_order' => 20],
+            ['id' => 3, 'name' => 'Spouse', 'slug' => 'spouse', 'description' => null, 'is_active' => 1, 'sort_order' => 30],
+            ['id' => 4, 'name' => 'Child', 'slug' => 'child', 'description' => null, 'is_active' => 1, 'sort_order' => 40],
+            ['id' => 5, 'name' => 'Relative', 'slug' => 'relative', 'description' => null, 'is_active' => 1, 'sort_order' => 50],
+            ['id' => 6, 'name' => 'Friend', 'slug' => 'friend', 'description' => null, 'is_active' => 1, 'sort_order' => 60],
+            ['id' => 7, 'name' => 'Business Partner', 'slug' => 'business_partner', 'description' => null, 'is_active' => 1, 'sort_order' => 70],
+            ['id' => 8, 'name' => 'Landlord', 'slug' => 'landlord', 'description' => null, 'is_active' => 1, 'sort_order' => 80],
+            ['id' => 9, 'name' => 'Tenant', 'slug' => 'tenant', 'description' => null, 'is_active' => 1, 'sort_order' => 90],
+            ['id' => 10, 'name' => 'Employer', 'slug' => 'employer', 'description' => null, 'is_active' => 1, 'sort_order' => 100],
+            ['id' => 11, 'name' => 'Colleague', 'slug' => 'colleague', 'description' => null, 'is_active' => 1, 'sort_order' => 110],
+            ['id' => 12, 'name' => 'Supervisor', 'slug' => 'supervisor', 'description' => null, 'is_active' => 1, 'sort_order' => 120],
+            ['id' => 13, 'name' => 'Chief', 'slug' => 'chief', 'description' => null, 'is_active' => 1, 'sort_order' => 130],
+            ['id' => 14, 'name' => 'HOA', 'slug' => 'hoa', 'description' => null, 'is_active' => 1, 'sort_order' => 140],
+            ['id' => 15, 'name' => 'Neighbor', 'slug' => 'neighbor', 'description' => null, 'is_active' => 1, 'sort_order' => 150],
+            ['id' => 16, 'name' => 'Other', 'slug' => 'other', 'description' => null, 'is_active' => 1, 'sort_order' => 999],
+        ]);
 
-        // Contact Types
-        $contactTypes = [
-            ['name' => 'Parent', 'slug' => 'parent', 'sort_order' => 10],
-            ['name' => 'Sibling', 'slug' => 'sibling', 'sort_order' => 20],
-            ['name' => 'Spouse', 'slug' => 'spouse', 'sort_order' => 30],
-            ['name' => 'Child', 'slug' => 'child', 'sort_order' => 40],
-            ['name' => 'Relative', 'slug' => 'relative', 'sort_order' => 50],
-            ['name' => 'Friend', 'slug' => 'friend', 'sort_order' => 60],
-            ['name' => 'Business Partner', 'slug' => 'business_partner', 'sort_order' => 70],
-            ['name' => 'Landlord', 'slug' => 'landlord', 'sort_order' => 80],
-            ['name' => 'Tenant', 'slug' => 'tenant', 'sort_order' => 90],
-            ['name' => 'Employer', 'slug' => 'employer', 'sort_order' => 100],
-            ['name' => 'Colleague', 'slug' => 'colleague', 'sort_order' => 110],
-            ['name' => 'Supervisor', 'slug' => 'supervisor', 'sort_order' => 120],
-            ['name' => 'Chief', 'slug' => 'chief', 'sort_order' => 130],
-            ['name' => 'HOA', 'slug' => 'hoa', 'sort_order' => 140],
-            ['name' => 'Neighbor', 'slug' => 'neighbor', 'sort_order' => 150],
-            ['name' => 'Other', 'slug' => 'other', 'sort_order' => 999],
-        ];
-        foreach ($contactTypes as $type) {
-            ContactType::updateOrCreate(['slug' => $type['slug']], $type);
+        $this->seed('address_types', 'slug', [
+            ['id' => 1, 'name' => 'Current', 'slug' => 'current', 'description' => null, 'is_active' => 1, 'sort_order' => 10],
+            ['id' => 2, 'name' => 'Previous', 'slug' => 'previous', 'description' => null, 'is_active' => 1, 'sort_order' => 20],
+            ['id' => 3, 'name' => 'Permanent', 'slug' => 'permanent', 'description' => null, 'is_active' => 1, 'sort_order' => 30],
+            ['id' => 4, 'name' => 'Postal', 'slug' => 'postal', 'description' => null, 'is_active' => 1, 'sort_order' => 40],
+            ['id' => 5, 'name' => 'Business', 'slug' => 'business', 'description' => null, 'is_active' => 1, 'sort_order' => 50],
+            ['id' => 6, 'name' => 'Other', 'slug' => 'other', 'description' => null, 'is_active' => 1, 'sort_order' => 999],
+        ]);
+
+        $this->seed('asset_types', 'slug', [
+            ['id' => 1, 'name' => 'Vehicle', 'slug' => 'vehicle', 'requires_registration' => 1, 'is_active' => 1, 'sort_order' => 10],
+            ['id' => 2, 'name' => 'Property', 'slug' => 'property', 'requires_registration' => 1, 'is_active' => 1, 'sort_order' => 20],
+            ['id' => 3, 'name' => 'Equipment', 'slug' => 'equipment', 'requires_registration' => 0, 'is_active' => 1, 'sort_order' => 30],
+            ['id' => 4, 'name' => 'Inventory', 'slug' => 'inventory', 'requires_registration' => 0, 'is_active' => 1, 'sort_order' => 40],
+            ['id' => 5, 'name' => 'Bank Account', 'slug' => 'bank_account', 'requires_registration' => 0, 'is_active' => 1, 'sort_order' => 50],
+            ['id' => 6, 'name' => 'Investment', 'slug' => 'investment', 'requires_registration' => 0, 'is_active' => 1, 'sort_order' => 60],
+            ['id' => 7, 'name' => 'Crypto Wallet', 'slug' => 'crypto_wallet', 'requires_registration' => 0, 'is_active' => 1, 'sort_order' => 70],
+            ['id' => 8, 'name' => 'Other', 'slug' => 'other', 'requires_registration' => 0, 'is_active' => 1, 'sort_order' => 999],
+        ]);
+
+        $this->seed('residence_types', 'slug', [
+            ['id' => 1, 'name' => 'Owned', 'slug' => 'owned', 'description' => null, 'is_active' => 1, 'sort_order' => 10],
+            ['id' => 2, 'name' => 'Rented', 'slug' => 'rented', 'description' => null, 'is_active' => 1, 'sort_order' => 20],
+            ['id' => 3, 'name' => 'Family', 'slug' => 'family', 'description' => null, 'is_active' => 1, 'sort_order' => 30],
+            ['id' => 4, 'name' => 'Employer Housing', 'slug' => 'employer_housing', 'description' => null, 'is_active' => 1, 'sort_order' => 40],
+            ['id' => 5, 'name' => 'Government Housing', 'slug' => 'government_housing', 'description' => null, 'is_active' => 1, 'sort_order' => 50],
+            ['id' => 6, 'name' => 'Other', 'slug' => 'other', 'description' => null, 'is_active' => 1, 'sort_order' => 999],
+        ]);
+
+        $this->seed('payment_method_types', 'slug', [
+            ['id' => 1, 'name' => 'Bank Account', 'slug' => 'bank_account', 'requires_verification' => 1, 'is_active' => 1, 'sort_order' => 10],
+            ['id' => 2, 'name' => 'Mobile Money', 'slug' => 'mobile_money', 'requires_verification' => 1, 'is_active' => 1, 'sort_order' => 20],
+            ['id' => 3, 'name' => 'Crypto Wallet', 'slug' => 'crypto_wallet', 'requires_verification' => 0, 'is_active' => 1, 'sort_order' => 30],
+            ['id' => 4, 'name' => 'PayPal', 'slug' => 'paypal', 'requires_verification' => 1, 'is_active' => 1, 'sort_order' => 40],
+            ['id' => 5, 'name' => 'Other', 'slug' => 'other', 'requires_verification' => 0, 'is_active' => 1, 'sort_order' => 999],
+        ]);
+
+        $this->seed('employment_types', 'slug', [
+            ['id' => 1, 'name' => 'Full Time', 'slug' => 'full_time', 'description' => null, 'is_active' => 1, 'sort_order' => 10],
+            ['id' => 2, 'name' => 'Part Time', 'slug' => 'part_time', 'description' => null, 'is_active' => 1, 'sort_order' => 20],
+            ['id' => 3, 'name' => 'Contract', 'slug' => 'contract', 'description' => null, 'is_active' => 1, 'sort_order' => 30],
+            ['id' => 4, 'name' => 'Casual', 'slug' => 'casual', 'description' => null, 'is_active' => 1, 'sort_order' => 40],
+            ['id' => 5, 'name' => 'Self Employed', 'slug' => 'self_employed', 'description' => null, 'is_active' => 1, 'sort_order' => 50],
+            ['id' => 6, 'name' => 'Business Owner', 'slug' => 'business_owner', 'description' => null, 'is_active' => 1, 'sort_order' => 60],
+            ['id' => 7, 'name' => 'Other', 'slug' => 'other', 'description' => null, 'is_active' => 1, 'sort_order' => 999],
+        ]);
+
+        $this->seed('risk_categories', 'slug', [
+            ['id' => 1, 'name' => 'Very High Risk', 'slug' => 'very_high_risk', 'min_score' => 0, 'max_score' => 49, 'color_code' => '#EF4444', 'description' => null],
+            ['id' => 2, 'name' => 'High Risk', 'slug' => 'high_risk', 'min_score' => 50, 'max_score' => 64, 'color_code' => '#F59E0B', 'description' => null],
+            ['id' => 3, 'name' => 'Medium Risk', 'slug' => 'medium_risk', 'min_score' => 65, 'max_score' => 79, 'color_code' => '#FBBF24', 'description' => null],
+            ['id' => 4, 'name' => 'Low Risk', 'slug' => 'low_risk', 'min_score' => 80, 'max_score' => 100, 'color_code' => '#10B981', 'description' => null],
+        ]);
+
+        $this->seed('recovery_statuses', 'slug', [
+            ['id' => 1, 'name' => 'Open', 'slug' => 'open', 'is_active' => 1, 'sort_order' => 10],
+            ['id' => 2, 'name' => 'In Progress', 'slug' => 'in_progress', 'is_active' => 1, 'sort_order' => 20],
+            ['id' => 3, 'name' => 'Negotiation', 'slug' => 'negotiation', 'is_active' => 1, 'sort_order' => 30],
+            ['id' => 4, 'name' => 'Legal', 'slug' => 'legal', 'is_active' => 1, 'sort_order' => 40],
+            ['id' => 5, 'name' => 'Recovered', 'slug' => 'recovered', 'is_active' => 1, 'sort_order' => 50],
+            ['id' => 6, 'name' => 'Written Off', 'slug' => 'written_off', 'is_active' => 1, 'sort_order' => 60],
+            ['id' => 7, 'name' => 'Closed', 'slug' => 'closed', 'is_active' => 1, 'sort_order' => 70],
+        ]);
+
+        $this->seed('recovery_priorities', 'slug', [
+            ['id' => 1, 'name' => 'Low', 'slug' => 'low', 'priority_level' => 1, 'color_code' => '#6B7280'],
+            ['id' => 2, 'name' => 'Medium', 'slug' => 'medium', 'priority_level' => 2, 'color_code' => '#F59E0B'],
+            ['id' => 3, 'name' => 'High', 'slug' => 'high', 'priority_level' => 3, 'color_code' => '#EF4444'],
+            ['id' => 4, 'name' => 'Urgent', 'slug' => 'urgent', 'priority_level' => 4, 'color_code' => '#DC2626'],
+        ]);
+
+        $this->seed('document_types', 'slug', [
+            ['id' => 1, 'name' => 'Loan Agreement', 'slug' => 'loan_agreement', 'requires_verification' => 1, 'is_active' => 1],
+            ['id' => 2, 'name' => 'ID Copy', 'slug' => 'id_copy', 'requires_verification' => 1, 'is_active' => 1],
+            ['id' => 3, 'name' => 'Income Proof', 'slug' => 'income_proof', 'requires_verification' => 1, 'is_active' => 1],
+            ['id' => 4, 'name' => 'Address Proof', 'slug' => 'address_proof', 'requires_verification' => 1, 'is_active' => 1],
+            ['id' => 5, 'name' => 'Letter', 'slug' => 'letter', 'requires_verification' => 0, 'is_active' => 1],
+            ['id' => 6, 'name' => 'Court Document', 'slug' => 'court_document', 'requires_verification' => 1, 'is_active' => 1],
+            ['id' => 7, 'name' => 'Payment Receipt', 'slug' => 'payment_receipt', 'requires_verification' => 1, 'is_active' => 1],
+            ['id' => 8, 'name' => 'Other', 'slug' => 'other', 'requires_verification' => 0, 'is_active' => 1],
+        ]);
+
+        $this->seed('document_statuses', 'slug', [
+            ['id' => 1, 'name' => 'Pending', 'slug' => 'pending', 'description' => null, 'is_active' => 1],
+            ['id' => 2, 'name' => 'Verified', 'slug' => 'verified', 'description' => null, 'is_active' => 1],
+            ['id' => 3, 'name' => 'Rejected', 'slug' => 'rejected', 'description' => null, 'is_active' => 1],
+            ['id' => 4, 'name' => 'Expired', 'slug' => 'expired', 'description' => null, 'is_active' => 1],
+        ]);
+
+        $this->seed('action_types', 'slug', [
+            ['id' => 1, 'name' => 'Phone Call', 'slug' => 'phone_call', 'is_active' => 1, 'sort_order' => 10],
+            ['id' => 2, 'name' => 'SMS', 'slug' => 'sms', 'is_active' => 1, 'sort_order' => 20],
+            ['id' => 3, 'name' => 'Email', 'slug' => 'email', 'is_active' => 1, 'sort_order' => 30],
+            ['id' => 4, 'name' => 'Visit', 'slug' => 'visit', 'is_active' => 1, 'sort_order' => 40],
+            ['id' => 5, 'name' => 'Letter', 'slug' => 'letter', 'is_active' => 1, 'sort_order' => 50],
+            ['id' => 6, 'name' => 'Legal Notice', 'slug' => 'legal_notice', 'is_active' => 1, 'sort_order' => 60],
+            ['id' => 7, 'name' => 'Negotiation', 'slug' => 'negotiation', 'is_active' => 1, 'sort_order' => 70],
+            ['id' => 8, 'name' => 'Payment Arrangement', 'slug' => 'payment_arrangement', 'is_active' => 1, 'sort_order' => 80],
+            ['id' => 9, 'name' => 'Field Visit', 'slug' => 'field_visit', 'is_active' => 1, 'sort_order' => 90],
+            ['id' => 10, 'name' => 'Other', 'slug' => 'other', 'is_active' => 1, 'sort_order' => 999],
+        ]);
+
+        $this->seed('legal_proceeding_types', 'slug', [
+            ['id' => 1, 'name' => 'Demand Letter', 'slug' => 'demand_letter', 'description' => null, 'is_active' => 1, 'sort_order' => 10],
+            ['id' => 2, 'name' => 'Court Filing', 'slug' => 'court_filing', 'description' => null, 'is_active' => 1, 'sort_order' => 20],
+            ['id' => 3, 'name' => 'Judgment', 'slug' => 'judgment', 'description' => null, 'is_active' => 1, 'sort_order' => 30],
+            ['id' => 4, 'name' => 'Writ of Attachment', 'slug' => 'writ_of_attachment', 'description' => null, 'is_active' => 1, 'sort_order' => 40],
+            ['id' => 5, 'name' => 'Garnishment', 'slug' => 'garnishment', 'description' => null, 'is_active' => 1, 'sort_order' => 50],
+            ['id' => 6, 'name' => 'Bankruptcy Notice', 'slug' => 'bankruptcy_notice', 'description' => null, 'is_active' => 1, 'sort_order' => 60],
+            ['id' => 7, 'name' => 'Settlement', 'slug' => 'settlement', 'description' => null, 'is_active' => 1, 'sort_order' => 70],
+            ['id' => 8, 'name' => 'Appeal', 'slug' => 'appeal', 'description' => null, 'is_active' => 1, 'sort_order' => 80],
+            ['id' => 9, 'name' => 'Other', 'slug' => 'other', 'description' => null, 'is_active' => 1, 'sort_order' => 999],
+        ]);
+
+        $this->seed('communication_types', 'slug', [
+            ['id' => 1, 'name' => 'SMS', 'slug' => 'sms', 'is_active' => 1, 'sort_order' => 10],
+            ['id' => 2, 'name' => 'Email', 'slug' => 'email', 'is_active' => 1, 'sort_order' => 20],
+            ['id' => 3, 'name' => 'WhatsApp', 'slug' => 'whatsapp', 'is_active' => 1, 'sort_order' => 30],
+            ['id' => 4, 'name' => 'Letter', 'slug' => 'letter', 'is_active' => 1, 'sort_order' => 40],
+            ['id' => 5, 'name' => 'Phone Call', 'slug' => 'phone_call', 'is_active' => 1, 'sort_order' => 50],
+        ]);
+
+        $this->seed('communication_statuses', 'slug', [
+            ['id' => 1, 'name' => 'Sent', 'slug' => 'sent', 'description' => null, 'is_active' => 1],
+            ['id' => 2, 'name' => 'Delivered', 'slug' => 'delivered', 'description' => null, 'is_active' => 1],
+            ['id' => 3, 'name' => 'Failed', 'slug' => 'failed', 'description' => null, 'is_active' => 1],
+            ['id' => 4, 'name' => 'Read', 'slug' => 'read', 'description' => null, 'is_active' => 1],
+            ['id' => 5, 'name' => 'Replied', 'slug' => 'replied', 'description' => null, 'is_active' => 1],
+        ]);
+
+        $this->seed('hardship_reasons', 'slug', [
+            ['id' => 1, 'name' => 'Job Loss', 'slug' => 'job_loss', 'description' => null, 'is_active' => 1],
+            ['id' => 2, 'name' => 'Medical Emergency', 'slug' => 'medical_emergency', 'description' => null, 'is_active' => 1],
+            ['id' => 3, 'name' => 'Business Failure', 'slug' => 'business_failure', 'description' => null, 'is_active' => 1],
+            ['id' => 4, 'name' => 'Natural Disaster', 'slug' => 'natural_disaster', 'description' => null, 'is_active' => 1],
+            ['id' => 5, 'name' => 'Death in Family', 'slug' => 'death_in_family', 'description' => null, 'is_active' => 1],
+            ['id' => 6, 'name' => 'Divorce', 'slug' => 'divorce', 'description' => null, 'is_active' => 1],
+            ['id' => 7, 'name' => 'Other', 'slug' => 'other', 'description' => null, 'is_active' => 1],
+        ]);
+
+        $this->seed('bureau_names', 'slug', [
+            ['id' => 1, 'name' => 'CRB Kenya', 'slug' => 'crb_kenya', 'website' => null, 'is_active' => 1],
+            ['id' => 2, 'name' => 'TransUnion', 'slug' => 'transunion', 'website' => null, 'is_active' => 1],
+            ['id' => 3, 'name' => 'Equifax', 'slug' => 'equifax', 'website' => null, 'is_active' => 1],
+            ['id' => 4, 'name' => 'Experian', 'slug' => 'experian', 'website' => null, 'is_active' => 1],
+            ['id' => 5, 'name' => 'Other', 'slug' => 'other', 'website' => null, 'is_active' => 1],
+        ]);
+
+        $this->seed('categories', ['category_type', 'name'], [
+            ['id' => 1, 'name' => 'Christian', 'category_type' => 'religion', 'categoryable_id' => 1],
+            ['id' => 2, 'name' => 'Muslim', 'category_type' => 'religion', 'categoryable_id' => 1],
+            ['id' => 3, 'name' => 'Atheist', 'category_type' => 'religion', 'categoryable_id' => 1],
+            ['id' => 4, 'name' => 'Hindu', 'category_type' => 'religion', 'categoryable_id' => 1],
+            ['id' => 5, 'name' => 'Traditional', 'category_type' => 'religion', 'categoryable_id' => 1],
+            ['id' => 11, 'name' => 'Primary', 'category_type' => 'education', 'categoryable_id' => 2],
+            ['id' => 12, 'name' => 'Secondary', 'category_type' => 'education', 'categoryable_id' => 2],
+            ['id' => 13, 'name' => 'Diploma', 'category_type' => 'education', 'categoryable_id' => 2],
+            ['id' => 14, 'name' => 'Bachelor\'s Degree', 'category_type' => 'education', 'categoryable_id' => 2],
+            ['id' => 15, 'name' => 'Master\'s Degree', 'category_type' => 'education', 'categoryable_id' => 2],
+            ['id' => 16, 'name' => 'PhD', 'category_type' => 'education', 'categoryable_id' => 2],
+            ['id' => 27, 'name' => 'Brother', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 28, 'name' => 'Sister', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 29, 'name' => 'Father', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 30, 'name' => 'Mother', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 31, 'name' => 'Aunt', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 32, 'name' => 'Uncle', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 33, 'name' => 'Aunt', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 34, 'name' => 'Grand Mother', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 35, 'name' => 'Grand Father', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 36, 'name' => 'Friend', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 37, 'name' => 'Business Partner', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 38, 'name' => 'Work Colleague', 'category_type' => 'relationship', 'categoryable_id' => 3],
+            ['id' => 39, 'name' => 'Employment', 'category_type' => 'income_type', 'categoryable_id' => 4],
+            ['id' => 40, 'name' => 'Business', 'category_type' => 'income_type', 'categoryable_id' => 4],
+            ['id' => 41, 'name' => 'Asset', 'category_type' => 'income_type', 'categoryable_id' => 4],
+            ['id' => 42, 'name' => 'Government', 'category_type' => 'income_type', 'categoryable_id' => 4],
+            ['id' => 43, 'name' => 'Remittances', 'category_type' => 'income_type', 'categoryable_id' => 4],
+        ]);
+
+        $this->seed('loan_types', 'name', [
+            ['id' => 1, 'name' => 'Emergency 10 Days', 'period' => 10, 'unit' => 'days', 'interest_rate' => 20.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k!'],
+            ['id' => 2, 'name' => 'Quick Loans 1 month 20%', 'period' => 1, 'unit' => 'months', 'interest_rate' => 20.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k! Monthly'],
+            ['id' => 3, 'name' => 'Quick Loans 14', 'period' => 2, 'unit' => 'weeks', 'interest_rate' => 20.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k! 2 weeks!'],
+            ['id' => 4, 'name' => 'Quick Loans 3 months', 'period' => 3, 'unit' => 'months', 'interest_rate' => 95.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k! 2 weeks!'],
+            ['id' => 5, 'name' => 'Quick Loans 1 months 30%', 'period' => 1, 'unit' => 'months', 'interest_rate' => 30.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k! 2 weeks!'],
+            ['id' => 6, 'name' => 'Emergency Loans 2 weeks 35%', 'period' => 2, 'unit' => 'weeks', 'interest_rate' => 35.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k! 2 weeks!'],
+            ['id' => 7, 'name' => 'Quick Loans 1 month 10%', 'period' => 1, 'unit' => 'months', 'interest_rate' => 10.00, 'penalty_rate' => 1.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k! Monthly'],
+            ['id' => 8, 'name' => 'Quick Loans 2 weeks +1 repayment week at 20%', 'period' => 3, 'unit' => 'weeks', 'interest_rate' => 20.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 1m! Monthly'],
+            ['id' => 9, 'name' => 'Quick Loans 3 months 50% ', 'period' => 3, 'unit' => 'months', 'interest_rate' => 50.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k! 2 weeks!'],
+            ['id' => 10, 'name' => 'Quick Loans 3 months 10% monthly', 'period' => 3, 'unit' => 'months', 'interest_rate' => 30.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 300k! 2 weeks!'],
+            ['id' => 11, 'name' => 'Quick Loans 2 months 15% monthly', 'period' => 2, 'unit' => 'months', 'interest_rate' => 30.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 300k! 2 weeks!'],
+            ['id' => 12, 'name' => 'Quick Loans 2 months 20% monthly', 'period' => 2, 'unit' => 'months', 'interest_rate' => 20.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 300k! 2 weeks!'],
+            ['id' => 13, 'name' => 'Quick Loans 3 months 60% ', 'period' => 3, 'unit' => 'months', 'interest_rate' => 60.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k! 2 weeks!'],
+            ['id' => 14, 'name' => 'Emergency 5 Days', 'period' => 5, 'unit' => 'days', 'interest_rate' => 10.00, 'penalty_rate' => 7.50, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k!'],
+            ['id' => 15, 'name' => 'Family 3 months 2% monthly', 'period' => 3, 'unit' => 'months', 'interest_rate' => 6.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 300k! 2 weeks!'],
+            ['id' => 16, 'name' => '7 days 25%', 'period' => 7, 'unit' => 'days', 'interest_rate' => 25.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 300k! 2 weeks!'],
+            ['id' => 17, 'name' => '3 weeks 20%', 'period' => 3, 'unit' => 'weeks', 'interest_rate' => 20.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 300k! 3 weeks!'],
+            ['id' => 18, 'name' => 'Emergency 10 Days at 30%', 'period' => 10, 'unit' => 'days', 'interest_rate' => 30.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k!'],
+        ]);
+
+        $this->command?->info('Lookup tables seeded.');
+    }
+
+    /**
+     * Insert each row unless one with the same natural key already exists.
+     * The original id is kept when it is free, so ids match the live database.
+     */
+    private function seed(string $table, string|array $key, array $rows): void
+    {
+        $now = now();
+        $added = 0;
+
+        foreach ($rows as $row) {
+            $match = array_intersect_key($row, array_flip((array) $key));
+            if (DB::table($table)->where($match)->exists()) {
+                continue;
+            }
+            if (DB::table($table)->where('id', $row['id'])->exists()) {
+                unset($row['id']);
+            }
+            DB::table($table)->insert($row + ['created_at' => $now, 'updated_at' => $now]);
+            $added++;
         }
-        $this->command->info('✅ Contact Types seeded: ' . count($contactTypes));
 
-        // Address Types
-        $addressTypes = [
-            ['name' => 'Current', 'slug' => 'current', 'sort_order' => 10],
-            ['name' => 'Previous', 'slug' => 'previous', 'sort_order' => 20],
-            ['name' => 'Permanent', 'slug' => 'permanent', 'sort_order' => 30],
-            ['name' => 'Postal', 'slug' => 'postal', 'sort_order' => 40],
-            ['name' => 'Business', 'slug' => 'business', 'sort_order' => 50],
-            ['name' => 'Other', 'slug' => 'other', 'sort_order' => 999],
-        ];
-        foreach ($addressTypes as $type) {
-            AddressType::updateOrCreate(['slug' => $type['slug']], $type);
+        if ($added) {
+            $this->command?->line("  {$table}: {$added} added");
         }
-        $this->command->info('✅ Address Types seeded: ' . count($addressTypes));
-
-        // Asset Types
-        $assetTypes = [
-            ['name' => 'Vehicle', 'slug' => 'vehicle', 'requires_registration' => true, 'sort_order' => 10],
-            ['name' => 'Property', 'slug' => 'property', 'requires_registration' => true, 'sort_order' => 20],
-            ['name' => 'Equipment', 'slug' => 'equipment', 'requires_registration' => false, 'sort_order' => 30],
-            ['name' => 'Inventory', 'slug' => 'inventory', 'requires_registration' => false, 'sort_order' => 40],
-            ['name' => 'Bank Account', 'slug' => 'bank_account', 'requires_registration' => false, 'sort_order' => 50],
-            ['name' => 'Investment', 'slug' => 'investment', 'requires_registration' => false, 'sort_order' => 60],
-            ['name' => 'Crypto Wallet', 'slug' => 'crypto_wallet', 'requires_registration' => false, 'sort_order' => 70],
-            ['name' => 'Other', 'slug' => 'other', 'requires_registration' => false, 'sort_order' => 999],
-        ];
-        foreach ($assetTypes as $type) {
-            AssetType::updateOrCreate(['slug' => $type['slug']], $type);
-        }
-        $this->command->info('✅ Asset Types seeded: ' . count($assetTypes));
-
-        // Residence Types
-        $residenceTypes = [
-            ['name' => 'Owned', 'slug' => 'owned', 'sort_order' => 10],
-            ['name' => 'Rented', 'slug' => 'rented', 'sort_order' => 20],
-            ['name' => 'Family', 'slug' => 'family', 'sort_order' => 30],
-            ['name' => 'Employer Housing', 'slug' => 'employer_housing', 'sort_order' => 40],
-            ['name' => 'Government Housing', 'slug' => 'government_housing', 'sort_order' => 50],
-            ['name' => 'Other', 'slug' => 'other', 'sort_order' => 999],
-        ];
-        foreach ($residenceTypes as $type) {
-            ResidenceType::updateOrCreate(['slug' => $type['slug']], $type);
-        }
-        $this->command->info('✅ Residence Types seeded: ' . count($residenceTypes));
-
-        // Payment Method Types
-        $paymentMethodTypes = [
-            ['name' => 'Bank Account', 'slug' => 'bank_account', 'requires_verification' => true, 'sort_order' => 10],
-            ['name' => 'Mobile Money', 'slug' => 'mobile_money', 'requires_verification' => true, 'sort_order' => 20],
-            ['name' => 'Crypto Wallet', 'slug' => 'crypto_wallet', 'requires_verification' => false, 'sort_order' => 30],
-            ['name' => 'PayPal', 'slug' => 'paypal', 'requires_verification' => true, 'sort_order' => 40],
-            ['name' => 'Other', 'slug' => 'other', 'requires_verification' => false, 'sort_order' => 999],
-        ];
-        foreach ($paymentMethodTypes as $type) {
-            PaymentMethodType::updateOrCreate(['slug' => $type['slug']], $type);
-        }
-        $this->command->info('✅ Payment Method Types seeded: ' . count($paymentMethodTypes));
-
-        // Employment Types
-        $employmentTypes = [
-            ['name' => 'Full Time', 'slug' => 'full_time', 'sort_order' => 10],
-            ['name' => 'Part Time', 'slug' => 'part_time', 'sort_order' => 20],
-            ['name' => 'Contract', 'slug' => 'contract', 'sort_order' => 30],
-            ['name' => 'Casual', 'slug' => 'casual', 'sort_order' => 40],
-            ['name' => 'Self Employed', 'slug' => 'self_employed', 'sort_order' => 50],
-            ['name' => 'Business Owner', 'slug' => 'business_owner', 'sort_order' => 60],
-            ['name' => 'Other', 'slug' => 'other', 'sort_order' => 999],
-        ];
-        foreach ($employmentTypes as $type) {
-            EmploymentType::updateOrCreate(['slug' => $type['slug']], $type);
-        }
-        $this->command->info('✅ Employment Types seeded: ' . count($employmentTypes));
-
-        // Risk Categories
-        $riskCategories = [
-            ['name' => 'Very High Risk', 'slug' => 'very_high_risk', 'min_score' => 0, 'max_score' => 49, 'color_code' => '#EF4444'],
-            ['name' => 'High Risk', 'slug' => 'high_risk', 'min_score' => 50, 'max_score' => 64, 'color_code' => '#F59E0B'],
-            ['name' => 'Medium Risk', 'slug' => 'medium_risk', 'min_score' => 65, 'max_score' => 79, 'color_code' => '#FBBF24'],
-            ['name' => 'Low Risk', 'slug' => 'low_risk', 'min_score' => 80, 'max_score' => 100, 'color_code' => '#10B981'],
-        ];
-        foreach ($riskCategories as $category) {
-            RiskCategory::updateOrCreate(['slug' => $category['slug']], $category);
-        }
-        $this->command->info('✅ Risk Categories seeded: ' . count($riskCategories));
-
-        // Recovery Statuses
-        $recoveryStatuses = [
-            ['name' => 'Open', 'slug' => 'open', 'sort_order' => 10],
-            ['name' => 'In Progress', 'slug' => 'in_progress', 'sort_order' => 20],
-            ['name' => 'Negotiation', 'slug' => 'negotiation', 'sort_order' => 30],
-            ['name' => 'Legal', 'slug' => 'legal', 'sort_order' => 40],
-            ['name' => 'Recovered', 'slug' => 'recovered', 'sort_order' => 50],
-            ['name' => 'Written Off', 'slug' => 'written_off', 'sort_order' => 60],
-            ['name' => 'Closed', 'slug' => 'closed', 'sort_order' => 70],
-        ];
-        foreach ($recoveryStatuses as $status) {
-            RecoveryStatus::updateOrCreate(['slug' => $status['slug']], $status);
-        }
-        $this->command->info('✅ Recovery Statuses seeded: ' . count($recoveryStatuses));
-
-        // Recovery Priorities
-        $recoveryPriorities = [
-            ['name' => 'Low', 'slug' => 'low', 'priority_level' => 1, 'color_code' => '#6B7280'],
-            ['name' => 'Medium', 'slug' => 'medium', 'priority_level' => 2, 'color_code' => '#F59E0B'],
-            ['name' => 'High', 'slug' => 'high', 'priority_level' => 3, 'color_code' => '#EF4444'],
-            ['name' => 'Urgent', 'slug' => 'urgent', 'priority_level' => 4, 'color_code' => '#DC2626'],
-        ];
-        foreach ($recoveryPriorities as $priority) {
-            RecoveryPriority::updateOrCreate(['slug' => $priority['slug']], $priority);
-        }
-        $this->command->info('✅ Recovery Priorities seeded: ' . count($recoveryPriorities));
-
-        // Document Types
-        $documentTypes = [
-            ['name' => 'Loan Agreement', 'slug' => 'loan_agreement', 'requires_verification' => true],
-            ['name' => 'ID Copy', 'slug' => 'id_copy', 'requires_verification' => true],
-            ['name' => 'Income Proof', 'slug' => 'income_proof', 'requires_verification' => true],
-            ['name' => 'Address Proof', 'slug' => 'address_proof', 'requires_verification' => true],
-            ['name' => 'Letter', 'slug' => 'letter', 'requires_verification' => false],
-            ['name' => 'Court Document', 'slug' => 'court_document', 'requires_verification' => true],
-            ['name' => 'Payment Receipt', 'slug' => 'payment_receipt', 'requires_verification' => true],
-            ['name' => 'Other', 'slug' => 'other', 'requires_verification' => false],
-        ];
-        foreach ($documentTypes as $type) {
-            DocumentType::updateOrCreate(['slug' => $type['slug']], $type);
-        }
-        $this->command->info('✅ Document Types seeded: ' . count($documentTypes));
-
-        // Document Statuses
-        $documentStatuses = [
-            ['name' => 'Pending', 'slug' => 'pending'],
-            ['name' => 'Verified', 'slug' => 'verified'],
-            ['name' => 'Rejected', 'slug' => 'rejected'],
-            ['name' => 'Expired', 'slug' => 'expired'],
-        ];
-        foreach ($documentStatuses as $status) {
-            DocumentStatus::updateOrCreate(['slug' => $status['slug']], $status);
-        }
-        $this->command->info('✅ Document Statuses seeded: ' . count($documentStatuses));
-
-        // Action Types
-        $actionTypes = [
-            ['name' => 'Phone Call', 'slug' => 'phone_call', 'sort_order' => 10],
-            ['name' => 'SMS', 'slug' => 'sms', 'sort_order' => 20],
-            ['name' => 'Email', 'slug' => 'email', 'sort_order' => 30],
-            ['name' => 'Visit', 'slug' => 'visit', 'sort_order' => 40],
-            ['name' => 'Letter', 'slug' => 'letter', 'sort_order' => 50],
-            ['name' => 'Legal Notice', 'slug' => 'legal_notice', 'sort_order' => 60],
-            ['name' => 'Negotiation', 'slug' => 'negotiation', 'sort_order' => 70],
-            ['name' => 'Payment Arrangement', 'slug' => 'payment_arrangement', 'sort_order' => 80],
-            ['name' => 'Field Visit', 'slug' => 'field_visit', 'sort_order' => 90],
-            ['name' => 'Other', 'slug' => 'other', 'sort_order' => 999],
-        ];
-        foreach ($actionTypes as $type) {
-            ActionType::updateOrCreate(['slug' => $type['slug']], $type);
-        }
-        $this->command->info('✅ Action Types seeded: ' . count($actionTypes));
-
-        // Legal Proceeding Types
-        $legalProceedingTypes = [
-            ['name' => 'Demand Letter', 'slug' => 'demand_letter', 'sort_order' => 10],
-            ['name' => 'Court Filing', 'slug' => 'court_filing', 'sort_order' => 20],
-            ['name' => 'Judgment', 'slug' => 'judgment', 'sort_order' => 30],
-            ['name' => 'Writ of Attachment', 'slug' => 'writ_of_attachment', 'sort_order' => 40],
-            ['name' => 'Garnishment', 'slug' => 'garnishment', 'sort_order' => 50],
-            ['name' => 'Bankruptcy Notice', 'slug' => 'bankruptcy_notice', 'sort_order' => 60],
-            ['name' => 'Settlement', 'slug' => 'settlement', 'sort_order' => 70],
-            ['name' => 'Appeal', 'slug' => 'appeal', 'sort_order' => 80],
-            ['name' => 'Other', 'slug' => 'other', 'sort_order' => 999],
-        ];
-        foreach ($legalProceedingTypes as $type) {
-            LegalProceedingType::updateOrCreate(['slug' => $type['slug']], $type);
-        }
-        $this->command->info('✅ Legal Proceeding Types seeded: ' . count($legalProceedingTypes));
-
-        // Communication Types
-        $communicationTypes = [
-            ['name' => 'SMS', 'slug' => 'sms', 'sort_order' => 10],
-            ['name' => 'Email', 'slug' => 'email', 'sort_order' => 20],
-            ['name' => 'WhatsApp', 'slug' => 'whatsapp', 'sort_order' => 30],
-            ['name' => 'Letter', 'slug' => 'letter', 'sort_order' => 40],
-            ['name' => 'Phone Call', 'slug' => 'phone_call', 'sort_order' => 50],
-        ];
-        foreach ($communicationTypes as $type) {
-            CommunicationType::updateOrCreate(['slug' => $type['slug']], $type);
-        }
-        $this->command->info('✅ Communication Types seeded: ' . count($communicationTypes));
-
-        // Communication Statuses
-        $communicationStatuses = [
-            ['name' => 'Sent', 'slug' => 'sent'],
-            ['name' => 'Delivered', 'slug' => 'delivered'],
-            ['name' => 'Failed', 'slug' => 'failed'],
-            ['name' => 'Read', 'slug' => 'read'],
-            ['name' => 'Replied', 'slug' => 'replied'],
-        ];
-        foreach ($communicationStatuses as $status) {
-            CommunicationStatus::updateOrCreate(['slug' => $status['slug']], $status);
-        }
-        $this->command->info('✅ Communication Statuses seeded: ' . count($communicationStatuses));
-
-        // Hardship Reasons
-        $hardshipReasons = [
-            ['name' => 'Job Loss', 'slug' => 'job_loss'],
-            ['name' => 'Medical Emergency', 'slug' => 'medical_emergency'],
-            ['name' => 'Business Failure', 'slug' => 'business_failure'],
-            ['name' => 'Natural Disaster', 'slug' => 'natural_disaster'],
-            ['name' => 'Death in Family', 'slug' => 'death_in_family'],
-            ['name' => 'Divorce', 'slug' => 'divorce'],
-            ['name' => 'Other', 'slug' => 'other'],
-        ];
-        foreach ($hardshipReasons as $reason) {
-            HardshipReason::updateOrCreate(['slug' => $reason['slug']], $reason);
-        }
-        $this->command->info('✅ Hardship Reasons seeded: ' . count($hardshipReasons));
-
-        // Bureau Names
-        $bureauNames = [
-            ['name' => 'CRB Kenya', 'slug' => 'crb_kenya'],
-            ['name' => 'TransUnion', 'slug' => 'transunion'],
-            ['name' => 'Equifax', 'slug' => 'equifax'],
-            ['name' => 'Experian', 'slug' => 'experian'],
-            ['name' => 'Other', 'slug' => 'other'],
-        ];
-        foreach ($bureauNames as $bureau) {
-            BureauName::updateOrCreate(['slug' => $bureau['slug']], $bureau);
-        }
-        $this->command->info('✅ Bureau Names seeded: ' . count($bureauNames));
-
-        // Event Types
-        $eventTypes = [
-            ['name' => 'Case Created', 'slug' => 'case_created', 'icon' => 'fa-plus-circle', 'color_code' => '#10B981'],
-            ['name' => 'Action Taken', 'slug' => 'action_taken', 'icon' => 'fa-phone', 'color_code' => '#3B82F6'],
-            ['name' => 'Communication Sent', 'slug' => 'communication_sent', 'icon' => 'fa-envelope', 'color_code' => '#8B5CF6'],
-            ['name' => 'Payment Received', 'slug' => 'payment_received', 'icon' => 'fa-money-bill-wave', 'color_code' => '#10B981'],
-            ['name' => 'Payment Plan Created', 'slug' => 'payment_plan_created', 'icon' => 'fa-file-contract', 'color_code' => '#F59E0B'],
-            ['name' => 'Legal Proceeding', 'slug' => 'legal_proceeding', 'icon' => 'fa-gavel', 'color_code' => '#EF4444'],
-            ['name' => 'Document Uploaded', 'slug' => 'document_uploaded', 'icon' => 'fa-file-upload', 'color_code' => '#6B7280'],
-            ['name' => 'Status Changed', 'slug' => 'status_changed', 'icon' => 'fa-exchange-alt', 'color_code' => '#3B82F6'],
-            ['name' => 'Note Added', 'slug' => 'note_added', 'icon' => 'fa-sticky-note', 'color_code' => '#F59E0B'],
-            ['name' => 'Task Created', 'slug' => 'task_created', 'icon' => 'fa-tasks', 'color_code' => '#8B5CF6'],
-            ['name' => 'Task Completed', 'slug' => 'task_completed', 'icon' => 'fa-check-circle', 'color_code' => '#10B981'],
-            ['name' => 'Agency Assigned', 'slug' => 'agency_assigned', 'icon' => 'fa-handshake', 'color_code' => '#3B82F6'],
-            ['name' => 'Case Resolved', 'slug' => 'case_resolved', 'icon' => 'fa-check-double', 'color_code' => '#10B981'],
-        ];
-        foreach ($eventTypes as $event) {
-            EventType::updateOrCreate(['slug' => $event['slug']], $event);
-        }
-        $this->command->info('✅ Event Types seeded: ' . count($eventTypes));
-
-        $this->command->info('🎉 All lookup tables seeded successfully!');
     }
 }

@@ -18,6 +18,8 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_register_as_individual_borrowers(): void
     {
+        $this->seed(\Database\Seeders\RoleSeeder::class); // sign-up assigns the borrower role
+
         $response = $this->post('/register', [
             'account_type' => 'individual',
             'name' => 'Test User',

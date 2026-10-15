@@ -245,7 +245,7 @@
         <h2>Four calm steps</h2>
         <p class="lead">From sign-up to funds, usually the same day.</p>
       </div>
-      <div class="grid g4">
+      <div class="grid g4" data-carousel="step" aria-label="How it works">
         <div class="step">
           <div class="step-top">
             <span class="chip white"

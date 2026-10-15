@@ -1,10 +1,15 @@
-{{-- Shared <head> for every Aimzone page. Pass $title and $description. --}}
+{{-- Shared <head> for every Aimzone page. Pass $title and $description; $noindex = true keeps a page out of search results. --}}
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
 <title>{{ $title }}</title>
 <meta name="description" content="{{ $description }}" />
 <meta name="theme-color" content="#1B2B6B" />
+@if ($noindex ?? false)
+  <meta name="robots" content="noindex, nofollow" />
+@else
+  <link rel="canonical" href="{{ url()->current() }}" />
+@endif
 <link rel="icon" href="{{ asset('assets/images/logo/favicon.ico') }}" sizes="any" />
 <link rel="icon" href="{{ asset('assets/images/logo/favicon.svg') }}" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="{{ asset('assets/images/logo/apple-touch-icon.png') }}" />
@@ -12,6 +17,14 @@
 <meta property="og:title" content="{{ $title }}" />
 <meta property="og:description" content="{{ $description }}" />
 <meta property="og:type" content="website" />
+<meta property="og:site_name" content="Aimzone Ventures" />
+<meta property="og:url" content="{{ url()->current() }}" />
+<meta property="og:image" content="{{ asset('assets/images/og-aimzone.jpg') }}" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Aimzone Ventures: emergency funding and trade finance in Kenya" />
+<meta property="og:locale" content="en_KE" />
+<meta name="twitter:card" content="summary_large_image" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link

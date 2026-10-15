@@ -2,10 +2,11 @@
   'title' => 'CRB Solutions — Aimzone Ventures',
   'description' => 'A credit bureau listing can block loans, jobs and contracts. We settle or restructure the debt behind it and get you a clearance certificate, fast and',
   'active' => 'services',
+  'variant' => 'on-photo',
 ])
 
 @section('content')
-  <section class="page-hero">
+  <section class="page-hero page-hero-photo">
     <div class="wrap split">
       <div class="stack stack-lg">
         <span class="tag sage"
@@ -34,7 +35,8 @@
           alt="Kenyan shopkeeper restocking her kiosk"
           width="1600"
           height="1200"
-          loading="lazy"
+          loading="eager"
+          fetchpriority="high"
           decoding="async"
         />
       </figure>
@@ -96,7 +98,7 @@
   <section class="section section-tint">
     <div class="wrap">
       <div class="section-head reveal"><h2>How it works</h2></div>
-      <div class="grid g4">
+      <div class="grid g4" data-carousel="step" aria-label="How it works">
         <div class="step">
           <span class="n">01</span>
           <h3>Share your report</h3>
@@ -165,7 +167,7 @@
   <section class="section section-tint">
     <div class="wrap">
       <div class="section-head reveal"><h2>Other services</h2></div>
-      <div class="grid g3">
+      <div class="grid g3" data-carousel="service" aria-label="Other services">
         <a class="card" href="{{ route('site.page', 'emergency-solutions') }}"
           ><span class="chip"
             ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 14h6l-1 7 8-11h-6z" /></svg

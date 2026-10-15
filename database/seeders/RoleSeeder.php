@@ -160,11 +160,7 @@ class RoleSeeder extends Seeder
             'view dashboard',
         ]);
 
-        // ============ ASSIGN SUPER ADMIN TO FIRST USER ============
-        // Optionally assign super-admin role to the first user (admin@example.com)
-        $user = \App\Models\User::where('email', 'admin@example.com')->first();
-        if ($user) {
-            $user->assignRole('super-admin');
-        }
+        // Accounts get their roles where they are created: RegisteredUserController (public sign-up = borrower),
+        // Users management for staff, and DemoUsersSeeder for the local demo accounts.
     }
 }

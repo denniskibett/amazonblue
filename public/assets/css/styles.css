@@ -1365,10 +1365,24 @@ td .with-ic .ic {
   gap: 12px;
   min-width: 150px;
 }
-.footer-col h4 {
+.footer-col h4,
+.footer-col .footer-h {
   margin: 0;
   font: 600 14px/1.3 var(--display);
+  letter-spacing: normal;
   color: #fff;
+}
+/* hidden from view, still read by screen readers (keeps the heading outline in order) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .footer-col a {
   color: var(--mist);
@@ -1693,6 +1707,10 @@ textarea.input {
 }
 .toc a.active span {
   color: var(--mist);
+}
+.toc a {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .toc a span {
   font-family: var(--num);
@@ -2039,10 +2057,11 @@ textarea.input {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .legal {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .toc {
     position: static;
+    min-width: 0;
   }
 }
 @media (max-width: 900px) {
@@ -3243,6 +3262,16 @@ textarea.input {
   background: var(--apricot);
   color: var(--apricot-d);
 }
+.kyc-note.error {
+  background: var(--rose);
+  color: var(--rose-d);
+  border: 1px solid rgba(155, 44, 59, 0.25);
+}
+.kyc-note.error b,
+.kyc-note.error span {
+  color: var(--rose-d);
+  opacity: 1;
+}
 .kyc-nav {
   display: flex;
   justify-content: space-between;
@@ -4183,16 +4212,22 @@ textarea.input {
 }
 .desk-meta div {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 2px 12px;
 }
 .desk-meta dt {
   color: var(--slate);
 }
+.desk-meta dt {
+  flex: none;
+}
 .desk-meta dd {
-  margin: 0;
+  margin: 0 0 0 auto; /* stays right-aligned when it wraps under its label */
+  min-width: 0;
   font-weight: 600;
   text-align: right;
+  overflow-wrap: break-word;
 }
 .desk .more {
   margin-top: 4px;
@@ -4251,6 +4286,7 @@ textarea.input {
 }
 .office-lines div {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
@@ -4262,10 +4298,11 @@ textarea.input {
   color: var(--mist);
 }
 .office-lines dd {
-  margin: 0;
+  margin: 0 0 0 auto;
   text-align: right;
   font-weight: 600;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 .office-lines small {
   display: block;
@@ -4518,12 +4555,14 @@ textarea.input {
   }
 }
 
-/* testimonials carousel (phones): one quote at a time, snap scrolling, progress dots */
+/* mobile slider for any card row marked data-carousel (testimonials, steps, other services):
+   one card at a time, snap scrolling, progress dots */
 .carousel-dots {
   display: none;
 }
 @media (max-width: 760px) {
-  .quotes {
+  .quotes,
+  .grid[data-carousel] {
     display: flex;
     gap: 16px;
     overflow-x: auto;
@@ -4535,10 +4574,12 @@ textarea.input {
     padding: 4px var(--gutter) 24px;
     scroll-padding: 0 var(--gutter);
   }
-  .quotes::-webkit-scrollbar {
+  .quotes::-webkit-scrollbar,
+  .grid[data-carousel]::-webkit-scrollbar {
     display: none;
   }
-  .quotes > .quote {
+  .quotes > .quote,
+  .grid[data-carousel] > * {
     flex: 0 0 100%;
     scroll-snap-align: start;
     scroll-snap-stop: always;
@@ -4642,4 +4683,169 @@ textarea.input {
   font: 600 11px var(--body, inherit);
   line-height: 1.6;
   vertical-align: middle;
+}
+
+/* modal (contact page enquiry confirmation) */
+.modal {
+  box-sizing: border-box;
+  width: min(460px, calc(100% - 32px));
+  max-width: none;
+  margin: auto;
+  border: 0;
+  border-radius: var(--r-lg);
+  padding: clamp(24px, 5vw, 36px);
+  box-shadow: 0 30px 80px rgba(21, 26, 46, 0.25);
+  color: var(--ink);
+  text-align: center;
+}
+.modal::backdrop {
+  background: rgba(21, 26, 46, 0.55);
+  backdrop-filter: blur(4px);
+}
+.modal[open] {
+  animation: modal-in 0.28s var(--ease);
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+.modal .chip.big {
+  margin: 0 auto 14px;
+}
+.modal h2 {
+  font: 600 22px/1.25 var(--display);
+  margin-bottom: 10px;
+  overflow-wrap: anywhere;
+}
+.modal p {
+  overflow-wrap: anywhere;
+}
+.modal p {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.modal a {
+  color: var(--royal);
+  font-weight: 600;
+}
+.modal-ref {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin: 20px 0 12px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--line);
+  text-align: left;
+}
+.modal-ref div {
+  background: var(--cloud);
+  padding: 12px 14px;
+}
+.modal-ref span {
+  display: block;
+  font-size: 12px;
+  color: var(--slate);
+}
+.modal-ref b {
+  font-size: 15px;
+}
+.modal-hint {
+  font-size: 13px !important;
+  color: var(--slate);
+  margin-bottom: 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal[open] {
+    animation: none;
+  }
+}
+
+/* service page heroes on tablets and phones: same treatment as the home slider. The photo runs
+   edge to edge behind the text, from the top of the screen (under the transparent header) down */
+@media (max-width: 900px) {
+  .page-hero-photo {
+    padding: 0;
+    background: var(--ink);
+  }
+  .page-hero-photo::after {
+    display: none;
+  }
+  .page-hero-photo .wrap.split {
+    position: relative;
+    isolation: isolate;
+    max-width: none;
+    min-height: min(86svh, 760px);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-start; /* .split centres its columns; here the copy lines up with the logo */
+    gap: 0;
+    padding: calc(76px + 32px) var(--gutter) 40px;
+  }
+  .page-hero-photo .wrap.split > .stack {
+    max-width: 640px;
+  }
+  .page-hero-photo .media {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    min-height: 0;
+    border-radius: 0;
+    box-shadow: none;
+    animation: none;
+  }
+  /* these heroes carry more text than a home slide, so the headline sits higher on the photo:
+     keep the upper half darker than the home slider so it stays readable over busy photos */
+  .page-hero-photo .media::after {
+    background: linear-gradient(
+      180deg,
+      rgba(21, 26, 46, 0.55) 0%,
+      rgba(21, 26, 46, 0.5) 25%,
+      rgba(21, 26, 46, 0.72) 55%,
+      rgba(21, 26, 46, 0.92) 100%
+    );
+  }
+  .page-hero-photo h1 {
+    text-shadow: 0 2px 18px rgba(21, 26, 46, 0.35);
+  }
+  .page-hero-photo .split .media:hover > img,
+  .page-hero-photo .media:hover > img {
+    transform: none;
+  }
+  .page-hero-photo h1 {
+    color: #fff;
+  }
+  .page-hero-photo .lead {
+    color: rgba(255, 255, 255, 0.86);
+  }
+  .page-hero-photo .fact {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+  .page-hero-photo .fact b {
+    color: #fff;
+  }
+  .page-hero-photo .fact span {
+    color: var(--mist);
+  }
+  .page-hero-photo .btn-primary {
+    background: #fff;
+    color: var(--ink-blue);
+  }
+  .page-hero-photo .btn-primary:hover {
+    background: var(--cloud);
+    color: var(--ink-blue);
+  }
+  .page-hero-photo .btn-ghost {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+  .page-hero-photo .btn-ghost:hover {
+    color: #fff;
+    border-color: #fff;
+  }
 }
