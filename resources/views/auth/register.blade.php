@@ -48,7 +48,8 @@
                     ><span class="seg2"><span>2</span><em>Personal</em></span
                     ><span class="seg2"><span>3</span><em>Documents</em></span
                     ><span class="seg2"><span>4</span><em>Income</em></span
-                    ><span class="seg2"><span>5</span><em>Review</em></span>
+                    ><span class="seg2"><span>5</span><em>Contacts</em></span
+                    ><span class="seg2"><span>6</span><em>Review</em></span>
                   </div>
                 </div>
                 <div class="bar-biz">

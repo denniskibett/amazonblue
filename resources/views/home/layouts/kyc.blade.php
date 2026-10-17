@@ -1,15 +1,17 @@
 @php
-  // $title: page name. $step: 2 personal, 3 documents, 4 income, 5 review, 6 submitted (all done)
+  // $title: page name. $step: 2 personal, 3 documents, 4 income, 5 contacts, 6 review, 7 submitted (all done)
   $steps = [
     2 => ['Personal', route('kyc.personal')],
     3 => ['Documents', route('kyc.documents')],
     4 => ['Income', route('kyc.income')],
-    5 => ['Review', route('kyc.review')],
+    5 => ['Contacts', route('kyc.contacts')],
+    6 => ['Review', route('kyc.review')],
   ];
+  $last = array_key_last($steps);
   $tick = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg>';
   $arrow = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>';
   $prev = $steps[$step - 1][1] ?? null;
-  $next = $step < 5 ? $steps[$step + 1][1] : null;
+  $next = $step < $last ? $steps[$step + 1][1] : null;
 @endphp
 <!doctype html>
 <html lang="en">
@@ -38,7 +40,7 @@
             ><img class="kyc2-mobile-logo" src="{{ asset('assets/images/logo/aimzone-horizontal-blue.svg') }}" alt="Aimzone Ventures"
           /></a>
           <nav class="segbar" aria-label="Verification steps">
-            @if ($prev && $step <= 5)
+            @if ($prev && $step <= $last)
               <a class="segnav back" href="{{ $prev }}" aria-label="Previous step">{!! $arrow !!}</a>
             @else
               <span class="segnav back off" aria-hidden="true">{!! $arrow !!}</span>

@@ -18,15 +18,15 @@ return new class extends Migration
             $table->charset = 'utf8mb3';
 
             $table->bigIncrements('id');
-            $table->unsignedBigInteger('partner_id')->index('partner_id');
+            $table->unsignedBigInteger('partner_id');
             $table->string('wallet_slug', 32)->default('principal')->comment('principal|interest|broker_fee|investment_tracker|borrower_loan');
             $table->string('type', 32)->comment('contribution|withdrawal|principal_deployed|principal_returned|profit_distribution|broker_fee_earned|penalty_share|bonus|repayment|facility_funded|facility_settled|adjustment');
             $table->decimal('amount', 19, 4)->comment('Signed from partner perspective: credit=+, debit=-');
             $table->decimal('balance_after', 19, 4)->nullable()->comment('Snapshot only; bavix wallet is source of truth');
             $table->string('reference')->nullable();
-            $table->unsignedBigInteger('loan_id')->nullable()->index('loan_id');
+            $table->unsignedBigInteger('loan_id')->nullable()->index('pt_loan_idx');
             $table->unsignedBigInteger('repayment_id')->nullable()->index('pt_repayment_idx');
-            $table->unsignedBigInteger('investment_id')->nullable()->index('investment_id');
+            $table->unsignedBigInteger('investment_id')->nullable()->index('pt_investment_idx');
             $table->unsignedBigInteger('investment_funding_id')->nullable()->index('pt_investment_funding_idx');
             $table->text('notes')->nullable();
             $table->date('transaction_date');
@@ -34,11 +34,8 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
 
-            $table->index(['investment_id'], 'pt_investment_idx');
-            $table->index(['loan_id'], 'pt_loan_idx');
             $table->index(['partner_id', 'wallet_slug', 'transaction_date'], 'pt_partner_wallet_date_idx');
             $table->unique(['reference', 'wallet_slug'], 'pt_reference_wallet_unique');
-            $table->index(['repayment_id'], 'repayment_id');
 
             $table->foreign(['partner_id'], 'partner_transactions_ibfk_1')->references(['id'])->on('partners')->onUpdate('no action')->onDelete('no action');
             $table->foreign(['loan_id'], 'partner_transactions_ibfk_2')->references(['id'])->on('loans')->onUpdate('no action')->onDelete('no action');

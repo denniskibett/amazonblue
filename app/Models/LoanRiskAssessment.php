@@ -12,15 +12,20 @@ class LoanRiskAssessment extends Model
 
     protected $fillable = [
         'loan_id',
+        'source',
         'character_score',
         'capacity_score',
         'capital_score',
         'conditions_score',
         'overall_score',
+        'risk_category',
         'risk_category_id',
+        'limit_amount',
         'assessed_by',
         'assessment_notes',
-        'recommendation'
+        'recommendation',
+        'factors',
+        'assessed_at',
     ];
 
     protected $casts = [
@@ -29,6 +34,9 @@ class LoanRiskAssessment extends Model
         'capital_score' => 'integer',
         'conditions_score' => 'integer',
         'overall_score' => 'integer',
+        'limit_amount' => 'decimal:2',
+        'factors' => 'array',
+        'assessed_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -169,7 +177,17 @@ class LoanRiskAssessment extends Model
         ];
     }
 
+    public function getRiskCategory()
+    {
+        return $this->risk_category_name;
+    }
+
     // ============ SCOPES ============
+
+    public function scopeAuto($query)
+    {
+        return $query->where('source', 'auto');
+    }
 
     public function scopePassing($query)
     {

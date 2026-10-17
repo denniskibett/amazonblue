@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Lookup values the app's forms and reports rely on (types, statuses, dropdown categories, loan products).
- * Taken from the live data. Safe to run any time: rows are matched on their natural key and only
+ * Taken from the live database. Safe to run any time: rows are matched on their natural key and only
  * missing ones are added, so existing values (and anything edited in the app) are never overwritten.
  */
 class LookupTablesSeeder extends Seeder
@@ -231,6 +231,7 @@ class LookupTablesSeeder extends Seeder
             ['id' => 16, 'name' => '7 days 25%', 'period' => 7, 'unit' => 'days', 'interest_rate' => 25.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 300k! 2 weeks!'],
             ['id' => 17, 'name' => '3 weeks 20%', 'period' => 3, 'unit' => 'weeks', 'interest_rate' => 20.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 300k! 3 weeks!'],
             ['id' => 18, 'name' => 'Emergency 10 Days at 30%', 'period' => 10, 'unit' => 'days', 'interest_rate' => 30.00, 'penalty_rate' => 10.00, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'description' => 'Upto 250k!'],
+            ['id' => 19, 'name' => 'Trade Finance per year', 'period' => 1, 'unit' => 'year', 'interest_rate' => 50.00, 'penalty_rate' => 2.00, 'grace_period_days' => 0, 'default_threshold_days' => 45, 'description' => 'From 500k a year!'],
         ]);
 
         $this->command?->info('Lookup tables seeded.');

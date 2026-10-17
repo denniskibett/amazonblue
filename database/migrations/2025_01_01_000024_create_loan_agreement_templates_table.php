@@ -20,8 +20,8 @@ return new class extends Migration
             $table->bigIncrements('id');
             $table->string('name');
             $table->string('type');
-            $table->longText('content')->collation('utf8mb4_bin');
-            $table->longText('variables')->collation('utf8mb4_bin')->nullable();
+            $table->json('content');
+            $table->json('variables')->nullable();
             $table->string('status', 50)->nullable()->default('active');
             $table->timestamp('created_at')->nullable()->useCurrent();
             $table->timestamp('updated_at')->useCurrentOnUpdate()->nullable()->useCurrent();

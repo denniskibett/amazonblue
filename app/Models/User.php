@@ -49,6 +49,11 @@ class User extends Authenticatable implements Wallet
         'social',
         'password_changed_at',
         'kyc_submitted_at',
+        'kyc_status',
+        'kyc_reviewed_by',
+        'kyc_reviewed_at',
+        'kyc_review_notes',
+        'kyc_checks',
     ];
 
     protected $hidden = [
@@ -65,6 +70,8 @@ class User extends Authenticatable implements Wallet
             'disability' => 'boolean',
             'password_changed_at' => 'datetime',
             'kyc_submitted_at' => 'datetime',
+            'kyc_reviewed_at' => 'datetime',
+            'kyc_checks' => 'array',
         ];
     }
 
@@ -131,7 +138,26 @@ class User extends Authenticatable implements Wallet
     /**
      * Check if user is active
      */
-    public function isActive(): bool
+    // roles that work in the dashboard; everyone else is a customer
+    public const STAFF_ROLES = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'teller', 'broker'];
+
+    /**
+     * Borrowers and partners (without any staff role) use the customer account area, not the dashboard.
+     */
+    public function isCustomer(): bool
+    {
+        return $this->hasAnyRole(['borrower', 'partner']) && ! $this->hasAnyRole(self::STAFF_ROLES);
+    }
+
+    /**
+     * Where this user lands after signing in.
+     */
+    public function homeRoute(): string
+    {
+        return $this->isCustomer() ? 'account.home' : 'dashboard';
+    }
+
+        public function isActive(): bool
     {
         return $this->status === 0; // Assuming 0 = active
     }

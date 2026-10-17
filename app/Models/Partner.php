@@ -17,8 +17,9 @@ class Partner extends Model implements Wallet, Customer
     protected $fillable = [
         'user_id',
         'wallet_slug',
-        'type',              
-        'is_house_account',  
+        'type',
+        'account_type',      // house accounts: principal / interest / operating / reserve
+        'is_house_account',
         'name',
         'email',
         'phone',

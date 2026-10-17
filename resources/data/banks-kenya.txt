@@ -1,0 +1,51 @@
+# Banks in Kenya, for payout dropdowns (KYC income, profile).
+# Source: Central Bank of Kenya, "Directory of Licenced Commercial Banks, Mortgage Finance Institutions
+# and Authorised Non-Operating Bank Holding Companies" (July 2026, centralbank.go.ke).
+#
+# Edit freely: one bank per line as   Name | code
+#   - the code is optional (bank / Pesalink code); leave it blank until you need it
+#   - lines starting with # are ignored; keep the list alphabetical
+#   - people whose bank is missing can still pick "Other" and type it
+#
+# Commercial banks
+ABSA Bank Kenya PLC |
+Access Bank (Kenya) PLC |
+African Banking Corporation Limited |
+Bank of Africa Kenya Limited |
+Bank of Baroda (Kenya) Limited |
+Bank of India |
+Citibank N.A Kenya |
+Commercial International Bank (CIB) Kenya Limited |
+Consolidated Bank of Kenya Limited |
+Co-operative Bank of Kenya Limited |
+Credit Bank PLC |
+Development Bank of Kenya Limited |
+Diamond Trust Bank Kenya Limited |
+DIB Bank Kenya Limited |
+Ecobank Kenya Limited |
+Equity Bank Kenya Limited |
+Family Bank Limited |
+Guaranty Trust Bank (K) Ltd |
+Guardian Bank Limited |
+Gulf African Bank Limited |
+Habib Bank A.G Zurich |
+I&M Bank Limited |
+KCB Bank Kenya Limited |
+Kingdom Bank Limited |
+Middle East Bank (K) Limited |
+M-Oriental Bank Limited |
+National Bank of Kenya Limited |
+NCBA Bank Kenya PLC |
+Paramount Bank Limited |
+Premier Bank Kenya Limited |
+Prime Bank Limited |
+SBM Bank Kenya Limited |
+Sidian Bank Limited |
+Spire Bank Ltd |
+Stanbic Bank Kenya Limited |
+Standard Chartered Bank Kenya Limited |
+UBA Kenya Bank Limited |
+Victoria Commercial Bank PLC |
+
+# Mortgage finance institutions
+HFCB Limited |

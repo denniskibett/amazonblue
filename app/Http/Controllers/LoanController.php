@@ -16,6 +16,8 @@ use App\Models\LoanCycle;
 use App\Pdf\LoanPDF;
 use App\Services\LoanCalculator;
 use App\Services\SignatureService;
+use Illuminate\Support\Facades\DB;
+use App\Services\BorrowingEligibility;
 use App\Services\LoanAgreementService;
 use App\Services\NplDetectionService;
 use Illuminate\Http\Request;
@@ -48,9 +50,98 @@ class LoanController extends Controller
     /**
      * Store a newly created loan
      */
+    /**
+     * Borrower self-service application from the dashboard "Borrow" panel. Always the configured
+     * product (config lending.borrower_loan_type_id, "Emergency 10 Days"), within the borrower's limit,
+     * and only for staff-verified borrowers with no open loan. Creates the same records as a
+     * staff-created loan: the loan (pending), its first cycle and the signed agreement.
+     */
+    public function apply(Request $request, BorrowingEligibility $eligibility)
+    {
+        $user = $request->user();
+        abort_unless($user->hasRole('borrower'), 403);
+        $back = redirect()->route('account.borrow');
+
+        if ($blockers = $eligibility->blockers($user)) {
+            [$title, $message] = $blockers[0];
+            return $back->with('alert', ['type' => 'warning', 'title' => $title, 'message' => $message]);
+        }
+
+        $limit = $eligibility->limit($user)['limit'];
+        $min = (int) config('lending.min_amount');
+        $request->merge(['amount' => preg_replace('/[^\d.]/', '', (string) $request->input('amount'))]);
+        $validator = Validator::make($request->all(), [
+            'amount' => ['required', 'numeric', "min:{$min}", "max:{$limit}"],
+            'consent' => ['accepted'],
+        ], [
+            'amount.required' => 'Enter how much you would like to borrow.',
+            'amount.min' => 'The smallest loan is KES ' . number_format($min, 2) . '.',
+            'amount.max' => 'Your current limit is KES ' . number_format($limit, 2) . '. Repaying in full and on time raises it, up to KES ' . number_format(config('lending.good_standing_limit'), 2) . '.',
+            'consent.accepted' => 'Please accept the loan terms to continue.',
+        ]);
+        if ($validator->fails()) {
+            return $back->withInput()->withErrors($validator)
+                ->with('alert', ['type' => 'error', 'title' => 'Check your application', 'message' => $validator->errors()->first()]);
+        }
+
+        $loan = DB::transaction(function () use ($user, $request, $eligibility) {
+            // one application at a time, even if the button is pressed twice
+            User::whereKey($user->id)->lockForUpdate()->first();
+            if ($eligibility->openLoan($user)) {
+                return null;
+            }
+
+            return Loan::create([
+                'user_id' => $user->id,
+                'loan_type_id' => config('lending.borrower_loan_type_id'),
+                'amount' => $request->input('amount'),
+                'original_amount' => $request->input('amount'),
+                'borrow_date' => now()->toDateString(),
+                'status' => Loan::STATUS_PENDING,
+                'broker_status' => 0,
+                'reason' => 'Self-service application from the borrower dashboard.',
+                'consent' => true,
+                'consent_date' => now(),
+                'cycle' => 1,
+            ]);
+        });
+
+        if (! $loan) {
+            return $back->with('alert', ['type' => 'warning', 'title' => 'You already have a loan', 'message' => 'Your earlier application is still open.']);
+        }
+
+        try {
+            $this->loanCalculator->createInitialCycle($loan);
+        } catch (\Exception $e) {
+            Log::error('Failed to create initial cycle for self-service loan #' . $loan->id, ['error' => $e->getMessage()]);
+        }
+        try {
+            // the KYC signature is already on file, so the agreement is signed
+            $this->loanAgreementService->generateLoanAgreement($loan->fresh());
+        } catch (\Exception $e) {
+            Log::error('Failed to generate agreement for self-service loan #' . $loan->id, ['error' => $e->getMessage()]);
+        }
+
+        $quote = $eligibility->quote((float) $loan->amount, \Illuminate\Support\Carbon::parse($loan->borrow_date));
+
+        return redirect()->route('account.home')->with('alert', [
+            'type' => 'success',
+            'title' => 'Application sent',
+            'message' => 'Loan #' . str_pad((string) $loan->id, 5, '0', STR_PAD_LEFT) . ' for KES ' . number_format((float) $loan->amount, 2)
+                . ' is with our team. Once approved it goes to your M-Pesa; repay KES ' . number_format($quote['total'], 2)
+                . ' within ' . $quote['period'] . '.',
+        ]);
+    }
+
     public function store(Request $request)
     {
         $user = auth()->user();
+
+        // borrowers apply through the dashboard (fixed product, limits, verification)
+        if ($user->hasRole('borrower') && ! $user->can('create loans')) {
+            return redirect()->route('account.borrow')
+                ->with('alert', ['type' => 'info', 'title' => 'Apply from your account', 'message' => 'Apply from the Borrow page in your account.']);
+        }
         
         Log::debug('Loan Store Request Data:', $request->all());
         
@@ -321,6 +412,8 @@ class LoanController extends Controller
      */
     public function update(Request $request, Loan $loan)
     {
+        $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
+
         $validated = $request->validate([
             'loan_type_id'   => 'required|exists:loan_types,id',
             'amount'         => 'required|numeric|min:1',
@@ -560,12 +653,33 @@ class LoanController extends Controller
         // ============================================================
         $statuses = \App\Models\RecoveryStatus::all();
         $priorities = \App\Models\RecoveryPriority::all();
+
+        // Only id and name: officers are rendered into the page's JavaScript,
+        // so never send signature, KYC or next-of-kin columns to the browser.
         $officers = User::whereIn('role', [
             'admin',
             'teller'
-        ])->get();
+        ])->orderBy('name')->get(['id', 'name']);
 
         $actionTypes = \App\Models\ActionType::all();
+
+        // Borrower list for the case modal: plain arrays keyed by USER id (the modal
+        // posts user_id and calls /users/{id}/loans-data). Plain arrays cannot recurse
+        // during json_encode, unlike Borrower models with their appended accessors.
+        $caseBorrowers = User::borrowers()
+            ->select('users.id', 'users.name', 'users.email')
+            ->withExists(['loans as has_npl' => function ($q) {
+                $q->where('status', 'defaulted');
+            }])
+            ->orderBy('users.name')
+            ->get()
+            ->map(fn ($u) => [
+                'id'      => $u->id,
+                'name'    => $u->name,
+                'email'   => $u->email,
+                'has_npl' => (bool) $u->has_npl,
+            ])
+            ->values();
 
         // ============================================================
         // ALL BORROWERS
@@ -666,6 +780,7 @@ class LoanController extends Controller
             'priorities',
             'officers',
             'actionTypes',
+            'caseBorrowers',
             'allBorrowers',
             'recoveryCase',
 
@@ -725,6 +840,9 @@ class LoanController extends Controller
     public function create(Request $request)
     {
         $user = auth()->user();
+        if ($user->hasRole('borrower') && ! $user->can('create loans')) {
+            return redirect()->route('account.borrow');
+        }
         
         $users = collect();
         $loanTypes = LoanType::all();
@@ -795,6 +913,7 @@ class LoanController extends Controller
     {
         // Check permissions
         $user = auth()->user();
+        $this->authorizeLoanChange($user, $loan, 'edit loans');
         
         if ($user->role === 'borrower' && $loan->user_id !== $user->id) {
             abort(403, 'Unauthorized');
@@ -893,6 +1012,7 @@ class LoanController extends Controller
     public function destroy($id)
     {
         $loan = Loan::findOrFail($id);
+        $this->authorizeLoanChange(auth()->user(), $loan, 'delete loans');
         $loan->delete();
         return redirect()->route('loans.index');
     }
@@ -1905,5 +2025,19 @@ class LoanController extends Controller
                 return $this->loanCalculator->calculateLoanMetrics($loan)['outstanding_balance'];
             }),
         ];
+    }
+
+    /**
+     * Changing or deleting a loan needs the matching permission (borrowers have neither),
+     * and brokers may only touch their own clients' loans.
+     */
+    private function authorizeLoanChange(User $user, Loan $loan, string $permission): void
+    {
+        abort_unless($user->can($permission), 403, 'You are not allowed to change loans.');
+
+        if ($user->hasRole('broker') && ! $user->hasAnyRole(['super-admin', 'admin', 'manager'])) {
+            $isClient = $loan->user?->borrower && $user->broker && $loan->user->borrower->broker_id === $user->broker->id;
+            abort_unless($isClient, 403, 'This loan is not one of your clients\'.');
+        }
     }
 }

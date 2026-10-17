@@ -20,7 +20,7 @@
         </p>
         <div class="facts">
           <div class="fact"><b>20% flat</b><span>10-day facility</span></div>
-          <div class="fact"><b>KES 100K–20M</b><span>Facility size</span></div>
+          <div class="fact"><b>From KES 5,000</b><span>Bridge facilities 100K+</span></div>
           <div class="fact"><b>30–45 min</b><span>Processing</span></div>
         </div>
         <div class="actions">
@@ -141,7 +141,7 @@
               ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg
             ></span>
           </summary>
-          <p class="answer">From KES 100,000 up to KES 20 million, depending on your profile and any collateral.</p>
+          <p class="answer">Individuals start from KES 5,000 on their first loan, rising to KES 50,000 once you repay on time. Bridge facilities for businesses run from above KES 100,000 up to KES 20 million, depending on your profile and any collateral.</p>
         </details>
         <details>
           <summary>

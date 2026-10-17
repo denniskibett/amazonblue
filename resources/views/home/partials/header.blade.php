@@ -15,7 +15,7 @@
         <a class="nav-link" href="{{ route('site.page', $page) }}" @if (($active ?? null) === $page) aria-current="page" @endif>{{ $label }}</a>
       @endforeach
       @auth
-        <a class="btn btn-primary" href="{{ route('dashboard') }}">Dashboard</a>
+        <a class="btn btn-primary" href="{{ route(auth()->user()->homeRoute()) }}">{{ auth()->user()->isCustomer() ? 'My account' : 'Dashboard' }}</a>
       @else
         <a class="login" href="{{ route('login') }}"
           ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">

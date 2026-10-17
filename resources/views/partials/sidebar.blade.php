@@ -126,6 +126,36 @@
           </li>
           <!-- Menu Item User Management -->
 
+          @can('edit users')
+          <!-- Menu Item KYC Reviews: borrower verifications waiting for staff -->
+          @php
+            $kycWaiting = \App\Models\User::where('kyc_status', 'submitted')->count();
+          @endphp
+          <li>
+            <a
+              href="{{ route('kyc-reviews.index') }}"
+              @click="selected = (selected === 'KYC' ? '':'KYC')"
+              class="menu-item group"
+              :class=" (selected === 'KYC') || (page === 'kyc-reviews') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <svg
+                :class="(selected === 'KYC') || (page === 'kyc-reviews') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"
+                width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M9 12l2 2 4-4M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                KYC Reviews
+                @if ($kycWaiting)
+                <span class="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+                  {{ $kycWaiting }}
+                </span>
+                @endif
+              </span>
+            </a>
+          </li>
+          @endcan
+
           <!-- Menu Item Loan Portfolio -->
           <li>
             <a

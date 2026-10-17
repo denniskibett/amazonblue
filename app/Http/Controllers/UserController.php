@@ -81,8 +81,15 @@ class UserController extends Controller
         $signatureService = app(\App\Services\SignatureService::class);
         $signatureData = $signatureService->checkSignature($user);
         
+        // real cash (bavix wallet) and today's 4Cs, for anyone who has borrowed
+        $hasLoans = $user->loans->isNotEmpty();
+        $cash = $hasLoans ? app(\App\Services\CustomerWallets::class)->borrowerCash($user) : null;
+        $credit = $hasLoans ? app(\App\Services\CreditAssessment::class)->current($user) : null;
+
         return view('users.show', compact(
             'user',
+            'cash',
+            'credit',
             'completionPercentage',
             'missingFields',
             'totalLoans',

@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Views are MySQL SQL; other drivers (the SQLite test database) skip them.
+        // Views are MySQL SQL; other drivers skip them.
         if (! in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
             return;
         }

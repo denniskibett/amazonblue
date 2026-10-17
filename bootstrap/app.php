@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
             
             // Custom Middleware
             'check.role' => CheckRole::class,
+            // dashboard = staff only; borrowers and partners use /account
+            'staff' => \App\Http\Middleware\EnsureStaff::class,
         ]);
         
         // ============ ADD GLOBAL MIDDLEWARE ============

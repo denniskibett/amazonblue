@@ -64,7 +64,7 @@
         </ul>
         <div class="facts-row">
           <div><b>20% flat</b><span>10-day facility</span></div>
-          <div><b>KES 100K–20M</b><span>Facility size</span></div>
+          <div><b>From KES 5,000</b><span>Bridge facilities 100K+</span></div>
           <div><b>30–45 min</b><span>Processing</span></div>
         </div>
         <div class="actions">

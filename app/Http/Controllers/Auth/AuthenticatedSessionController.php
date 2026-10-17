@@ -28,7 +28,8 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // customers (borrowers, partners) land in their account; staff in the dashboard
+        return redirect()->intended(route($request->user()->homeRoute(), absolute: false));
     }
 
     /**

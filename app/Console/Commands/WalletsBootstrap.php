@@ -38,7 +38,7 @@ class WalletsBootstrap extends Command
                 $existing = $partner->getWallet($slug);
                 if ($existing) {
                     $this->line("  partner#{$partner->id} wallet '{$slug}' exists (balance="
-                        . number_format((float)$existing->balance / 100, 4) . ')');
+                        . number_format((float)$existing->balance / (10 ** (int) ($existing->decimal_places ?? 2)), 4) . ')');
                     continue;
                 }
 
@@ -60,7 +60,7 @@ class WalletsBootstrap extends Command
                         $opening = (float) ($partner->current_balance ?? 0);
                         if ($opening != 0.0) {
                             $reference = 'OPENING-' . $partner->id . '-' . Str::ulid();
-                            $wallet->deposit((int) round($opening * 100), [
+                            $wallet->deposit((int) round($opening * (10 ** (int) ($wallet->decimal_places ?? 2))), [
                                 'reference' => $reference,
                                 'description' => 'Opening balance migration',
                             ]);
@@ -123,7 +123,7 @@ class WalletsBootstrap extends Command
         $mismatches = 0;
         foreach ($partners as $partner) {
             $wallet = $partner->getWallet('principal');
-            $walletBalance = $wallet ? (float) $wallet->balance / 100 : 0.0;
+            $walletBalance = $wallet ? (float) $wallet->balance / (10 ** (int) ($wallet->decimal_places ?? 2)) : 0.0;
             $columnBalance = (float) ($partner->current_balance ?? 0);
             if (abs($walletBalance - $columnBalance) > 0.0001) {
                 $this->error(sprintf(

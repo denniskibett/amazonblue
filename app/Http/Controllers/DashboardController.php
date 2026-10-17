@@ -14,6 +14,7 @@ use App\Models\LoanType;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\CustomerWallets;
 
 class DashboardController extends Controller
 {
@@ -62,8 +63,6 @@ class DashboardController extends Controller
         // ============================================================
         if ($user->hasRole('admin')) {
             $data = array_merge($data, $this->getAdminData($user, $currentMonthStart));
-        } elseif ($user->hasRole('borrower')) {
-            $data = array_merge($data, $this->getBorrowerData($user, $currentMonthStart));
         } elseif ($user->hasRole('broker')) {
             $data = array_merge($data, $this->getBrokerData($user, $currentMonthStart));
         } elseif ($user->hasRole('teller')) {
@@ -101,6 +100,12 @@ class DashboardController extends Controller
             'repaymentsThisMonth' => Repayment::where('created_at', '>=', $currentMonthStart)
                                             ->sum('amount') ?? 0,
 
+            // Real cash only (no rollovers, discounts or write-offs): money that actually moved
+            'cashDisbursed' => $this->cashDisbursed(),
+            'cashDisbursedThisMonth' => $this->cashDisbursed(fn ($q) => $q->where('disburse_date', '>=', $currentMonthStart)),
+            'cashRepaid' => $this->cashRepaid(),
+            'cashRepaidThisMonth' => $this->cashRepaid(fn ($q) => $q->where('created_at', '>=', $currentMonthStart)),
+
             // User Metrics
             'borrowerCount' => User::role('borrower')->count(),
             'newBorrowersThisMonth' => User::role('borrower')
@@ -132,66 +137,6 @@ class DashboardController extends Controller
     // ================================================================
     // BORROWER DASHBOARD DATA - Clean and Simple
     // ================================================================
-    private function getBorrowerData($user, $currentMonthStart)
-    {
-        // Get all borrower loans with relationships
-        $loans = Loan::with(['loanType', 'repayments', 'cycles'])
-            ->where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        // Get active loan (if any)
-        $activeLoan = $loans->whereIn('status', [Loan::STATUS_DISBURSED, Loan::STATUS_ACTIVE, Loan::STATUS_OVERDUE])->first();
-
-        // Calculate loan stats
-        $totalBorrowed = $loans->sum('amount');
-        $completedLoans = $loans->where('status', Loan::STATUS_REPAID)->count();
-        $activeLoans = $loans->whereIn('status', [Loan::STATUS_DISBURSED, Loan::STATUS_ACTIVE])->count();
-
-        // Get recent transactions
-        $recentTransactions = $this->getBorrowerRecentTransactions($loans);
-
-        // Get biodata completion data
-        $biodataComplete = $this->checkBiodataComplete($user);
-        $missingFields = $this->getMissingBiodataFields($user);
-        $completionPercentage = $this->getBiodataCompletionPercentage($user);
-
-        // Get borrower recovery data
-        $myRecoveryCases = $user->debtRecoveryCases()->with(['status', 'priority'])->get();
-        $activeRecoveryCount = $user->debtRecoveryCases()->open()->count();
-        $hasActiveRecovery = $activeRecoveryCount > 0;
-
-        return [
-            // Borrower specific
-            'activeLoan' => $activeLoan,
-            'totalBorrowed' => $totalBorrowed,
-            'completedLoans' => $completedLoans,
-            'activeLoans' => $activeLoans,
-            'recentTransactions' => $recentTransactions,
-            'biodataComplete' => $biodataComplete,
-            'missingBiodataFields' => $missingFields,
-            'biodataCompletionPercentage' => $completionPercentage,
-            'myRecoveryCases' => $myRecoveryCases,
-            'hasActiveRecovery' => $hasActiveRecovery,
-            'activeRecoveryCount' => $activeRecoveryCount,
-
-            // Defaults for other sections (not shown to borrowers)
-            'totalLoans' => $loans->count(),
-            'loansThisMonth' => $loans->where('created_at', '>=', $currentMonthStart)->count(),
-            'totalRepayments' => $user->repayments()->sum('repayments.amount') ?? 0,
-            'repaymentsThisMonth' => $user->repayments()
-                                        ->where('repayments.created_at', '>=', $currentMonthStart)
-                                        ->sum('repayments.amount') ?? 0,
-            'totalDisbursements' => $user->disbursements()->sum('disbursements.amount') ?? 0,
-            'disbursementsThisMonth' => $user->disbursements()
-                                            ->where('disbursements.created_at', '>=', $currentMonthStart)
-                                            ->sum('disbursements.amount') ?? 0,
-            'borrowedThisMonth' => $loans->where('borrow_date', '>=', $currentMonthStart)->sum('amount') ?? 0,
-            'totalInterest' => 0,
-            'totalPenalty' => 0,
-        ];
-    }
-
     // ================================================================
     // BROKER DASHBOARD DATA
     // ================================================================
@@ -236,7 +181,33 @@ class DashboardController extends Controller
             'collectedRepayments' => Repayment::sum('amount') ?? 0,
             'monthRepayments' => Repayment::where('created_at', '>=', $currentMonthStart)
                                     ->sum('amount') ?? 0,
+
+            // real cash only
+            'cashDisbursedToday' => $this->cashDisbursed(fn ($q) => $q->whereDate('disburse_date', today())),
+            'cashDisbursedThisMonth' => $this->cashDisbursed(fn ($q) => $q->where('disburse_date', '>=', $currentMonthStart)),
+            'cashRepaid' => $this->cashRepaid(),
+            'cashRepaidThisMonth' => $this->cashRepaid(fn ($q) => $q->where('created_at', '>=', $currentMonthStart)),
         ];
+    }
+
+    /**
+     * Cash actually sent to borrowers (rollover / carry-forward "disbursements" are not money).
+     */
+    private function cashDisbursed(?callable $filter = null): float
+    {
+        $query = CustomerWallets::whereCash(Disbursement::query()->whereNull('deleted_at'));
+
+        return (float) ($filter ? $filter($query) : $query)->sum(DB::raw(CustomerWallets::DISBURSED_CASH_SQL));
+    }
+
+    /**
+     * Cash actually received from borrowers (rollovers, discounts and write-offs are not money).
+     */
+    private function cashRepaid(?callable $filter = null): float
+    {
+        $query = CustomerWallets::whereCash(Repayment::query());
+
+        return (float) ($filter ? $filter($query) : $query)->sum('amount');
     }
 
     // ================================================================
@@ -255,75 +226,6 @@ class DashboardController extends Controller
         }
 
         return $loanType;
-    }
-
-    private function getBorrowerRecentTransactions($loans)
-    {
-        $transactions = collect();
-
-        // Get disbursements
-        $disbursements = Disbursement::whereIn('loan_id', $loans->pluck('id'))
-            ->select('disburse_date as date', DB::raw("'Disbursement' as type"), 'amount', DB::raw("'completed' as status"))
-            ->get();
-
-        // Get repayments
-        $repayments = Repayment::whereIn('loan_id', $loans->pluck('id'))
-            ->select('repayment_date as date', DB::raw("'Repayment' as type"), 'amount', DB::raw("'completed' as status"))
-            ->get();
-
-        return $disbursements->merge($repayments)
-            ->sortByDesc('date')
-            ->take(5);
-    }
-
-    private function checkBiodataComplete($user)
-    {
-        $borrower = $user->borrower;
-        if (!$borrower) {
-            return false;
-        }
-
-        $requiredFields = ['phone', 'email', 'id_number', 'date_of_birth', 'gender', 'nationality'];
-        foreach ($requiredFields as $field) {
-            if (empty($borrower->$field) && empty($user->$field)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private function getBiodataCompletionPercentage($user)
-    {
-        $borrower = $user->borrower;
-        if (!$borrower) {
-            return 0;
-        }
-
-        $fields = ['phone', 'email', 'id_number', 'date_of_birth', 'gender', 'nationality'];
-        $filled = 0;
-        foreach ($fields as $field) {
-            if (!empty($borrower->$field) || !empty($user->$field)) {
-                $filled++;
-            }
-        }
-        return round(($filled / count($fields)) * 100);
-    }
-
-    private function getMissingBiodataFields($user)
-    {
-        $borrower = $user->borrower;
-        if (!$borrower) {
-            return ['phone', 'email', 'id_number', 'date_of_birth', 'gender', 'nationality'];
-        }
-
-        $fields = ['phone', 'email', 'id_number', 'date_of_birth', 'gender', 'nationality'];
-        $missing = [];
-        foreach ($fields as $field) {
-            if (empty($borrower->$field) && empty($user->$field)) {
-                $missing[] = $field;
-            }
-        }
-        return $missing;
     }
 
     private function prepareMonthlyData($chartData)

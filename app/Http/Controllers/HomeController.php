@@ -9,6 +9,12 @@ use App\Models\Enquiry;
 use App\Models\PaymentMethod;
 use App\Models\User;
 use App\Services\SignatureService;
+use App\Services\PartnerPortfolio;
+use App\Services\LoanProgress;
+use App\Services\LoanAgreementService;
+use App\Services\BorrowingEligibility;
+use App\Models\Partner;
+use App\Models\Loan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -84,6 +90,150 @@ class HomeController extends Controller
         $urls = array_merge([route('home')], array_map(fn ($page) => route('site.page', $page), self::PAGES));
 
         return response()->view('home.sitemap', ['urls' => $urls], 200, ['Content-Type' => 'application/xml']);
+    }
+
+    // ============ CUSTOMER ACCOUNT (borrowers & partners) ============
+    // Customers use these pages (website design, mobile first); the dashboard is staff-only.
+
+    public function account(Request $request, BorrowingEligibility $eligibility, LoanProgress $progress, PartnerPortfolio $portfolio): View|RedirectResponse
+    {
+        $user = $request->user();
+        if (! $user->isCustomer()) {
+            return redirect()->route('dashboard');
+        }
+
+        if ($user->hasRole('borrower')) {
+            $openLoan = $eligibility->openLoan($user);
+
+            return view('home.account.borrower', $this->borrowContext($user, $eligibility) + [
+                'progress' => $openLoan ? $progress->for($openLoan) : null,
+                'kycSteps' => $this->sections($user),
+                'activity' => $this->recentActivity($user),
+                // how each loan ended (on time, late, rolled over...), from the 4Cs scoring
+                'journey' => app(\App\Services\CreditAssessment::class)->current($user),
+            ]);
+        }
+
+        $partner = Partner::where('user_id', $user->id)->first();
+
+        return view('home.account.partner', [
+            'user' => $user,
+            'portfolio' => $partner ? $portfolio->summary($partner) : null,
+        ]);
+    }
+
+    public function accountBorrow(Request $request, BorrowingEligibility $eligibility): View|RedirectResponse
+    {
+        $user = $request->user();
+        if ($eligibility->openLoan($user)) {
+            return redirect()->route('account.home')->with('alert', ['type' => 'info', 'title' => 'You already have a loan', 'message' => 'You can borrow again once your current loan is repaid.']);
+        }
+
+        return view('home.account.borrow', $this->borrowContext($user, $eligibility));
+    }
+
+    public function accountLoans(Request $request): View
+    {
+        $loans = Loan::with(['loanType', 'cycles'])->where('user_id', $request->user()->id)
+            ->latest('borrow_date')->latest('id')->paginate(10);
+
+        return view('home.account.loans', ['user' => $request->user(), 'loans' => $loans]);
+    }
+
+    public function accountLoan(Request $request, Loan $loan, LoanProgress $progress): View
+    {
+        abort_unless($loan->user_id === $request->user()->id, 404);
+
+        return view('home.account.loan', ['user' => $request->user(), 'progress' => $progress->for($loan)]);
+    }
+
+    public function accountAgreement(Request $request, Loan $loan, LoanAgreementService $agreements)
+    {
+        abort_unless($loan->user_id === $request->user()->id, 404);
+
+        $path = storage_path('app/public/agreements/loan_agreement_' . $loan->id . '.pdf');
+        if (! is_file($path)) {
+            abort_unless($loan->consent, 404);
+            $agreements->generateLoanAgreement($loan);
+        }
+        abort_unless(is_file($path), 404);
+
+        return response()->file($path, ['Content-Type' => 'application/pdf']);
+    }
+
+    public function accountStatement(Request $request, PartnerPortfolio $portfolio): View
+    {
+        $partner = Partner::where('user_id', $request->user()->id)->firstOrFail();
+        $wallet = $request->query('wallet');
+
+        return view('home.account.statement', [
+            'user' => $request->user(),
+            'partner' => $partner,
+            'wallet' => array_key_exists((string) $wallet, PartnerPortfolio::WALLETS) ? $wallet : null,
+            'entries' => $portfolio->statement($partner, $wallet),
+        ]);
+    }
+
+    public function accountProfile(Request $request, BorrowingEligibility $eligibility): View
+    {
+        $user = $request->user();
+        $isBorrower = $user->hasRole('borrower');
+
+        return view('home.account.profile', [
+            'user' => $user,
+            'isBorrower' => $isBorrower,
+            'isVerified' => $isBorrower && $eligibility->isVerified($user),
+            'kycSteps' => $isBorrower ? $this->sections($user) : [],
+            'address' => $isBorrower ? $this->currentAddress($user) : null,
+            'mpesa' => $isBorrower ? $this->paymentMethod($user, 'mobile_money') : null,
+            'guarantor' => $isBorrower ? $user->contacts()->where('relationship_specific', self::GUARANTOR)->latest('id')->first() : null,
+            'partner' => $user->hasRole('partner') ? Partner::where('user_id', $user->id)->first() : null,
+        ]);
+    }
+
+    /**
+     * Everything the Borrow screens need: limit, fixed product and what (if anything) blocks applying.
+     */
+    private function borrowContext(User $user, BorrowingEligibility $eligibility): array
+    {
+        $product = $eligibility->loanType();
+
+        return [
+            'user' => $user,
+            'limit' => $eligibility->limit($user),
+            'blockers' => $eligibility->blockers($user),
+            'isVerified' => $eligibility->isVerified($user),
+            'isExistingClient' => $eligibility->isExistingClient($user),
+            'product' => $product ? [
+                'name' => $product->name,
+                'rate' => (float) $product->interest_rate,
+                'penalty_rate' => (float) $product->penalty_rate,
+                'period' => $product->period . ' ' . $product->unit,
+                'due_date' => $eligibility->quote(1)['due_date'],
+                'min' => (int) config('lending.min_amount'),
+                'good_standing_limit' => (int) config('lending.good_standing_limit'),
+            ] : null,
+        ];
+    }
+
+    /**
+     * Latest money movements across the borrower's loans: money sent and payments made.
+     */
+    private function recentActivity(User $user): \Illuminate\Support\Collection
+    {
+        $loanIds = Loan::where('user_id', $user->id)->pluck('id');
+
+        $sent = DB::table('disbursements')->whereIn('loan_id', $loanIds)->whereNull('deleted_at')
+            ->get(['loan_id', 'amount', 'net_amount', 'disburse_date as date', 'transaction'])
+            ->map(fn ($d) => ['kind' => 'sent', 'label' => 'Sent to your M-Pesa', 'amount' => (float) ($d->net_amount ?: $d->amount), 'date' => $d->date, 'loan_id' => $d->loan_id, 'ref' => $d->transaction]);
+        $paid = DB::table('repayments')->whereIn('loan_id', $loanIds)->whereNull('deleted_at')
+            ->get(['loan_id', 'amount', 'repayment_date as date', 'transaction'])
+            ->map(fn ($r) => ['kind' => 'paid', 'label' => 'Payment received', 'amount' => (float) $r->amount, 'date' => $r->date, 'loan_id' => $r->loan_id, 'ref' => $r->transaction]);
+
+        // real cash only, like the wallet: rollovers, waivers and write-offs aren't money moving
+        return $sent->concat($paid)
+            ->filter(fn ($item) => \App\Services\CustomerWallets::kind($item['ref']) === 'cash')
+            ->sortByDesc('date')->take(5)->values();
     }
 
     // ============ CONTACT: CONFIDENTIAL ENQUIRY ============
@@ -176,6 +326,7 @@ class HomeController extends Controller
 
         return view('home.kyc.personal', [
             'user' => $user,
+            'locked' => $this->lockedFields($user, $this->personalSaved($user)),
             'firstName' => $firstName,
             'lastName' => $lastName,
             'address' => $this->currentAddress($user),
@@ -190,6 +341,7 @@ class HomeController extends Controller
             return $locked;
         }
 
+        $this->keepSaved($request, $user, $this->personalSaved($user));
         $request->merge(['kra_pin' => strtoupper(trim((string) $request->input('kra_pin')))]);
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
@@ -204,6 +356,21 @@ class HomeController extends Controller
             'dob.before_or_equal' => 'You must be at least 18 years old.',
             'kra_pin.regex' => 'Enter a valid KRA PIN, e.g. A012345678X.',
         ]);
+
+        // while a loan is running, the identity on its signed agreement can't change
+        if ($user->isProfileLocked()) {
+            [$first, $last] = $this->splitName($user->name);
+            $changed = array_keys(array_filter([
+                'first_name' => $first !== '' && strcasecmp($first, $data['first_name']) !== 0,
+                'last_name' => $last !== '' && strcasecmp($last, $data['last_name']) !== 0,
+                'id_number' => filled($user->id_number) && $user->id_number !== $data['id_number'],
+                'dob' => $user->dob && $user->dob->toDateString() !== $data['dob'],
+            ]));
+            if ($changed) {
+                return back()->withInput()->withErrors(array_fill_keys($changed,
+                    'This is on your current loan agreement, so it can\'t change until the loan is repaid. Contact us if it is wrong.'));
+            }
+        }
 
         DB::transaction(function () use ($user, $data) {
             $user->update([
@@ -234,7 +401,9 @@ class HomeController extends Controller
 
     public function kycDocuments(Request $request): View
     {
-        return view('home.kyc.documents', ['user' => $request->user()]);
+        $user = $request->user();
+
+        return view('home.kyc.documents', ['user' => $user, 'lockSaved' => $this->locksSaved($user)]);
     }
 
     public function storeKycDocuments(Request $request, SignatureService $signatures): RedirectResponse
@@ -242,6 +411,20 @@ class HomeController extends Controller
         $user = $request->user();
         if ($locked = $this->lockedResponse($user)) {
             return $locked;
+        }
+
+        if ($this->locksSaved($user)) {
+            if ($user->id_type) {
+                $request->merge(['id_type' => $user->id_type]);
+            }
+            foreach (['id_front' => $user->id_front_path, 'passport_bio' => $user->id_front_path, 'id_back' => $user->id_back_path, 'photo' => $user->avatar, 'signature_file' => $user->signature] as $field => $onFile) {
+                if ($onFile) {
+                    $request->files->remove($field);
+                }
+            }
+            if ($user->signature) {
+                $request->request->remove('signature_data');
+            }
         }
 
         $passport = $request->input('id_type') === 'passport';
@@ -298,18 +481,26 @@ class HomeController extends Controller
     public function kycIncome(Request $request): View
     {
         $user = $request->user();
-        $employment = $user->currentEmployment;
+        $saved = $this->incomeSaved($user);
 
         return view('home.kyc.income', [
             'user' => $user,
-            'borrower' => $user->borrower,
+            'saved' => $saved,
+            'locked' => $this->lockedFields($user, $saved),
             'incomeTypes' => self::INCOME_TYPES,
-            'years' => $employment?->start_date ? (int) $employment->start_date->diffInYears(now()) : null,
-            'sourceOfFunds' => $this->sourceOfFunds($employment),
-            'mpesa' => $this->paymentMethod($user, 'mobile_money'),
-            'bank' => $this->paymentMethod($user, 'bank_account'),
+            'banks' => \App\Support\Banks::names(),
         ]);
     }
+
+    /**
+     * Fields each employment status asks for (required ones first). The form shows only the active set.
+     */
+    public const INCOME_FIELDS = [
+        'employed' => ['required' => ['employer_name', 'job_title', 'net_salary', 'years'], 'optional' => ['employer_phone']],
+        'self_employed' => ['required' => ['job_title', 'workplace', 'net_salary', 'years'], 'optional' => ['employer_name']],
+        'business' => ['required' => ['employer_name', 'business_type', 'workplace', 'net_salary', 'years'], 'optional' => ['registration_no']],
+        'other' => ['required' => ['job_title', 'net_salary'], 'optional' => ['employer_name']],
+    ];
 
     public function storeKycIncome(Request $request): RedirectResponse
     {
@@ -318,38 +509,69 @@ class HomeController extends Controller
             return $locked;
         }
 
-        $request->merge(['mpesa_number' => preg_replace('/[\s-]/', '', (string) $request->input('mpesa_number'))]);
+        $this->keepSaved($request, $user, $this->incomeSaved($user));
+        $request->merge([
+            'mpesa_number' => preg_replace('/[\s-]/', '', (string) $request->input('mpesa_number')),
+            'employer_phone' => preg_replace('/[\s-]/', '', (string) $request->input('employer_phone')) ?: null,
+            'net_salary' => preg_replace('/[^\d.]/', '', (string) $request->input('net_salary')),
+        ]);
+        $type = (string) $request->input('income_type');
+        $fields = self::INCOME_FIELDS[$type] ?? ['required' => [], 'optional' => []];
+        $need = fn ($field) => in_array($field, $fields['required'], true) ? 'required' : 'nullable';
+
         $data = $request->validate([
             'income_type' => ['required', Rule::in(array_keys(self::INCOME_TYPES))],
-            'employer_name' => ['required', 'string', 'max:255'],
-            'job_title' => ['required', 'string', 'max:255'],
+            'employer_name' => [$need('employer_name'), 'string', 'max:255'],
+            'job_title' => [$need('job_title'), 'string', 'max:255'],
+            'workplace' => [$need('workplace'), 'string', 'max:255'],
+            'business_type' => [$need('business_type'), 'string', 'max:255'],
+            'registration_no' => ['nullable', 'string', 'max:50'],
+            'employer_phone' => ['nullable', 'regex:/^(?:\+?254|0)\d{9}$/'],
             'net_salary' => ['required', 'numeric', 'min:0', 'max:999999999'],
-            'years' => ['required', 'integer', 'min:0', 'max:60'],
+            'years' => [$need('years'), 'nullable', 'integer', 'min:0', 'max:60'],
             'source_of_funds' => ['required', Rule::in(['Salary', 'Business income', 'Rental income', 'Other'])],
             'mpesa_number' => ['required', 'regex:/^(?:\+?254|0)[17]\d{8}$/'],
-            'bank_name' => ['nullable', 'required_with:bank_account', 'string', 'max:255'],
+            'bank_name' => ['nullable', 'required_with:bank_account', Rule::in(array_merge(\App\Support\Banks::names(), [\App\Support\Banks::OTHER]))],
+            'bank_other' => ['nullable', 'required_if:bank_name,' . \App\Support\Banks::OTHER, 'string', 'max:255'],
             'bank_account' => ['nullable', 'required_with:bank_name', 'string', 'max:50'],
         ], [
             'mpesa_number.regex' => 'Enter a Safaricom number like 0712 345 678.',
+            'employer_phone.regex' => 'Enter a Kenyan phone number like 0712 345 678.',
+            'employer_name.required' => $type === 'business' ? 'Enter your business name.' : 'Enter your employer\'s name.',
+            'job_title.required' => match ($type) { 'self_employed' => 'Tell us what you do.', 'other' => 'Tell us your main source of income.', default => 'Enter your job title.' },
+            'workplace.required' => $type === 'business' ? 'Where is the business?' : 'Where do you work from?',
+            'business_type.required' => 'What does the business do?',
+            'bank_other.required_if' => 'Type the name of your bank.',
         ]);
+        $bankName = ($data['bank_name'] ?? null) === \App\Support\Banks::OTHER ? ($data['bank_other'] ?? null) : ($data['bank_name'] ?? null);
 
-        DB::transaction(function () use ($user, $data) {
+        DB::transaction(function () use ($user, $data, $type, $bankName) {
+            $employer = $data['employer_name'] ?? null;
+            $jobTitle = $type === 'business' ? 'Owner' : ($data['job_title'] ?? null);
+
             $borrower = $user->borrower ?? $this->makeBorrower($user);
             $borrower->update([
-                'income_type' => $data['income_type'],
-                'employer_name' => $data['employer_name'],
-                'workplace' => $data['employer_name'],
-                'job_title' => $data['job_title'],
+                'income_type' => $type,
+                'employer_name' => $employer ?: ($type === 'self_employed' ? 'Self-employed' : null),
+                'workplace' => $data['workplace'] ?? $employer,
+                'job_title' => $jobTitle,
+                'department' => $data['business_type'] ?? null,
                 'net_salary' => $data['net_salary'],
             ]);
 
             $employment = $user->currentEmployment ?? new Employment(['user_id' => $user->id, 'is_current' => true]);
             $employment->fill([
-                'employer_name' => $data['employer_name'],
-                'job_title' => $data['job_title'],
-                'employment_type_id' => $this->lookupId('employment_types', self::EMPLOYMENT_TYPE_SLUGS[$data['income_type']]),
-                'start_date' => now()->subYears((int) $data['years'])->startOfMonth()->toDateString(),
-                'notes' => 'Source of funds: ' . $data['source_of_funds'],
+                'employer_name' => $employer,
+                'employer_address' => $data['workplace'] ?? null,
+                'employer_phone' => $data['employer_phone'] ?? null,
+                'job_title' => $jobTitle,
+                'department' => $data['business_type'] ?? null,
+                'employment_type_id' => $this->lookupId('employment_types', self::EMPLOYMENT_TYPE_SLUGS[$type]),
+                'start_date' => isset($data['years']) ? now()->subYears((int) $data['years'])->startOfMonth()->toDateString() : null,
+                'notes' => implode("\n", array_filter([
+                    'Source of funds: ' . $data['source_of_funds'],
+                    ! empty($data['registration_no']) ? 'Registration: ' . $data['registration_no'] : null,
+                ])),
             ])->save();
 
             $mpesa = $this->paymentMethod($user, 'mobile_money') ?? new PaymentMethod([
@@ -372,13 +594,89 @@ class HomeController extends Controller
                     'status' => 'pending_verification',
                 ]))->fill([
                     'account_name' => $user->name,
-                    'bank_name' => $data['bank_name'],
+                    'bank_name' => $bankName,
                     'account_number' => $data['bank_account'],
                     'is_primary' => false,
                 ])->save();
             } elseif ($bank && !$bank->is_verified) {
                 $bank->delete();
             }
+        });
+
+        return redirect()->route('kyc.contacts');
+    }
+
+    // ============ KYC: NEXT OF KIN & GUARANTOR ============
+
+    // relationship options (contact_types slugs) for the next of kin and guarantor
+    private const RELATIONSHIPS = [
+        'spouse' => 'Spouse', 'parent' => 'Parent', 'sibling' => 'Sibling', 'child' => 'Child',
+        'relative' => 'Relative', 'friend' => 'Friend', 'colleague' => 'Colleague', 'employer' => 'Employer',
+        'business_partner' => 'Business Partner', 'neighbor' => 'Neighbor', 'other' => 'Other',
+    ];
+
+    // guarantors are kept in contacts, marked by this relationship_specific value
+    public const GUARANTOR = 'Guarantor';
+
+    public function kycContacts(Request $request): View
+    {
+        $user = $request->user();
+        $guarantor = $user->contacts()->where('relationship_specific', self::GUARANTOR)->latest('id')->first();
+
+        return view('home.kyc.contacts', [
+            'user' => $user,
+            'guarantor' => $guarantor,
+            'guarantorType' => $guarantor ? DB::table('contact_types')->where('id', $guarantor->contact_type_id)->value('slug') : null,
+            'relationships' => self::RELATIONSHIPS,
+            'locked' => $this->lockedFields($user, $this->contactsSaved($user)),
+        ]);
+    }
+
+    public function storeKycContacts(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        if ($locked = $this->lockedResponse($user)) {
+            return $locked;
+        }
+
+        $this->keepSaved($request, $user, $this->contactsSaved($user));
+        $normalise = fn ($phone) => preg_replace('/[\s-]/', '', (string) $phone);
+        $request->merge([
+            'kin_phone' => $normalise($request->input('kin_phone')),
+            'guarantor_phone' => $normalise($request->input('guarantor_phone')),
+        ]);
+        $kenyan = 'regex:/^(?:\+?254|0)[17]\d{8}$/';
+        $data = $request->validate([
+            'kin_name' => ['required', 'string', 'max:255'],
+            'kin_relation' => ['required', Rule::in(array_values(self::RELATIONSHIPS))],
+            'kin_phone' => ['required', $kenyan, Rule::notIn([$normalise($user->phone)])],
+            'guarantor_name' => ['required', 'string', 'max:255'],
+            'guarantor_type' => ['required', Rule::in(array_keys(self::RELATIONSHIPS))],
+            'guarantor_phone' => ['required', $kenyan, 'different:kin_phone', Rule::notIn([$normalise($user->phone)])],
+        ], [
+            'kin_phone.regex' => 'Enter a Kenyan mobile number like 0712 345 678.',
+            'guarantor_phone.regex' => 'Enter a Kenyan mobile number like 0712 345 678.',
+            'kin_phone.not_in' => 'Use your next of kin\'s number, not your own.',
+            'guarantor_phone.not_in' => 'Use your guarantor\'s number, not your own.',
+            'guarantor_phone.different' => 'Your guarantor must be a different person from your next of kin.',
+        ]);
+
+        DB::transaction(function () use ($user, $data) {
+            $user->update([
+                'kin_name' => $data['kin_name'],
+                'kin_relation' => $data['kin_relation'],
+                'kin_phone' => $data['kin_phone'],
+            ]);
+
+            $guarantor = $user->contacts()->where('relationship_specific', self::GUARANTOR)->latest('id')->first()
+                ?? $user->contacts()->make(['relationship_specific' => self::GUARANTOR, 'priority' => 1]);
+            $guarantor->fill([
+                'contact_type_id' => $this->lookupId('contact_types', $data['guarantor_type']),
+                'name' => $data['guarantor_name'],
+                'phone' => $data['guarantor_phone'],
+                'created_by' => $guarantor->exists ? $guarantor->created_by : $user->id,
+                'updated_by' => $user->id,
+            ])->save();
         });
 
         return redirect()->route('kyc.review');
@@ -388,12 +686,24 @@ class HomeController extends Controller
 
     public function kycReview(Request $request): View
     {
-        return view('home.kyc.review', ['sections' => $this->sections($request->user())]);
+        $user = $request->user();
+
+        return view('home.kyc.review', ['sections' => $this->sections($user), 'verified' => $this->locksSaved($user)]);
     }
 
     public function submitKyc(Request $request): RedirectResponse
     {
         $user = $request->user();
+
+        // already verified: the missing details they added are saved, no declarations or new review needed
+        if ($this->locksSaved($user)) {
+            $incomplete = collect($this->sections($user))->firstWhere('complete', false);
+
+            return $incomplete
+                ? redirect($incomplete['href'])->withErrors(['kyc' => $incomplete['title'] . ' still has details missing.'])
+                : redirect()->route('account.profile')->with('alert', ['type' => 'success', 'title' => 'Details saved', 'message' => 'Thanks, your profile is complete.']);
+        }
+
         $request->validate([
             'confirm_true' => ['accepted'],
             'confirm_not_pep' => ['accepted'],
@@ -407,7 +717,8 @@ class HomeController extends Controller
             return redirect($incomplete['href'])->withErrors(['kyc' => $incomplete['title'] . ' is not finished yet.']);
         }
 
-        $user->update(['kyc_submitted_at' => now()]);
+        // waits for staff, who approve it after calling the next of kin and guarantor
+        $user->update(['kyc_submitted_at' => now(), 'kyc_status' => 'submitted']);
 
         return redirect()->route('kyc.submitted');
     }
@@ -423,7 +734,7 @@ class HomeController extends Controller
             'user' => $user,
             'firstName' => $this->splitName($user->name)[0],
             'reference' => 'KYC-' . str_pad((string) $user->id, 6, '0', STR_PAD_LEFT),
-            'verified' => (int) $user->borrower?->status === 1,
+            'verified' => app(\App\Services\BorrowingEligibility::class)->isVerified($user),
         ]);
     }
 
@@ -442,7 +753,11 @@ class HomeController extends Controller
 
         $personalDone = $user->id_number && $user->dob && $user->kra_pin && $address;
         $docsDone = $user->id_front_path && ($passport || $user->id_back_path) && $user->avatar && $user->signature;
-        $incomeDone = $borrower?->income_type && $borrower->employer_name && $borrower->net_salary !== null && $mpesa;
+        $income = $this->incomeSaved($user);
+        $incomeDone = $income['income_type'] && $mpesa && $income['net_salary'] !== null
+            && collect(self::INCOME_FIELDS[$income['income_type']]['required'])->every(fn ($f) => filled($income[$f]));
+        $guarantor = $user->contacts()->where('relationship_specific', self::GUARANTOR)->latest('id')->first();
+        $contactsDone = $user->kin_name && $user->kin_phone && $guarantor;
 
         return [
             [
@@ -468,8 +783,16 @@ class HomeController extends Controller
                 'href' => route('kyc.income'),
                 'complete' => (bool) $incomeDone,
                 'summary' => $incomeDone
-                    ? implode(' · ', [$borrower->formatted_income_type, 'KES ' . number_format($borrower->net_salary) . ' a month', 'M-Pesa ' . $mask($mpesa->mobile_number, 3)])
+                    ? implode(' · ', [$borrower->formatted_income_type, 'KES ' . number_format((float) $borrower->net_salary, 2) . ' a month', 'M-Pesa ' . $mask($mpesa->mobile_number, 3)])
                     : 'Employment, income and M-Pesa number',
+            ],
+            [
+                'title' => 'Next of kin & guarantor',
+                'href' => route('kyc.contacts'),
+                'complete' => (bool) $contactsDone,
+                'summary' => $contactsDone
+                    ? implode(' · ', [$user->kin_name . ' (' . $user->kin_relation . ')', 'Guarantor ' . $guarantor->name])
+                    : 'Who we call to confirm your details',
             ],
         ];
     }
@@ -477,13 +800,92 @@ class HomeController extends Controller
     /**
      * Details can't change while a loan is in the pipeline (same rule as the profile page).
      */
+    /**
+     * Once approved, what is on file stays as it is (shown as "Saved"); the borrower only adds what's missing.
+     * Before submission everything is editable, and a rejection reopens everything for correction.
+     */
+    private function locksSaved(User $user): bool
+    {
+        return $user->kyc_status === 'approved';
+    }
+
+    /**
+     * Saved fields (those with a value) that are locked for this borrower.
+     */
+    private function lockedFields(User $user, array $saved): array
+    {
+        return $this->locksSaved($user) ? array_keys(array_filter($saved, fn ($v) => filled($v))) : [];
+    }
+
+    /**
+     * Put the value on file back for every locked field, so nothing saved can change (even if the form is tampered with).
+     */
+    private function keepSaved(Request $request, User $user, array $saved): void
+    {
+        $locked = array_intersect_key($saved, array_flip($this->lockedFields($user, $saved)));
+        if ($locked) {
+            $request->merge($locked);
+        }
+    }
+
+    private function personalSaved(User $user): array
+    {
+        [$first, $last] = $this->splitName($user->name);
+        $address = $this->currentAddress($user);
+
+        return [
+            'first_name' => $first, 'last_name' => $last, 'id_number' => $user->id_number,
+            'dob' => $user->dob?->toDateString(), 'kra_pin' => $user->kra_pin,
+            'county' => $address?->state, 'address' => $address?->address_line_1,
+        ];
+    }
+
+    private function contactsSaved(User $user): array
+    {
+        $guarantor = $user->contacts()->where('relationship_specific', self::GUARANTOR)->latest('id')->first();
+
+        return [
+            'kin_name' => $user->kin_name, 'kin_relation' => $user->kin_relation, 'kin_phone' => $user->kin_phone,
+            'guarantor_name' => $guarantor?->name,
+            'guarantor_type' => $guarantor ? DB::table('contact_types')->where('id', $guarantor->contact_type_id)->value('slug') : null,
+            'guarantor_phone' => $guarantor?->phone,
+        ];
+    }
+
+    private function incomeSaved(User $user): array
+    {
+        $borrower = $user->borrower;
+        $employment = $user->currentEmployment;
+        $notes = collect(preg_split('/\R/', (string) $employment?->notes));
+        $mpesa = $this->paymentMethod($user, 'mobile_money');
+        $bank = $this->paymentMethod($user, 'bank_account');
+
+        return [
+            'income_type' => $borrower?->income_type && array_key_exists($borrower->income_type, self::INCOME_TYPES) ? $borrower->income_type : null,
+            'employer_name' => $borrower?->employer_name,
+            'job_title' => $borrower?->job_title,
+            'workplace' => $borrower?->workplace,
+            'business_type' => $employment?->department,
+            'registration_no' => ($line = $notes->first(fn ($l) => str_starts_with($l, 'Registration: '))) ? substr($line, 14) : null,
+            'employer_phone' => $employment?->employer_phone,
+            'net_salary' => $borrower?->net_salary !== null ? (string) (int) $borrower->net_salary : null,
+            'years' => $employment?->start_date ? (string) (int) $employment->start_date->diffInYears(now()) : null,
+            'source_of_funds' => $this->sourceOfFunds($employment),
+            'mpesa_number' => $mpesa?->mobile_number,
+            'bank_name' => $bank?->bank_name,
+            'bank_account' => $bank?->account_number,
+        ];
+    }
+
     private function lockedResponse(User $user): ?RedirectResponse
     {
-        if (!$user->isProfileLocked()) {
-            return null;
+        // staff verify exactly what was submitted, so details stay fixed under review and once approved
+        if ($user->kyc_status === 'submitted') {
+            return back()->withErrors(['kyc' => 'Your details are with our team for verification and can\'t be changed right now.']);
         }
-
-        return back()->withErrors(['kyc' => $user->getLoanStatusMessage() ?? 'Your details are locked while a loan is in progress.']);
+        // existing clients complete KYC once even while a loan is running; identity details
+        // on that loan's agreement are protected separately in storeKycPersonal()
+        return null;
     }
 
     private function makeBorrower(User $user): Borrower
@@ -510,9 +912,9 @@ class HomeController extends Controller
 
     private function sourceOfFunds(?Employment $employment): ?string
     {
-        return $employment && str_starts_with((string) $employment->notes, 'Source of funds: ')
-            ? substr($employment->notes, strlen('Source of funds: '))
-            : null;
+        $first = strtok((string) $employment?->notes, "\n");
+
+        return $first !== false && str_starts_with($first, 'Source of funds: ') ? trim(substr($first, strlen('Source of funds: '))) : null;
     }
 
     private function lookupId(string $table, string $slug): ?int

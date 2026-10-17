@@ -22,7 +22,7 @@ return new class extends Migration
             $table->enum('template_type', ['email', 'sms', 'letter', 'legal_notice', 'whatsapp'])->index('idx_template_type');
             $table->string('subject')->nullable();
             $table->text('body');
-            $table->longText('variables')->collation('utf8mb4_bin')->nullable();
+            $table->json('variables')->nullable();
             $table->enum('status', ['active', 'inactive'])->nullable()->default('active');
             $table->unsignedBigInteger('created_by')->nullable()->index('created_by');
             $table->timestamps();

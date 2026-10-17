@@ -157,6 +157,16 @@ class Loan extends Model
         return $this->hasMany(LoanRiskAssessment::class);
     }
 
+    /**
+     * Latest staff assessment if there is one, otherwise the system (4Cs) assessment.
+     */
+    public function getLatestRiskAssessment(): ?LoanRiskAssessment
+    {
+        $all = $this->relationLoaded('riskAssessments') ? $this->riskAssessments : $this->riskAssessments()->get();
+
+        return $all->where('source', 'manual')->sortByDesc('id')->first() ?? $all->where('source', 'auto')->first();
+    }
+
     public function cycles()
     {
         return $this->hasMany(LoanCycle::class)->orderBy('cycle_number', 'desc');

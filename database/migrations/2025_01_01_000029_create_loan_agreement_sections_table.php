@@ -21,8 +21,8 @@ return new class extends Migration
             $table->unsignedBigInteger('loan_id');
             $table->string('section_type');
             $table->string('title');
-            $table->longText('content')->collation('utf8mb4_bin')->nullable();
-            $table->longText('variables')->collation('utf8mb4_bin')->nullable();
+            $table->json('content')->nullable();
+            $table->json('variables')->nullable();
             $table->integer('order')->nullable()->default(0);
             $table->boolean('is_editable')->nullable()->default(true);
             $table->string('status', 50)->nullable()->default('draft');

@@ -26,7 +26,7 @@
             </p>
             <div class="facts">
               <div class="fact"><b>20% flat</b><span>10-day facility</span></div>
-              <div class="fact"><b>KES 100K–20M</b><span>Facility size</span></div>
+              <div class="fact"><b>From KES 5,000</b><span>Bridge facilities 100K+</span></div>
               <div class="fact"><b>30–45 min</b><span>Processing</span></div>
             </div>
             <div class="actions">
@@ -350,8 +350,12 @@
           </div>
           <ul class="ticks">
             <li>
-              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg>KES 100K –
-              KES 20 million
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg>Individuals
+              from KES 5,000
+            </li>
+            <li>
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg>Bridge
+              facilities above KES 100,000
             </li>
             <li>
               <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg>Collateral

@@ -31,6 +31,11 @@
         <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
           KES {{ number_format($totalDisbursements, 2) }}
         </h4>
+        @isset($cashDisbursed)
+          <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400" title="Money that actually moved: excludes rollovers, discounts and write-offs">
+            Real cash: <span class="font-semibold text-gray-700 dark:text-gray-300">KES {{ number_format($cashDisbursed, 2) }}</span>@isset($cashDisbursedThisMonth) · KES {{ number_format($cashDisbursedThisMonth, 2) }} this month @endisset
+          </p>
+        @endisset
         <div class="mt-4 flex items-end justify-between sm:mt-5">
           <div>
             <p class="text-theme-sm text-gray-700 dark:text-gray-400">
@@ -56,6 +61,11 @@
         <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
           KES {{ number_format($totalRepayments, 2) }}
         </h4>
+        @isset($cashRepaid)
+          <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400" title="Money that actually moved: excludes rollovers, discounts and write-offs">
+            Real cash: <span class="font-semibold text-gray-700 dark:text-gray-300">KES {{ number_format($cashRepaid, 2) }}</span>@isset($cashRepaidThisMonth) · KES {{ number_format($cashRepaidThisMonth, 2) }} this month @endisset
+          </p>
+        @endisset
         <div class="mt-4 flex items-end justify-between sm:mt-5">
           <div>
             <p class="text-theme-sm text-gray-700 dark:text-gray-400">
@@ -158,6 +168,11 @@
         <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
           KES {{ number_format($totalDisbursements, 2) }}
         </h4>
+        @isset($cashDisbursed)
+          <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400" title="Money that actually moved: excludes rollovers, discounts and write-offs">
+            Real cash: <span class="font-semibold text-gray-700 dark:text-gray-300">KES {{ number_format($cashDisbursed, 2) }}</span>@isset($cashDisbursedThisMonth) · KES {{ number_format($cashDisbursedThisMonth, 2) }} this month @endisset
+          </p>
+        @endisset
         <div class="mt-4 flex items-end justify-between sm:mt-5">
           <div>
             <p class="text-theme-sm text-gray-700 dark:text-gray-400">
@@ -183,6 +198,11 @@
         <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
           KES {{ number_format($totalRepayments, 2) }}
         </h4>
+        @isset($cashRepaid)
+          <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400" title="Money that actually moved: excludes rollovers, discounts and write-offs">
+            Real cash: <span class="font-semibold text-gray-700 dark:text-gray-300">KES {{ number_format($cashRepaid, 2) }}</span>@isset($cashRepaidThisMonth) · KES {{ number_format($cashRepaidThisMonth, 2) }} this month @endisset
+          </p>
+        @endisset
         <div class="mt-4 flex items-end justify-between sm:mt-5">
           <div>
             <p class="text-theme-sm text-gray-700 dark:text-gray-400">
@@ -298,6 +318,11 @@
         <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
           KES {{ number_format($todaysDisbursements, 2) }}
         </h4>
+        @isset($cashDisbursedToday)
+          <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400" title="Money that actually moved: excludes rollovers, discounts and write-offs">
+            Real cash: <span class="font-semibold text-gray-700 dark:text-gray-300">KES {{ number_format($cashDisbursedToday, 2) }}</span>@isset($cashDisbursedThisMonth) · KES {{ number_format($cashDisbursedThisMonth, 2) }} this month @endisset
+          </p>
+        @endisset
         <div class="mt-4 flex items-end justify-between sm:mt-5">
           <div>
             <p class="text-theme-sm text-gray-700 dark:text-gray-400">
@@ -340,6 +365,11 @@
         <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
           KES {{ number_format($collectedRepayments, 2) }}
         </h4>
+        @isset($cashRepaid)
+          <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400" title="Money that actually moved: excludes rollovers, discounts and write-offs">
+            Real cash: <span class="font-semibold text-gray-700 dark:text-gray-300">KES {{ number_format($cashRepaid, 2) }}</span>@isset($cashRepaidThisMonth) · KES {{ number_format($cashRepaidThisMonth, 2) }} this month @endisset
+          </p>
+        @endisset
         <div class="mt-4 flex items-end justify-between sm:mt-5">
           <div>
             <p class="text-theme-sm text-gray-700 dark:text-gray-400">

@@ -3,21 +3,105 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
+/**
+ * Roles and permissions (spatie/laravel-permission), matching the live system.
+ *
+ * Only ever adds: missing permissions, roles and grants are created, but nothing is
+ * removed, so permissions granted later in the app survive a re-run.
+ */
 class RoleSeeder extends Seeder
 {
-    public function run(): void
-    {
-        // Reset cached roles and permissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+    public const PERMISSIONS = [
+        'view loans',
+        'create loans',
+        'edit loans',
+        'delete loans',
+        'approve loans',
+        'disburse loans',
+        'rollover loans',
+        'view users',
+        'create users',
+        'edit users',
+        'delete users',
+        'manage roles',
+        'view reports',
+        'export reports',
+        'view disbursements',
+        'create disbursements',
+        'edit disbursements',
+        'delete disbursements',
+        'view repayments',
+        'create repayments',
+        'edit repayments',
+        'delete repayments',
+        'view recovery cases',
+        'create recovery cases',
+        'edit recovery cases',
+        'delete recovery cases',
+        'view partners',
+        'create partners',
+        'edit partners',
+        'delete partners',
+        'view investments',
+        'create investments',
+        'edit investments',
+        'delete investments',
+        'view dashboard',
+        'grant forbearance',
+        'end forbearance',
+        'access system settings',
+        'clear cache',
+        'view logs',
+        'view wallets',
+        'create wallets',
+        'edit wallets',
+        'delete wallets',
+        'transfer between wallets',
+        'adjust wallet balance',
+        'view ledger',
+        'post to ledger',
+        'reverse ledger entry',
+        'reconcile wallets',
+        'view broker fees',
+        'set broker rate',
+        'settle broker fees',
+        'view partner statements',
+        'view house accounts',
+        'post to house accounts',
+        'view house reconciliation',
+        'manage house settings',
+        'view investment fundings',
+        'create investment funding',
+        'edit investment funding',
+        'settle investment funding',
+        'assign recovery case',
+        'log recovery action',
+        'close recovery case',
+        'write off loan',
+        'view audit log',
+        'view financial reports',
+        'view regulatory reports',
+        'export financial data',
+        'manage loan types',
+        'manage loan cycles',
+        'manage notifications',
+        'manage backups',
+        'manage API tokens',
+        'impersonate users',
+        'view system health',
+        'manage feature flags',
+    ];
 
-        // ============ PERMISSIONS ============
-        // Use firstOrCreate to avoid duplicates
-        $permissions = [
-            // Loan Permissions
+    /**
+     * Role => its permissions. '*' means every permission.
+     */
+    public const ROLES = [
+        'super-admin' => '*',
+        'admin' => [
             'view loans',
             'create loans',
             'edit loans',
@@ -25,142 +109,280 @@ class RoleSeeder extends Seeder
             'approve loans',
             'disburse loans',
             'rollover loans',
-            
-            // User Permissions
             'view users',
             'create users',
             'edit users',
             'delete users',
-            'manage roles',
-            
-            // Report Permissions
             'view reports',
             'export reports',
-            
-            // Disbursement Permissions
             'view disbursements',
             'create disbursements',
             'edit disbursements',
             'delete disbursements',
-            
-            // Repayment Permissions
             'view repayments',
             'create repayments',
             'edit repayments',
             'delete repayments',
-            
-            // Recovery Permissions
             'view recovery cases',
             'create recovery cases',
             'edit recovery cases',
             'delete recovery cases',
-            
-            // Partner Permissions
             'view partners',
             'create partners',
             'edit partners',
             'delete partners',
-            
-            // Investment Permissions
             'view investments',
             'create investments',
             'edit investments',
             'delete investments',
-            
-            // Dashboard Permissions
             'view dashboard',
-            
-            // Forbearance Permissions
             'grant forbearance',
             'end forbearance',
-            
-            // System Permissions
-            'access system settings',
-            'clear cache',
             'view logs',
-        ];
-
-        foreach ($permissions as $permissionName) {
-            Permission::firstOrCreate(
-                ['name' => $permissionName, 'guard_name' => 'web'],
-                ['guard_name' => 'web']
-            );
-        }
-
-        // ============ ROLES ============
-        
-        // Super Admin - Has all permissions
-        $superAdmin = Role::firstOrCreate(
-            ['name' => 'super-admin', 'guard_name' => 'web'],
-            ['guard_name' => 'web']
-        );
-        $superAdmin->syncPermissions(Permission::all());
-        
-        // Admin - Most permissions except system settings
-        $admin = Role::firstOrCreate(
-            ['name' => 'admin', 'guard_name' => 'web'],
-            ['guard_name' => 'web']
-        );
-        $admin->syncPermissions([
-            'view loans', 'create loans', 'edit loans', 'delete loans', 'approve loans', 'disburse loans', 'rollover loans',
-            'view users', 'create users', 'edit users', 'delete users',
-            'view reports', 'export reports',
-            'view disbursements', 'create disbursements', 'edit disbursements', 'delete disbursements',
-            'view repayments', 'create repayments', 'edit repayments', 'delete repayments',
-            'view recovery cases', 'create recovery cases', 'edit recovery cases', 'delete recovery cases',
-            'view partners', 'create partners', 'edit partners', 'delete partners',
-            'view investments', 'create investments', 'edit investments', 'delete investments',
-            'view dashboard',
-            'grant forbearance', 'end forbearance',
-        ]);
-        
-        // Teller - Can manage loans, disbursements, repayments
-        $teller = Role::firstOrCreate(
-            ['name' => 'teller', 'guard_name' => 'web'],
-            ['guard_name' => 'web']
-        );
-        $teller->syncPermissions([
-            'view loans', 'create loans', 'edit loans', 'disburse loans',
-            'view disbursements', 'create disbursements',
-            'view repayments', 'create repayments',
-            'view dashboard',
-        ]);
-        
-        // Broker - Can view their clients' loans and create loans for them
-        $broker = Role::firstOrCreate(
-            ['name' => 'broker', 'guard_name' => 'web'],
-            ['guard_name' => 'web']
-        );
-        $broker->syncPermissions([
-            'view loans', 'create loans', 'edit loans',
-            'view disbursements', 'view repayments',
-            'view dashboard',
-            'view users',
-        ]);
-        
-        // Borrower - Can view their own loans and make repayments
-        $borrower = Role::firstOrCreate(
-            ['name' => 'borrower', 'guard_name' => 'web'],
-            ['guard_name' => 'web']
-        );
-        $borrower->syncPermissions([
+            'view wallets',
+            'create wallets',
+            'edit wallets',
+            'delete wallets',
+            'transfer between wallets',
+            'adjust wallet balance',
+            'view ledger',
+            'post to ledger',
+            'reverse ledger entry',
+            'reconcile wallets',
+            'view broker fees',
+            'set broker rate',
+            'settle broker fees',
+            'view partner statements',
+            'view house accounts',
+            'post to house accounts',
+            'view house reconciliation',
+            'manage house settings',
+            'view investment fundings',
+            'create investment funding',
+            'edit investment funding',
+            'settle investment funding',
+            'assign recovery case',
+            'log recovery action',
+            'close recovery case',
+            'write off loan',
+            'view audit log',
+            'view financial reports',
+            'view regulatory reports',
+            'export financial data',
+            'manage loan types',
+            'manage loan cycles',
+            'manage notifications',
+        ],
+        'borrower' => [
             'view loans',
             'view repayments',
             'view dashboard',
-        ]);
-        
-        // Partner - Can view investments and their own data
-        $partner = Role::firstOrCreate(
-            ['name' => 'partner', 'guard_name' => 'web'],
-            ['guard_name' => 'web']
-        );
-        $partner->syncPermissions([
+        ],
+        'broker' => [
+            'view loans',
+            'create loans',
+            'edit loans',
+            'view users',
+            'view disbursements',
+            'view repayments',
+            'view dashboard',
+            'view wallets',
+            'view ledger',
+            'view broker fees',
+            'view partner statements',
+        ],
+        'teller' => [
+            'view loans',
+            'create loans',
+            'edit loans',
+            'disburse loans',
+            'view disbursements',
+            'create disbursements',
+            'view repayments',
+            'create repayments',
+            'view dashboard',
+            'view wallets',
+            'view ledger',
+            'view broker fees',
+            'view investment fundings',
+        ],
+        'partner' => [
             'view partners',
             'view investments',
             'view dashboard',
-        ]);
+            'view wallets',
+            'view ledger',
+            'view partner statements',
+            'view investment fundings',
+        ],
+        'manager' => [
+            'view loans',
+            'create loans',
+            'edit loans',
+            'delete loans',
+            'approve loans',
+            'disburse loans',
+            'rollover loans',
+            'view users',
+            'create users',
+            'edit users',
+            'view reports',
+            'export reports',
+            'view disbursements',
+            'create disbursements',
+            'edit disbursements',
+            'delete disbursements',
+            'view repayments',
+            'create repayments',
+            'edit repayments',
+            'delete repayments',
+            'view recovery cases',
+            'create recovery cases',
+            'edit recovery cases',
+            'delete recovery cases',
+            'view partners',
+            'create partners',
+            'edit partners',
+            'delete partners',
+            'view investments',
+            'create investments',
+            'edit investments',
+            'delete investments',
+            'view dashboard',
+            'grant forbearance',
+            'end forbearance',
+            'view wallets',
+            'create wallets',
+            'edit wallets',
+            'transfer between wallets',
+            'view ledger',
+            'post to ledger',
+            'reconcile wallets',
+            'view broker fees',
+            'set broker rate',
+            'settle broker fees',
+            'view partner statements',
+            'view house accounts',
+            'post to house accounts',
+            'view house reconciliation',
+            'view investment fundings',
+            'create investment funding',
+            'edit investment funding',
+            'settle investment funding',
+            'assign recovery case',
+            'log recovery action',
+            'close recovery case',
+            'view financial reports',
+            'view regulatory reports',
+            'export financial data',
+            'manage loan types',
+            'manage loan cycles',
+            'manage notifications',
+            'manage API tokens',
+        ],
+        'loan-officer' => [
+            'view loans',
+            'create loans',
+            'edit loans',
+            'rollover loans',
+            'view disbursements',
+            'view repayments',
+            'view dashboard',
+            'grant forbearance',
+            'end forbearance',
+            'assign recovery case',
+            'log recovery action',
+        ],
+        'accountant' => [
+            'view reports',
+            'export reports',
+            'view disbursements',
+            'edit disbursements',
+            'view repayments',
+            'edit repayments',
+            'view dashboard',
+            'view wallets',
+            'edit wallets',
+            'transfer between wallets',
+            'adjust wallet balance',
+            'view ledger',
+            'post to ledger',
+            'reverse ledger entry',
+            'reconcile wallets',
+            'view broker fees',
+            'settle broker fees',
+            'view partner statements',
+            'view house accounts',
+            'post to house accounts',
+            'view house reconciliation',
+            'view investment fundings',
+            'edit investment funding',
+            'settle investment funding',
+            'view financial reports',
+            'view regulatory reports',
+            'export financial data',
+        ],
+        'recovery-officer' => [
+            'view loans',
+            'edit loans',
+            'view users',
+            'view repayments',
+            'create repayments',
+            'view recovery cases',
+            'create recovery cases',
+            'edit recovery cases',
+            'view dashboard',
+            'grant forbearance',
+            'end forbearance',
+            'assign recovery case',
+            'log recovery action',
+            'close recovery case',
+            'write off loan',
+        ],
+        'auditor' => [
+            'view loans',
+            'view users',
+            'view reports',
+            'export reports',
+            'view disbursements',
+            'view repayments',
+            'view recovery cases',
+            'view partners',
+            'view investments',
+            'view dashboard',
+            'view wallets',
+            'view ledger',
+            'view broker fees',
+            'view partner statements',
+            'view house accounts',
+            'view house reconciliation',
+            'view investment fundings',
+            'view audit log',
+            'view financial reports',
+            'view regulatory reports',
+            'export financial data',
+            'view system health',
+        ],
+    ];
 
-        // Accounts get their roles where they are created: RegisteredUserController (public sign-up = borrower),
-        // Users management for staff, and DemoUsersSeeder for the local demo accounts.
+    public function run(): void
+    {
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
+        foreach (self::PERMISSIONS as $name) {
+            Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+        }
+
+        foreach (self::ROLES as $name => $permissions) {
+            $role = Role::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+            $wanted = $permissions === '*' ? self::PERMISSIONS : $permissions;
+            $missing = array_values(array_diff($wanted, $role->permissions()->pluck('name')->all()));
+            if ($missing) {
+                $role->givePermissionTo($missing);
+            }
+        }
+
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        $this->command?->info(count(self::ROLES) . ' roles and ' . count(self::PERMISSIONS) . ' permissions ensured.');
     }
 }

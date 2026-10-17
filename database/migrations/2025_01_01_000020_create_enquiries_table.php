@@ -2,14 +2,26 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // Existing databases already have this table: leave it and its data untouched.
+        // Existing databases already have this table: leave its data untouched. Some MySQL/MariaDB setups gave
+        // consented_at "ON UPDATE CURRENT_TIMESTAMP", which would overwrite the consent time on every edit.
         if (Schema::hasTable('enquiries')) {
+            if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
+                $extra = DB::selectOne(
+                    "select extra as col_extra from information_schema.columns
+                     where table_schema = database() and table_name = 'enquiries' and column_name = 'consented_at'"
+                )?->col_extra ?? '';
+                if (stripos($extra, 'on update') !== false) {
+                    DB::statement('ALTER TABLE enquiries MODIFY consented_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
+                }
+            }
+
             return;
         }
 
@@ -28,7 +40,7 @@ return new class extends Migration
             $table->text('message');
             $table->string('route_to')->comment('Desk inbox that handles this topic');
             $table->enum('status', ['new', 'in_progress', 'closed'])->default('new')->index();
-            $table->timestamp('consented_at');
+            $table->timestamp('consented_at')->useCurrent();
             $table->string('ip_address', 45)->nullable();
             $table->string('user_agent')->nullable();
             $table->timestamps();

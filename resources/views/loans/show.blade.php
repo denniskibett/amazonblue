@@ -1,3 +1,4 @@
+{{--resources/views/loans/show.blade.php--}}
 @extends('layouts.app')
 
 @section('content')
@@ -79,7 +80,7 @@
                         Due On:
                     </span>
                     <span class="block text-sm text-gray-500 dark:text-gray-400">
-                        {{ $metrics['due_date'] ? $metrics['due_date']->format('D, M d, Y') : 'N/A' }}
+                        {{ !empty($metrics['due_date']) ? \Carbon\Carbon::parse($metrics['due_date'])->format('D, M d, Y') : 'N/A' }}
                         @if(($metrics['days_late'] ?? 0) > 0)
                             <span class="text-red-500 ml-2">({{ round($metrics['days_late']) }} days late)</span>
                         @endif
@@ -139,9 +140,6 @@
                             </div>
                         </div>
 
-                        <!-- Penalties - Use service calculated values -->
-
-                                                
                         <!-- Penalties -->
                         @if($penaltyAmount > 0)
                         <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">
@@ -205,7 +203,7 @@
             <div class="my-6 border-b border-gray-100 pb-6 dark:border-gray-800">
                 @php
                     // ALL calculations come from the service
-                    $cycleNumber = $cycleCalculation['cycle_number'] ?? $activeCycle->cycle_number ?? 1;
+                    $cycleNumber = $cycleCalculation['cycle_number'] ?? $activeCycle?->cycle_number ?? 1;
                     $newCycleBalance = $cycleCalculation['new_balance'] ?? 0;
                     $cycleBalanceFull = $cycleCalculation['new_balance'] ?? $metrics['principal_plus_interest'] ?? 0;
                     $cyclePenalty = $cycleCalculation['penalty'] ?? 0;
@@ -251,7 +249,7 @@
                 <!-- Grace Period Info -->
                 <div class="flex justify-between pt-2 text-xs text-gray-500 dark:text-gray-400 border-t mt-2">
                     <span>Grace Days Remaining</span>
-                    <span>{{ $loan->getRemainingGraceDays() }}</span>
+                    <span>{{ $cycleGraceDaysRemaining }}</span>
                 </div>
                 <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span>Grace Days Balance</span>
@@ -311,11 +309,11 @@
                             @foreach($sortedCycles as $cycle)
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                 <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">#{{ $cycle->cycle_number }}</td>
-                                <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ $cycle->start_date->format('M d, Y') }}</td>
+                                <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ $cycle->start_date ? \Carbon\Carbon::parse($cycle->start_date)->format('M d, Y') : '-' }}</td>
                                 <td class="px-4 py-2 text-right text-gray-600 dark:text-gray-400">KES {{ number_format($cycle->previous_balance, 2) }}</td>
                                 <td class="px-4 py-2 text-right text-purple-600 dark:text-purple-400">KES {{ number_format($cycle->interest_capitalized, 2) }}</td>
                                 <td class="px-4 py-2 text-right font-medium text-gray-900 dark:text-white">KES {{ number_format($cycle->new_balance, 2) }}</td>
-                                <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ $cycle->due_date->format('M d, Y') }}</td>
+                                <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ $cycle->due_date ? \Carbon\Carbon::parse($cycle->due_date)->format('M d, Y') : '-' }}</td>
                                 <td class="px-4 py-2">
                                     <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium
                                         @if($cycle->status === 'active') bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300
@@ -373,7 +371,7 @@
                                         <p class="text-xs text-gray-400">{{ $disbursement->mode ?? '' }}</p>
                                         @if(auth()->user()->role !== 'borrower')
                                         <div class="flex space-x-1 mt-1 justify-end">
-                                            <button onclick="openDisbursementModal(null, {{ json_encode($disbursement) }})" 
+                                            <button onclick="openDisbursementModal(null, {{ json_encode($disbursement->attributesToArray()) }})" 
                                                 class="text-blue-600 text-xs hover:underline">Edit</button>
                                             <form action="{{ route('disbursements.destroy', $disbursement->id) }}" method="POST" class="inline">
                                                 @csrf
@@ -409,7 +407,9 @@
                     </div>
                     
                     @php
-                        $cycleRepaymentsList = $activeCycle ? $loan->repayments()->where('loan_cycle_id', $activeCycle->id)->get() : collect();
+                        $cycleRepaymentsList = $activeCycle
+                            ? $loan->repayments->where('loan_cycle_id', $activeCycle->id)->values()
+                            : collect();
                     @endphp
                     
                     @if($cycleRepaymentsList->isEmpty())
@@ -431,7 +431,7 @@
                                         <p class="text-xs text-gray-400">{{ $repayment->mode ?? '' }}</p>
                                         @if(auth()->user()->role !== 'borrower')
                                         <div class="flex space-x-1 mt-1 justify-end">
-                                            <button onclick="openRepaymentModal(null, {{ json_encode($repayment) }})" 
+                                            <button onclick="openRepaymentModal(null, {{ json_encode($repayment->attributesToArray()) }})" 
                                                 class="text-blue-600 text-xs hover:underline">Edit</button>
                                             <form action="{{ route('repayments.destroy', $repayment->id) }}" method="POST" class="inline">
                                                 @csrf
@@ -475,8 +475,6 @@
 @include('partials.modal.repayment-create-modal')
 @include('partials.modal.alert-modal')
 
-@endsection
-
 @push('styles')
 <style>
     .loan-status-badge {
@@ -499,6 +497,23 @@
     }
 </style>
 @endpush
+
+@php
+    // Built in PHP and emitted with @json so a null column can never produce
+    // broken JavaScript such as "grace_days_balance: ,".
+    $loanJsData = [
+        'id'                 => $loan->id,
+        'amount'             => (float) $loan->amount,
+        'cycle'              => (int) ($loan->cycle ?? 1),
+        'grace_days_balance' => (int) ($loan->grace_days_balance ?? 0),
+        'interest_rate'      => (float) ($loan->loanType->interest_rate ?? 0),
+        'period'             => (int) ($loan->loanType->period ?? 30),
+        'unit'               => $loan->loanType->unit ?? 'days',
+        'borrow_date'        => $loan->borrow_date ? \Carbon\Carbon::parse($loan->borrow_date)->toDateString() : null,
+        'due_date'           => $loan->due_date ? \Carbon\Carbon::parse($loan->due_date)->toDateString() : null,
+        'status'             => $loan->status,
+    ];
+@endphp
 
 <script>
 // ============ GLOBAL FUNCTIONS ============
@@ -616,6 +631,9 @@ function openForbearanceModal() {
     window.dispatchEvent(event);
 }
 
+// Available immediately, not only after Alpine runs init()
+window.loanData = @json($loanJsData);
+
 document.addEventListener('alpine:init', function() {
     Alpine.data('loanShow', function() {
         return {
@@ -623,18 +641,7 @@ document.addEventListener('alpine:init', function() {
             isForbearanceModalOpen: false,
             
             init() {
-                window.loanData = {
-                    id: {{ $loan->id }},
-                    amount: {{ $loan->amount }},
-                    cycle: {{ $loan->cycle }},
-                    grace_days_balance: {{ $loan->grace_days_balance }},
-                    interest_rate: {{ $loan->loanType->interest_rate ?? 0 }},
-                    period: {{ $loan->loanType->period ?? 30 }},
-                    unit: '{{ $loan->loanType->unit ?? 'days' }}',
-                    borrow_date: '{{ $loan->borrow_date ? $loan->borrow_date : '' }}',
-                    due_date: '{{ $loan->due_date ? $loan->due_date : '' }}',
-                    status: '{{ $loan->status }}',
-                };
+                window.loanData = @json($loanJsData);
                 
                 window.addEventListener('open-forbearance-modal', () => {
                     this.isForbearanceModalOpen = true;
@@ -684,3 +691,4 @@ document.addEventListener('alpine:init', function() {
     });
 });
 </script>
+@endsection

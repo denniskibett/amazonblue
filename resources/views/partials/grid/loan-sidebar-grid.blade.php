@@ -308,27 +308,45 @@
                 </a>
             </div>
 
-            <!-- Risk Assessment -->
-            @if(isset($loan->riskAssessments) && $loan->riskAssessments->isNotEmpty())
+            <!-- Risk Assessment (4Cs: staff assessment if any, otherwise the system score as at the borrow date) -->
+            @php $latestAssessment = $loan->getLatestRiskAssessment(); @endphp
+            @if($latestAssessment)
+            @php
+                $riskTone = match (true) {
+                    $latestAssessment->overall_score >= 80 => 'text-green-600 bg-green-50',
+                    $latestAssessment->overall_score >= 65 => 'text-yellow-700 bg-yellow-50',
+                    $latestAssessment->overall_score >= 50 => 'text-orange-600 bg-orange-50',
+                    default => 'text-red-600 bg-red-50',
+                };
+                $f = $latestAssessment->factors ?? [];
+            @endphp
             <div class="border-t border-gray-200 pt-4 mt-4">
-                <h3 class="text-md font-semibold mb-3">Risk Assessment</h3>
-                @php $latestAssessment = $loan->getLatestRiskAssessment(); @endphp
-                <div class="space-y-2">
-                    <div class="flex justify-between">
-                        <span class="text-sm">Overall Score</span>
-                        <span class="text-sm font-medium">{{ $latestAssessment->overall_score }}/100</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-sm">Risk Category</span>
-                        <span class="text-sm font-medium 
-                            @if($latestAssessment->getRiskCategory() === 'Low Risk') text-green-600
-                            @elseif($latestAssessment->getRiskCategory() === 'Medium Risk') text-yellow-600
-                            @elseif($latestAssessment->getRiskCategory() === 'High Risk') text-orange-600
-                            @else text-red-600 @endif">
-                            {{ $latestAssessment->getRiskCategory() }}
-                        </span>
-                    </div>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-md font-semibold">Risk Assessment (4Cs)</h3>
+                    <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ $riskTone }}">{{ $latestAssessment->getRiskCategory() }} · {{ $latestAssessment->overall_score }}/100</span>
                 </div>
+                <div class="space-y-2">
+                    @foreach (['character' => 'Character', 'capacity' => 'Capacity', 'capital' => 'Capital', 'conditions' => 'Conditions'] as $c => $label)
+                        @php $v = (int) $latestAssessment->{$c . '_score'}; @endphp
+                        <div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-500">{{ $label }}</span><span class="font-medium">{{ $v }}</span></div>
+                            <div class="h-1.5 rounded-full bg-gray-100 dark:bg-gray-700"><div class="h-1.5 rounded-full {{ $v >= 65 ? 'bg-green-500' : ($v >= 50 ? 'bg-orange-400' : 'bg-red-500') }}" style="width: {{ max(3, $v) }}%"></div></div>
+                        </div>
+                    @endforeach
+                </div>
+                @if ($latestAssessment->recommendation)
+                    <p class="mt-3 text-sm">{{ $latestAssessment->recommendation }}</p>
+                @endif
+                @if ($latestAssessment->limit_amount)
+                    <p class="mt-1 text-xs text-gray-500">Limit at the time: KES {{ number_format($latestAssessment->limit_amount, 2) }}</p>
+                @endif
+                @if ($latestAssessment->assessment_notes)
+                    <p class="mt-1 text-xs text-gray-500">{{ $latestAssessment->assessment_notes }}</p>
+                @endif
+                @if (! empty($f['outcome']['label']) && $f['outcome']['status'] !== 'not_taken')
+                    <p class="mt-1 text-xs text-gray-500">This loan: <span class="font-medium text-gray-700 dark:text-gray-300">{{ $f['outcome']['label'] }}</span></p>
+                @endif
+                <p class="mt-1 text-xs text-gray-400">{{ $latestAssessment->source === 'auto' ? 'System score as at ' . optional($latestAssessment->assessed_at)->format('j M Y') . ', from repayment history' : 'Assessed by ' . ($latestAssessment->assessor?->name ?? 'staff') }}</p>
             </div>
             @endif
 

@@ -46,7 +46,7 @@
                     </div>
 
                     <div class="order-3 xl:order-2">
-                        <h4 class="mb-2 text-center text-lg font-semibold xl:text-left">{{ $user->name }}</h4>
+                        <h4 class="mb-2 text-center text-lg font-semibold xl:text-left">{{ $user->name }}@if($user->kyc_status === 'approved')<svg class="ml-1 inline-block h-4 w-4 align-[-2px] text-blue-600" viewBox="0 0 24 24" role="img" aria-label="Verified to borrow"><title>Verified to borrow</title><path fill="currentColor" d="M12 1.6l2.5 1.9 3.1-.3 1 3 2.6 1.7-.9 3 .9 3-2.6 1.7-1 3-3.1-.3L12 22.4l-2.5-1.9-3.1.3-1-3-2.6-1.7.9-3-.9-3 2.6-1.7 1-3 3.1.3z"/><path d="M8.2 12.3l2.6 2.6 5-5.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>@endif</h4>
                         <div class="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
                             <p class="text-sm text-gray-500 dark:text-gray-400">{{ ucfirst($user->role) }} Profile</p>
                             @if($user->role === 'borrower' && $user->borrower)
@@ -84,6 +84,47 @@
             </div>
         </div>
         
+        @if($cash && $credit)
+            @php
+                $tones = ['on_time' => 'bg-green-500', 'late' => 'bg-amber-400', 'discounted' => 'bg-amber-400', 'rolled' => 'bg-blue-300', 'written_off' => 'bg-red-500', 'overdue' => 'bg-red-500', 'running' => 'bg-gray-300'];
+                $f = $credit['factors'];
+            @endphp
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {{-- real cash: staff and partners only (not shown to the borrower) --}}
+                <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+                    <h3 class="text-md font-semibold text-gray-800 dark:text-white/90">Cash with us</h3>
+                    <dl class="mt-3 grid grid-cols-3 gap-3 text-sm">
+                        <div><dt class="text-gray-500">Sent to them</dt><dd class="font-semibold">KES {{ number_format($cash['received'], 2) }}</dd></div>
+                        <div><dt class="text-gray-500">Repaid to us</dt><dd class="font-semibold">KES {{ number_format($cash['repaid'], 2) }}</dd></div>
+                        <div><dt class="text-gray-500">Net</dt><dd class="font-semibold {{ $cash['balance'] < 0 ? 'text-red-600' : 'text-green-600' }}">{{ $cash['balance'] < 0 ? '−' : '+' }}KES {{ number_format(abs($cash['balance']), 2) }}</dd></div>
+                    </dl>
+                    <p class="mt-3 text-xs text-gray-500">Real money only, from the borrower's wallet. Rollovers, discounts and write-offs are not cash.</p>
+                </div>
+
+                {{-- today's 4Cs and repayment journey --}}
+                <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-md font-semibold text-gray-800 dark:text-white/90">4Cs today</h3>
+                        <span class="text-sm font-medium">{{ $credit['category']?->name ?? '—' }} · {{ $credit['overall'] }}/100</span>
+                    </div>
+                    <div class="mt-3 grid grid-cols-4 gap-3 text-center text-xs">
+                        @foreach ($credit['scores'] as $c => $v)
+                            <div><div class="text-lg font-semibold {{ $v >= 65 ? 'text-green-600' : ($v >= 50 ? 'text-orange-500' : 'text-red-600') }}">{{ $v }}</div><div class="text-gray-500">{{ ucfirst($c) }}</div></div>
+                        @endforeach
+                    </div>
+                    <p class="mt-3 text-sm">Self-service limit: <span class="font-semibold">KES {{ number_format($credit['limit']['limit'], 2) }}</span>
+                        @if ($credit['limit']['capped_by'])<span class="text-xs text-gray-500">(lowered from KES {{ number_format($credit['limit']['ladder'], 2) }} by {{ $credit['limit']['capped_by'] === 'risk' ? 'the risk score' : 'declared income' }})</span>@endif
+                    </p>
+                    <div class="mt-3 flex flex-wrap gap-1" aria-label="Loans, oldest first">
+                        @foreach ($credit['history'] as $h)
+                            <span class="h-4 w-4 rounded {{ $tones[$h['status']] ?? 'bg-gray-200' }}" title="#{{ $h['loan_id'] }} · {{ $h['borrow_date'] }} · KES {{ number_format($h['amount'], 2) }} · {{ $h['label'] }}"></span>
+                        @endforeach
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500">{{ $f['on_time'] }} on time · {{ $f['late'] }} late · {{ $f['rolled'] }} rolled over · {{ $f['discounted'] }} discounted · {{ $f['written_off'] }} written off</p>
+                </div>
+            </div>
+        @endif
+
         @include('partials.card.users-card', ['user' => $user])
 
         <!-- Main Tabbed Content -->

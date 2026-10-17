@@ -43,6 +43,7 @@ class RepaymentController extends Controller
 
     public function create(Request $request)
     {
+        abort_unless(auth()->user()->can('create repayments'), 403, 'You are not allowed to record or change repayments.');
         $user = auth()->user();
         $loan_id = $request->get('loan_id');
         $loan = Loan::with('borrower')->findOrFail($loan_id);
@@ -61,6 +62,7 @@ class RepaymentController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless(auth()->user()->can('create repayments'), 403, 'You are not allowed to record or change repayments.');
         $validated = $request->validate([
             'loan_id' => 'required|exists:loans,id',
             'loan_cycle_id' => 'required|exists:loan_cycles,id',
@@ -112,6 +114,7 @@ class RepaymentController extends Controller
 
     public function update(Request $request, Repayment $repayment)
     {
+        abort_unless(auth()->user()->can('edit repayments'), 403, 'You are not allowed to record or change repayments.');
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01',
             'repayment_date' => 'required|date',
@@ -152,6 +155,7 @@ class RepaymentController extends Controller
 
     public function edit(Repayment $repayment)
     {
+        abort_unless(auth()->user()->can('edit repayments'), 403, 'You are not allowed to record or change repayments.');
         $user = auth()->user();
         $loan = $repayment->loan;
         
@@ -168,6 +172,7 @@ class RepaymentController extends Controller
 
     public function destroy(Repayment $repayment)
     {
+        abort_unless(auth()->user()->can('delete repayments'), 403, 'You are not allowed to record or change repayments.');
         $user = auth()->user();
         $loan = $repayment->loan;
         

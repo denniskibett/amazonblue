@@ -40,7 +40,9 @@ class WalletsReconcileFromJournal extends Command
                 continue;
             }
             $wallet = $partner->getWallet($row->wallet_slug);
-            $walletBalance = $wallet ? (float) $wallet->balance / 100 : 0.0;
+            // wallets store minor units at their own precision (partner wallets use 4 decimal places)
+            $scale = $wallet ? 10 ** (int) ($wallet->decimal_places ?? 2) : 100;
+            $walletBalance = $wallet ? (float) $wallet->balance / $scale : 0.0;
             $journalSum = (float) $row->journal_sum;
 
             $diff = round($walletBalance - $journalSum, 4);
@@ -56,14 +58,14 @@ class WalletsReconcileFromJournal extends Command
             ));
 
             if ($apply && $wallet) {
-                DB::transaction(function () use ($wallet, $journalSum, $diff) {
+                DB::transaction(function () use ($wallet, $journalSum, $diff, $scale) {
                     // Reset to zero, then deposit exact journal sum.
                     if ($wallet->balance > 0) {
                         $wallet->forceWithdraw((int) $wallet->balance, [
                             'description' => 'Reconcile reset',
                         ]);
                     }
-                    $target = (int) round($journalSum * 100);
+                    $target = (int) round($journalSum * $scale);
                     if ($target > 0) {
                         $wallet->deposit($target, [
                             'description' => 'Reconcile rebuild from journal',

@@ -1,4 +1,4 @@
-@extends('home.layouts.kyc', ['step' => 5, 'title' => 'Review & submit'])
+@extends('home.layouts.kyc', ['step' => 6, 'title' => 'Review & submit'])
 
 @section('content')
   <div class="kyc-head">
@@ -22,6 +22,7 @@
         <a href="{{ $section['href'] }}">{{ $section['complete'] ? 'Edit' : 'Finish' }}</a>
       </div>
     @endforeach
+    @unless ($verified)
     <div class="kyc-card">
       <label class="check"
         ><input type="checkbox" name="confirm_true" value="1" required /><span>The information I've given is true and complete.</span></label
@@ -35,8 +36,9 @@
         ></label
       >
     </div>
+    @endunless
     <div class="kyc-nav">
-      <a href="{{ route('kyc.income') }}">Back</a><button class="btn btn-primary" type="submit">Submit for review</button>
+      <a href="{{ route('kyc.contacts') }}">Back</a><button class="btn btn-primary" type="submit">{{ $verified ? 'Save details' : 'Submit for review' }}</button>
     </div>
   </form>
 @endsection

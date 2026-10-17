@@ -35,6 +35,8 @@ Route::middleware(['auth', 'role:borrower'])->prefix('kyc')->name('kyc.')->contr
     Route::post('/documents', 'storeKycDocuments')->name('documents.store');
     Route::get('/income', 'kycIncome')->name('income');
     Route::post('/income', 'storeKycIncome')->name('income.store');
+    Route::get('/contacts', 'kycContacts')->name('contacts');
+    Route::post('/contacts', 'storeKycContacts')->name('contacts.store');
     Route::get('/review', 'kycReview')->name('review');
     Route::post('/review', 'submitKyc')->name('submit');
     Route::get('/submitted', 'kycSubmitted')->name('submitted');
@@ -44,8 +46,30 @@ Route::middleware(['auth', 'role:borrower'])->prefix('kyc')->name('kyc.')->contr
 Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('login.google');
 Route::get('/auth/google/callback', [GoogleController::class, 'callback']);
 
-// ============ AUTHENTICATED ROUTES ============
-Route::middleware(['auth', 'verified'])->group(function () {
+// ============ CUSTOMER ACCOUNT (borrowers & partners; website design, mobile first) ============
+Route::middleware('auth')->prefix('account')->name('account.')->group(function () {
+    Route::controller(HomeController::class)->group(function () {
+        Route::get('/', 'account')->name('home');
+        Route::get('/profile', 'accountProfile')->name('profile');
+
+        Route::middleware('role:borrower')->group(function () {
+            Route::get('/borrow', 'accountBorrow')->name('borrow');
+            Route::get('/loans', 'accountLoans')->name('loans');
+            Route::get('/loans/{loan}', 'accountLoan')->name('loan');
+            Route::get('/loans/{loan}/agreement', 'accountAgreement')->name('agreement');
+        });
+
+        Route::middleware('role:partner')->get('/statement', 'accountStatement')->name('statement');
+    });
+
+    // the application itself (fixed product, limits, verification) lives with the other loan logic
+    Route::post('/borrow', [LoanController::class, 'apply'])
+        ->middleware(['role:borrower', 'throttle:6,1'])
+        ->name('borrow.store');
+});
+
+// ============ STAFF DASHBOARD (business processes; customers are sent to /account) ============
+Route::middleware(['auth', 'verified', 'staff'])->group(function () {
     
     // Dashboard - All authenticated users
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -72,6 +96,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/users/{user}/loans-data', [UserController::class, 'getUserLoansData'])
         ->name('users.loans-data')
         ->middleware('permission:view users');
+
+    // ============ KYC REVIEWS (staff verify borrower KYC) ============
+    Route::prefix('kyc-reviews')->name('kyc-reviews.')->middleware('permission:edit users')
+        ->controller(\App\Http\Controllers\KycReviewController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/{user}', 'show')->name('show');
+            Route::post('/{user}/approve', 'approve')->name('approve');
+            Route::post('/{user}/reject', 'reject')->name('reject');
+        });
 
     // ============ USER LOAN ROUTES ============
     Route::prefix('users/{user}')->name('users.')->group(function () {

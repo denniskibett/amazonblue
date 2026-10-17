@@ -1,4 +1,38 @@
 {{-- resources/views/partials/modal/cases-create-modal.blade.php --}}
+@php
+    // Project everything this modal renders into plain arrays with only the fields the
+    // JavaScript reads. Never json_encode Eloquent models here: appended accessors and
+    // loaded relations can recurse forever, and full User rows carry signature/KYC data.
+    $caseModalBorrowers = collect($caseBorrowers ?? $borrowers ?? [])->map(fn ($b) => [
+        'id'      => data_get($b, 'id'),
+        'name'    => data_get($b, 'name'),
+        'email'   => data_get($b, 'email'),
+        'has_npl' => (bool) data_get($b, 'has_npl', false),
+    ])->values();
+
+    $caseModalStatuses = collect($statuses ?? [])->map(fn ($s) => [
+        'id'   => data_get($s, 'id'),
+        'name' => data_get($s, 'name'),
+        'slug' => data_get($s, 'slug'),
+    ])->values();
+
+    $caseModalPriorities = collect($priorities ?? [])->map(fn ($p) => [
+        'id'   => data_get($p, 'id'),
+        'name' => data_get($p, 'name'),
+        'slug' => data_get($p, 'slug'),
+    ])->values();
+
+    $caseModalOfficers = collect($officers ?? [])->map(fn ($o) => [
+        'id'   => data_get($o, 'id'),
+        'name' => data_get($o, 'name'),
+    ])->values();
+
+    $caseModalActionTypes = collect($actionTypes ?? [])->map(fn ($a) => [
+        'id'   => data_get($a, 'id'),
+        'name' => data_get($a, 'name'),
+        'slug' => data_get($a, 'slug'),
+    ])->values();
+@endphp
 <div x-data="caseFormModal()" 
      x-init="initModal()"
      x-show="isOpen" 
@@ -429,12 +463,12 @@ document.addEventListener('alpine:init', function() {
             isEditMode: false,
             errors: {},
             
-            // Data from PHP (passed via Alpine)
-            borrowers: @json($borrowers),
-            statuses: @json($statuses),
-            priorities: @json($priorities),
-            officers: @json($officers),
-            actionTypes: @json($actionTypes),
+            // Data from PHP (plain arrays, see the @php block at the top of this file)
+            borrowers: @json($caseModalBorrowers),
+            statuses: @json($caseModalStatuses),
+            priorities: @json($caseModalPriorities),
+            officers: @json($caseModalOfficers),
+            actionTypes: @json($caseModalActionTypes),
             
             // Dynamic data
             borrowerLoans: [],
@@ -730,10 +764,8 @@ document.addEventListener('alpine:init', function() {
 
             // ============ INIT ============
             initModal() {
-                console.log('Case form modal initialized');
-                
-                window.addEventListener('open-case-create', () => {
-                    this.openCreate();
+                window.addEventListener('open-case-create', (event) => {
+                    this.openCreate(event.detail || {});
                 });
 
                 window.addEventListener('edit-case', (event) => {
@@ -767,8 +799,7 @@ document.addEventListener('alpine:init', function() {
                 };
             },
 
-            openCreate() {
-                console.log('Opening create modal');
+            openCreate(prefill = {}) {
                 this.isEditMode = false;
                 this.isOpen = true;
                 this.errors = {};
@@ -779,11 +810,27 @@ document.addEventListener('alpine:init', function() {
                 this.notesList = [];
                 this.showCompilation = false;
                 this.selectedStrategy = '';
+
+                // Opened from a loan page: preselect that borrower (the $watch loads
+                // their loans) and that loan once the list arrives.
+                if (prefill.user_id) {
+                    const wantedLoanId = prefill.loan_id ? parseInt(prefill.loan_id) : null;
+                    this.formData.user_id = String(prefill.user_id);
+                    if (wantedLoanId) {
+                        const stop = this.$watch('borrowerLoans', (loans) => {
+                            if (loans.some(l => l.id === wantedLoanId)) {
+                                this.formData.loan_id = wantedLoanId;
+                                this.populateDebtDetails();
+                            }
+                            stop && stop();
+                        });
+                    }
+                }
+
                 document.body.style.overflow = 'hidden';
             },
 
             openEdit(caseData) {
-                console.log('Opening edit modal for:', caseData);
                 this.isEditMode = true;
                 this.isOpen = true;
                 this.errors = {};

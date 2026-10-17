@@ -8,8 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Existing databases already have this table: leave it and its data untouched.
+        // Existing databases already have this table: leave it and its data untouched, only adding
+        // account_type (house principal / interest accounts) where an older copy lacks it.
         if (Schema::hasTable('partners')) {
+            if (! Schema::hasColumn('partners', 'account_type')) {
+                Schema::table('partners', function (Blueprint $table) {
+                    $table->enum('account_type', ['principal', 'interest', 'operating', 'reserve'])->default('principal')->after('type');
+                });
+            }
+
             return;
         }
 
@@ -24,7 +31,8 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->string('company_name')->nullable();
             $table->string('registration_number')->nullable();
-            $table->enum('type', ['partner', 'business', 'company', 'investor'])->default('partner');
+            $table->enum('type', ['corporate', 'partner', 'business', 'company', 'individual'])->default('partner');
+            $table->enum('account_type', ['principal', 'interest', 'operating', 'reserve'])->default('principal');
             $table->boolean('is_house_account')->default(false);
             $table->enum('status', ['active', 'inactive', 'suspended'])->nullable()->default('active');
             $table->decimal('profit_share_rate', 5)->nullable()->default(0);

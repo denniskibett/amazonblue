@@ -21,8 +21,8 @@ return new class extends Migration
             $table->string('table_name', 100);
             $table->unsignedBigInteger('record_id');
             $table->enum('action', ['create', 'update', 'delete', 'restore', 'force_delete'])->index('idx_action');
-            $table->longText('old_values')->collation('utf8mb4_bin')->nullable();
-            $table->longText('new_values')->collation('utf8mb4_bin')->nullable();
+            $table->json('old_values')->nullable();
+            $table->json('new_values')->nullable();
             $table->unsignedBigInteger('user_id')->nullable()->index('idx_user_id');
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();

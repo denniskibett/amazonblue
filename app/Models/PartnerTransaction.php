@@ -12,6 +12,10 @@ class PartnerTransaction extends Model
 
     protected $fillable = [
         'partner_id',
+        // without these two, create() silently dropped them: rows fell back to the 'principal' default
+        // and PartnerLedger's duplicate check (reference + wallet_slug) never matched
+        'wallet_slug',
+        'investment_funding_id',
         'type',
         'amount',
         'balance_after',

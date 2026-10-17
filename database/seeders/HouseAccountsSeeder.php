@@ -10,9 +10,11 @@ class HouseAccountsSeeder extends Seeder
     public function run(): void
     {
         // House Principal Account
+        // matched on the house account type, so an existing house account (e.g. live's "House Account") is reused
         Partner::firstOrCreate(
-            ['name' => 'House Principal Account'],
+            ['is_house_account' => true, 'account_type' => 'principal'],
             [
+                'name' => 'House Principal Account',
                 'email' => 'house.principal@internal',
                 'phone' => 'N/A',
                 'type' => 'company',
@@ -26,8 +28,9 @@ class HouseAccountsSeeder extends Seeder
 
         // House Interest Account
         Partner::firstOrCreate(
-            ['name' => 'House Interest Account'],
+            ['is_house_account' => true, 'account_type' => 'interest'],
             [
+                'name' => 'House Interest Account',
                 'email' => 'house.interest@internal',
                 'phone' => 'N/A',
                 'type' => 'company',
