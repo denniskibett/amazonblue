@@ -438,7 +438,7 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
     });
 
     // ============ SYSTEM SETTINGS ============
-    Route::prefix('system')->name('system.')->middleware(['role:super-admin|admin'])->group(function () { // no super-admin named yet, so admins run the system pages too
+    Route::prefix('system')->name('system.')->middleware(['permission:access system settings'])->group(function () { // super-admin only (sysadmin, owner 20 Oct 2026)
         Route::get('/', [SystemController::class, 'index'])->name('index');
         Route::put('/update', [SystemController::class, 'update'])->name('update');
         // where partners send money: super-admin only (+ current password, audit row, admin email)

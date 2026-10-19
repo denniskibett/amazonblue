@@ -96,8 +96,10 @@ class PartnerFundingSettingsTest extends TestCase
         $this->actingAs($this->staff('super-admin'))->get('/system')
             ->assertOk()->assertSee('Partner funding details')->assertSee('Save partner funding details');
 
-        $this->actingAs($this->staff('admin'))->get('/system')
-            ->assertOk()->assertSee('Partner funding details')->assertDontSee('Save partner funding details');
+        // /system is super-admin only (permission:access system settings)
+        $this->actingAs($this->staff('admin'))->get('/system')->assertForbidden();
+        $this->actingAs($this->staff('admin'))->put('/system/update', [])->assertForbidden();
+        $this->actingAs($this->staff('manager'))->get('/system')->assertForbidden();
     }
 
     public function test_bad_values_are_refused(): void
@@ -110,6 +112,9 @@ class PartnerFundingSettingsTest extends TestCase
 
     private function staff(string $role): User
     {
+        if (! Role::where('name', 'super-admin')->exists()) {
+            $this->seed(\Database\Seeders\RoleSeeder::class);
+        }
         Role::findOrCreate($role, 'web');
         $user = User::factory()->create();
         $user->assignRole($role);
