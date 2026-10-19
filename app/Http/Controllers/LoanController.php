@@ -504,7 +504,15 @@ class LoanController extends Controller
             }
         }
 
+        $termsChanged = collect(['amount', 'loan_type_id', 'borrow_date'])
+            ->contains(fn ($field) => array_key_exists($field, $validated) && $this->loanFieldChanged($loan, $field, $validated[$field]));
+
         $loan->update($validated);
+
+        // G5: new terms on a loan that has moved no money (e.g. a rejected loan reopened with a new amount) → rebuild cycle 1
+        if ($termsChanged) {
+            $this->loanCalculator->rebuildInitialCycle($loan->fresh());
+        }
 
         // If loan status changed to defaulted, create recovery case
         if ($request->has('status') && $request->status === 'defaulted') {

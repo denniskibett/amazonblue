@@ -80,7 +80,7 @@ class BorrowerLoanState
                 'next' => [
                     'We may call you or your guarantor to confirm a few details.',
                     'Once approved, the money is sent to your M-Pesa and you get the M-Pesa message.',
-                    'Your due date is set from the day the money is sent.',
+                    'Your due date is set from the date we send the money.', // G4: decision 12 (cycle 1 starts at disbursement; engine in Phase 2)
                 ],
             ],
             'approved' => [

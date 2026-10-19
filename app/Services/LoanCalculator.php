@@ -8,6 +8,7 @@ use App\Models\Investment;
 use App\Models\Partner;
 use App\Models\PartnerTransaction;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class LoanCalculator
@@ -619,6 +620,28 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
         ]);
 
         return $cycle;
+    }
+
+    /**
+     * Rebuild cycle 1 from the loan's current amount, product and borrow date, but only while no money has moved:
+     * the loan is pending or approved, has no disbursement or repayment, and has no cycle after the first (G5).
+     * Returns false (and changes nothing) otherwise.
+     */
+    public function rebuildInitialCycle(Loan $loan): bool
+    {
+        if (! in_array($loan->status, [Loan::STATUS_PENDING, Loan::STATUS_APPROVED], true)
+            || $loan->disbursements()->exists()
+            || $loan->repayments()->withTrashed()->exists()
+            || $loan->cycles()->where('cycle_number', '>', 1)->exists()) {
+            return false;
+        }
+
+        DB::transaction(function () use ($loan) {
+            $loan->cycles()->where('cycle_number', 1)->delete();
+            $this->createInitialCycle($loan);
+        });
+
+        return true;
     }
 
     /**
