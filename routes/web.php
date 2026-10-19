@@ -441,6 +441,9 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
     Route::prefix('system')->name('system.')->middleware(['role:super-admin|admin'])->group(function () { // no super-admin named yet, so admins run the system pages too
         Route::get('/', [SystemController::class, 'index'])->name('index');
         Route::put('/update', [SystemController::class, 'update'])->name('update');
+        // where partners send money: super-admin only (+ current password, audit row, admin email)
+        Route::put('/partner-funding', [SystemController::class, 'updatePartnerFunding'])
+            ->name('partner-funding.update')->middleware('role:super-admin');
         Route::get('/clear-cache', [SystemController::class, 'clearCache'])->name('clear-cache');
         Route::get('/backup', [SystemController::class, 'backupDatabase'])->name('backup');
         Route::post('/toggle-maintenance', [SystemController::class, 'toggleMaintenance'])->name('toggle-maintenance');

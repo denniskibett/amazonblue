@@ -8,6 +8,7 @@ use App\Services\AuditTrail;
 use App\Services\PartnerAccount;
 use App\Services\PartnerPortfolio;
 use App\Support\CustomerNotifier;
+use App\Support\PartnerFunding;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -156,7 +157,7 @@ trait PartnerSelfService
         return view('home.account.partner.funds', [
             'partner' => $partner,
             'reference' => $this->partnerReference($partner),
-            'cfg' => config('lending.partner_funding'),
+            'cfg' => PartnerFunding::all(),
         ]);
     }
 
@@ -165,7 +166,7 @@ trait PartnerSelfService
         $partner = $account->partnerFor($request->user());
         abort_unless($partner, 404);
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:' . (int) config('lending.partner_funding.min_amount', 1000), 'max:1000000000'],
+            'amount' => ['required', 'numeric', 'min:' . PartnerFunding::minAmount(), 'max:1000000000'],
             'method' => ['required', Rule::in(['bank', 'mpesa'])],
             'transaction_code' => ['required', 'string', 'max:60'],
             'sent_on' => ['required', 'date', 'before_or_equal:today'],
@@ -202,7 +203,7 @@ trait PartnerSelfService
             'partner' => $partner,
             'wallets' => $account->withdrawable($partner),
             'payout' => PartnerAccount::payoutMethod($partner),
-            'min' => (int) config('lending.partner_funding.min_amount', 1000),
+            'min' => PartnerFunding::minAmount(),
         ]);
     }
 
@@ -214,7 +215,7 @@ trait PartnerSelfService
         $payout = PartnerAccount::payoutMethod($partner);
         $data = $request->validate([
             'wallet' => ['required', Rule::in(array_keys($wallets))],
-            'amount' => ['required', 'numeric', 'min:' . (int) config('lending.partner_funding.min_amount', 1000)],
+            'amount' => ['required', 'numeric', 'min:' . PartnerFunding::minAmount()],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
         $amount = round((float) $data['amount'], 2);
@@ -253,7 +254,7 @@ trait PartnerSelfService
 
     private function partnerReference(Partner $partner): string
     {
-        return config('lending.partner_funding.reference_prefix', 'AZP-') . str_pad((string) $partner->id, 4, '0', STR_PAD_LEFT);
+        return PartnerFunding::reference($partner);
     }
 
     /** wallet / from / to from the query string, in PartnerAccount::statementQuery's argument order. */

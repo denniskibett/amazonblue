@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use App\Services\AuditTrail;
+use App\Support\CustomerNotifier;
+use App\Support\PartnerFunding;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
@@ -161,6 +163,39 @@ class SystemController extends Controller
         SystemHelper::clearCache();
         return back()->with('success', 'System settings updated successfully!');
     }   
+    /**
+     * Partner funding details (where partners send money): super-admin only (route), current password required,
+     * audited and emailed to every admin by PartnerFunding / CustomerNotifier. An empty field falls back to config.
+     */
+    public function updatePartnerFunding(Request $request)
+    {
+        $data = $request->validateWithBag('partnerFunding', [
+            'current_password' => ['required', 'current_password'],
+            'bank_name' => ['nullable', 'string', 'max:100'],
+            'bank_account_name' => ['nullable', 'string', 'max:150'],
+            'bank_account_number' => ['nullable', 'string', 'max:40', 'regex:/^[0-9A-Za-z\- ]+$/'],
+            'bank_branch' => ['nullable', 'string', 'max:100'],
+            'bank_swift' => ['nullable', 'string', 'regex:/^[A-Za-z]{6}[A-Za-z0-9]{2}([A-Za-z0-9]{3})?$/'],
+            'mpesa_paybill' => ['nullable', 'digits_between:5,7'],
+            'mpesa_account' => ['nullable', 'string', 'max:40', 'regex:/^[0-9A-Za-z\-]+$/'],
+            'reference_prefix' => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z0-9\-]+$/'],
+            'min_amount' => ['nullable', 'integer', 'min:1', 'max:100000000'],
+        ], [
+            'current_password.current_password' => 'That is not your current password.',
+            'bank_swift.regex' => 'A SWIFT code has 8 or 11 letters and numbers.',
+            'mpesa_paybill.digits_between' => 'A paybill number has 5 to 7 digits.',
+        ]);
+
+        $result = PartnerFunding::save($data);
+        if (! $result['changed']) {
+            return redirect(route('system.index') . '#partner-funding')->with('success', 'Partner funding details: nothing changed.');
+        }
+        CustomerNotifier::partnerFundingChanged($request->user(), $result['old'], $result['new']);
+
+        return redirect(route('system.index') . '#partner-funding')
+            ->with('success', 'Partner funding details saved. Every admin has been emailed about the change.');
+    }
+
     public function clearCache()
     {
         Cache::flush();

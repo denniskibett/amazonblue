@@ -928,6 +928,8 @@
             </div>
         </form>
     </div>
+
+    @include('admin.system._partner-funding')
 </div>
 
 <script>

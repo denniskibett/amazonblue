@@ -49,6 +49,12 @@ Screenshots (desktop 1440 px and phone 390 px) are in `docs/stage2/screens/<jour
 - **Partners pay into:** I&M Bank, IMAGINE-NATION AGENCY LIMITED, Wilson branch, A/c 01104493106350, or M-Pesa paybill 542542 with account no. 01104493106350.
   - These are the defaults in `config/lending.php` (`partner_funding`); env vars override them.
   - Because the paybill account no. is the bank account, partners send their `AZP-` reference through the "I've sent funds" form.
+  - **Editable on `/system` (addendum, 20 October 2026).** A "Partner funding details" card holds the 9 values in `system.settings.partner_funding`; there is no schema change and no SQL script.
+    - Read order (`App\Support\PartnerFunding`): the saved value, else `config/lending.php`/env. A blank field returns to the default.
+    - Only the super-admin can save, and must enter their current password. Admins see the values read-only.
+    - Every save writes an `audit_logs` row (`table_name = system`, `event = partner_funding_changed`, old and new values) and emails every admin and super-admin the old and new values.
+    - A second-person approval for changes needs the Stage 4 Phase 5 approvals table.
+    - Tests: `tests/Feature/PartnerFundingSettingsTest.php`.
 - **Account-number format:** `MPESA_ACCOUNT_FORMAT=loan_number`.
 - **Borrower paybill: not set yet.** The 174379 shortcode and passkey you supplied are Safaricom's public sandbox (test) credentials, but `.env` says `MPESA_ENV=production`. Borrowers keep seeing "paybill to be confirmed" until the live paybill and live Daraja credentials are confirmed.
 - **Rejecting a loan** needs `approve loans` on both the reject route and the edit form; tellers and brokers can no longer reject.

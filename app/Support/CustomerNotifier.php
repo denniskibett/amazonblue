@@ -118,6 +118,22 @@ class CustomerNotifier
         self::toStaff(new StaffAlert($subject, $line, 'Open the partner', route('partners.show', $partner)));
     }
 
+    /**
+     * The partner funding details (where partners send money) changed on /system: every admin hears about it,
+     * with the old and new values, so a change nobody expected is spotted before a partner pays into it.
+     */
+    public static function partnerFundingChanged(User $by, array $old, array $new): void
+    {
+        $lines = collect($new)->map(fn ($value, $key) => str_replace('_', ' ', $key) . ': '
+            . (filled($old[$key] ?? null) ? $old[$key] : '(default)') . ' → ' . (filled($value) ? $value : '(default)'))->implode('; ');
+        self::toStaff(new StaffAlert(
+            'Partner funding details changed by ' . $by->name,
+            $by->name . ' (' . $by->email . ') changed where partners send money, at ' . now()->format('d M Y H:i') . '. '
+                . $lines . '. If you did not expect this, sign in and check the System settings now.',
+            'Open System settings', route('system.index') . '#partner-funding'
+        ));
+    }
+
     private static function send(User $user, $notification): void
     {
         if (! $user->email) {

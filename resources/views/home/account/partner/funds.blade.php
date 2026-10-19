@@ -1,4 +1,4 @@
-{{-- Add funds: where to send money (config lending.partner_funding) and an "I've sent funds" form that only
+{{-- Add funds: where to send money (App\Support\PartnerFunding: /system, else config lending.partner_funding) and an "I've sent funds" form that only
      emails staff + writes an audit row. Staff record the contribution after checking the bank / M-Pesa statement. --}}
 @extends('home.layouts.account', ['title' => 'Add funds', 'tab' => 'home', 'area' => 'partner'])
 
@@ -60,7 +60,7 @@
       <p class="muted" style="margin:4px 0 14px;font-size:14px">Tell us what you sent so we can match it. Your capital goes up once our team confirms the money has arrived.</p>
       <form method="POST" action="{{ route('account.partner.funds.store') }}" class="a-grid" style="gap:12px">
         @csrf
-        <x-az.field name="amount" label="Amount (KES)" type="number" required step="0.01" :min="config('lending.partner_funding.min_amount')" inputmode="decimal" />
+        <x-az.field name="amount" label="Amount (KES)" type="number" required step="0.01" :min="\App\Support\PartnerFunding::minAmount()" inputmode="decimal" />
         <x-az.field name="method" label="How you sent it" type="select" required :options="['bank' => 'Bank transfer', 'mpesa' => 'M-Pesa']" placeholder="Choose one" />
         <x-az.field name="transaction_code" label="Transaction code" required hint="The bank or M-Pesa confirmation code" maxlength="60" />
         <x-az.field name="sent_on" label="Date sent" type="date" required :value="now()->toDateString()" :max="now()->toDateString()" />
