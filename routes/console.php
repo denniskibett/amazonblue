@@ -27,3 +27,10 @@ Schedule::command('loans:detect-npl')
     ->timezone('Africa/Nairobi')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/loan-npl.log'));
+
+// read-only report: repaid loans that still owe, active cycles after repaid, misdated/misplaced repayments (Phase 0.11)
+Schedule::command('loans:check-integrity --csv --notify')
+    ->dailyAt('02:00')
+    ->timezone('Africa/Nairobi')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/loan-integrity.log'));
