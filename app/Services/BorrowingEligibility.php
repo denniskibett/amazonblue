@@ -92,6 +92,11 @@ class BorrowingEligibility
             $reasons[] = ['You already have a loan', 'Loan #' . str_pad((string) $loan->id, 5, '0', STR_PAD_LEFT) . ' is ' . str_replace('_', ' ', $loan->status) . '. You can apply again once it is repaid.'];
         }
 
+        // G7 (decision 18): no new loan after a write-off; the written-off balance is still owed
+        if (Loan::where('user_id', $user->id)->where('status', Loan::STATUS_WRITTEN_OFF)->exists()) {
+            $reasons[] = ['Balance still owed', 'A previous loan was written off with a balance still owed. Please talk to our team about settling it before you apply again.'];
+        }
+
         if ($user->debtRecoveryCases()->open()->exists()) {
             $reasons[] = ['Account under recovery', 'Please settle your outstanding balance with our team before applying.'];
         }

@@ -109,10 +109,10 @@ class BorrowerLoanState
             'written_off' => [
                 'tone' => 'err',
                 'title' => 'This loan has been written off',
-                'message' => 'Our records show this loan as written off. It still counts on your repayment history with us.',
+                'message' => 'Our records show this loan as written off. The balance is still owed, and it counts on your repayment history with us.',
                 'next' => [
                     'Talk to us about settling it; settled loans are noted on your record.',
-                    'A written-off loan keeps the amount you can borrow at the starting limit.',
+                    'You can\'t take a new loan until it is settled with our team.', // G7, decision 18
                 ],
             ],
             'forbearance' => [
