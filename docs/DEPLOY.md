@@ -47,3 +47,25 @@ Other details:
 - **Never** run `loans:repair-cycles` on live.
 - Keep `APP_DEBUG=false` on live.
 - Secrets live only in the server `.env`. Never paste them into chats or commits.
+
+## Live status (20 October 2026)
+
+**Live:** `stage-2-ui` (`a2c9732`) was deployed with `scripts/push-live.sh`. Smoke test 200/200; old agreement URLs return 404.
+
+**Confirmed on live:**
+
+- `APP_DEBUG=false`.
+- All SQL twins applied.
+- Stage 1 data repairs done.
+- `wallets:check` reconciles.
+- SSH key login from the Mac works.
+
+**Open (owner, then close Stage 2):**
+
+1. **Cron:** `crontab -u loans4537` is empty, so the nightly status/NPL jobs don't run. Add `* * * * * cd /home/loans.sharet.africa/laravel && php artisan schedule:run >> /dev/null 2>&1` for `loans4537`.
+2. **Email:** sent from `noreply@loans.sharet.africa`. Gmail accepts it but quarantines it (DMARC), because there is no SPF/DKIM. Add SPF, DKIM (CyberPanel › Email › DKIM Manager) and the `mail.loans` A record **at Olitt**, not CyberPanel DNS.
+3. **`.env`:** remove the duplicate `LOG_STACK=single` (the first value wins) and add `LOG_DAILY_DAYS=30`.
+4. **Secrets:** rotate `DB_PASSWORD`, which was pasted in chat.
+5. **sysadmin:** set a strong password and confirm `getRoleNames()` = `["super-admin"]`.
+6. **Browser checks:** `/system` funding card (sysadmin), Business Reviews in the staff sidebar, Repay for a borrower.
+7. **Later:** Ubuntu 20.04 is past standard support (enable Ubuntu Pro or upgrade); the server has 2 GB RAM with swap half used.
