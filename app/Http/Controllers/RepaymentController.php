@@ -66,7 +66,8 @@ class RepaymentController extends Controller
         abort_unless(auth()->user()->can('create repayments'), 403, 'You are not allowed to record or change repayments.');
         $validated = $request->validate([
             'loan_id' => 'required|exists:loans,id',
-            'loan_cycle_id' => 'required|exists:loan_cycles,id',
+            // the cycle must belong to this loan (G3; the UI offers only the loan's cycles, the server checks too)
+            'loan_cycle_id' => ['required', \Illuminate\Validation\Rule::exists('loan_cycles', 'id')->where('loan_id', (int) $request->input('loan_id'))],
             'amount' => 'required|numeric|min:0',
             'repayment_date' => 'required|date',
             'transaction' => 'nullable|string',
