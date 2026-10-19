@@ -47,7 +47,7 @@ Route::get('/files/users/{user}/{document}', [PrivateFileController::class, 'use
     ->middleware('auth')
     ->whereIn('document', array_keys(\App\Support\PrivateFiles::USER_DOCUMENTS))
     ->name('files.user');
-// company documents: the owner, members with a user account, staff with `view users` (Business::isVisibleTo)
+// company documents: the owner, members with a user account, staff KYC reviewers (Business::isVisibleTo)
 Route::get('/files/businesses/{business}/{document}', [PrivateFileController::class, 'business'])
     ->middleware('auth')
     ->whereNumber('document')

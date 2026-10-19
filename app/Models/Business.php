@@ -134,7 +134,7 @@ class Business extends Model
 
     /**
      * Who may see the business and its files: the owner, a member with a linked user account, or staff
-     * who work with customer records (view users).
+     * who may open KYC documents (PrivateFileController::isStaffReviewer).
      */
     public function isVisibleTo(User $viewer): bool
     {
@@ -145,6 +145,6 @@ class Business extends Model
             return true;
         }
 
-        return $viewer->hasAnyRole(User::STAFF_ROLES) && ($viewer->hasRole('super-admin') || $viewer->can('view users'));
+        return \App\Http\Controllers\PrivateFileController::isStaffReviewer($viewer);
     }
 }

@@ -29,7 +29,7 @@ class PrivateFileController extends Controller
     }
 
     /**
-     * A company document (business KYC): the owner, a member with a user account, or staff with `view users`.
+     * A company document (business KYC): the owner, a member with a user account, or a staff KYC reviewer.
      */
     public function business(Request $request, \App\Models\Business $business, string $document)
     {
@@ -48,11 +48,12 @@ class PrivateFileController extends Controller
     }
 
     /**
-     * Staff who work with customer records (users, KYC reviews or loans).
+     * Staff who may open KYC documents: `edit users` or `view kyc documents`.
+     * `view users` and `view loans` are not enough (brokers hold `view loans`).
      */
     public static function isStaffReviewer(User $viewer): bool
     {
         return $viewer->hasAnyRole(User::STAFF_ROLES)
-            && ($viewer->hasRole('super-admin') || $viewer->canAny(['view users', 'edit users', 'view loans']));
+            && ($viewer->hasRole('super-admin') || $viewer->canAny(['edit users', 'view kyc documents']));
     }
 }
