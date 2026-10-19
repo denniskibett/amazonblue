@@ -35,4 +35,4 @@ Run it once now. After that, run it every quarter and after any server change. R
 | Date | Dump | Result | By |
 |---|---|---|---|
 | 2026-10-20 | local clone (`loans_wp_s2`) | Script check only: 12/12 tables restored, counts equal | Claude (local) |
-| | live `~/backups/db_*.sql.gz` | **To do (owner)** | |
+| 2026-10-20 | live `db_20261020_013126.sql.gz` (244K) | Passed: 12/12 tables restored, counts equal to `loans_main`, restored in 1s | owner (root) |

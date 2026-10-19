@@ -50,7 +50,17 @@ Other details:
 
 ## Live status (20 October 2026)
 
-**Live:** `stage-2-ui` (`a2c9732`) was deployed with `scripts/push-live.sh`. Smoke test 200/200; old agreement URLs return 404.
+**Live:** `stage-2-ui` (`f7a5ef4`, Stage 4 Phase 0) was deployed with `scripts/push-live.sh`. Smoke test 200/200. Previous release: `releases/laravel_20261020_013126`. Before that: `a2c9732` (Stage 2); old agreement URLs return 404.
+
+**Phase 0 on live (20 Oct):**
+
+- Both `2026_10_20_*.sql` scripts ran. The broker has no `view users`. Only sysadmin (#113) can open `/system`.
+- First `loans:check-integrity` run found 443 findings:
+  - 6 repaid loans that still owe (#7, 97, 164, 253, 344, 502);
+  - 434 repaid loans with an active cycle;
+  - 3 repayments dated before their cycle (#369, 370, 450).
+- The CSV is in `storage/app/private/reports/`.
+- Restore test passed ([RETENTION.md](stage4/RETENTION.md)).
 
 **Confirmed on live:**
 
