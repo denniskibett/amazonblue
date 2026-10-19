@@ -83,7 +83,7 @@
       @endif
 
       @if ($loan->consent)
-        <a class="btn btn-ghost btn-block" href="{{ route('account.agreement', $loan) }}" target="_blank" rel="noopener">View signed loan agreement</a>
+        <a class="btn btn-ghost btn-block" href="{{ route('account.agreement', $loan) }}">View signed loan agreement</a>
       @endif
     </div>
   </div>

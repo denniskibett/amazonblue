@@ -156,7 +156,7 @@
                         </label>
                         <div class="flex flex-col gap-2">
                             @if($system->logo)
-                                <img src="{{ SystemHelper::logoUrl('light') }}" alt="Logo" class="h-12 w-auto rounded-lg bg-white p-2">
+                                <img src="{{ \App\Helpers\SystemHelper::logoUrl('light') }}" alt="Logo" class="h-12 w-auto rounded-lg bg-white p-2">
                             @endif
                             <input type="file" name="logo" accept="image/*"
                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
@@ -170,7 +170,7 @@
                         </label>
                         <div class="flex flex-col gap-2">
                             @if($system->logo_dark)
-                                <img src="{{ SystemHelper::logoUrl('dark') }}" alt="Dark Logo" class="h-12 w-auto rounded-lg bg-gray-800 p-2">
+                                <img src="{{ \App\Helpers\SystemHelper::logoUrl('dark') }}" alt="Dark Logo" class="h-12 w-auto rounded-lg bg-gray-800 p-2">
                             @endif
                             <input type="file" name="logo_dark" accept="image/*"
                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
@@ -184,7 +184,7 @@
                         </label>
                         <div class="flex flex-col gap-2">
                             @if($system->logo_icon)
-                                <img src="{{ SystemHelper::logoUrl('icon') }}" alt="Logo Icon" class="h-10 w-10 rounded-lg">
+                                <img src="{{ \App\Helpers\SystemHelper::logoUrl('icon') }}" alt="Logo Icon" class="h-10 w-10 rounded-lg">
                             @endif
                             <input type="file" name="logo_icon" accept="image/*"
                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
@@ -198,7 +198,7 @@
                         </label>
                         <div class="flex flex-col gap-2">
                             @if($system->favicon)
-                                <img src="{{ SystemHelper::faviconUrl() }}" alt="Favicon" class="h-8 w-8 rounded">
+                                <img src="{{ \App\Helpers\SystemHelper::faviconUrl() }}" alt="Favicon" class="h-8 w-8 rounded">
                             @endif
                             <input type="file" name="favicon" accept="image/*"
                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
@@ -719,7 +719,7 @@
                                         Content
                                     </label>
                                     <textarea name="page_{{ $page }}_content" rows="3"
-                                              class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm">{{ old("page_{$page}_content", $pageData['content']) }}</textarea>
+                                              class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm">{{ old("page_{$page}_content", $pageData['content'] ?? '') }}</textarea>
                                 </div>
                             </div>
                         </div>

@@ -107,7 +107,7 @@
         </div>
 
         <!-- Profile Completion Status -->
-        @if(auth()->user()->role === 'borrower')
+        @if(auth()->user()->hasRole('borrower'))
         <div class="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-6 shadow-sm dark:border-blue-800 dark:bg-blue-900/20">
             <div class="flex items-center justify-between flex-wrap gap-4">
                 <div>
@@ -487,7 +487,7 @@
                             @if($user->id_front_path)
                             <p class="mt-1 text-sm text-green-600">Current file uploaded</p>
                             <div class="mt-2">
-                                <img src="{{ asset('storage/' . $user->id_front_path) }}" alt="ID Front" class="w-32 h-32 object-cover rounded-lg border border-gray-300">
+                                <img src="{{ $user->documentUrl('id-front') }}" alt="ID Front" class="w-32 h-32 object-cover rounded-lg border border-gray-300">
                             </div>
                             @endif
                             @error('id_front_path')
@@ -506,7 +506,7 @@
                             @if($user->id_back_path)
                             <p class="mt-1 text-sm text-green-600">Current file uploaded</p>
                             <div class="mt-2">
-                                <img src="{{ asset('storage/' . $user->id_back_path) }}" alt="ID Back" class="w-32 h-32 object-cover rounded-lg border border-gray-300">
+                                <img src="{{ $user->documentUrl('id-back') }}" alt="ID Back" class="w-32 h-32 object-cover rounded-lg border border-gray-300">
                             </div>
                             @endif
                             @error('id_back_path')
@@ -585,7 +585,7 @@
                 <!-- ============================================ -->
                 <!-- BUCKET 4: EMPLOYMENT - UNLOCKED               -->
                 <!-- ============================================ -->
-                @if($user->role === 'borrower')
+                @if($user->hasRole('borrower'))
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="employment">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
@@ -690,7 +690,7 @@
                 <!-- ============================================ -->
                 <!-- BUCKET 5: BORROWER ACCOUNT - LOCKED          -->
                 <!-- ============================================ -->
-                @if($user->role === 'borrower')
+                @if($user->hasRole('borrower'))
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="borrower-info">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
@@ -752,7 +752,7 @@
                 <!-- ============================================ -->
                 <!-- BUCKET 6: BROKER - Certificate Locked, Rates Unlocked -->
                 <!-- ============================================ -->
-                @if($user->role === 'broker')
+                @if($user->hasRole('broker'))
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="broker-info">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
@@ -849,7 +849,7 @@
                 <!-- ============================================ -->
                 <!-- BUCKET 7: TELLER - UNLOCKED                   -->
                 <!-- ============================================ -->
-                @if($user->role === 'teller')
+                @if($user->hasRole('teller'))
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="teller-info">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
@@ -926,7 +926,7 @@
                     <div class="flex-shrink-0">
                         <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700 shadow-sm">
                             <div class="w-32 h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded">
-                                <img src="{{ asset('storage/' . $user->signature) }}?v={{ time() }}"
+                                <img src="{{ $user->documentUrl('signature') }}"
                                     alt="Signature of {{ $user->name }}"
                                     class="max-w-full max-h-full object-contain"
                                     onerror="this.style.display='none';">
@@ -952,7 +952,7 @@
                             <div class="flex-shrink-0">
                                 <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-green-200 dark:border-green-700 shadow-sm">
                                     <div class="w-32 h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded">
-                                        <img src="{{ asset('storage/' . $user->signature) }}?v={{ time() }}"
+                                        <img src="{{ $user->documentUrl('signature') }}"
                                             alt="Signature of {{ $user->name }}"
                                             class="max-w-full max-h-full object-contain"
                                             onerror="this.style.display='none';">

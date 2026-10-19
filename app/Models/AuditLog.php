@@ -9,6 +9,9 @@ class AuditLog extends Model
 {
     use HasFactory;
 
+    // audit_logs has created_at only (rows are never updated)
+    const UPDATED_AT = null;
+
     protected $fillable = [
         'table_name',
         'record_id',

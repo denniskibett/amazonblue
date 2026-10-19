@@ -1,7 +1,8 @@
 @extends('layouts.app')
 
 @php
-    $doc = fn ($path) => $path ? \Illuminate\Support\Facades\Storage::disk('public')->url($path) : null;
+    // documents are private: served through files.user (owner or staff only)
+    $doc = fn ($path) => $path ? $user->documentUrl(array_search($path, ['id-front' => $user->id_front_path, 'id-back' => $user->id_back_path, 'photo' => $user->avatar, 'signature' => $user->signature], true)) : null;
     $isPdf = fn ($path) => $path && str_ends_with(strtolower($path), '.pdf');
     $card = 'rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]';
     $label = 'text-xs text-gray-500 dark:text-gray-400';

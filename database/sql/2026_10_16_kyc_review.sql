@@ -53,7 +53,9 @@ PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 UPDATE `users` SET `kyc_status` = 'submitted' WHERE `kyc_submitted_at` IS NOT NULL AND `kyc_status` IS NULL;
 
 INSERT INTO `migrations` (`migration`, `batch`)
-SELECT '2026_10_16_000000_add_kyc_review_fields_to_users_table', COALESCE(MAX(batch), 0) + 1 FROM `migrations`
+SELECT m.migration, m.batch FROM (
+  SELECT '2026_10_16_000000_add_kyc_review_fields_to_users_table' AS migration, COALESCE(MAX(batch), 0) + 1 AS batch FROM `migrations`
+) m
 WHERE NOT EXISTS (SELECT 1 FROM `migrations` WHERE migration = '2026_10_16_000000_add_kyc_review_fields_to_users_table');
 
 SELECT 'Done: KYC review fields ready.' AS result;

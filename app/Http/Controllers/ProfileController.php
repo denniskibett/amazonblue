@@ -150,7 +150,7 @@ class ProfileController extends Controller
         $rules['profile_photo'] = 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048';
         
         // Employment (for borrowers)
-        if ($user->role === 'borrower') {
+        if ($user->hasRole('borrower')) {
             $rules['income_type'] = 'sometimes|string|max:50';
             $rules['gross_salary'] = 'nullable|numeric|min:0';
             $rules['net_salary'] = 'nullable|numeric|min:0';
@@ -163,7 +163,7 @@ class ProfileController extends Controller
         }
         
         // Broker rates (if broker)
-        if ($user->role === 'broker') {
+        if ($user->hasRole('broker')) {
             $rules['interest_client'] = 'sometimes|numeric|min:0';
             $rules['interest_broker'] = 'sometimes|numeric|min:0';
             $rules['penalty_client'] = 'sometimes|numeric|min:0';
@@ -171,7 +171,7 @@ class ProfileController extends Controller
         }
         
         // Teller branch (if teller)
-        if ($user->role === 'teller') {
+        if ($user->hasRole('teller')) {
             $rules['branch'] = 'sometimes|string|max:255';
         }
         
@@ -209,7 +209,7 @@ class ProfileController extends Controller
         }
         
         // Update role-specific info
-        if ($user->role === 'broker' && $user->broker) {
+        if ($user->hasRole('broker') && $user->broker) {
             $brokerData = [];
             $brokerFields = ['interest_client', 'interest_broker', 'penalty_client', 'penalty_broker'];
             foreach ($brokerFields as $field) {
@@ -220,7 +220,7 @@ class ProfileController extends Controller
             if (!empty($brokerData)) {
                 $user->broker->update($brokerData);
             }
-        } elseif ($user->role === 'borrower') {
+        } elseif ($user->hasRole('borrower')) {
             $borrowerData = [];
             $borrowerFields = ['income_type', 'gross_salary', 'net_salary', 'job_title', 'workplace', 
                                'employer_name', 'employer_email', 'employer_title', 'department'];
@@ -237,7 +237,7 @@ class ProfileController extends Controller
                     $user->borrower()->create($borrowerData);
                 }
             }
-        } elseif ($user->role === 'teller' && isset($validatedData['branch'])) {
+        } elseif ($user->hasRole('teller') && isset($validatedData['branch'])) {
             if ($user->teller) {
                 $user->teller->update(['branch' => $validatedData['branch']]);
             } else {

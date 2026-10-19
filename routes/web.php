@@ -3,7 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\SystemController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\PrivateFileController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LoanController;
@@ -42,9 +42,11 @@ Route::middleware(['auth', 'role:borrower'])->prefix('kyc')->name('kyc.')->contr
     Route::get('/submitted', 'kycSubmitted')->name('submitted');
 });
 
-// Google Auth
-Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('login.google');
-Route::get('/auth/google/callback', [GoogleController::class, 'callback']);
+// ============ PRIVATE DOCUMENTS (KYC ID images, photo, signature: owner or staff only) ============
+Route::get('/files/users/{user}/{document}', [PrivateFileController::class, 'user'])
+    ->middleware('auth')
+    ->whereIn('document', array_keys(\App\Support\PrivateFiles::USER_DOCUMENTS))
+    ->name('files.user');
 
 // ============ CUSTOMER ACCOUNT (borrowers & partners; website design, mobile first) ============
 Route::middleware('auth')->prefix('account')->name('account.')->group(function () {
@@ -57,6 +59,7 @@ Route::middleware('auth')->prefix('account')->name('account.')->group(function (
             Route::get('/loans', 'accountLoans')->name('loans');
             Route::get('/loans/{loan}', 'accountLoan')->name('loan');
             Route::get('/loans/{loan}/agreement', 'accountAgreement')->name('agreement');
+            Route::get('/loans/{loan}/agreement.pdf', 'accountAgreementFile')->name('agreement.file');
         });
 
         Route::middleware('role:partner')->get('/statement', 'accountStatement')->name('statement');
@@ -80,30 +83,29 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('/edit', [ProfileController::class, 'edit'])->name('edit');
         Route::match(['PUT', 'PATCH'], '/update', [ProfileController::class, 'update'])->name('update');
         Route::delete('/destroy', [ProfileController::class, 'destroy'])->name('destroy');
-        Route::delete('/avatar', [ProfileController::class, 'deleteAvatar'])->name('delete-avatar');
-        Route::match(['PUT', 'PATCH'], '/address', [ProfileController::class, 'updateAddress'])->name('address.update');
-        Route::get('/data', [ProfileController::class, 'getUserData'])->name('data');
         Route::post('/signature', [ProfileController::class, 'saveSignature'])->name('signature.save');
         Route::delete('/signature', [ProfileController::class, 'deleteSignature'])->name('signature.delete');
         Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password');
-        Route::post('/password/confirm', [ProfileController::class, 'confirmPassword'])->name('password.confirm');
     });
     
     // ============ USER MANAGEMENT ============
     Route::resource('users', UserController::class)
-        ->middleware('permission:view users|create users|edit users|delete users');
+        ->middlewareFor(['index', 'show'], 'permission:view users')
+        ->middlewareFor(['create', 'store'], 'permission:create users')
+        ->middlewareFor(['edit', 'update'], 'permission:edit users')
+        ->middlewareFor('destroy', 'permission:delete users');
 
     Route::get('/users/{user}/loans-data', [UserController::class, 'getUserLoansData'])
         ->name('users.loans-data')
         ->middleware('permission:view users');
 
     // ============ KYC REVIEWS (staff verify borrower KYC) ============
-    Route::prefix('kyc-reviews')->name('kyc-reviews.')->middleware('permission:edit users')
+    Route::prefix('kyc-reviews')->name('kyc-reviews.')
         ->controller(\App\Http\Controllers\KycReviewController::class)->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::get('/{user}', 'show')->name('show');
-            Route::post('/{user}/approve', 'approve')->name('approve');
-            Route::post('/{user}/reject', 'reject')->name('reject');
+            Route::get('/', 'index')->name('index')->middleware('permission:view users');
+            Route::get('/{user}', 'show')->name('show')->middleware('permission:view users');
+            Route::post('/{user}/approve', 'approve')->name('approve')->middleware('permission:edit users');
+            Route::post('/{user}/reject', 'reject')->name('reject')->middleware('permission:edit users');
         });
 
     // ============ USER LOAN ROUTES ============
@@ -135,7 +137,10 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
 
     // ============ LOANS ============
     Route::resource('loans', LoanController::class)
-        ->middleware('permission:view loans|create loans|edit loans|delete loans');
+        ->middlewareFor(['index', 'show'], 'permission:view loans')
+        ->middlewareFor(['create', 'store'], 'permission:create loans')
+        ->middlewareFor(['edit', 'update'], 'permission:edit loans')
+        ->middlewareFor('destroy', 'permission:delete loans');
 
     Route::prefix('loans/{loan}')->name('loans.')->group(function () {
         // Rollover Routes
@@ -195,36 +200,45 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::post('/signature', [LoanController::class, 'saveSignature'])
             ->name('signature.save')
             ->middleware('permission:edit loans');
-        
-        Route::get('/user-loans', [LoanController::class, 'getUserLoans'])
-            ->name('user-loans')
-            ->middleware('permission:view loans');
-        
-        Route::get('/chart-data', [LoanController::class, 'chartData'])
-            ->name('chart-data')
-            ->middleware('permission:view dashboard');
+
+        // Reject a pending/approved application (same permission as approving via edit)
+        Route::patch('/reject', [LoanController::class, 'reject'])
+            ->name('reject')
+            ->middleware('permission:edit loans');
     });
 
-    // Admin Loan Edit
-    Route::middleware('permission:edit loans')
-        ->get('/admin/loans/{loan}/edit', [LoanController::class, 'adminEdit'])
-        ->name('admin.loans.edit');
+    // Removed (no view/JS used them, controller methods never existed):
+    // loans.user-loans (getUserLoans), loans.chart-data (chartData), admin.loans.edit (adminEdit -> use loans.edit)
 
     // ============ DISBURSEMENTS ============
     Route::resource('disbursements', DisbursementController::class)
-        ->middleware('permission:view disbursements|create disbursements|edit disbursements|delete disbursements');
+        ->middlewareFor(['index', 'show'], 'permission:view disbursements')
+        ->middlewareFor(['create', 'store'], 'permission:create disbursements')
+        ->middlewareFor(['edit', 'update'], 'permission:edit disbursements')
+        ->middlewareFor('destroy', 'permission:delete disbursements');
 
     // ============ REPAYMENTS ============
     Route::resource('repayments', RepaymentController::class)
-        ->middleware('permission:view repayments|create repayments|edit repayments|delete repayments');
+        ->middlewareFor(['index', 'show'], 'permission:view repayments')
+        ->middlewareFor(['create', 'store'], 'permission:create repayments')
+        ->middlewareFor(['edit', 'update'], 'permission:edit repayments')
+        ->middlewareFor('destroy', 'permission:delete repayments');
 
     // ============ RECOVERY CASES ============
-    Route::resource('cases', CaseController::class)
-        ->middleware('permission:view recovery cases|create recovery cases|edit recovery cases|delete recovery cases');
-
+    // Static cases/* paths first, so cases/{case} (show) does not swallow them.
     Route::get('cases/my', [CaseController::class, 'myCases'])
         ->name('cases.my')
         ->middleware('permission:view recovery cases');
+
+    Route::get('cases/stats', [CaseController::class, 'getStats'])
+        ->name('cases.stats')
+        ->middleware('permission:view recovery cases');
+
+    Route::resource('cases', CaseController::class)
+        ->middlewareFor(['index', 'show'], 'permission:view recovery cases')
+        ->middlewareFor(['create', 'store'], 'permission:create recovery cases')
+        ->middlewareFor(['edit', 'update'], 'permission:edit recovery cases')
+        ->middlewareFor('destroy', 'permission:delete recovery cases');
 
     Route::patch('cases/{case}/recover', [CaseController::class, 'markAsRecovered'])
         ->name('cases.recover')
@@ -246,23 +260,20 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         ->name('cases.export')
         ->middleware('permission:view recovery cases');
 
-    Route::get('cases/stats', [CaseController::class, 'getStats'])
-        ->name('cases.stats')
-        ->middleware('permission:view recovery cases');
-
     // ============ REPORTS ============
     Route::prefix('reports')->name('reports.')->group(function () {
         Route::get('/', [ReportController::class, 'index'])
             ->name('index')
             ->middleware('permission:view reports');
         
-        Route::get('/{reportType}', [ReportController::class, 'show'])
-            ->name('show')
-            ->middleware('permission:view reports');
-        
+        // before /{reportType}, which would otherwise catch "export"
         Route::get('/export', [ReportController::class, 'export'])
             ->name('export')
             ->middleware('permission:export reports');
+
+        Route::get('/{reportType}', [ReportController::class, 'show'])
+            ->name('show')
+            ->middleware('permission:view reports');
     });
 
     // ============ INVESTMENTS ============
@@ -356,14 +367,19 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
     });
 
     // ============ SYSTEM SETTINGS ============
-    Route::prefix('system')->name('system.')->middleware(['permission:access system settings'])->group(function () {
+    Route::prefix('system')->name('system.')->middleware(['role:super-admin|admin'])->group(function () { // no super-admin named yet, so admins run the system pages too
         Route::get('/', [SystemController::class, 'index'])->name('index');
         Route::put('/update', [SystemController::class, 'update'])->name('update');
         Route::get('/clear-cache', [SystemController::class, 'clearCache'])->name('clear-cache');
         Route::get('/backup', [SystemController::class, 'backupDatabase'])->name('backup');
         Route::post('/toggle-maintenance', [SystemController::class, 'toggleMaintenance'])->name('toggle-maintenance');
-        Route::post('/debug', [SystemController::class, 'debug'])->name('debug');
+        // system.debug removed: no method, and only the unused admin/system/index.blade.php called it.
     });
+
+    // ============ AUDIT LOG (read-only) ============
+    Route::get('audit-log', [\App\Http\Controllers\AuditLogController::class, 'index'])
+        ->name('audit-log.index')
+        ->middleware('permission:view audit log');
 
     // Static Pages
     $staticPages = [

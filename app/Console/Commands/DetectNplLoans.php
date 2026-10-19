@@ -4,11 +4,13 @@ namespace App\Console\Commands;
 
 use App\Services\NplDetectionService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class DetectNplLoans extends Command
 {
-    protected $signature = 'loans:detect-npl {--loan= : Check a specific loan ID}';
+    protected $signature = 'loans:detect-npl {--loan= : Check a specific loan ID}
+                            {--dry-run : Run detection in a transaction and roll back (nothing is saved)}';
     protected $description = 'Detect non-performing loans and create recovery cases';
 
     protected $nplDetectionService;
@@ -22,11 +24,14 @@ class DetectNplLoans extends Command
     public function handle()
     {
         $loanId = $this->option('loan');
+        $dryRun = (bool) $this->option('dry-run');
 
         if ($loanId) {
             // Check specific loan
-            $this->info("Checking loan #{$loanId}...");
+            $this->info("Checking loan #{$loanId}..." . ($dryRun ? ' (dry run)' : ''));
+            DB::beginTransaction();
             $result = $this->nplDetectionService->checkLoan($loanId);
+            $dryRun ? DB::rollBack() : DB::commit();
             
             if (isset($result['error'])) {
                 $this->error($result['error']);
@@ -49,10 +54,10 @@ class DetectNplLoans extends Command
         }
 
         // Run full detection
-        $this->info('Starting NPL detection...');
+        $this->info('Starting NPL detection...' . ($dryRun ? ' (DRY RUN - changes rolled back)' : ''));
         
         try {
-            $results = $this->nplDetectionService->runDetection();
+            $results = $this->nplDetectionService->runDetection($dryRun);
 
             $this->info('NPL Detection completed!');
             $this->newLine();
@@ -62,6 +67,7 @@ class DetectNplLoans extends Command
                 [
                     ['Loans Checked', $results['loans_checked']],
                     ['New NPL Loans', $results['new_npl']],
+                    ['Already NPL', $results['still_npl']],
                     ['New Overdue Loans', $results['new_overdue']],
                     ['Recovery Cases Created', $results['recovery_cases_created']],
                 ]

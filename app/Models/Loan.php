@@ -297,7 +297,8 @@ class Loan extends Model
             return 0; // Not overdue yet
         }
         
-        return (int) $now->diffInDays($dueDate); // Only positive days
+        // Carbon 3 returns a signed diff (now->diffInDays(past) is negative), so diff forward.
+        return (int) $dueDate->diffInDays($now); // Only positive days
     }
 
     /**
@@ -327,92 +328,69 @@ class Loan extends Model
         return $daysOverdue >= $threshold;
     }
 
-    // ============ SINGLE STATUS UPDATE METHOD ============
+    /**
+     * Days after which an overdue loan counts as non-performing / defaulted.
+     *
+     * Detection-only (status + NPL flags). Priority:
+     * 1. loans.npl_trigger_threshold when > 0
+     * 2. loan_types.default_threshold_days when > 0
+     * 3. getNplThreshold() fallback (period + grace guess)
+     *
+     * getNplThreshold() itself is left unchanged because LoanCalculator uses it
+     * for penalty maths when npl_trigger_threshold is 0.
+     */
+    public function getDefaultThresholdDays(): int
+    {
+        if ($this->npl_trigger_threshold > 0) {
+            return (int) $this->npl_trigger_threshold;
+        }
+
+        $typeThreshold = (int) ($this->loanType->default_threshold_days ?? 0);
+        if ($typeThreshold > 0) {
+            return $typeThreshold;
+        }
+
+        return $this->getNplThreshold();
+    }
 
     /**
-     * Update loan status based on current state
-     * This is the ONLY method that changes loan status
+     * Refresh overdue / NPL flags for a running loan (used by NplDetectionService).
+     *
+     * Only acts on disbursed, overdue and expired-forbearance loans. Writes
+     * days_overdue, last_overdue_check, status (disbursed <-> overdue),
+     * is_non_performing and default_date. Does not touch balances, cycles,
+     * penalties or default_triggered (that stays with markAsDefaulted()).
      */
-    public function updateStatus(): void
+    public function updateNplStatus(): void
     {
-        // Don't update final statuses
-        if ($this->isFinal()) {
-            return;
-        }
-
-        // ============ CHECK IF LOAN IS FULLY REPAID ============
-        // Check if all cycles are completed
-        $hasActiveCycles = $this->cycles()
-            ->where('status', 'active')
-            ->exists();
-        
-        // Check if total repayments cover the loan amount
-        $totalRepaid = $this->repayments()->sum('amount');
-        $totalLoanAmount = $this->amount;
-        
-        if (!$hasActiveCycles || $totalRepaid >= $totalLoanAmount) {
-            $this->status = self::STATUS_REPAID;
-            $this->save();
-            Log::info('Loan auto-marked as repaid', [
-                'loan_id' => $this->id,
-                'total_repaid' => $totalRepaid,
-                'loan_amount' => $totalLoanAmount,
-                'has_active_cycles' => $hasActiveCycles
-            ]);
-            return;
-        }
-
-        // Don't update if in forbearance
-        if ($this->isForbearanceActive()) {
-            return;
-        }
-
-        // Don't update if in recovery
-        if ($this->isInRecovery()) {
-            return;
-        }
-
-        $dueDate = $this->getDueDate();
-        if (!$dueDate) {
+        $running = [self::STATUS_DISBURSED, self::STATUS_OVERDUE, self::STATUS_FORBEARANCE];
+        if (!in_array($this->status, $running, true) || $this->isForbearanceActive()) {
             return;
         }
 
         $daysOverdue = $this->calculateDaysOverdue();
-        $threshold = $this->getNplThreshold();
+        $threshold = $this->getDefaultThresholdDays();
 
         $this->days_overdue = $daysOverdue;
         $this->last_overdue_check = now();
 
-        if ($daysOverdue <= 0) {
-            if (in_array($this->status, [self::STATUS_OVERDUE, self::STATUS_DEFAULTED])) {
-                $this->status = self::STATUS_ACTIVE;
+        if ($daysOverdue > 0) {
+            if ($this->status !== self::STATUS_OVERDUE) {
+                $this->status = self::STATUS_OVERDUE;
             }
-            if ($this->is_non_performing) {
-                $this->is_non_performing = false;
+            if ($daysOverdue >= $threshold && !$this->is_non_performing) {
+                $this->is_non_performing = true;
+                $this->default_date = $this->default_date ?? now();
             }
-            $this->save();
-            return;
+        } elseif (!$this->default_triggered) {
+            // Due date moved out (rollover / plan): back to a running, performing loan.
+            if ($this->status === self::STATUS_OVERDUE) {
+                $this->status = self::STATUS_DISBURSED;
+            }
+            $this->is_non_performing = false;
         }
 
-        if ($this->grace_days_balance > 0 && $this->grace_days_balance >= $daysOverdue) {
-            $this->useGraceDays((int) $daysOverdue);
-            if (in_array($this->status, [self::STATUS_OVERDUE, self::STATUS_DEFAULTED])) {
-                $this->status = self::STATUS_ACTIVE;
-            }
-            $this->save();
-            return;
-        }
-
-        if ($daysOverdue >= $threshold && !$this->default_triggered) {
-            $this->markAsDefaulted("Loan overdue for {$daysOverdue} days");
-            $this->save();
-            return;
-        }
-
-        if ($this->status !== self::STATUS_OVERDUE) {
-            $this->status = self::STATUS_OVERDUE;
-            $this->save();
-        }
+        $this->save();
     }
 
     /**
@@ -653,48 +631,8 @@ class Loan extends Model
         }
     }
 
-    // ============ ROLLOVER METHODS ============
-
-
-    public function rollover(array $options = []): self
-    {
-        $loanCalculator = app(\App\Services\LoanCalculator::class);
-
-        $interestToCapitalize = $loanCalculator->calculateCapitalizedInterest($this);
-        $newAmount = $this->amount + $interestToCapitalize;
-        $newDueDate = $loanCalculator->calculateRolloverDueDate($this);
-        
-        // Store original amount if not set
-        if (!$this->original_amount) {
-            $this->original_amount = $this->amount;
-        }
-        
-        // ============ FIX: Update loan amount to new balance ============
-        $this->amount = $newAmount;
-        $this->cycle += 1;
-        $this->borrow_date = now();
-        $this->due_date = $newDueDate;
-        $this->calculated_due_date = $newDueDate;
-        $this->status = self::STATUS_DISBURSED;
-        $this->capitalized_interest += $interestToCapitalize;
-        $this->applyGracePeriod();
-        $this->save();
-
-        // ============ FIX: Create cycle record with previous_balance = old amount ============
-        $this->createCycleRecord([
-            'cycle_number' => $this->cycle,
-            'previous_balance' => $newAmount - $interestToCapitalize, // This is the old balance
-            'interest_capitalized' => $interestToCapitalize,
-            'new_balance' => $newAmount,
-            'interest_rate' => $this->loanType->interest_rate ?? 0,
-            'start_date' => now(),
-            'due_date' => $newDueDate,
-            'status' => 'active',
-            'notes' => $options['notes'] ?? 'Loan rollover',
-        ]);
-
-        return $this;
-    }
+    // ============ CYCLE RECORDS ============
+    // (Rollover lives in LoanCalculator / LoanController::rollover.)
 
     public function createCycleRecord(array $data): LoanCycle
     {
@@ -1077,7 +1015,7 @@ class Loan extends Model
             return;
         }
         
-        $this->status = self::STATUS_ACTIVE;
+        $this->status = self::STATUS_DISBURSED;
         $this->forbearance_until = null;
         $this->save();
         

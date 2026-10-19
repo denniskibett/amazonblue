@@ -80,7 +80,8 @@ class LoanProgress
             'progress' => $balance && $balance['total'] > 0 ? (int) min(100, round($balance['paid'] / $balance['total'] * 100)) : 0,
             'cycles' => $cycles,
             'repayments' => $repayments,
-            'has_agreement' => is_file(storage_path('app/public/agreements/loan_agreement_' . $loan->id . '.pdf')),
+            // signed copy frozen on file, or consented (frozen on first view)
+            'has_agreement' => (bool) ($loan->agreement_sha256 || $loan->consent),
         ];
     }
 }

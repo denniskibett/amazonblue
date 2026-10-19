@@ -60,16 +60,18 @@ class PartnerLedger
             $dp    = $wallet->decimal_places ?? 4;
             $minor = (int) round($amount * (10 ** $dp));
 
+            // source/type let a wallet posting be traced back to its journal row (reference + wallet_slug)
+            $meta = [
+                'source'      => 'partner_journal',
+                'type'        => $type,
+                'reference'   => $reference,
+                'description' => $notes ?? $type,
+            ];
             if ($minor >= 0) {
-                $wallet->deposit($minor, [
-                    'reference'   => $reference,
-                    'description' => $notes ?? $type,
-                ]);
+                $wallet->deposit($minor, $meta);
             } else {
-                $wallet->withdraw(abs($minor), [
-                    'reference'   => $reference,
-                    'description' => $notes ?? $type,
-                ]);
+                // throws InsufficientFunds rather than letting a partner wallet go below zero
+                $wallet->withdraw(abs($minor), $meta);
             }
 
             $wallet->refresh();
@@ -87,6 +89,7 @@ class PartnerLedger
                 'reference'             => $reference,
                 'notes'                 => $notes,
                 'transaction_date'      => $transactionDate ?? now()->toDateString(),
+                'created_by'            => auth()->id(),
             ]);
         });
     }

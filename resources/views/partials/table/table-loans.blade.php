@@ -8,8 +8,8 @@
     // Ensure variables exist with defaults - query if not provided
     $users = $users ?? collect();
     $loanTypes = $loanTypes ?? App\Models\LoanType::all();
-    $guarantors = $guarantors ?? App\Models\User::where('role', 'borrower')->get();
-    $loanOfficers = $loanOfficers ?? App\Models\User::whereIn('role', ['admin', 'teller'])->get();
+    $guarantors = $guarantors ?? App\Models\User::role('borrower')->get();
+    $loanOfficers = $loanOfficers ?? App\Models\User::role(['admin', 'teller'])->get();
     
     // Signature-related variables with defaults
     $signatureUser = $signatureUser ?? null;
@@ -18,18 +18,18 @@
     
     // Determine if we should show signature section
     $showSignatureSection = false;
-    if (isset($user) || auth()->user()->role === 'borrower') {
+    if (isset($user) || auth()->user()->hasRole('borrower')) {
         $showSignatureSection = true;
         $signatureUser = $signatureUser ?? $user ?? auth()->user();
         $hasExistingSignature = $signatureUser ? (!empty($signatureUser->signature)) : false;
-        $existingSignatureUrl = $hasExistingSignature ? Storage::url($signatureUser->signature) : null;
+        $existingSignatureUrl = $hasExistingSignature ? $signatureUser->documentUrl('signature') : null;
     }
     
     // ============ FIX: Prepare user data for JavaScript with signature ============
     $userDataForJs = null;
     if (isset($user)) {
         $hasSignature = !empty($user->signature);
-        $signatureUrl = $hasSignature ? Storage::url($user->signature) : '';
+        $signatureUrl = $hasSignature ? $user->documentUrl('signature') : '';
         
         $userDataForJs = [
             'id' => $user->id,
@@ -84,13 +84,13 @@
         </div>
       </div>
 
-      @if(isset($user) && (auth()->user()->role === 'admin' || auth()->user()->role === 'teller' || (auth()->user()->role === 'broker' && auth()->user()->broker && $user->borrower->broker_id === auth()->user()->broker->id)))
+      @if(isset($user) && (auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller') || (auth()->user()->hasRole('broker') && auth()->user()->broker && $user->borrower->broker_id === auth()->user()->broker->id)))
       <button 
           @click="openCreateModal({ 
               userId: {{ $user->id }}, 
               userName: '{{ addslashes($user->name) }}',
               hasSignature: {{ !empty($user->signature) ? 'true' : 'false' }},
-              signatureUrl: '{{ !empty($user->signature) ? Storage::url($user->signature) : '' }}'
+              signatureUrl: '{{ !empty($user->signature) ? $user->documentUrl('signature') : '' }}'
           })"
           class="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-theme-sm font-medium text-gray-500 shadow-theme-xs ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03]">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -98,7 +98,7 @@
           </svg>
           Create Loan
       </button>
-      @elseif(!isset($user) && (auth()->user()->role === 'admin' || auth()->user()->role === 'teller' || auth()->user()->role === 'broker'))
+      @elseif(!isset($user) && (auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller') || auth()->user()->hasRole('broker')))
       <button 
           @click="openCreateModal()"
           class="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-theme-sm font-medium text-gray-500 shadow-theme-xs ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03]">
@@ -115,10 +115,10 @@
     <table class="min-w-full" id="loansTable">
       <thead class="hidden sm:table-header-group">
         <tr class="border-gray-100 border-y dark:border-gray-800">
-          @if($showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']))
+          @if($showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']))
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable(0)">
             <div class="flex items-center justify-between">
-              <span>@if(auth()->user()->role === 'broker') Client @else Borrower @endif</span>
+              <span>@if(auth()->user()->hasRole('broker')) Client @else Borrower @endif</span>
               <span class="sort-icon text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
@@ -127,7 +127,7 @@
             </div>
           </th>
           @endif
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']) ? 1 : 0 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 1 : 0 }})">
             <div class="flex items-center justify-between">
               <span>Amount</span>
               <span class="sort-icon text-gray-400">
@@ -137,7 +137,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']) ? 2 : 1 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 2 : 1 }})">
             <div class="flex items-center justify-between">
               <span>Borrow Date</span>
               <span class="sort-icon text-gray-400">
@@ -147,7 +147,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']) ? 3 : 2 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 3 : 2 }})">
             <div class="flex items-center justify-between">
               <span>Duration</span>
               <span class="sort-icon text-gray-400">
@@ -157,7 +157,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']) ? 4 : 3 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 4 : 3 }})">
             <div class="flex items-center justify-between">
               <span>Status</span>
               <span class="sort-icon text-gray-400">
@@ -167,7 +167,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']) ? 5 : 4 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 5 : 4 }})">
             <div class="flex items-center justify-between">
               <span>Broker Fees</span>
               <span class="sort-icon text-gray-400">
@@ -177,7 +177,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']) ? 6 : 5 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 6 : 5 }})">
             <div class="flex items-center justify-between">
               <span>Penalty</span>
               <span class="sort-icon text-gray-400">
@@ -187,8 +187,8 @@
               </span>
             </div>
           </th>
-          @if(auth()->user()->role === 'admin')
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']) ? 7 : 6 }})">
+          @if(auth()->user()->hasRole('admin'))
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 7 : 6 }})">
             <div class="flex items-center justify-between">
               <span>Type</span>
               <span class="sort-icon text-gray-400">
@@ -238,7 +238,7 @@
             data-amount="{{ $loan->amount }}"
             data-borrow-date="{{ $loan->borrow_date->format('Y-m-d') }}"
             data-due-date="{{ $dueDate->format('Y-m-d') }}">
-          @if($showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']))
+          @if($showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']))
           <td class="py-3 hidden sm:table-cell">
             <div class="flex items-center gap-3">
               <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -280,17 +280,17 @@
         
           <td class="py-3 hidden sm:table-cell">
             <div class="text-sm text-gray-500">
-              @if(auth()->user()->role === 'broker') KES {{ number_format($loan->broker_interest_amount ?? 0, 2) }} @else {{ $loan->loanType->interest_rate }}% @endif
+              @if(auth()->user()->hasRole('broker')) KES {{ number_format($loan->broker_interest_amount ?? 0, 2) }} @else {{ $loan->loanType->interest_rate }}% @endif
             </div>
           </td>
         
           <td class="py-3 hidden sm:table-cell">
             <div class="text-sm text-gray-500">
-              @if(auth()->user()->role === 'broker') KES {{ number_format($loan->broker_penalty_amount ?? 0, 2) }} @else {{ $loan->loanType->penalty_rate }}% @endif
+              @if(auth()->user()->hasRole('broker')) KES {{ number_format($loan->broker_penalty_amount ?? 0, 2) }} @else {{ $loan->loanType->penalty_rate }}% @endif
             </div>
           </td>
         
-          @if(auth()->user()->role === 'admin')
+          @if(auth()->user()->hasRole('admin'))
           <td class="py-3 hidden sm:table-cell">
             <div class="text-sm text-gray-500 loan-type">{{ $loan->loanType->name ?? 'Standard' }}</div>
           </td>
@@ -305,7 +305,7 @@
                 </svg>
               </a>
 
-              @if($loan->consent && in_array(auth()->user()->role, ['admin', 'teller', 'broker']))
+              @if($loan->consent && auth()->user()->hasAnyRole(['admin', 'teller', 'broker']))
               <button @click="openPdfModal({{ $loan->id }}, '{{ addslashes($loan->user->name) }}\'s Loan (KES {{ number_format($loan->amount, 2) }})')" class="text-purple-600 hover:text-purple-900" title="View Agreement">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -313,7 +313,7 @@
               </button>
               @endif
 
-              @if(in_array(auth()->user()->role, ['admin', 'broker', 'teller']) && $loan->status !== 'rejected')
+              @if(auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) && $loan->status !== 'rejected')
               <button 
                   @click="openEditModal({{ $loan->id }})"
                   class="text-green-600 hover:text-green-900" 
@@ -324,7 +324,7 @@
               </button>
               @endif
 
-              @if(in_array(auth()->user()->role, ['admin', 'broker']))
+              @if(auth()->user()->hasAnyRole(['admin', 'broker']))
               <button @click="openDeleteModal({{ $loan->id }}, '{{ addslashes($loan->user->name) }}\'s Loan (KES {{ number_format($loan->amount, 2) }})')" class="text-red-600 hover:text-red-900" title="Delete">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -362,7 +362,7 @@
               </svg>
             </a>
           
-            @if($loan->consent && in_array(auth()->user()->role, ['admin', 'teller', 'broker']))
+            @if($loan->consent && auth()->user()->hasAnyRole(['admin', 'teller', 'broker']))
             <button @click="openPdfModal({{ $loan->id }}, '{{ addslashes($loan->user->name) }}\'s Loan (KES {{ number_format($loan->amount, 2) }})')" class="text-purple-600 hover:text-purple-900 inline-block mr-2" title="View Agreement">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -370,7 +370,7 @@
             </button>
             @endif
           
-            @if(in_array(auth()->user()->role, ['admin', 'broker', 'teller']) && $loan->status !== 'rejected')
+            @if(auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) && $loan->status !== 'rejected')
             <button 
                 @click="openEditModal({{ $loan->id }})"
                 class="text-green-600 hover:text-green-900 inline-block mr-2" 
@@ -381,7 +381,7 @@
             </button>
             @endif
           
-            @if(in_array(auth()->user()->role, ['admin', 'broker']))
+            @if(auth()->user()->hasAnyRole(['admin', 'broker']))
             <button @click="openDeleteModal({{ $loan->id }}, '{{ addslashes($loan->user->name) }}\'s Loan (KES {{ number_format($loan->amount, 2) }})')" class="text-red-600 hover:text-red-900 inline-block mr-2" title="Delete">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -392,7 +392,7 @@
         </tr>
       @empty
         <tr>
-          <td colspan="{{ $showUserColumn && in_array(auth()->user()->role, ['admin', 'broker', 'teller']) ? 9 : 8 }}" class="py-8 text-center">
+          <td colspan="{{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 9 : 8 }}" class="py-8 text-center">
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>

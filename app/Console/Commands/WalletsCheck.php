@@ -38,7 +38,11 @@ class WalletsCheck extends Command
         $this->newLine();
         $this->info('Partner wallets vs partner journal');
         $p = $wallets->checkPartners();
-        $this->line("  {$p['checked']} partner wallet(s) with journal entries checked");
+        $this->line("  {$p['checked']} partner wallet(s) checked (every wallet, and every journal group)");
+        foreach ($p['slug_mismatches'] as $m) {
+            $problems++;
+            $this->warn(sprintf('  partner #%d journal: %d row(s) (%s) say %s but were posted to %s', $m['partner'], $m['rows'], number_format((float) $m['amount'], 4), $m['journal_says'], $m['posted_to']));
+        }
         foreach ($p['issues'] as $i) {
             $problems++;
             $this->warn(sprintf('  partner #%d %s: journal %s, wallet %s', $i['partner'], $i['wallet'], number_format($i['journal'], 4), $i['balance'] === null ? 'missing' : number_format($i['balance'], 4)));
@@ -50,15 +54,24 @@ class WalletsCheck extends Command
 
         if ($this->option('repair-partners') && ($p['issues'] || $p['integrity'])) {
             $this->newLine();
-            $journal = \App\Models\PartnerTransaction::selectRaw('partner_id, wallet_slug, sum(amount) as total')->groupBy('partner_id', 'wallet_slug')->get()
-                ->keyBy(fn ($r) => $r->partner_id . ':' . $r->wallet_slug);
-            $targets = collect($p['issues'])->map(fn ($i) => $i['partner'] . ':' . $i['wallet'])
-                ->merge(collect($p['integrity'])->map(fn ($i) => $i['holder'] . ':' . $i['slug']))->unique();
+            // safe only once the journal itself is right: aligning wallets to a journal whose rows point
+            // at the wrong wallet is what double-counted the House Account on 2026-10-15
+            if ($p['slug_mismatches']) {
+                $this->error('Not repairing: journal rows point at the wrong wallet. Run database/sql/2026_10_16_partner_journal_wallet_slug.sql first.');
+
+                return self::FAILURE;
+            }
+            $journal = collect($p['issues'])->mapWithKeys(fn ($i) => [$i['partner'] . ':' . $i['wallet'] => $i['journal']]);
+            $targets = $journal->keys()->merge(collect($p['integrity'])->map(fn ($i) => $i['holder'] . ':' . $i['slug']))->unique();
             foreach ($targets as $key) {
                 [$partnerId, $slug] = explode(':', $key);
                 $partner = Partner::find($partnerId);
+                if (! $partner) {
+                    continue;
+                }
                 $wallets->ensurePartnerWallets($partner);
-                $posted = $wallets->repairPartnerWallet($partner, $slug, (float) ($journal[$key]->total ?? 0));
+                $total = $journal[$key] ?? (float) \App\Models\PartnerTransaction::where('partner_id', $partnerId)->where('wallet_slug', $slug)->sum('amount');
+                $posted = $wallets->correctPartnerWallet($partner, $slug, $total, 'wallets:check --repair-partners: wallet differed from the partner journal');
                 $this->line(sprintf('  repaired partner #%d %s (correcting entry %s)', $partnerId, $slug, number_format($posted, 4)));
             }
             $this->info('Repaired. Run wallets:check again to confirm.');

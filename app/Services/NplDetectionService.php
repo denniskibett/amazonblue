@@ -16,10 +16,12 @@ class NplDetectionService
 {
     /**
      * Run full NPL detection
+     *
+     * @param bool $dryRun run everything inside the transaction, then roll back
      */
-    public function runDetection()
+    public function runDetection(bool $dryRun = false)
     {
-        Log::info('NPL Detection started');
+        Log::info('NPL Detection started', ['dry_run' => $dryRun]);
 
         try {
             DB::beginTransaction();
@@ -28,33 +30,40 @@ class NplDetectionService
                 'loans_checked' => 0,
                 'new_npl' => 0,
                 'new_overdue' => 0,
+                'still_npl' => 0,
                 'recovery_cases_created' => 0,
                 'errors' => [],
             ];
 
-            // Find loans to check
+            // Find running loans to check (pending/approved/rejected are never overdue;
+            // forbearance is included so expired forbearance gets picked up -
+            // updateNplStatus() skips forbearance that is still active)
             $loansToCheck = Loan::with(['loanType', 'user', 'repayments', 'disbursements'])
-                ->whereIn('status', ['disbursed', 'approved', 'active', 'overdue'])
-                ->where('default_triggered', 0)
+                ->whereIn('status', [Loan::STATUS_DISBURSED, Loan::STATUS_OVERDUE, Loan::STATUS_FORBEARANCE])
+                ->where(function ($q) {
+                    $q->where('default_triggered', 0)->orWhereNull('default_triggered');
+                })
                 ->get();
 
             $results['loans_checked'] = $loansToCheck->count();
 
             foreach ($loansToCheck as $loan) {
                 try {
+                    $wasNpl = (bool) $loan->is_non_performing;
+                    $wasOverdue = $loan->status === Loan::STATUS_OVERDUE;
+
                     // Update NPL status
                     $loan->updateNplStatus();
-                    $results['loans_checked']++;
 
                     if ($loan->is_non_performing) {
-                        $results['new_npl']++;
+                        $results[$wasNpl ? 'still_npl' : 'new_npl']++;
                         
                         // Create recovery case if not exists
                         $caseCreated = $this->createRecoveryCase($loan);
                         if ($caseCreated) {
                             $results['recovery_cases_created']++;
                         }
-                    } elseif ($loan->isOverdue()) {
+                    } elseif ($loan->status === Loan::STATUS_OVERDUE && !$wasOverdue) {
                         $results['new_overdue']++;
                     }
 
@@ -64,9 +73,13 @@ class NplDetectionService
                 }
             }
 
-            DB::commit();
+            if ($dryRun) {
+                DB::rollBack();
+            } else {
+                DB::commit();
+            }
 
-            Log::info('NPL Detection completed', $results);
+            Log::info('NPL Detection completed', $results + ['dry_run' => $dryRun]);
 
             return $results;
 
@@ -138,7 +151,7 @@ class NplDetectionService
         $caseNumber = 'DR-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
         // Find default assignee
-        $assignedTo = User::whereIn('role', ['admin', 'teller'])->first();
+        $assignedTo = User::role(['admin', 'teller'])->first();
 
         // Create the recovery case
         $case = DebtRecoveryCase::create([
@@ -191,7 +204,7 @@ class NplDetectionService
             'is_npl' => $loan->is_non_performing,
             'is_overdue' => $loan->isOverdue(),
             'days_overdue' => $loan->days_overdue,
-            'threshold' => $loan->npl_trigger_threshold,
+            'threshold' => $loan->getDefaultThresholdDays(),
             'status' => $loan->status,
         ];
     }

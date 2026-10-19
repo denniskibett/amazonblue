@@ -20,7 +20,7 @@
     : ['home' => ['Home', route('account.home')], 'statement' => ['Statement', route('account.statement')], 'profile' => ['Profile', route('account.profile')]];
   $icon = fn ($key) => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="' . $icons[$key] . '" /></svg>';
   $initials = collect(explode(' ', trim($me->name)))->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('');
-  $avatar = $me->avatar ? \Illuminate\Support\Facades\Storage::disk('public')->url($me->avatar) : null;
+  $avatar = $me->avatar ? $me->documentUrl('photo') : null;
   $whatsapp = 'https://wa.me/254701607959';
 @endphp
 <!doctype html>

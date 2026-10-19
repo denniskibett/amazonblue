@@ -12,6 +12,7 @@ use App\Models\LoanType;
 use App\Models\Partner;
 use App\Models\Investment;
 use App\Services\LoanCalculator;
+use App\Services\CustomerWallets;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,8 +34,12 @@ class ReportController extends Controller
 
     public function show($reportType)
     {
-        // Generate report data
-        $reportData = $this->generateReport($reportType);
+        if (!in_array($reportType, array_column($this->getAvailableReports(), 'id'), true)) {
+            abort(404, 'Report not found');
+        }
+
+        // Generate report data (date filters from the query string, e.g. ?start_date=2026-01-01&end_date=2026-01-31)
+        $reportData = $this->generateReport($reportType, array_filter(request()->only(['start_date', 'end_date'])));
         $filters = $this->getReportFilters($reportType);
         
         // Determine available charts for this report type
@@ -54,7 +59,10 @@ class ReportController extends Controller
     {
         $reportType = $request->input('report_type');
         $format = $request->input('format', 'csv');
-        $filters = $request->input('filters', []);
+        $filters = array_filter((array) $request->input('filters', []), 'is_scalar');
+        if (!in_array($reportType, array_column($this->getAvailableReports(), 'id'), true)) {
+            abort(404, 'Report not found');
+        }
         
         $data = $this->generateReport($reportType, $filters);
         
@@ -295,14 +303,14 @@ class ReportController extends Controller
 
     private function generateCustomerReport($filters)
     {
-        $users = User::with(['borrower', 'loans', 'repayments'])->get();
+        $users = User::with(['roles', 'borrower', 'loans', 'repayments'])->get();
         
         return [
             'summary' => [
                 'total_customers' => $users->count(),
                 'active_customers' => $users->where('status', 0)->count(),
-                'borrowers' => $users->where('role', 'borrower')->count(),
-                'brokers' => $users->where('role', 'broker')->count(),
+                'borrowers' => $users->filter(fn ($u) => $u->hasRole('borrower'))->count(),
+                'brokers' => $users->filter(fn ($u) => $u->hasRole('broker'))->count(),
             ],
             'customers' => $users->map(function ($user) {
                 return [
@@ -310,7 +318,7 @@ class ReportController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
-                    'role' => $user->role,
+                    'role' => $user->roles->pluck('name')->implode(', '),
                     'status' => $user->status ? 'Active' : 'Inactive',
                     'gender' => $user->gender,
                     'dob' => $user->dob,
@@ -333,17 +341,15 @@ class ReportController extends Controller
             'summary' => [
                 'total_submissions' => Loan::count(),
                 'active_listings' => Loan::whereIn('status', ['disbursed', 'approved'])->count(),
-                'default_listings' => Loan::where('status', 'rejected')->count(),
+                'default_listings' => Loan::whereIn('status', ['defaulted', 'recovery', 'written_off'])->count(),
                 'cleared_listings' => Loan::where('status', 'repaid')->count(),
             ],
+            // From the system's own 4Cs risk assessments; empty until assessments exist
             'credit_scores' => $this->getCreditScoreDistribution(),
-            'cic_compliance' => [
-                'compliance_rate' => 98.5,
-                'reporting_accuracy' => 95.2,
-                'disputes_registered' => 28,
-                'disputes_resolved' => 22
-            ],
-            'bureau_data' => $this->getBureauData()
+            // No CRB/CIC submission or dispute records exist in the system yet: nothing to report
+            'cic_compliance' => [],
+            'bureau_data' => $this->getBureauData(),
+            'not_available' => ['CIC compliance and dispute figures', 'Credit bureau submissions (TransUnion, Creditinfo, CRB)'],
         ];
     }
 
@@ -358,7 +364,7 @@ class ReportController extends Controller
                 'average_loan_size' => $loans->average('amount') ?? 0,
                 'average_interest_rate' => $loans->average('loanType.interest_rate') ?? 0,
                 'performing_loans' => $loans->whereIn('status', ['approved', 'disbursed'])->count(),
-                'non_performing_loans' => $loans->where('status', 'rejected')->count(),
+                'non_performing_loans' => $loans->filter(fn ($l) => $l->is_non_performing || in_array($l->status, ['defaulted', 'recovery', 'written_off']))->count(),
             ],
             'status_breakdown' => [
                 'pending' => $loans->where('status', 'pending')->count(),
@@ -366,6 +372,7 @@ class ReportController extends Controller
                 'disbursed' => $loans->where('status', 'disbursed')->count(),
                 'rejected' => $loans->where('status', 'rejected')->count(),
                 'repaid' => $loans->where('status', 'repaid')->count(),
+                'written_off' => $loans->where('status', 'written_off')->count(),
             ],
             'by_loan_type' => $loans->groupBy('loan_type_id')->map(function ($group) {
                 $loanType = $group->first()->loanType;
@@ -702,6 +709,10 @@ class ReportController extends Controller
             'summary' => [
                 'total_disbursements' => $disbursements->count(),
                 'total_amount' => $disbursements->sum('amount'),
+                // money actually sent: rollover / carry-forward entries are not cash; net of fees when recorded
+                'real_cash_disbursed' => (float) CustomerWallets::whereCash(Disbursement::query())
+                    ->whereBetween('disburse_date', [$startDate, $endDate])
+                    ->sum(DB::raw(CustomerWallets::DISBURSED_CASH_SQL)),
                 'average_amount' => $disbursements->average('amount') ?? 0,
                 'by_channel' => [
                     'm-pesa' => $disbursements->where('mode', 'm-pesa')->sum('amount'),
@@ -739,6 +750,10 @@ class ReportController extends Controller
                 'customers_zero_balance' => $users->filter(function($user) {
                     return $user->loans->sum('amount') - $user->repayments->sum('amount') <= 0;
                 })->count(),
+                // recorded repayments include rollovers, discounts and write-offs; real cash does not
+                'recorded_repayments' => (float) Repayment::sum('amount'),
+                'real_cash_repaid' => (float) CustomerWallets::whereCash(Repayment::query())->sum('amount'),
+                'real_cash_disbursed' => (float) CustomerWallets::whereCash(Disbursement::query())->sum(DB::raw(CustomerWallets::DISBURSED_CASH_SQL)),
             ],
             'customers' => $users->map(function ($user) {
                 $totalLoans = $user->loans->sum('amount');
@@ -764,80 +779,64 @@ class ReportController extends Controller
 
     private function generateCustomerSavingsReport($filters)
     {
-        $users = User::with(['loans'])->get();
-        
+        // The system has no savings product or savings ledger, so there is nothing real to show.
+        // (This report used to show 10% of each customer's loans with a random "last activity" date.)
         return [
             'summary' => [
-                'total_savings' => $users->sum(function($user) {
-                    return $user->loans->sum('amount') * 0.1;
-                }),
-                'average_savings' => $users->average(function($user) {
-                    return $user->loans->sum('amount') * 0.1;
-                }) ?? 0,
-                'savings_ratio' => 32.8,
+                'savings' => 'Not available yet',
             ],
-            'savings' => $users->map(function ($user) {
-                $simulatedSavings = $user->loans->sum('amount') * 0.1;
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'savings_balance' => $simulatedSavings,
-                    'total_deposits' => $simulatedSavings * 0.7,
-                    'total_withdrawals' => $simulatedSavings * 0.3,
-                    'interest_earned' => $simulatedSavings * 0.05,
-                    'last_activity' => now()->subDays(rand(1, 30))->format('Y-m-d')
-                ];
-            })->sortByDesc('savings_balance')->values()
+            'savings' => [],
+            'not_available' => ['Customer savings: no savings accounts are recorded in the system'],
         ];
     }
 
     private function generateCashflowReport($filters)
     {
-        $startDate = $filters['start_date'] ?? Carbon::now()->startOfMonth();
-        $endDate = $filters['end_date'] ?? Carbon::now()->endOfMonth();
-        
-        $inflows = Disbursement::with(['loan.user'])
-            ->whereBetween('disburse_date', [$startDate, $endDate])
-            ->get();
-            
-        $outflows = Repayment::with(['loan.user'])
-            ->whereBetween('repayment_date', [$startDate, $endDate])
-            ->get();
-        
-        $totalInflows = $inflows->sum('amount');
-        $totalOutflows = $outflows->sum('amount');
-        
+        $startDate = Carbon::parse($filters['start_date'] ?? Carbon::now()->startOfMonth())->startOfDay();
+        $endDate = Carbon::parse($filters['end_date'] ?? Carbon::now()->endOfMonth())->endOfDay();
+
+        // Inflows = money received from borrowers (repayments); outflows = money sent (disbursements).
+        // Recorded totals include rollovers, discounts and write-offs; "real cash" excludes them
+        // (CustomerWallets cash rules) and counts disbursements net of fees when recorded.
+        $repayments = Repayment::query()->whereBetween('repayment_date', [$startDate->toDateString(), $endDate->toDateString()]);
+        $disbursements = Disbursement::query()->whereBetween('disburse_date', [$startDate->toDateString(), $endDate->toDateString()]);
+
+        $recordedInflows = (float) (clone $repayments)->sum('amount');
+        $recordedOutflows = (float) (clone $disbursements)->sum('amount');
+
+        $cashIn = CustomerWallets::whereCash(clone $repayments)
+            ->selectRaw('DATE(repayment_date) as d, SUM(amount) as total')->groupBy('d')->pluck('total', 'd');
+        $cashOut = CustomerWallets::whereCash(clone $disbursements)
+            ->selectRaw('DATE(disburse_date) as d, SUM(' . CustomerWallets::DISBURSED_CASH_SQL . ') as total')->groupBy('d')->pluck('total', 'd');
+
         $dailyData = [];
-        $currentDate = Carbon::parse($startDate);
-        while ($currentDate <= $endDate) {
-            $dateKey = $currentDate->format('Y-m-d');
-            $dayInflows = $inflows->where('disburse_date', $currentDate->format('Y-m-d'))->sum('amount');
-            $dayOutflows = $outflows->where('repayment_date', $currentDate->format('Y-m-d'))->sum('amount');
-            
-            $dailyData[] = [
-                'date' => $dateKey,
-                'inflows' => $dayInflows,
-                'outflows' => $dayOutflows,
-                'net' => $dayInflows - $dayOutflows,
-                'running_balance' => 0
-            ];
-            $currentDate->addDay();
-        }
-        
         $runningBalance = 0;
-        foreach ($dailyData as &$day) {
-            $runningBalance += $day['net'];
-            $day['running_balance'] = $runningBalance;
+        for ($day = $startDate->copy(); $day <= $endDate; $day->addDay()) {
+            $key = $day->format('Y-m-d');
+            $in = (float) ($cashIn[$key] ?? 0);
+            $out = (float) ($cashOut[$key] ?? 0);
+            $runningBalance += $in - $out;
+            $dailyData[] = [
+                'date' => $key,
+                'inflows' => $in,
+                'outflows' => $out,
+                'net' => $in - $out,
+                'running_balance' => $runningBalance,
+            ];
         }
-        
+
+        $totalInflows = (float) $cashIn->sum();
+        $totalOutflows = (float) $cashOut->sum();
+        $activeDays = collect($dailyData)->filter(fn ($d) => $d['inflows'] > 0 || $d['outflows'] > 0);
+
         return [
             'summary' => [
-                'total_inflows' => $totalInflows,
-                'total_outflows' => $totalOutflows,
+                'real_cash_inflows' => $totalInflows,
+                'real_cash_outflows' => $totalOutflows,
                 'net_cashflow' => $totalInflows - $totalOutflows,
-                'operating_cashflow_ratio' => $totalOutflows > 0 ? $totalInflows / $totalOutflows : 0,
-                'days_of_activity' => $dailyData ? count($dailyData) : 0,
+                'recorded_repayments' => $recordedInflows,
+                'recorded_disbursements' => $recordedOutflows,
+                'days_of_activity' => $activeDays->count(),
             ],
             'daily_data' => $dailyData,
             'peak_inflow_day' => collect($dailyData)->sortByDesc('inflows')->first(),
@@ -978,24 +977,40 @@ class ReportController extends Controller
         }
     }
 
+    /**
+     * Risk category distribution from the system's own loan risk assessments (latest per loan).
+     * Empty when there are no assessments: the view then says "not available yet".
+     */
     private function getCreditScoreDistribution()
     {
-        return [
-            'excellent' => ['count' => 124, 'percentage' => 9.9],
-            'good' => ['count' => 312, 'percentage' => 25.0],
-            'fair' => ['count' => 456, 'percentage' => 36.6],
-            'poor' => ['count' => 312, 'percentage' => 25.0],
-            'bad' => ['count' => 43, 'percentage' => 3.5],
-        ];
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('loan_risk_assessments', 'risk_category')) {
+                return [];
+            }
+            $latest = DB::table('loan_risk_assessments')->selectRaw('MAX(id) as id')->groupBy('loan_id');
+            $rows = DB::table('loan_risk_assessments')
+                ->whereIn('id', $latest)
+                ->whereNotNull('risk_category')
+                ->selectRaw('risk_category, COUNT(*) as c')
+                ->groupBy('risk_category')
+                ->pluck('c', 'risk_category');
+            $total = $rows->sum();
+
+            return $rows->map(fn ($c) => [
+                'count' => (int) $c,
+                'percentage' => $total > 0 ? round($c / $total * 100, 1) : 0,
+            ])->all();
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
+    /**
+     * Credit bureau submissions: the system has no CRB integration or submission records yet.
+     */
     private function getBureauData()
     {
-        return [
-            'transunion' => ['submissions' => 520, 'listings' => 420],
-            'creditinfo' => ['submissions' => 380, 'listings' => 310],
-            'crb_kenya' => ['submissions' => 347, 'listings' => 212],
-        ];
+        return [];
     }
 
     private function calculateRepaymentPercentage($loan)
@@ -1032,23 +1047,45 @@ class ReportController extends Controller
 
     private function exportCsv($data, $reportType)
     {
+        $reportType = preg_replace('/[^a-z0-9_]/i', '', (string) $reportType) ?: 'report';
         $filename = $reportType . '_' . date('Y-m-d') . '.csv';
-        $handle = fopen('php://output', 'w');
-        
-        $firstItem = $this->flattenArray($data['entries'][0] ?? $data['loans'][0] ?? $data['customers'][0] ?? []);
-        fputcsv($handle, array_keys($firstItem));
-        
-        $items = $data['entries'] ?? $data['loans'] ?? $data['customers'] ?? [];
-        foreach ($items as $item) {
-            fputcsv($handle, $this->flattenArray($item));
+
+        // The report's main list: the first entry that is a list of rows (loans, customers, daily_data, ...)
+        $rows = [];
+        foreach ((array) $data as $key => $value) {
+            if ($key === 'summary') {
+                continue;
+            }
+            $value = $value instanceof \Illuminate\Support\Collection ? $value->all() : $value;
+            if (is_array($value) && $value && array_is_list($value) && is_array(reset($value))) {
+                $rows = array_map(fn ($row) => $this->flattenArray($row), $value);
+                break;
+            }
         }
-        
-        fclose($handle);
-        
-        return response()->make('', 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"$filename\"",
-        ]);
+        // No list (or an error): export the summary as key/value rows instead
+        if (!$rows) {
+            $rows = [];
+            foreach ($this->flattenArray((array) ($data['summary'] ?? $data)) as $k => $v) {
+                $rows[] = ['item' => $k, 'value' => $v];
+            }
+        }
+
+        $headers = [];
+        foreach ($rows as $row) {
+            foreach (array_keys($row) as $h) {
+                $headers[$h] = true;
+            }
+        }
+        $headers = array_keys($headers);
+
+        return response()->streamDownload(function () use ($rows, $headers) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $headers);
+            foreach ($rows as $row) {
+                fputcsv($out, array_map(fn ($h) => is_bool($row[$h] ?? null) ? (int) $row[$h] : ($row[$h] ?? ''), $headers));
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     private function flattenArray($array, $prefix = '')
@@ -1056,7 +1093,16 @@ class ReportController extends Controller
         $result = [];
         foreach ($array as $key => $value) {
             $newKey = $prefix ? $prefix . '.' . $key : $key;
-            if (is_array($value) && !is_numeric($value)) {
+            if ($value instanceof \Illuminate\Support\Collection) {
+                $value = $value->all();
+            }
+            if ($value instanceof \DateTimeInterface) {
+                $value = $value->format('Y-m-d');
+            }
+            if (is_object($value) && method_exists($value, 'toArray')) {
+                $value = $value->toArray();
+            }
+            if (is_array($value)) {
                 $result = array_merge($result, $this->flattenArray($value, $newKey));
             } else {
                 $result[$newKey] = $value;

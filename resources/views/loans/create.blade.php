@@ -2,7 +2,7 @@
 
 @section('content')
 
-@if(auth()->user()->role === 'borrower' && !auth()->user()->hasCompleteBiodata())
+@if(auth()->user()->hasRole('borrower') && !auth()->user()->hasCompleteBiodata())
 <div class="col-span-12">
     <div class="rounded-2xl border border-red-200 bg-red-50 p-6 shadow-sm dark:border-red-800 dark:bg-red-900/20">
         <div class="flex items-center gap-4">
@@ -30,9 +30,9 @@
         <div class="px-5 py-4 sm:px-6 sm:py-5">
 
             <h1 class="text-xl font-medium text-gray-800 dark:text-white/90">
-                @if(auth()->user()->role === 'broker')
+                @if(auth()->user()->hasRole('broker'))
                     Create New Loan for {{ $user->name ?? 'Borrower' }}
-                @elseif(isset($user) && auth()->user()->role === 'admin')
+                @elseif(isset($user) && auth()->user()->hasRole('admin'))
                     Create Loan for {{ $user->name }}
                 @else
                     Create New Loan
@@ -45,7 +45,7 @@
                 @csrf
 
                 {{-- User/Borrower Selection --}}
-                @if(auth()->user()->role === 'admin' && !isset($user))
+                @if(auth()->user()->hasRole('admin') && !isset($user))
                     <div>
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                             Select User
@@ -77,7 +77,7 @@
                             <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
-                @elseif(auth()->user()->role === 'broker')
+                @elseif(auth()->user()->hasRole('broker'))
                     <div>
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                             Select Your Borrower
@@ -216,7 +216,7 @@
                 </div>
 
                 {{-- Status Field --}}
-                @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
+                @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller'))
                     <div>
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                             Loan Status
@@ -257,7 +257,7 @@
                 @endif
 
                 {{-- Broker Status Field (only visible to admin/teller) --}}
-                @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
+                @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller'))
                     <div>
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                             Transaction Type
@@ -308,7 +308,7 @@
                 {{-- Add these fields after the existing form fields in create.blade.php --}}
 
                 {{-- Guarantor Information --}}
-                @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller' || auth()->user()->role === 'borrower')
+                @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller') || auth()->user()->hasRole('borrower'))
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div>
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
@@ -360,7 +360,7 @@
                 @endif
 
                 {{-- Loan Officer (Admin/Teller only) --}}
-                @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
+                @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller'))
                 <div>
                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                         Loan Officer
@@ -593,7 +593,7 @@
                         Cancel
                     </a>
                     <button type="submit" class="inline-flex h-11 items-center justify-center rounded-lg border border-brand-500 bg-brand-500 px-6 py-2.5 text-sm font-medium text-white shadow-theme-xs transition-colors hover:border-brand-600 hover:bg-brand-600 focus:outline-hidden focus:ring-2 focus:ring-brand-500/30">
-                        @if(auth()->user()->role === 'broker')
+                        @if(auth()->user()->hasRole('broker'))
                             Submit Loan for Borrower
                         @else
                             Create Loan

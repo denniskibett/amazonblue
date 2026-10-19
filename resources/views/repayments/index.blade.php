@@ -4,7 +4,7 @@
 <div class="max-w-7xl mx-auto p-6">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold">Repayments</h2>
-        @if(in_array(auth()->user()->role, ['admin', 'broker', 'teller']))
+        @if(auth()->user()->hasAnyRole(['admin', 'broker', 'teller']))
             <a href="{{ route('repayments.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                 Add Repayment
             </a>
@@ -48,11 +48,11 @@
                     <td class="py-2 px-4 border-b flex space-x-2">
                         <a href="{{ route('repayments.show', $repayment->id) }}" class="text-blue-600 hover:underline">View</a>
                         
-                        @if(in_array(auth()->user()->role, ['admin', 'teller']))
+                        @if(auth()->user()->hasAnyRole(['admin', 'teller']))
                             <a href="{{ route('repayments.edit', $repayment->id) }}" class="text-yellow-600 hover:underline">Edit</a>
                         @endif
                         
-                        @if(auth()->user()->role === 'admin')
+                        @if(auth()->user()->hasRole('admin'))
                             <form action="{{ route('repayments.destroy', $repayment->id) }}" method="POST" onsubmit="return confirm('Are you sure?');">
                                 @csrf
                                 @method('DELETE')

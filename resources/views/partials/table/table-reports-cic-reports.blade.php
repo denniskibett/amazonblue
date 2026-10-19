@@ -34,7 +34,7 @@
             <tr class="bg-gray-50 dark:bg-gray-700/30">
                 <td colspan="3" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Credit Score Distribution</td>
             </tr>
-            @foreach($data['credit_scores'] ?? [] as $score => $details)
+            @forelse($data['credit_scores'] ?? [] as $score => $details)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 <td class="px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300">{{ ucfirst($score) }}</td>
                 <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
@@ -51,13 +51,15 @@
                     </span>
                 </td>
             </tr>
-            @endforeach
+            @empty
+            <tr><td colspan="3" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Not available yet</td></tr>
+            @endforelse
 
             <!-- Bureau Data -->
             <tr class="bg-gray-50 dark:bg-gray-700/30">
                 <td colspan="3" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Bureau Data</td>
             </tr>
-            @foreach($data['bureau_data'] ?? [] as $bureau => $details)
+            @forelse($data['bureau_data'] ?? [] as $bureau => $details)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 <td class="px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300">{{ ucfirst($bureau) }}</td>
                 <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
@@ -69,13 +71,15 @@
                     </span>
                 </td>
             </tr>
-            @endforeach
+            @empty
+            <tr><td colspan="3" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Not available yet</td></tr>
+            @endforelse
 
             <!-- Compliance -->
             <tr class="bg-gray-50 dark:bg-gray-700/30">
                 <td colspan="3" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Compliance</td>
             </tr>
-            @foreach($data['cic_compliance'] ?? [] as $key => $value)
+            @forelse($data['cic_compliance'] ?? [] as $key => $value)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 <td class="px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300">{{ ucfirst(str_replace('_', ' ', $key)) }}</td>
                 <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
@@ -95,7 +99,9 @@
                     @endif
                 </td>
             </tr>
-            @endforeach
+            @empty
+            <tr><td colspan="3" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Not available yet</td></tr>
+            @endforelse
         </tbody>
     </table>
 </div>

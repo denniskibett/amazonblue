@@ -9,6 +9,10 @@ use App\Helpers\CountryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use App\Services\AuditTrail;
+use Symfony\Component\Process\ExecutableFinder;
+use Symfony\Component\Process\Process;
 
 class SystemController extends Controller
 {
@@ -176,5 +180,90 @@ class SystemController extends Controller
         Cache::forget('system_settings');
         SystemHelper::clearCache();
         return back()->with('success', 'Maintenance mode updated!');
+    }
+
+    /**
+     * Download a fresh database backup (mysqldump, gzipped). The file is written to
+     * storage/app/private/backups (never public) and streamed to the admin. Credentials go to
+     * mysqldump through a temporary 0600 option file, never the command line, and no error shown
+     * to the user contains connection details.
+     */
+    public function backupDatabase()
+    {
+        // Access: the system.* route group (admins / super-admins only).
+        $connection = config('database.default');
+        $db = config("database.connections.{$connection}");
+        if (! in_array($db['driver'] ?? null, ['mysql', 'mariadb'], true)) {
+            return back()->with('error', 'Backups are only available for MySQL/MariaDB databases.');
+        }
+
+        $dir = storage_path('app/private/backups');
+        $optionFile = null;
+        $sqlPath = null;
+
+        try {
+            if (! is_dir($dir)) {
+                mkdir($dir, 0750, true);
+            }
+            $finder = new ExecutableFinder();
+            $binary = $finder->find('mysqldump', null, ['/usr/bin', '/usr/local/bin', '/usr/local/mysql/bin', '/opt/homebrew/bin'])
+                ?? $finder->find('mariadb-dump', null, ['/usr/bin', '/usr/local/bin']);
+            if (! $binary) {
+                throw new \RuntimeException('mysqldump not found on this server');
+            }
+
+            $optionFile = tempnam($dir, '.dump-');
+            chmod($optionFile, 0600);
+            $quote = fn ($v) => '"' . addcslashes((string) $v, "\\\"") . '"';
+            $lines = ['[client]', 'user=' . $quote($db['username'] ?? ''), 'password=' . $quote($db['password'] ?? '')];
+            if (! empty($db['unix_socket'])) {
+                $lines[] = 'socket=' . $quote($db['unix_socket']);
+            } else {
+                $lines[] = 'host=' . $quote($db['host'] ?? '127.0.0.1');
+                $lines[] = 'port=' . (int) ($db['port'] ?? 3306);
+            }
+            file_put_contents($optionFile, implode("\n", $lines) . "\n");
+
+            $name = 'backup-' . now()->format('Ymd-His');
+            $sqlPath = "{$dir}/{$name}.sql";
+            $process = new Process([
+                $binary, "--defaults-extra-file={$optionFile}",
+                '--single-transaction', '--routines', '--triggers', '--no-tablespaces',
+                "--result-file={$sqlPath}", $db['database'],
+            ]);
+            $process->setTimeout(600);
+            $process->run();
+
+            if (! $process->isSuccessful() || ! is_file($sqlPath) || filesize($sqlPath) === 0) {
+                Log::error('Database backup failed', ['exit' => $process->getExitCode(), 'error' => mb_substr($process->getErrorOutput(), 0, 500)]);
+                throw new \RuntimeException('mysqldump did not complete');
+            }
+
+            $gzPath = "{$sqlPath}.gz";
+            $in = fopen($sqlPath, 'rb');
+            $out = gzopen($gzPath, 'wb6');
+            while (! feof($in)) {
+                gzwrite($out, fread($in, 1024 * 1024));
+            }
+            fclose($in);
+            gzclose($out);
+            @unlink($sqlPath);
+            chmod($gzPath, 0640);
+
+            AuditTrail::record('system', 0, 'create', null, ['event' => 'database_backup', 'file' => basename($gzPath), 'bytes' => filesize($gzPath)]);
+
+            return response()->download($gzPath, basename($gzPath), ['Content-Type' => 'application/gzip']);
+        } catch (\Throwable $e) {
+            Log::error('Database backup failed: ' . get_class($e) . ': ' . $e->getMessage());
+            if ($sqlPath && is_file($sqlPath)) {
+                @unlink($sqlPath);
+            }
+
+            return back()->with('error', 'Backup failed. Details are in the application log.');
+        } finally {
+            if ($optionFile && is_file($optionFile)) {
+                @unlink($optionFile);
+            }
+        }
     }
 }

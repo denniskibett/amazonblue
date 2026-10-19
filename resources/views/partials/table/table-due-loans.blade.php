@@ -152,7 +152,7 @@
       </thead>
 
       <tbody class="divide-y divide-gray-100 dark:divide-gray-800" id="loansTableBody">
-        @if(Auth::user()->role === 'admin')
+        @if(Auth::user()->hasRole('admin'))
           @foreach($dueLoans as $loan)
           <tr class="loan-row">
             <!-- Desktop cells -->
@@ -274,7 +274,7 @@
             </td>
           </tr>
           @endforeach
-        @elseif(Auth::user()->role === 'broker')
+        @elseif(Auth::user()->hasRole('broker'))
           @foreach($dueLoans as $loan)
           <tr class="loan-row">
             <!-- Desktop cells -->
@@ -396,7 +396,7 @@
             </td>
           </tr>
           @endforeach
-        @elseif(Auth::user()->role === 'borrower')
+        @elseif(Auth::user()->hasRole('borrower'))
           @foreach($dueLoans->where('user_id', Auth::user()->id) as $loan)
           <tr class="loan-row">
             <!-- Desktop cells -->

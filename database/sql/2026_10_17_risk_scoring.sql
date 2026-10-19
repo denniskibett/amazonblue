@@ -59,7 +59,9 @@ SET @sql = (SELECT IF(COUNT(*) = 1,
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 INSERT INTO `migrations` (`migration`, `batch`)
-SELECT '2026_10_17_000000_add_scoring_fields_to_loan_risk_assessments_table', COALESCE(MAX(batch), 0) + 1 FROM `migrations`
+SELECT m.migration, m.batch FROM (
+  SELECT '2026_10_17_000000_add_scoring_fields_to_loan_risk_assessments_table' AS migration, COALESCE(MAX(batch), 0) + 1 AS batch FROM `migrations`
+) m
 WHERE NOT EXISTS (SELECT 1 FROM `migrations` WHERE migration = '2026_10_17_000000_add_scoring_fields_to_loan_risk_assessments_table');
 
 SELECT 'Done: risk scoring fields ready. Now run: php artisan risk:assess' AS result;

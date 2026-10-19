@@ -475,8 +475,7 @@ function loansCreateModal() {
 
         // Computed
         get isAdminOrTeller() {
-            const role = '{{ auth()->user()->role }}';
-            return role === 'admin' || role === 'teller';
+            return {{ auth()->user()->hasAnyRole([...\App\Models\User::BACK_OFFICE_ROLES, 'teller']) ? 'true' : 'false' }};
         },
 
         init() {
@@ -657,8 +656,8 @@ function loansCreateModal() {
             this.open = true;
             document.body.style.overflow = 'hidden';
 
-            const userRole = '{{ auth()->user()->role }}';
-            this.showUserSelection = userRole === 'admin' || userRole === 'teller' || userRole === 'broker';
+            const userRole = '{{ auth()->user()->primaryRole() }}';
+            this.showUserSelection = {{ auth()->user()->hasAnyRole([...\App\Models\User::BACK_OFFICE_ROLES, 'teller', 'broker']) ? 'true' : 'false' }};
 
             const isEdit = data && data.edit;
 

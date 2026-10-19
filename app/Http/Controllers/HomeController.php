@@ -9,6 +9,7 @@ use App\Models\Enquiry;
 use App\Models\PaymentMethod;
 use App\Models\User;
 use App\Services\SignatureService;
+use App\Support\PrivateFiles;
 use App\Services\PartnerPortfolio;
 use App\Services\LoanProgress;
 use App\Services\LoanAgreementService;
@@ -147,18 +148,42 @@ class HomeController extends Controller
         return view('home.account.loan', ['user' => $request->user(), 'progress' => $progress->for($loan)]);
     }
 
-    public function accountAgreement(Request $request, Loan $loan, LoanAgreementService $agreements)
+    /**
+     * The signed agreement shown inside the account (PDF embedded, with a download button).
+     */
+    public function accountAgreement(Request $request, Loan $loan, LoanAgreementService $agreements): View
+    {
+        $this->agreementPath($request, $loan, $agreements);
+
+        return view('home.account.agreement', ['user' => $request->user(), 'loan' => $loan->refresh()]);
+    }
+
+    public function accountAgreementFile(Request $request, Loan $loan, LoanAgreementService $agreements)
+    {
+        $path = $this->agreementPath($request, $loan, $agreements);
+        $name = 'Aimzone loan agreement #' . str_pad($loan->id, 5, '0', STR_PAD_LEFT) . '.pdf';
+
+        return $request->boolean('download')
+            ? response()->download($path, $name, ['Content-Type' => 'application/pdf'])
+            : response()->file($path, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="' . $name . '"']);
+    }
+
+    /**
+     * The signed PDF for this borrower's loan (private disk). Frozen when they consented; generated
+     * once on first view only for older loans signed before agreements were frozen.
+     */
+    private function agreementPath(Request $request, Loan $loan, LoanAgreementService $agreements): string
     {
         abort_unless($loan->user_id === $request->user()->id, 404);
 
-        $path = storage_path('app/public/agreements/loan_agreement_' . $loan->id . '.pdf');
-        if (! is_file($path)) {
+        $path = $agreements->storedPath($loan);
+        if (! $path) {
             abort_unless($loan->consent, 404);
-            $agreements->generateLoanAgreement($loan);
+            $path = $agreements->generateLoanAgreement($loan);
         }
         abort_unless(is_file($path), 404);
 
-        return response()->file($path, ['Content-Type' => 'application/pdf']);
+        return $path;
     }
 
     public function accountStatement(Request $request, PartnerPortfolio $portfolio): View
@@ -454,18 +479,18 @@ class HomeController extends Controller
         $updates = ['id_type' => $request->input('id_type')];
         $front = $passport ? 'passport_bio' : 'id_front';
         if ($request->hasFile($front)) {
-            $updates['id_front_path'] = $this->replaceFile($user->id_front_path, $request->file($front)->store('id_cards', 'public'));
+            $updates['id_front_path'] = $this->replaceFile($user->id_front_path, PrivateFiles::storeUpload($request->file($front), 'id_cards', $user));
         }
         if (!$passport && $request->hasFile('id_back')) {
-            $updates['id_back_path'] = $this->replaceFile($user->id_back_path, $request->file('id_back')->store('id_cards', 'public'));
+            $updates['id_back_path'] = $this->replaceFile($user->id_back_path, PrivateFiles::storeUpload($request->file('id_back'), 'id_cards', $user));
         }
         if ($request->hasFile('photo')) {
-            $updates['avatar'] = $this->replaceFile($user->avatar, $request->file('photo')->store('avatars', 'public'));
+            $updates['avatar'] = $this->replaceFile($user->avatar, PrivateFiles::storeUpload($request->file('photo'), 'avatars', $user));
         }
         $user->update($updates);
 
         if ($request->hasFile('signature_file')) {
-            $user->update(['signature' => $this->replaceFile($user->signature, $request->file('signature_file')->store('signatures', 'public'))]);
+            $user->update(['signature' => $this->replaceFile($user->signature, PrivateFiles::storeUpload($request->file('signature_file'), 'signatures', $user))]);
         } elseif ($request->filled('signature_data')) {
             $result = $signatures->saveSignature($request->input('signature_data'), $user);
             if (!$result['success']) {
@@ -719,6 +744,7 @@ class HomeController extends Controller
 
         // waits for staff, who approve it after calling the next of kin and guarantor
         $user->update(['kyc_submitted_at' => now(), 'kyc_status' => 'submitted']);
+        \App\Support\CustomerNotifier::kycSubmitted($user);
 
         return redirect()->route('kyc.submitted');
     }
@@ -924,10 +950,11 @@ class HomeController extends Controller
         return $cache["$table.$slug"] ??= DB::table($table)->where('slug', $slug)->value('id');
     }
 
+    // KYC documents are private (storage/app/private), named {user id}_{random}, so nobody else's upload can replace them
     private function replaceFile(?string $old, string $new): string
     {
         if ($old && $old !== $new) {
-            Storage::disk('public')->delete($old);
+            PrivateFiles::delete($old);
         }
 
         return $new;

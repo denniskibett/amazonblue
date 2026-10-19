@@ -340,7 +340,7 @@ document.addEventListener('alpine:init', function() {
                 console.log('Partner form modal initialized');
                 
                 // Check if user is admin (injected from Laravel)
-                this.isAdmin = {{ auth()->user()->role === 'admin' ? 'true' : 'false' }};
+                this.isAdmin = {{ auth()->user()->hasRole('admin') ? 'true' : 'false' }};
                 
                 // Load users from the users prop passed via Alpine
                 this.users = @json($users ?? []);

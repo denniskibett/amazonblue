@@ -19,7 +19,7 @@ class PartnerController extends Controller
             ->get()
             ->map(fn ($partner) => $this->partnerPayload($partner));
 
-        $users = User::where('role', 'partner')
+        $users = User::role('partner')
             ->orWhereDoesntHave('partner')
             ->get(['id', 'name', 'email', 'role']);
 
@@ -141,9 +141,9 @@ class PartnerController extends Controller
             // If a user was provided, update their role
             if ($request->filled('user_id')) {
                 $user = User::find($request->user_id);
-                if ($user && $user->role !== 'partner') {
-                    $user->role = 'partner';
-                    $user->save();
+                if ($user && ! $user->hasRole('partner')) {
+                    $user->assignRole('partner');
+                    $user->syncLegacyRole();
                 }
             }
 
@@ -291,7 +291,7 @@ class PartnerController extends Controller
         }
 
         try {
-            $transaction = $partner->addContribution($request->amount, $request->reference, $request->notes);
+            $transaction = $partner->addContribution((float) $request->amount, $request->reference, $request->notes);
 
             return response()->json([
                 'success' => true,
@@ -327,7 +327,8 @@ class PartnerController extends Controller
         }
 
         try {
-            $transaction = $partner->withdraw($request->amount, $request->reference, $request->notes);
+            // the partner journal + principal wallet; refused when the wallet holds less than asked
+            $transaction = $partner->withdrawPartnerBalance((float) $request->amount, $request->reference, $request->notes);
 
             return response()->json([
                 'success' => true,
@@ -362,7 +363,7 @@ class PartnerController extends Controller
         }
 
         try {
-            $transaction = $partner->distributeProfit($request->amount, $request->notes);
+            $transaction = $partner->distributeProfit((float) $request->amount, $request->notes);
 
             return response()->json([
                 'success' => true,

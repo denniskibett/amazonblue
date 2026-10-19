@@ -73,12 +73,20 @@
                 <select name="status" id="status" class="w-full p-2 border rounded-md" required>
                     @php
                         $statuses = ['pending' => 'Pending', 'approved' => 'Approved', 'disbursed' => 'Disbursed', 'repaid' => 'Repaid'];
+                        if (in_array($loan->status, ['pending', 'approved', 'rejected'])) {
+                            $statuses['rejected'] = 'Rejected';
+                        }
                     @endphp
                     @foreach ($statuses as $key => $label)
-                        <option value="{{ $key }}" {{ $loan->status === $key ? 'selected' : '' }}>{{ $label }}</option>
+                        <option value="{{ $key }}" {{ old('status', $loan->status) === $key ? 'selected' : '' }}>{{ $label }}</option>
                     @endforeach
                 </select>
                 <p class="text-sm text-gray-500 mt-1">Current status: <strong>{{ ucfirst($loan->status) }}</strong></p>
+                @if (in_array($loan->status, ['pending', 'approved']))
+                    <label for="rejection_reason" class="block mt-3 mb-1 text-sm font-semibold">Rejection reason (required when rejecting)</label>
+                    <textarea name="rejection_reason" id="rejection_reason" rows="2" class="w-full p-2 border rounded-md">{{ old('rejection_reason') }}</textarea>
+                    @error('rejection_reason')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
+                @endif
             </div>
 
             <!-- Broker Status -->

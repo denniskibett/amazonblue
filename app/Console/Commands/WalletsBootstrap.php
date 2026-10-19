@@ -28,7 +28,7 @@ class WalletsBootstrap extends Command
         $this->info($apply ? 'APPLY MODE' : 'DRY RUN — nothing will be written');
 
         $partners = Partner::query()->get();
-        $borrowers = User::query()->where('role', 'borrower')->get();
+        $borrowers = User::query()->role('borrower')->get();
 
         $partnerRows = 0;
         $partnerErrors = 0;

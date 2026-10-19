@@ -18,13 +18,15 @@ use Illuminate\Support\Facades\Storage;
 use App\Helpers\SystemHelper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
     public function index()
     {
         // Fetch all users with their loans and repayments for stats
-        $users = User::with(['loans', 'repayments'])
+        $users = User::with(['roles', 'loans', 'repayments'])
             ->orderBy('status', 'asc')
             ->get()
             ->map(function ($user) {
@@ -74,8 +76,8 @@ class UserController extends Controller
         $averageLoan = $user->loans->count() > 0 ? $user->loans->avg('amount') : 0;
         
         $loanTypes = LoanType::all();
-        $guarantors = User::where('role', 'borrower')->get();
-        $loanOfficers = User::whereIn('role', ['admin', 'teller'])->get();
+        $guarantors = User::role('borrower')->get();
+        $loanOfficers = User::role(['admin', 'teller'])->get();
         $signatureUser = null;
             // ============ ADD SIGNATURE DATA ============
         $signatureService = app(\App\Services\SignatureService::class);
@@ -150,6 +152,7 @@ class UserController extends Controller
         $userData = array_merge($userData, $filePaths);
         
         $user = User::create($userData);
+        $this->assignRoleFrom($user, $validatedData['role']);
     
         // Handle role-specific data
         switch ($validatedData['role']) {
@@ -293,6 +296,7 @@ class UserController extends Controller
             
             // Update the user
             $updateResult = $user->update($userData);
+            $this->assignRoleFrom($user, $validatedData['role']);
             Log::info('User update result: ' . ($updateResult ? 'SUCCESS' : 'FAILED'));
             Log::info('User updated successfully. New data:', [
                 'name' => $user->fresh()->name,
@@ -301,7 +305,7 @@ class UserController extends Controller
             ]);
         
             // Update related model
-            if ($user->role === 'borrower') {
+            if ($user->hasRole('borrower')) {
                 Log::info('Updating borrower data...');
                 $borrowerData = [
                     'client_type' => $validatedData['client_type'] ?? null,
@@ -331,7 +335,7 @@ class UserController extends Controller
                     Borrower::create($borrowerData);
                     Log::info('Borrower created');
                 }
-            } elseif ($user->role === 'broker') {
+            } elseif ($user->hasRole('broker')) {
                 $brokerData = [
                     'penalty_client' => $validatedData['penalty_client'] ?? null,
                     'penalty_broker' => $validatedData['penalty_broker'] ?? null,
@@ -408,6 +412,36 @@ class UserController extends Controller
         return redirect()->route('users.index');
     }
     
+    /**
+     * Roles the signed-in user may hand out: every role in the roles table, except that only a
+     * super-admin can grant super-admin and only an admin/super-admin can grant admin.
+     */
+    private function assignableRoles(): array
+    {
+        $actor = auth()->user();
+
+        return Role::where('guard_name', 'web')->pluck('name')
+            ->reject(fn ($name) => $name === 'super-admin' && ! $actor?->hasRole('super-admin'))
+            ->reject(fn ($name) => $name === 'admin' && ! $actor?->hasAnyRole(['super-admin', 'admin']))
+            ->values()->all();
+    }
+
+    /**
+     * Spatie is the source of truth: the chosen role replaces the user's primary role (other roles,
+     * e.g. partner on a borrower, are kept), and users.role mirrors it for older screens.
+     */
+    private function assignRoleFrom(User $user, string $role): void
+    {
+        $current = $user->primaryRole();
+        if ($current !== $role) {
+            if ($current !== null) {
+                $user->removeRole($current);
+            }
+            $user->assignRole($role);
+        }
+        $user->syncLegacyRole();
+    }
+
     private function validateUserData(Request $request, $user = null)
     {
         $userId = $user ? $user->id : null;
@@ -421,7 +455,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $userId,
             'phone' => 'required|unique:users,phone,' . $userId,
-            'role' => 'required|in:admin,broker,borrower,teller',
+            'role' => ['required', 'string', Rule::in($this->assignableRoles())],
             'status' => 'sometimes|in:0,1',
             'password' => $userId ? 'nullable|min:6' : 'required|min:6',
             
@@ -488,22 +522,22 @@ class UserController extends Controller
         
         // Add avatar (avatar photo) handling
         if ($request->hasFile('avatar')) {
-            $filePaths['avatar'] = $request->file('avatar')->store('avatars', 'public');
+            $filePaths['avatar'] = $request->file('avatar')->store('avatars', \App\Support\PrivateFiles::DISK);
             Log::info('Avatar file uploaded to: ' . $filePaths['avatar']);
         }
         
         if ($request->hasFile('id_front_path')) {
-            $filePaths['id_front_path'] = $request->file('id_front_path')->store('id_cards', 'public');
+            $filePaths['id_front_path'] = $request->file('id_front_path')->store('id_cards', \App\Support\PrivateFiles::DISK);
             Log::info('ID front file uploaded to: ' . $filePaths['id_front_path']);
         }
         
         if ($request->hasFile('id_back_path')) {
-            $filePaths['id_back_path'] = $request->file('id_back_path')->store('id_cards', 'public');
+            $filePaths['id_back_path'] = $request->file('id_back_path')->store('id_cards', \App\Support\PrivateFiles::DISK);
             Log::info('ID back file uploaded to: ' . $filePaths['id_back_path']);
         }
         
         if ($request->hasFile('signature')) {
-            $filePaths['signature'] = $request->file('signature')->store('signatures', 'public');
+            $filePaths['signature'] = $request->file('signature')->store('signatures', \App\Support\PrivateFiles::DISK);
             Log::info('Signature file uploaded to: ' . $filePaths['signature']);
         }
         

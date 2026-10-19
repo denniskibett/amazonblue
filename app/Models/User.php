@@ -16,6 +16,21 @@ class User extends Authenticatable implements Wallet
 {
     use HasFactory, Notifiable, SoftDeletes, HasRoles, HasWallet, HasWallets;
 
+    protected static function booted(): void
+    {
+        // wallet handle (rule 9): set once from the name when missing, e.g. Dennis Kibet -> @denniskibet
+        static::saving(function (User $user) {
+            if ((! $user->exists || array_key_exists('handle', $user->getAttributes())) && empty($user->handle) && ($handle = \App\Support\Handle::forUser($user))) {
+                $user->handle = $handle;
+            }
+
+            // users.role only mirrors the primary Spatie role (Spatie is the source of truth)
+            if ($user->exists && ($primary = $user->primaryRole())) {
+                $user->attributes['role'] = $primary;
+            }
+        });
+    }
+
     protected $fillable = [
         'name', 
         'email', 
@@ -146,7 +161,45 @@ class User extends Authenticatable implements Wallet
      */
     public function isCustomer(): bool
     {
-        return $this->hasAnyRole(['borrower', 'partner']) && ! $this->hasAnyRole(self::STAFF_ROLES);
+        return ! $this->isStaff();
+    }
+
+    /**
+     * Staff = holds at least one staff role. A user with no role at all is a customer, never staff.
+     */
+    public function isStaff(): bool
+    {
+        return $this->hasAnyRole(self::STAFF_ROLES);
+    }
+
+    // staff who see every loan/borrower (not limited to their own clients like brokers)
+    public const BACK_OFFICE_ROLES = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor'];
+
+    // most senior first: the first one a user holds is mirrored into users.role
+    public const ROLE_PRIORITY = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'teller', 'broker', 'partner', 'borrower'];
+
+    /**
+     * The user's main Spatie role (by ROLE_PRIORITY), or null when they have none.
+     */
+    public function primaryRole(): ?string
+    {
+        $names = $this->roles()->pluck('name');
+        if ($names->isEmpty()) {
+            return null;
+        }
+
+        return collect(self::ROLE_PRIORITY)->first(fn ($r) => $names->contains($r)) ?? $names->first();
+    }
+
+    /**
+     * Copy the primary Spatie role into the legacy users.role column (kept for older screens).
+     */
+    public function syncLegacyRole(): void
+    {
+        $primary = $this->primaryRole();
+        if ($primary !== null && ($this->attributes['role'] ?? null) !== $primary) {
+            $this->forceFill(['role' => $primary])->saveQuietly();
+        }
     }
 
     /**
@@ -442,6 +495,15 @@ class User extends Authenticatable implements Wallet
 
     // ============ HELPER METHODS ============
 
+    /**
+     * URL of a personal document (id-front, id-back, photo, signature) through the authorised
+     * files.user route, or null when none is on record. The files themselves are private.
+     */
+    public function documentUrl(string $document): ?string
+    {
+        return \App\Support\PrivateFiles::userUrl($this, $document);
+    }
+
     public function getAvatarUrl()
     {
         // Check profile_photo_path first
@@ -457,20 +519,13 @@ class User extends Authenticatable implements Wallet
             return asset('storage/' . $path);
         }
         
-        // Fallback to avatar field
+        // Fallback to the KYC passport photo (private, served through files.user)
         if ($this->avatar) {
             if (filter_var($this->avatar, FILTER_VALIDATE_URL)) {
                 return $this->avatar;
             }
-            
-            $path = $this->avatar;
-            if (str_starts_with($path, 'storage/')) {
-                $path = substr($path, 8);
-            }
-            if (!str_starts_with($path, 'avatars/') && !str_starts_with($path, 'profile-photos/')) {
-                $path = 'avatars/' . $path;
-            }
-            return asset('storage/' . $path);
+
+            return $this->documentUrl('photo');
         }
         
         // Ultimate fallback - UI Avatars

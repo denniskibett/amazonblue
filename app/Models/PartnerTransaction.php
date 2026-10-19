@@ -24,12 +24,13 @@ class PartnerTransaction extends Model
         'repayment_id',
         'investment_id',
         'notes',
-        'transaction_date'
+        'transaction_date',
+        'created_by',
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-        'balance_after' => 'decimal:2',
+        'amount' => 'decimal:4', // columns are decimal(19,4)
+        'balance_after' => 'decimal:4',
         'transaction_date' => 'date'
     ];
 

@@ -21,7 +21,7 @@ class DisbursementController extends Controller
 
     public function index()
     {
-        if (auth()->user()->role === 'admin') {
+        if (auth()->user()->hasAnyRole([...\App\Models\User::BACK_OFFICE_ROLES, 'teller'])) {
             $disbursements = Disbursement::with(['loan.user', 'loanCycle'])->get();
             return view('disbursements.index', compact('disbursements'));
         } else {
@@ -45,7 +45,13 @@ class DisbursementController extends Controller
 
     public function store(Request $request)
     {
-        $isInvestmentOnly = $request->filled('investment_id') && !$request->filled('loan_id');
+        // every disbursement is cash to a borrower on a loan; investment-only draws (loan_id NULL) are refused
+        if ($request->filled('investment_id') && !$request->filled('loan_id')) {
+            return response()->json([
+                'message' => 'Choose the loan this disbursement is for. A disbursement from an investment must be linked to a loan.',
+                'errors' => ['loan_id' => ['A disbursement from an investment must be linked to a loan.']],
+            ], 422);
+        }
 
         $rules = [
             'amount' => 'required|numeric|min:0.01',
@@ -59,15 +65,12 @@ class DisbursementController extends Controller
             'partner_transaction_id' => 'nullable|exists:partner_transactions,id',
         ];
 
-        if ($isInvestmentOnly) {
-            $rules['loan_id'] = 'nullable|exists:loans,id';
-            $rules['loan_cycle_id'] = 'nullable|exists:loan_cycles,id';
-        } else {
-            $rules['loan_id'] = 'required|exists:loans,id';
-            $rules['loan_cycle_id'] = 'nullable|exists:loan_cycles,id';
-        }
+        $rules['loan_id'] = 'required|exists:loans,id';
+        $rules['loan_cycle_id'] = 'nullable|exists:loan_cycles,id';
 
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, [
+            'loan_id.required' => 'Choose the loan this disbursement is for.',
+        ]);
 
         // ============ AUTO-DETECT FUNDING SOURCE ============
         if (empty($validated['funding_source'])) {
@@ -129,54 +132,39 @@ class DisbursementController extends Controller
             }
         }
 
-        // ============ INVESTMENT-ONLY DISBURSEMENT ============
-        if ($isInvestmentOnly) {
-            $disbursement = Disbursement::create([
-                'loan_id' => null,
-                'loan_cycle_id' => null,
-                'investment_id' => $validated['investment_id'],
-                'partner_transaction_id' => $validated['partner_transaction_id'] ?? null,
-                'funding_source' => $validated['funding_source'],
-                'amount' => $validated['amount'],
-                'transaction' => $validated['transaction'],
-                'mode' => $validated['mode'] ?? 'investment',
-                'disburse_date' => $validated['disburse_date'],
-                'payment_date' => $validated['payment_date'] ?? $validated['disburse_date'],
-                'notes' => $validated['notes'] ?? null,
-            ]);
-
-            // Track disbursement against the pivot
-            $investment = Investment::find($validated['investment_id']);
-            if ($investment) {
-                $investment->recordFundingDisbursement((float) $validated['amount']);
-            }
-
-            return response()->json([
-                'message' => 'Investment disbursement created successfully!',
-                'data' => $disbursement
-            ], 201);
-        }
-
         // ============ LOAN DISBURSEMENT ============
         $loan = Loan::find($validated['loan_id']);
         $cycle = $loan->getCurrentCycle();
 
-        $disbursement = $this->disbursementService->createDisbursement($loan, $validated, $cycle);
-
-        // Attach investment_id and funding
-        if ($disbursement && !empty($validated['investment_id'])) {
-            $disbursement->update([
-                'investment_id' => $validated['investment_id'],
-                'partner_transaction_id' => $validated['partner_transaction_id'] ?? $disbursement->partner_transaction_id,
-                'funding_source' => $validated['funding_source'],
-            ]);
-
-            // Track against pivot
-            $investment = Investment::find($validated['investment_id']);
-            if ($investment) {
-                $investment->recordFundingDisbursement((float) $validated['amount']);
-            }
+        // no draw beyond what partners committed to the investment (house lines are not capped)
+        $investment = !empty($validated['investment_id']) ? Investment::find($validated['investment_id']) : null;
+        $fundingPartnerId = !empty($validated['partner_transaction_id'])
+            ? \App\Models\PartnerTransaction::find($validated['partner_transaction_id'])?->partner_id
+            : null;
+        try {
+            $investment?->assertCanDisburse((float) $validated['amount'], $fundingPartnerId);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage(), 'errors' => ['amount' => [$e->getMessage()]]], 422);
         }
+
+        // disbursement, its investment link and the funding draw succeed or fail together
+        $disbursement = \Illuminate\Support\Facades\DB::transaction(function () use ($loan, $validated, $cycle, $investment, $fundingPartnerId) {
+            $disbursement = $this->disbursementService->createDisbursement($loan, $validated, $cycle);
+
+            // Attach investment_id and funding
+            if ($disbursement && $investment) {
+                $disbursement->update([
+                    'investment_id' => $investment->id,
+                    'partner_transaction_id' => $validated['partner_transaction_id'] ?? $disbursement->partner_transaction_id,
+                    'funding_source' => $validated['funding_source'],
+                ]);
+
+                // Track against pivot
+                $investment->recordFundingDisbursement((float) $validated['amount'], $fundingPartnerId);
+            }
+
+            return $disbursement;
+        });
 
         // Update loan status if approved
         if ($loan->status === 'approved') {

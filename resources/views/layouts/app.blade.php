@@ -356,5 +356,8 @@
     </div>
 </div>
 
+{{-- Page scripts pushed by staff views (@push('scripts')): cases, reports, partners, investments, users.
+     Inline here, so their alpine:init listeners register before the deferred Alpine starts. --}}
+@stack('scripts')
 </body>
 </html>

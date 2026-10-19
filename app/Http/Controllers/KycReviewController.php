@@ -80,6 +80,7 @@ class KycReviewController extends Controller
             // an active borrower can borrow from the dashboard
             $user->borrower?->update(['status' => 1]);
         });
+        \App\Support\CustomerNotifier::kycReviewed($user, true);
 
         return redirect()->route('kyc-reviews.index')
             ->with('alert', ['type' => 'success', 'title' => 'Verification approved', 'message' => $user->name . ' can now borrow from their dashboard.']);
@@ -106,6 +107,7 @@ class KycReviewController extends Controller
                 'guarantor' => $request->boolean('called_guarantor'),
             ],
         ]);
+        \App\Support\CustomerNotifier::kycReviewed($user, false, $data['notes']);
 
         return redirect()->route('kyc-reviews.index')
             ->with('alert', ['type' => 'warning', 'title' => 'Verification rejected', 'message' => $user->name . ' will see your note and can resubmit.']);

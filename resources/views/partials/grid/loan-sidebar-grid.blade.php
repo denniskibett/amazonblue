@@ -388,7 +388,7 @@
                     <div class="flex items-center space-x-6 p-5 border border-gray-300 rounded-2xl bg-white shadow-sm dark:bg-gray-900">
                         <div class="flex-shrink-0 p-2 bg-white border border-gray-200 rounded-xl overflow-hidden">
                             <div class="flex items-center justify-center h-24 w-40 bg-transparent">
-                                <img src="{{ asset('storage/' . $loan->user->signature) }}" 
+                                <img src="{{ $loan->user->documentUrl('signature') }}" 
                                     alt="Signature of {{ $loan->user->name }}"
                                     class="max-h-20 object-contain object-center">
                             </div>

@@ -3,100 +3,43 @@
 namespace App\Http\Middleware;
 
 use App\Helpers\SystemHelper;
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * The admin "maintenance mode" switch (System settings, systems.maintenance_mode). While it is on,
+ * visitors and customers get the branded 503 page (or JSON 503); staff keep working, and the login /
+ * logout / password pages stay open so staff can sign in. Runs in the web group (bootstrap/app.php).
+ * `php artisan down` is separate and blocks everyone (use `--secret` to let yourself through).
+ */
 class CheckMaintenanceMode
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @return mixed
-     */
-    public function handle(Request $request, Closure $next)
+    // reachable while the switch is on, so staff can still sign in
+    private const OPEN = ['login', 'logout', 'forgot-password', 'reset-password', 'reset-password/*', 'up'];
+
+    public function handle(Request $request, Closure $next): Response
     {
-        // Check if maintenance mode is enabled
-        if ($this->isMaintenanceModeEnabled()) {
-            // Check if user is authenticated and has admin privileges
-            if (!$this->hasAdminAccess($request)) {
-                // Return maintenance page response
-                return $this->maintenanceResponse();
-            }
+        if (! $this->enabled() || $request->is(...self::OPEN)) {
+            return $next($request);
         }
 
-        return $next($request);
+        $user = $request->user();
+        if ($user && $user->hasAnyRole(User::STAFF_ROLES)) {
+            return $next($request);
+        }
+
+        abort(503);
     }
 
-    /**
-     * Check if maintenance mode is enabled
-     */
-    protected function isMaintenanceModeEnabled(): bool
+    private function enabled(): bool
     {
         try {
             return SystemHelper::isMaintenanceMode();
-        } catch (\Exception $e) {
-            // If there's an error (e.g., system table doesn't exist), fall back to config
-            return config('app.maintenance_mode', false);
-        }
-    }
-
-    /**
-     * Check if user has admin access
-     */
-    protected function hasAdminAccess(Request $request): bool
-    {
-        $user = $request->user();
-        
-        // Check if user is authenticated
-        if (!$user) {
+        } catch (\Throwable $e) {
+            // settings table unavailable: never lock everyone out because of it
             return false;
         }
-
-        // Check if user has admin role (adjust based on your application's role system)
-        if (method_exists($user, 'isAdmin')) {
-            return $user->isAdmin();
-        }
-
-        // Alternative: Check for admin role or permission
-        if (method_exists($user, 'hasRole')) {
-            return $user->hasRole('admin');
-        }
-
-        // Alternative: Check for admin permission
-        if (method_exists($user, 'hasPermissionTo')) {
-            return $user->hasPermissionTo('access_maintenance_mode');
-        }
-
-        // Default: Check if user has admin email or specific attribute
-        return in_array($user->email, config('app.maintenance_allowed_emails', []));
-    }
-
-    /**
-     * Return maintenance page response
-     */
-    protected function maintenanceResponse()
-    {
-        // Get custom maintenance message from system settings if available
-        $message = null;
-        try {
-            $message = SystemHelper::get('maintenance_message');
-        } catch (\Exception $e) {
-            // Use default message
-        }
-
-        // Get custom title from system settings
-        $title = SystemHelper::appName() . ' - Maintenance';
-
-        // Return maintenance view with custom data
-        return response()->view('maintenance', [
-            'title' => $title,
-            'message' => $message,
-            'timezone' => SystemHelper::timezone(),
-            'contact_email' => SystemHelper::contactEmail(),
-            'contact_phone' => SystemHelper::contactPhone(),
-        ], 503);
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -13,6 +14,9 @@ class ProfileTest extends TestCase
     public function test_profile_page_is_displayed(): void
     {
         $user = User::factory()->create();
+        // /profile is in the staff area; a user with no role is a customer and is sent to /account
+        Role::findOrCreate('admin', 'web');
+        $user->assignRole('admin');
 
         $response = $this
             ->actingAs($user)

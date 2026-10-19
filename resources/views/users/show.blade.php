@@ -17,7 +17,7 @@
                         @php
                             $avatarUrl = null;
                             if ($user->avatar) {
-                                $avatarUrl = Storage::url($user->avatar);
+                                $avatarUrl = $user->documentUrl('photo');
                             } elseif ($user->profile_photo_path) {
                                 $avatarUrl = asset('storage/' . $user->profile_photo_path);
                             }
@@ -48,8 +48,12 @@
                     <div class="order-3 xl:order-2">
                         <h4 class="mb-2 text-center text-lg font-semibold xl:text-left">{{ $user->name }}@if($user->kyc_status === 'approved')<svg class="ml-1 inline-block h-4 w-4 align-[-2px] text-blue-600" viewBox="0 0 24 24" role="img" aria-label="Verified to borrow"><title>Verified to borrow</title><path fill="currentColor" d="M12 1.6l2.5 1.9 3.1-.3 1 3 2.6 1.7-.9 3 .9 3-2.6 1.7-1 3-3.1-.3L12 22.4l-2.5-1.9-3.1.3-1-3-2.6-1.7.9-3-.9-3 2.6-1.7 1-3 3.1.3z"/><path d="M8.2 12.3l2.6 2.6 5-5.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>@endif</h4>
                         <div class="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
+                            @if($user->handle)
+                                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ '@' . $user->handle }}</p>
+                                <div class="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
+                            @endif
                             <p class="text-sm text-gray-500 dark:text-gray-400">{{ ucfirst($user->role) }} Profile</p>
-                            @if($user->role === 'borrower' && $user->borrower)
+                            @if($user->hasRole('borrower') && $user->borrower)
                                 <div class="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
                                 <div class="flex items-center">
                                     <span class="px-2 py-1 text-xs font-medium rounded-full 
@@ -67,7 +71,7 @@
                         </div>
                     </div>
                     <div class="order-2 flex grow items-center gap-2 xl:order-3 xl:justify-end">
-                        @if($user->role === 'borrower')
+                        @if($user->hasRole('borrower'))
                             <a href="{{ route('loans.create', $user->id) }}" 
                                class="flex items-center gap-2 rounded-full border border-blue-600 bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 hover:border-blue-700 transition-colors">
                                 <i class="fas fa-plus"></i> New Loan
@@ -148,7 +152,7 @@
                             >
                                 <i class="fas fa-user-circle text-lg"></i>
                                 Profile
-                                @if($user->role === 'borrower' && !$user->hasCompleteBiodata())
+                                @if($user->hasRole('borrower') && !$user->hasCompleteBiodata())
                                     @php $overallPercentage = $user->getBiodataCompletionPercentage(); @endphp
                                     <span class="inline-flex items-center justify-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-500/15 dark:text-yellow-500">
                                         {{ $overallPercentage }}%
@@ -177,7 +181,7 @@
                             </button>
 
                             <!-- Employment Tab (Only for borrowers) -->
-                            @if($user->role === 'borrower')
+                            @if($user->hasRole('borrower'))
                             <button
                                 class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
                                 x-bind:class="activeTab === 'employment' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
@@ -214,7 +218,7 @@
                             </button>
 
                             <!-- Recovery Tab -->
-                            @if(in_array($user->role, ['admin', 'teller', 'borrower']) && $user->debtRecoveryCases->count() > 0)
+                            @if($user->hasAnyRole(['admin', 'teller', 'borrower']) && $user->debtRecoveryCases->count() > 0)
                             <button
                                 class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
                                 x-bind:class="activeTab === 'recovery' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
@@ -235,7 +239,7 @@
                         <!-- Profile Tab Content -->
                         <div x-show="activeTab === 'profile'" x-cloak>
                             <!-- Profile Completion Alert -->
-                            @if($user->role === 'borrower' && !$user->hasCompleteBiodata())
+                            @if($user->hasRole('borrower') && !$user->hasCompleteBiodata())
                                 @php
                                     $completionData = $user->getBiodataCompletionBySections();
                                     $overallPercentage = $user->getBiodataCompletionPercentage();
@@ -362,7 +366,7 @@
 
                                             </div>
                                             
-                                            @if($user->role === 'borrower' && $user->borrower)
+                                            @if($user->hasRole('borrower') && $user->borrower)
                                                 <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
                                                     <span class="text-sm text-gray-500 dark:text-gray-400">Borrower Status</span>
                                             
@@ -446,11 +450,11 @@
                                         @if($user->avatar)
                                             <div class="relative group w-full">
                                                 <img 
-                                                    src="{{ Storage::url($user->avatar) }}" 
+                                                    src="{{ $user->documentUrl('photo') }}" 
                                                     alt="Passport Photo"
                                                     class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700"
                                                 >
-                                                <a href="{{ Storage::url($user->avatar) }}" target="_blank"
+                                                <a href="{{ $user->documentUrl('photo') }}" target="_blank"
                                                    class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
                                                     <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
                                                 </a>
@@ -466,7 +470,7 @@
                                     </div>
                                     @if($user->avatar)
                                         <div class="mt-4 flex justify-center">
-                                            <a href="{{ Storage::url($user->avatar) }}" target="_blank"
+                                            <a href="{{ $user->documentUrl('photo') }}" target="_blank"
                                                class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
                                                 <i class="fas fa-external-link-alt"></i> View Full Size
                                             </a>
@@ -497,11 +501,11 @@
                                         @if($user->id_front_path)
                                             <div class="relative group w-full">
                                                 <img
-                                                    src="{{ Storage::url($user->id_front_path) }}"
+                                                    src="{{ $user->documentUrl('id-front') }}"
                                                     alt="ID Front"
                                                     class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700"
                                                 >
-                                                <a href="{{ Storage::url($user->id_front_path) }}" target="_blank"
+                                                <a href="{{ $user->documentUrl('id-front') }}" target="_blank"
                                                    class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
                                                     <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
                                                 </a>
@@ -517,7 +521,7 @@
                                     </div>
                                     @if($user->id_front_path)
                                         <div class="mt-4 flex justify-center">
-                                            <a href="{{ Storage::url($user->id_front_path) }}" target="_blank"
+                                            <a href="{{ $user->documentUrl('id-front') }}" target="_blank"
                                                class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
                                                 <i class="fas fa-external-link-alt"></i> View Full Size
                                             </a>
@@ -548,11 +552,11 @@
                                         @if($user->id_back_path)
                                             <div class="relative group w-full">
                                                 <img
-                                                    src="{{ Storage::url($user->id_back_path) }}"
+                                                    src="{{ $user->documentUrl('id-back') }}"
                                                     alt="ID Back"
                                                     class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700"
                                                 >
-                                                <a href="{{ Storage::url($user->id_back_path) }}" target="_blank"
+                                                <a href="{{ $user->documentUrl('id-back') }}" target="_blank"
                                                    class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
                                                     <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
                                                 </a>
@@ -568,7 +572,7 @@
                                     </div>
                                     @if($user->id_back_path)
                                         <div class="mt-4 flex justify-center">
-                                            <a href="{{ Storage::url($user->id_back_path) }}" target="_blank"
+                                            <a href="{{ $user->documentUrl('id-back') }}" target="_blank"
                                                class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
                                                 <i class="fas fa-external-link-alt"></i> View Full Size
                                             </a>
@@ -594,11 +598,11 @@
                                         @if($user->signature)
                                             <div class="relative group w-full">
                                                 <img
-                                                    src="{{ Storage::url($user->signature) }}"
+                                                    src="{{ $user->documentUrl('signature') }}"
                                                     alt="Digital Signature"
                                                     class="h-48 w-full rounded-lg object-contain border border-gray-200 dark:border-gray-700 bg-white p-4"
                                                 >
-                                                <a href="{{ Storage::url($user->signature) }}" target="_blank"
+                                                <a href="{{ $user->documentUrl('signature') }}" target="_blank"
                                                    class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
                                                     <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
                                                 </a>
@@ -614,7 +618,7 @@
                                     </div>
                                     @if($user->signature)
                                         <div class="mt-4 flex justify-center">
-                                            <a href="{{ Storage::url($user->signature) }}" target="_blank"
+                                            <a href="{{ $user->documentUrl('signature') }}" target="_blank"
                                                class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
                                                 <i class="fas fa-external-link-alt"></i> View Full Size
                                             </a>
@@ -625,7 +629,7 @@
                         </div>
 
                         <!-- Employment Tab Content -->
-                        @if($user->role === 'borrower')
+                        @if($user->hasRole('borrower'))
                         <div x-show="activeTab === 'employment'" x-cloak>
                             @if($user->borrower && $user->borrower->income_type)
                                 <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -794,7 +798,7 @@
                                     <i class="fas fa-history text-gray-400 text-4xl mb-4"></i>
                                     <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Loan History</h4>
                                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">This user has no loan history yet</p>
-                                    @if($user->role === 'borrower')
+                                    @if($user->hasRole('borrower'))
                                         <a href="{{ route('loans.create', $user->id) }}" 
                                            class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs transition-colors hover:bg-brand-600">
                                             <i class="fas fa-plus"></i> Create First Loan
@@ -928,7 +932,7 @@
                     </h4>
                     
                     <input type="hidden" name="status" value="{{ $user->status }}">
-                    @if($user->role === 'borrower' && $user->borrower)
+                    @if($user->hasRole('borrower') && $user->borrower)
                         <input type="hidden" name="borrower_status" value="{{ $user->borrower->status }}">
                     @endif
 
@@ -1026,7 +1030,7 @@
                                 </select>
                             </div>
 
-                            @if(auth()->user()->role === 'admin')
+                            @if(auth()->user()->hasRole('admin'))
                             <div class="col-span-1">
                                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                                     Role *
@@ -1206,7 +1210,7 @@
                     </div>
 
                     <!-- Section 4: Employment Information (Only for Borrowers) -->
-                    @if($user->role === 'borrower')
+                    @if($user->hasRole('borrower'))
                     <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
                         <h5 class="mb-4 text-sm font-medium text-gray-700 dark:text-gray-300">Employment Information</h5>
                         <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
@@ -1357,7 +1361,7 @@
                                 />
                                 @if($user->avatar)
                                 <p class="text-xs text-gray-500 mt-2">
-                                    Current: <a href="{{ Storage::url($user->avatar) }}" target="_blank" class="text-blue-600 hover:underline">View</a>
+                                    Current: <a href="{{ $user->documentUrl('photo') }}" target="_blank" class="text-blue-600 hover:underline">View</a>
                                 </p>
                                 @endif
                             </div>
@@ -1374,7 +1378,7 @@
                                 />
                                 @if($user->signature)
                                 <p class="text-xs text-gray-500 mt-2">
-                                    Current: <a href="{{ Storage::url($user->signature) }}" target="_blank" class="text-blue-600 hover:underline">View</a>
+                                    Current: <a href="{{ $user->documentUrl('signature') }}" target="_blank" class="text-blue-600 hover:underline">View</a>
                                 </p>
                                 @endif
                             </div>
@@ -1394,7 +1398,7 @@
                                 />
                                 @if($user->id_front_path)
                                 <p class="text-xs text-gray-500 mt-2">
-                                    Current: <a href="{{ Storage::url($user->id_front_path) }}" target="_blank" class="text-blue-600 hover:underline">View</a>
+                                    Current: <a href="{{ $user->documentUrl('id-front') }}" target="_blank" class="text-blue-600 hover:underline">View</a>
                                 </p>
                                 @endif
                             </div>
@@ -1411,7 +1415,7 @@
                                 />
                                 @if($user->id_back_path)
                                 <p class="text-xs text-gray-500 mt-2">
-                                    Current: <a href="{{ Storage::url($user->id_back_path) }}" target="_blank" class="text-blue-600 hover:underline">View</a>
+                                    Current: <a href="{{ $user->documentUrl('id-back') }}" target="_blank" class="text-blue-600 hover:underline">View</a>
                                 </p>
                                 @endif
                             </div>

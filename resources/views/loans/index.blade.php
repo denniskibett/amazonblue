@@ -26,11 +26,11 @@
 
     @php
         $loansToDisplay = [];
-        if (auth()->user()->role === 'admin') {
+        if (auth()->user()->hasAnyRole(\App\Models\User::BACK_OFFICE_ROLES)) {
             $loansToDisplay = $allLoans ?? [];
-        } elseif (auth()->user()->role === 'broker') {
+        } elseif (auth()->user()->hasRole('broker')) {
             $loansToDisplay = $brokerLoans ?? [];
-        } elseif (auth()->user()->role === 'teller') {
+        } elseif (auth()->user()->hasRole('teller')) {
             $loansToDisplay = $activeLoans ?? [];
         } else {
             $loansToDisplay = $userLoans ?? [];
@@ -39,8 +39,8 @@
 
     @include('partials.table.table-loans', [
         'loans' => $loansToDisplay,
-        'showUserColumn' => in_array(auth()->user()->role, ['admin', 'broker', 'teller']),
-        'showCreateButton' => auth()->user()->can('create', App\Models\Loan::class),
+        'showUserColumn' => auth()->user()->hasAnyRole([...\App\Models\User::BACK_OFFICE_ROLES, 'broker', 'teller']),
+        'showCreateButton' => auth()->user()->can('create loans'),
         'context' => 'loans-index',
         
     ])

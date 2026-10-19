@@ -1,0 +1,165 @@
+# Design artefact: screens by page
+
+Source: claude.ai/artifact/2JAjByGcGyBxbALNTnFMX9 (design canvas "AIMZONE Ventures Logos", 229 files). Read on 2026-10-17: the index only (screen titles and sections). The 75 web-app boards were mapped by title; their contents were not opened one by one.
+
+## Emails (3)
+- Email · Repayment reminder
+- Email · Payment received
+- Email · Overdue notice
+
+## Documents (23)
+- Facility agreement · cover
+- Facility agreement · key terms
+- Offer letter
+- Payment receipt
+- Statement of account
+- Asset-backed agreement · cover
+- Asset-backed agreement · terms & security
+- Borrower agreement · schedule & signatures
+- Trade finance · term sheet
+- Trade finance · LC application
+- Partner portfolio report · summary
+- Partner portfolio report · holdings
+- Company profile · cover
+- Company profile · who we are
+- Company profile · leadership & partners
+- Investor pitch · 01 Cover
+- Investor pitch · 02 Problem
+- Investor pitch · 03 Solution
+- Investor pitch · 04 Products
+- Investor pitch · 05 Traction
+- Investor pitch · 06 Model
+- Investor pitch · 07 Market & team
+- Investor pitch · 08 The ask
+
+## Mobile app (23)
+- Borrower · 1 Welcome
+- Borrower · 2 Amount
+- Borrower · 3 Verify
+- Borrower · 4 Offer
+- Borrower · 5 Funds sent
+- Borrower · Home
+- Partner · Portfolio
+- Partner · Opportunities
+- Partner · Invest
+- Partner · Statements
+- Trade · 1 Type
+- Trade · 2 Deal
+- Trade · 3 Documents
+- Trade · 4 Term sheet
+- Trade · 5 Tracking
+- Asset-backed · 1 Asset
+- Asset-backed · 2 Valuation
+- Asset-backed · 3 LTV
+- Asset-backed · 4 Offer
+- Asset-backed · 5 Schedule
+- Team · Officer pipeline
+- Team · Credit decision
+- Team · Admin overview
+
+## Web app journeys (75)
+- Thank you · verified
+- Borrower dashboard · new
+- Borrow · 1 product
+- Borrow · 2 amount
+- Borrow · 3 payout & security
+- Borrow · 4 offer
+- Borrow · 5 sign
+- Borrow · funds sent
+- Borrower dashboard · active loan
+- Repay · M-Pesa prompt
+- Repaid · facility closed
+- Partner KYC · 1 investor type
+- Partner KYC · 2 identity
+- Partner KYC · 3 suitability
+- Partner KYC · 4 payout & tax
+- Partner KYC · thank you
+- Partner dashboard · new
+- Invest · fund overview
+- Invest · 1 amount & tenor
+- Invest · 2 subscription agreement
+- Invest · 3 fund your investment
+- Invest · confirmed
+- Partner dashboard · active
+- Trade · 1 business verification
+- Trade · 2 deal details
+- Trade · 3 trade documents
+- Trade · 4 term sheet
+- Trade dashboard
+- Pay supplier · 1 add supplier
+- Pay supplier · 2 payment & FX
+- Pay supplier · 3 authorise
+- Supplier payment tracking
+- Trade · repay facility
+- Alerts · by journey
+- Alerts · channels
+- Relationship officer · pipeline
+- Relationship officer · client 360
+- Relationship officer · new application
+- Relationship officer · tasks
+- Credit analyst · queue
+- Credit analyst · assessment
+- Credit analyst · decision
+- Credit analyst · portfolio risk
+- Compliance officer · KYC queue
+- Compliance officer · document review
+- Compliance officer · business review
+- Compliance officer · AML alerts
+- Trade finance officer · desk
+- Trade finance officer · document check
+- Trade finance officer · issue LC
+- Trade finance officer · FX & settlements
+- Valuation officer · requests
+- Valuation officer · report
+- Valuation officer · collateral register
+- Valuation officer · insurance & tracking
+- Teller · disbursement queue
+- Teller · disburse
+- Teller · receive payment
+- Teller · end of day
+- Collections officer · queue
+- Collections officer · contact
+- Collections officer · restructure
+- Collections officer · performance
+- Accountant · reconciliation
+- Accountant · ledger
+- Accountant · reports
+- Accountant · partner distributions
+- Admin · overview
+- Admin · users & roles
+- Admin · products & pricing
+- Admin · approval limits
+- System admin · health
+- System admin · audit log
+- System admin · security
+- System admin · API & webhooks
+
+## Website (26)
+- Website · Home
+- Website · Services
+- Website · Company
+- Website · Contact
+- Log in
+- Register · individual
+- Forgot password
+- Verify code
+- Reset password
+- KYC individual · 1 personal details
+- KYC individual · 2 identity documents
+- KYC individual · submitted
+- Website · Privacy policy
+- Website · Terms of service
+- Website · Disclaimer
+- Website · Careers
+- KYC individual · 3 income & payout
+- KYC individual · 4 review & submit
+- KYC business · start
+- KYC business · 1 business details
+- KYC business · 2 directors & owners
+- KYC business · 3 company documents
+- KYC business · 4 financials
+- KYC business · 5 review & submit
+- KYC business · submitted
+- Register · business
+
+Not listed: logo explorations (32), brand identity book (20), social media (4), project branding (2).

@@ -5,18 +5,18 @@
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
             <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
-                @if(auth()->user()->role === 'admin')
+                @if(auth()->user()->hasRole('admin'))
                     All Disbursements
-                @elseif(auth()->user()->role === 'broker')
+                @elseif(auth()->user()->hasRole('broker'))
                     Your Brokerage Disbursements
                 @else
                     Your Loan Disbursements
                 @endif
             </h1>
             <p class="text-gray-600 mt-1">
-                @if(auth()->user()->role === 'admin')
+                @if(auth()->user()->hasRole('admin'))
                     All disbursement transactions across the system
-                @elseif(auth()->user()->role === 'broker')
+                @elseif(auth()->user()->hasRole('broker'))
                     Disbursements for your brokered loans
                 @else
                     Your personal loan disbursements
@@ -24,7 +24,7 @@
             </p>
         </div>
         
-        @can('create', App\Models\Disbursement::class)
+        @can('create disbursements')
         <a href="{{ route('disbursements.create') }}" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg shadow hover:from-blue-700 hover:to-blue-600 transition-colors duration-200">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -41,15 +41,15 @@
             </svg>
             <h3 class="mt-4 text-lg font-medium text-gray-900">No disbursements found</h3>
             <p class="mt-1 text-gray-500">
-                @if(auth()->user()->role === 'admin')
+                @if(auth()->user()->hasRole('admin'))
                     No disbursement records exist in the system yet.
-                @elseif(auth()->user()->role === 'broker')
+                @elseif(auth()->user()->hasRole('broker'))
                     You have no disbursements for your brokered loans.
                 @else
                     You have no loan disbursements yet.
                 @endif
             </p>
-            @can('create', App\Models\Disbursement::class)
+            @can('create disbursements')
             <div class="mt-6">
                 <a href="{{ route('disbursements.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     Create First Disbursement
@@ -66,12 +66,12 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Loan Details
                             </th>
-                            @if(auth()->user()->role === 'admin')
+                            @if(auth()->user()->hasRole('admin'))
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Borrower
                             </th>
                             @endif
-                            @if(in_array(auth()->user()->role, ['admin', 'broker']))
+                            @if(auth()->user()->hasAnyRole(['admin', 'broker']))
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Broker Status
                             </th>
@@ -111,21 +111,21 @@
                                 </div>
                             </td>
                             
-                            @if(auth()->user()->role === 'admin')
+                            @if(auth()->user()->hasRole('admin'))
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm text-gray-900">{{ $disbursement->loan->user->name }}</div>
                                 <div class="text-xs text-gray-500">{{ $disbursement->loan->user->email }}</div>
                             </td>
                             @endif
                             
-                            @if(in_array(auth()->user()->role, ['admin', 'broker']))
+                            @if(auth()->user()->hasAnyRole(['admin', 'broker']))
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
                                     @if($disbursement->loan->broker_status) bg-green-100 text-green-800
                                     @else bg-gray-100 text-gray-800 @endif">
                                     {{ $disbursement->loan->broker_status ? 'Brokered' : 'Direct' }}
                                 </span>
-                                @if($disbursement->loan->broker_status && auth()->user()->role === 'admin')
+                                @if($disbursement->loan->broker_status && auth()->user()->hasRole('admin'))
                                 <div class="text-xs text-gray-500 mt-1">
                                     Broker: {{ $disbursement->loan->broker->name ?? 'N/A' }}
                                 </div>
@@ -165,7 +165,7 @@
                                         </svg>
                                         View
                                     </a>
-                                    @can('update', $disbursement)
+                                    @can('edit disbursements')
                                     <a href="{{ route('disbursements.edit', $disbursement->id) }}" class="text-indigo-600 hover:text-indigo-900 inline-flex items-center ml-3">
                                         <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>

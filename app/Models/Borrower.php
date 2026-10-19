@@ -13,6 +13,8 @@ class Borrower extends Model
     // today's 4Cs, worked out once per request (see calculate4csScore)
     protected ?array $fourCsCache = null;
 
+    protected array|false|null $assessmentCache = false;
+
     protected $fillable = [
         'user_id', 
         'client_type', 
@@ -183,31 +185,40 @@ class Borrower extends Model
         return implode(' | ', $info);
     }
 
+    // The helpers below follow the live rules in config/lending.php through App\Services\CreditAssessment
+    // (4Cs score, risk category, ladder limit); there is no separate 300-850 score any more.
+
     public function getRiskCategoryAttribute()
     {
-        $scores = $this->calculate4csScore();
-        $overall = $scores['overall'];
-        
+        $current = $this->currentAssessment();
+        if ($current && $current['category']) {
+            return $current['category']->name;
+        }
+
+        $overall = $this->calculate4csScore()['overall'];
         if ($overall >= 80) return 'Low Risk';
         if ($overall >= 65) return 'Medium Risk';
         if ($overall >= 50) return 'High Risk';
         return 'Very High Risk';
     }
 
+    /**
+     * Most a month's repayment can take: declared net income x lending.income_multiple (the same income
+     * check the limit uses).
+     */
     public function getMonthlyDebtCapacityAttribute()
     {
         if (!$this->net_salary) return 0;
-        
-        // Assume maximum 40% of net salary can go to debt repayment
-        return $this->net_salary * 0.4;
+
+        return (float) $this->net_salary * (float) config('lending.income_multiple', 1.0);
     }
 
+    /**
+     * Today's self-service borrowing limit (BorrowingEligibility / CreditAssessment ladder, risk and income caps).
+     */
     public function getRecommendedLoanLimitAttribute()
     {
-        $monthlyCapacity = $this->getMonthlyDebtCapacityAttribute();
-        
-        // Assume 12-month loan term for calculation
-        return $monthlyCapacity * 12;
+        return $this->currentAssessment()['limit']['limit'] ?? (int) config('lending.first_time_limit');
     }
 
     public function getDebtToIncomeRatioAttribute()
@@ -246,64 +257,10 @@ class Borrower extends Model
 
     public function isOverLeveraged()
     {
-        return $this->getDebtToIncomeRatio() > 40;
+        // same income check as the limit: repayments may take up to lending.income_multiple x net income
+        return $this->getDebtToIncomeRatio() > (float) config('lending.income_multiple', 1.0) * 100;
     }
 
-
-    public function getCreditScore()
-    {
-        $fourCs = $this->calculate4csScore();
-        $overall = $fourCs['overall'];
-        
-        // Convert to credit score range (300-850)
-        $creditScore = 300 + ($overall / 100) * 550;
-        
-        return round($creditScore);
-    }
-
-    public function getCreditRating()
-    {
-        $creditScore = $this->getCreditScore();
-        
-        if ($creditScore >= 750) return 'Excellent';
-        if ($creditScore >= 700) return 'Good';
-        if ($creditScore >= 650) return 'Fair';
-        if ($creditScore >= 600) return 'Poor';
-        return 'Very Poor';
-    }
-
-    public function getMaxLoanAmount()
-    {
-        $creditScore = $this->getCreditScore();
-        $netSalary = $this->net_salary ?: 0;
-        
-        // Base on credit score and salary
-        if ($creditScore >= 750) {
-            return $netSalary * 12; // 12 months salary
-        } elseif ($creditScore >= 700) {
-            return $netSalary * 9; // 9 months salary
-        } elseif ($creditScore >= 650) {
-            return $netSalary * 6; // 6 months salary
-        } elseif ($creditScore >= 600) {
-            return $netSalary * 3; // 3 months salary
-        } else {
-            return $netSalary * 2; // 2 months salary
-        }
-    }
-
-    public function getSuggestedInterestRate()
-    {
-        $riskCategory = $this->getRiskCategoryAttribute();
-        
-        $rates = [
-            'Low Risk' => 8.5,
-            'Medium Risk' => 12.5,
-            'High Risk' => 18.0,
-            'Very High Risk' => 24.0
-        ];
-        
-        return $rates[$riskCategory] ?? 15.0;
-    }
 
     // ============ STATISTICS METHODS ============
 
@@ -384,10 +341,22 @@ class Borrower extends Model
     /**
      * Today's 4Cs from our repayment history (App\Services\CreditAssessment), memoised per request.
      */
+    /**
+     * Today's CreditAssessment for this borrower (scores, category, limit), worked out once per request.
+     */
+    protected function currentAssessment(): ?array
+    {
+        if ($this->assessmentCache === false) {
+            $this->assessmentCache = $this->user ? app(\App\Services\CreditAssessment::class)->current($this->user) : null;
+        }
+
+        return $this->assessmentCache;
+    }
+
     public function calculate4csScore()
     {
         if (! isset($this->fourCsCache)) {
-            $current = $this->user ? app(\App\Services\CreditAssessment::class)->current($this->user) : null;
+            $current = $this->currentAssessment();
             $this->fourCsCache = $current
                 ? $current['scores'] + ['overall' => $current['overall'], 'weights' => \App\Services\CreditAssessment::WEIGHTS]
                 : ['character' => 0, 'capacity' => 0, 'capital' => 0, 'conditions' => 0, 'overall' => 0, 'weights' => \App\Services\CreditAssessment::WEIGHTS];

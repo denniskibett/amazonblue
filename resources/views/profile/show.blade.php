@@ -297,7 +297,7 @@
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400">ID Front</p>
                         @if($user->id_front_path)
-                            <a href="{{ asset('storage/' . $user->id_front_path) }}" target="_blank" class="text-sm text-blue-600 hover:underline">
+                            <a href="{{ $user->documentUrl('id-front') }}" target="_blank" class="text-sm text-blue-600 hover:underline">
                                 View Document
                             </a>
                         @else
@@ -307,7 +307,7 @@
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400">ID Back</p>
                         @if($user->id_back_path)
-                            <a href="{{ asset('storage/' . $user->id_back_path) }}" target="_blank" class="text-sm text-blue-600 hover:underline">
+                            <a href="{{ $user->documentUrl('id-back') }}" target="_blank" class="text-sm text-blue-600 hover:underline">
                                 View Document
                             </a>
                         @else
@@ -365,7 +365,7 @@
             </div>
 
             <!-- Employment (Borrowers only) -->
-            @if($user->role === 'borrower' && $user->borrower)
+            @if($user->hasRole('borrower') && $user->borrower)
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
@@ -426,7 +426,7 @@
             @endif
 
             <!-- Broker Info (Brokers only) -->
-            @if($user->role === 'broker' && $user->broker)
+            @if($user->hasRole('broker') && $user->broker)
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
@@ -467,7 +467,7 @@
             @endif
 
             <!-- Teller Info (Tellers only) -->
-            @if($user->role === 'teller' && $user->teller)
+            @if($user->hasRole('teller') && $user->teller)
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
@@ -512,7 +512,7 @@
                             <div class="flex flex-col sm:flex-row items-center gap-4">
                                 <div class="bg-white dark:bg-gray-800 p-2 rounded-lg border border-green-200 dark:border-green-700">
                                     <div class="w-24 h-24 flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded">
-                                        <img src="{{ asset('storage/' . $user->signature) }}?v={{ time() }}"
+                                        <img src="{{ $user->documentUrl('signature') }}"
                                              alt="Signature of {{ $user->name }}"
                                              class="max-w-full max-h-full object-contain"
                                              onerror="this.style.display='none';">
@@ -580,7 +580,7 @@
                     </div>
                 </div>
                 
-                @if($user->role === 'borrower' && $user->borrower)
+                @if($user->hasRole('borrower') && $user->borrower)
                 <div class="mt-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
                     <div class="flex justify-between items-center text-sm">
                         <span class="text-gray-500 dark:text-gray-400">Monthly Debt Capacity</span>
@@ -601,17 +601,12 @@
                         </span>
                     </div>
                     <div class="flex justify-between items-center text-sm mt-1">
-                        <span class="text-gray-500 dark:text-gray-400">Credit Score</span>
-                        <span class="font-medium">
-                            <span class="px-2 py-0.5 rounded-full text-xs 
-                                @if($user->borrower->getCreditScore() >= 750) bg-green-100 text-green-800
-                                @elseif($user->borrower->getCreditScore() >= 700) bg-green-100 text-green-700
-                                @elseif($user->borrower->getCreditScore() >= 650) bg-yellow-100 text-yellow-800
-                                @elseif($user->borrower->getCreditScore() >= 600) bg-orange-100 text-orange-800
-                                @else bg-red-100 text-red-800 @endif">
-                                {{ $user->borrower->getCreditScore() }} ({{ $user->borrower->getCreditRating() }})
-                            </span>
-                        </span>
+                        <span class="text-gray-500 dark:text-gray-400">4Cs Score</span>
+                        <span class="font-medium">{{ $user->borrower->calculate4csScore()['overall'] }}/100</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm mt-1">
+                        <span class="text-gray-500 dark:text-gray-400">Borrowing Limit</span>
+                        <span class="font-medium">KES {{ number_format($user->borrower->recommended_loan_limit, 2) }}</span>
                     </div>
                 </div>
                 @endif

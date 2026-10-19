@@ -345,7 +345,7 @@
                 <div class="bg-white p-4 rounded-lg shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-lg font-semibold">Disbursements</h3>
-                        @if(auth()->user()->role !== 'borrower')
+                        @if(! auth()->user()->hasRole('borrower'))
                             <button onclick="openDisbursementModal({{ $loan->id }})" 
                                 class="text-xs bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded">
                                 + Add
@@ -369,7 +369,7 @@
                                     <div class="text-right">
                                         <p class="text-xs text-gray-500">{{ $disbursement->transaction ?? 'N/A' }}</p>
                                         <p class="text-xs text-gray-400">{{ $disbursement->mode ?? '' }}</p>
-                                        @if(auth()->user()->role !== 'borrower')
+                                        @if(! auth()->user()->hasRole('borrower'))
                                         <div class="flex space-x-1 mt-1 justify-end">
                                             <button onclick="openDisbursementModal(null, {{ json_encode($disbursement->attributesToArray()) }})" 
                                                 class="text-blue-600 text-xs hover:underline">Edit</button>
@@ -398,7 +398,7 @@
                             Repayments 
                             <span class="text-xs font-normal text-gray-500">(Cycle #{{ $cycleNumber ?? 1 }})</span>
                         </h3>
-                        @if(auth()->user()->role !== 'borrower')
+                        @if(! auth()->user()->hasRole('borrower'))
                             <button onclick="openRepaymentModal({{ $loan->id }})" 
                                 class="text-xs bg-green-500 hover:bg-green-700 text-white py-1 px-2 rounded">
                                 + Add
@@ -429,7 +429,7 @@
                                     <div class="text-right">
                                         <p class="text-xs text-gray-500">{{ $repayment->transaction ?? 'N/A' }}</p>
                                         <p class="text-xs text-gray-400">{{ $repayment->mode ?? '' }}</p>
-                                        @if(auth()->user()->role !== 'borrower')
+                                        @if(! auth()->user()->hasRole('borrower'))
                                         <div class="flex space-x-1 mt-1 justify-end">
                                             <button onclick="openRepaymentModal(null, {{ json_encode($repayment->attributesToArray()) }})" 
                                                 class="text-blue-600 text-xs hover:underline">Edit</button>

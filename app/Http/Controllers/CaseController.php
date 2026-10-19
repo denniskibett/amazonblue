@@ -13,7 +13,10 @@ use App\Models\RecoveryStatus;
 use App\Models\RecoveryPriority;
 use App\Models\ActionType;
 use App\Models\RecoveryCaseNote;
+use App\Models\Repayment;
+use App\Services\AuditTrail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -51,9 +54,9 @@ class CaseController extends Controller
 
         // Role-based filtering
         $user = Auth::user();
-        if ($user->role === 'borrower') {
+        if ($user->hasRole('borrower')) {
             $query->where('user_id', $user->id);
-        } elseif ($user->role === 'broker') {
+        } elseif ($user->hasRole('broker')) {
             $broker = $user->broker;
             if ($broker) {
                 $borrowerIds = Borrower::where('broker_id', $broker->id)->pluck('user_id');
@@ -84,7 +87,7 @@ class CaseController extends Controller
         // Filter options
         $statuses = RecoveryStatus::all();
         $priorities = RecoveryPriority::all();
-        $officers = User::whereIn('role', ['admin', 'teller'])->get();
+        $officers = User::role(['admin', 'manager', 'recovery-officer', 'teller'])->get();
 
         // Statistics
         $stats = [
@@ -165,7 +168,7 @@ class CaseController extends Controller
 
     public function create(Request $request)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+        if (! Auth::user()->can('create recovery cases')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -195,7 +198,7 @@ class CaseController extends Controller
 
         $statuses = RecoveryStatus::all();
         $priorities = RecoveryPriority::all();
-        $officers = User::whereIn('role', ['admin', 'teller'])->get();
+        $officers = User::role(['admin', 'manager', 'recovery-officer', 'teller'])->get();
         $actionTypes = ActionType::all();
 
         return view('cases.create', compact(
@@ -213,7 +216,7 @@ class CaseController extends Controller
      */
     public function store(Request $request)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+        if (! Auth::user()->can('create recovery cases')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized action.'
@@ -424,10 +427,10 @@ public function show(string $id)
 
     // Check permission
     $user = Auth::user();
-    if ($user->role === 'borrower' && $caseData->user_id !== $user->id) {
+    if ($user->hasRole('borrower') && $caseData->user_id !== $user->id) {
         abort(403, 'Unauthorized action.');
     }
-    if ($user->role === 'broker') {
+    if ($user->hasRole('broker')) {
         $broker = $user->broker;
         if ($broker) {
             $borrowerIds = Borrower::where('broker_id', $broker->id)->pluck('user_id');
@@ -531,7 +534,7 @@ public function show(string $id)
     $actionTypes = ActionType::all();
     $statuses = RecoveryStatus::all();
     $priorities = RecoveryPriority::all();
-    $officers = User::whereIn('role', ['admin', 'teller'])->get();
+    $officers = User::role(['admin', 'manager', 'recovery-officer', 'teller'])->get();
 
     // ============ ADD DATA FOR CASES MODAL ============
     // Get all borrowers for the modal - DO NOT add to with() array
@@ -562,7 +565,7 @@ public function show(string $id)
      */
     public function edit(string $id)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+        if (! Auth::user()->can('edit recovery cases')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -570,7 +573,7 @@ public function show(string $id)
         
         $statuses = RecoveryStatus::all();
         $priorities = RecoveryPriority::all();
-        $officers = User::whereIn('role', ['admin', 'teller'])->get();
+        $officers = User::role(['admin', 'manager', 'recovery-officer', 'teller'])->get();
 
         return view('cases.edit', compact('case', 'statuses', 'priorities', 'officers'));
     }
@@ -580,7 +583,7 @@ public function show(string $id)
      */
     public function update(Request $request, string $id)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+        if (! Auth::user()->can('edit recovery cases')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -610,9 +613,19 @@ public function show(string $id)
                 ->withInput();
         }
 
+        // Writing off has its own action (reason, amount, loan status), so the edit form cannot do it.
+        if ($request->filled('status_id') && (int) $request->status_id !== (int) $case->status_id
+            && RecoveryStatus::whereKey($request->status_id)->value('slug') === 'written_off') {
+            $msg = 'Use "Write off" on the case page to write a case off.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg, 'errors' => ['status_id' => [$msg]]], 422);
+            }
+            return redirect()->back()->withErrors(['status_id' => $msg])->withInput();
+        }
+
         try {
             $oldStatus = $case->status->slug ?? 'unknown';
-            
+
             $updateData = $request->only([
                 'total_debt_amount',
                 'principal_outstanding',
@@ -703,7 +716,7 @@ public function show(string $id)
      */
     public function markAsRecovered(string $id)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+        if (! Auth::user()->can('edit recovery cases')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -765,7 +778,7 @@ public function show(string $id)
      */
     public function markAsWrittenOff(Request $request, string $id)
     {
-        if (Auth::user()->role !== 'admin') {
+        if (! Auth::user()->can('write off loan')) {
             abort(403, 'Only admins can write off cases.');
         }
 
@@ -776,6 +789,9 @@ public function show(string $id)
         ]);
 
         if ($validator->fails()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
+            }
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
@@ -787,26 +803,51 @@ public function show(string $id)
                 throw new \Exception('Written off status not found.');
             }
 
-            $case->update([
-                'status_id' => $writtenOffStatus->id,
-                'notes' => ($case->notes ? $case->notes . "\n\n" : '') . "WRITTEN OFF: " . $request->write_off_reason,
-                'updated_by' => Auth::id(),
-            ]);
+            // A write-off is not a payment: no Repayment is created. The outstanding debt stays on the
+            // case as the written-off amount and the loan is marked written_off (not repaid).
+            DB::transaction(function () use ($case, $request, $writtenOffStatus) {
+                $amount = (float) $case->total_debt_amount;
+                $reason = $request->write_off_reason;
+                $oldLoanStatus = $case->loan->status ?? null;
+                $oldCaseStatus = $case->status_id;
+                $summary = 'WRITTEN OFF ' . number_format($amount, 2) . ' on ' . now()->toDateString()
+                    . ' by ' . Auth::user()->name . '. Reason: ' . $reason;
 
-            // Update associated loan
-            if ($case->loan) {
-                $case->loan->update([
-                    'status' => Loan::STATUS_REPAID,
-                    'is_non_performing' => false,
+                $case->update([
+                    'status_id' => $writtenOffStatus->id,
+                    'notes' => ($case->notes ? $case->notes . "\n\n" : '') . $summary,
+                    'updated_by' => Auth::id(),
                 ]);
-            }
 
-            RecoveryCaseNote::create([
-                'case_id' => $case->id,
-                'note_type' => 'alert',
-                'note' => "Case written off by " . Auth::user()->name . ". Reason: " . $request->write_off_reason,
-                'created_by' => Auth::id(),
-            ]);
+                if ($case->loan) {
+                    $case->loan->update(['status' => Loan::STATUS_WRITTEN_OFF]);
+                }
+
+                RecoveryCaseNote::create([
+                    'case_id' => $case->id,
+                    'note_type' => 'alert',
+                    'note' => $summary,
+                    'created_by' => Auth::id(),
+                ]);
+
+                $otherType = ActionType::where('slug', 'other')->value('id');
+                if ($otherType) {
+                    RecoveryAction::create([
+                        'case_id' => $case->id,
+                        'action_type_id' => $otherType,
+                        'action_date' => now(),
+                        'performed_by' => Auth::id(),
+                        'outcome' => 'failed',
+                        'amount_collected' => 0,
+                        'notes' => $summary,
+                    ]);
+                }
+
+                AuditTrail::record('debt_recovery_cases', $case->id, 'update',
+                    ['status_id' => $oldCaseStatus, 'loan_status' => $oldLoanStatus],
+                    ['event' => 'write_off', 'status_id' => $writtenOffStatus->id, 'loan_id' => $case->loan_id,
+                     'loan_status' => Loan::STATUS_WRITTEN_OFF, 'written_off_amount' => $amount, 'reason' => $reason]);
+            });
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -838,7 +879,7 @@ public function show(string $id)
      */
     public function destroy(string $id)
     {
-        if (Auth::user()->role !== 'admin') {
+        if (! Auth::user()->can('delete recovery cases')) {
             abort(403, 'Only admins can delete cases.');
         }
 
@@ -879,8 +920,9 @@ public function show(string $id)
     {
         $user = Auth::user();
         
-        if ($user->role !== 'borrower') {
-            abort(403, 'Only borrowers can view their recovery cases.');
+        if (! $user->hasRole('borrower')) {
+            // Staff: "my cases" = the cases assigned to me (borrowers never reach the staff routes).
+            return redirect()->route('cases.index', ['assigned_to' => $user->id]);
         }
 
         $cases = DebtRecoveryCase::with(['status', 'priority', 'loan'])
@@ -912,7 +954,7 @@ public function show(string $id)
      */
     public function addAction(Request $request, string $id)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+        if (! Auth::user()->can('edit recovery cases')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -929,18 +971,34 @@ public function show(string $id)
             'promised_amount' => 'nullable|numeric|min:0',
             'promised_date' => 'nullable|date',
             'amount_collected' => 'nullable|numeric|min:0',
+            'collection_reference' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'follow_up_date' => 'nullable|date',
             'follow_up_notes' => 'nullable|string',
         ]);
+        // A collection becomes a Repayment, so it needs a loan and a payment reference.
+        $validator->after(function ($v) use ($request, $case) {
+            if ((float) $request->amount_collected > 0) {
+                if (!$case->loan) {
+                    $v->errors()->add('amount_collected', 'This case has no loan to post the collection to.');
+                }
+                if (!trim((string) $request->collection_reference)) {
+                    $v->errors()->add('collection_reference', 'Enter the payment reference (M-Pesa code, bank ref, receipt no.) for the amount collected.');
+                }
+            }
+        });
 
         if ($validator->fails()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
+            }
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
 
         try {
+          $action = DB::transaction(function () use ($request, $case) {
             $action = RecoveryAction::create([
                 'case_id' => $case->id,
                 'action_type_id' => $request->action_type_id,
@@ -981,29 +1039,45 @@ public function show(string $id)
                 ]);
             }
 
-            // If amount collected, reduce outstanding amounts
-            if ($request->amount_collected && $request->amount_collected > 0) {
-                $remaining = $case->total_debt_amount - $request->amount_collected;
+            // Amount collected = money received: post it as a real Repayment on the loan through the
+            // normal staff repayment path (wallet sync, cycle and loan status handled there), then
+            // lower the case debt by what was posted.
+            if ((float) $request->amount_collected > 0) {
+                $repayment = $this->postCollectionAsRepayment($case, $action, (float) $request->amount_collected,
+                    trim((string) $request->collection_reference), $request->action_date);
+
+                $oldDebt = (float) $case->total_debt_amount;
+                $remaining = $oldDebt - (float) $repayment->amount;
                 $case->update([
                     'total_debt_amount' => max(0, $remaining),
+                    'updated_by' => Auth::id(),
                 ]);
 
-                // If fully collected, mark as recovered
+                // Fully collected: close the case as recovered (the loan's own status was set by the repayment path)
                 if ($remaining <= 0) {
                     $recoveredStatus = RecoveryStatus::where('slug', 'recovered')->first();
                     if ($recoveredStatus) {
                         $case->update(['status_id' => $recoveredStatus->id]);
-                        
-                        // Update loan if exists
-                        if ($case->loan) {
-                            $case->loan->update([
-                                'status' => Loan::STATUS_REPAID,
-                                'is_non_performing' => false,
-                            ]);
-                        }
                     }
                 }
+
+                RecoveryCaseNote::create([
+                    'case_id' => $case->id,
+                    'note_type' => 'action',
+                    'note' => 'Collected ' . number_format((float) $repayment->amount, 2) . ' (ref ' . $repayment->transaction
+                        . ') posted as repayment #' . $repayment->id . ' by ' . Auth::user()->name,
+                    'created_by' => Auth::id(),
+                ]);
+
+                AuditTrail::record('debt_recovery_cases', $case->id, 'update',
+                    ['total_debt_amount' => $oldDebt],
+                    ['event' => 'recovery_collection', 'total_debt_amount' => max(0, $remaining), 'loan_id' => $case->loan_id,
+                     'repayment_id' => $repayment->id, 'recovery_action_id' => $action->id, 'amount' => (float) $repayment->amount,
+                     'reference' => $repayment->transaction]);
             }
+
+            return $action;
+          });
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -1041,7 +1115,7 @@ public function show(string $id)
 
         // Check permission
         $user = Auth::user();
-        if ($user->role === 'borrower' && $case->user_id !== $user->id) {
+        if ($user->hasRole('borrower') && $case->user_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1098,7 +1172,7 @@ public function show(string $id)
      */
     public function updateAction(Request $request, string $id, string $actionId)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+        if (! Auth::user()->can('edit recovery cases')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1126,27 +1200,12 @@ public function show(string $id)
                 'outcome' => $request->outcome,
                 'promised_amount' => $request->promised_amount,
                 'promised_date' => $request->promised_date,
-                'amount_collected' => $request->amount_collected,
                 'notes' => $request->notes,
                 'follow_up_date' => $request->follow_up_date,
                 'follow_up_notes' => $request->follow_up_notes,
             ]);
-
-            // If amount collected, reduce outstanding amounts
-            if ($request->amount_collected && $request->amount_collected > 0) {
-                $remaining = $case->total_debt_amount - $request->amount_collected;
-                $case->update([
-                    'total_debt_amount' => max(0, $remaining),
-                ]);
-
-                // If fully collected, mark as recovered
-                if ($remaining <= 0) {
-                    $recoveredStatus = RecoveryStatus::where('slug', 'recovered')->first();
-                    if ($recoveredStatus) {
-                        $case->update(['status_id' => $recoveredStatus->id]);
-                    }
-                }
-            }
+            // amount_collected is not editable here: a collection is posted once, as a Repayment, when
+            // the action is added (addAction). Corrections go through the repayment itself.
 
             // Update next action date if follow up is scheduled
             if ($request->follow_up_date) {
@@ -1187,7 +1246,7 @@ public function show(string $id)
      */
     public function stats(Request $request)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+        if (! Auth::user()->can('view recovery cases')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1201,21 +1260,21 @@ public function show(string $id)
             ];
 
             // Cases by status
-            $statusStats = RecoveryStatus::withCount('debtRecoveryCases')->get();
+            $statusStats = RecoveryStatus::withCount('recoveryCases')->get();
             foreach ($statusStats as $status) {
                 $overallStats['cases_by_status'][$status->slug] = [
                     'name' => $status->name,
-                    'count' => $status->debt_recovery_cases_count,
+                    'count' => $status->recovery_cases_count,
                     'color' => $status->color ?? 'gray',
                 ];
             }
 
             // Cases by priority
-            $priorityStats = RecoveryPriority::withCount('debtRecoveryCases')->get();
+            $priorityStats = RecoveryPriority::withCount('recoveryCases')->get();
             foreach ($priorityStats as $priority) {
                 $overallStats['cases_by_priority'][$priority->slug] = [
                     'name' => $priority->name,
-                    'count' => $priority->debt_recovery_cases_count,
+                    'count' => $priority->recovery_cases_count,
                     'color' => $priority->color ?? 'gray',
                 ];
             }
@@ -1228,7 +1287,7 @@ public function show(string $id)
                 ->get();
 
             // Officer performance
-            $officerStats = User::whereIn('role', ['admin', 'teller'])
+            $officerStats = User::role(['admin', 'manager', 'recovery-officer', 'teller'])
                 ->withCount(['assignedRecoveryCases', 'assignedRecoveryCases as recovered_count' => function($q) {
                     $q->whereHas('status', function($sq) {
                         $sq->where('slug', 'recovered');
@@ -1263,6 +1322,92 @@ public function show(string $id)
                 'message' => 'Failed to get recovery stats: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Route cases.stats (GET cases/stats): JSON statistics for recovery cases.
+     */
+    public function getStats(Request $request)
+    {
+        return $this->stats($request);
+    }
+
+    /**
+     * Route cases.data (GET cases/{case}/data): one case as JSON (case, borrower, loan, actions, notes,
+     * collections posted as repayments) for refreshing the case page without a reload.
+     */
+    public function getCaseData(string $id)
+    {
+        $case = DebtRecoveryCase::with([
+            'user:id,name,email,phone',
+            'loan',
+            'status',
+            'priority',
+            'assignedTo:id,name',
+            'actions' => fn ($q) => $q->latest('action_date'),
+            'actions.actionType',
+            'actions.performedBy:id,name',
+            'actions.repayment',
+        ])->findOrFail($id);
+        // "notes" is both a column and a relation on cases; load the note rows explicitly
+        $caseNotes = $case->notes()->with('createdBy:id,name')->latest()->get();
+
+        $collected = (float) $case->actions->whereNotNull('repayment_id')->sum('amount_collected');
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'case' => $case,
+                'case_notes' => $caseNotes,
+                'summary' => [
+                    'total_debt_amount' => (float) $case->total_debt_amount,
+                    'collected_via_repayments' => $collected,
+                    'actions_count' => $case->actions->count(),
+                    'notes_count' => $caseNotes->count(),
+                    'status' => $case->status->slug ?? null,
+                    'loan_status' => $case->loan->status ?? null,
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Post a recovery collection as a Repayment through the same path staff use to record repayments
+     * (RepaymentController@store: cycle completion and loan status are decided there, unchanged).
+     * mode = 'recovery', transaction = the reference entered on the action. Links the action to it.
+     */
+    private function postCollectionAsRepayment(DebtRecoveryCase $case, RecoveryAction $action, float $amount, string $reference, $date): Repayment
+    {
+        $loan = $case->loan;
+        if (!$loan) {
+            throw new \RuntimeException('This case has no loan to post the collection to.');
+        }
+        $cycle = $loan->getCurrentCycle() ?? $loan->cycles()->latest()->first();
+        if (!$cycle) {
+            throw new \RuntimeException('Loan #' . $loan->id . ' has no repayment cycle to post the collection to.');
+        }
+
+        $payload = [
+            'loan_id' => $loan->id,
+            'loan_cycle_id' => $cycle->id,
+            'amount' => $amount,
+            'repayment_date' => Carbon::parse($date ?: now())->toDateString(),
+            'transaction' => $reference,
+            'mode' => 'recovery',
+        ];
+        $subRequest = Request::create(route('repayments.store'), 'POST', $payload);
+        $subRequest->setUserResolver(fn () => Auth::user());
+
+        $response = app(RepaymentController::class)->store($subRequest);
+        $repaymentId = data_get($response->getData(true), 'repayment.id');
+        if (!$repaymentId) {
+            throw new \RuntimeException('The repayment could not be recorded.');
+        }
+
+        $repayment = Repayment::findOrFail($repaymentId);
+        $action->update(['repayment_id' => $repayment->id]);
+
+        return $repayment;
     }
 
     /**
@@ -1388,7 +1533,7 @@ public function show(string $id)
      */
     public function export(Request $request)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'teller'])) {
+        if (! Auth::user()->can('view recovery cases')) {
             abort(403, 'Unauthorized action.');
         }
 

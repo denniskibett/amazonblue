@@ -96,10 +96,10 @@
                                     :class="isOptionSelected && 'text-gray-800 dark:text-white/90'"
                                     @change="isOptionSelected = true"
                                 >
-                                    <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>Admin</option>
-                                    <option value="borrower" {{ $user->role == 'borrower' ? 'selected' : '' }}>Borrower</option>
-                                    <option value="broker" {{ $user->role == 'broker' ? 'selected' : '' }}>Broker</option>
-                                    <option value="teller" {{ $user->role == 'teller' ? 'selected' : '' }}>Teller</option>
+                                    <option value="admin" {{ $user->hasRole('admin') ? 'selected' : '' }}>Admin</option>
+                                    <option value="borrower" {{ $user->hasRole('borrower') ? 'selected' : '' }}>Borrower</option>
+                                    <option value="broker" {{ $user->hasRole('broker') ? 'selected' : '' }}>Broker</option>
+                                    <option value="teller" {{ $user->hasRole('teller') ? 'selected' : '' }}>Teller</option>
                                 </select>
                                 <span class="pointer-events-none absolute top-1/2 right-4 z-30 -translate-y-1/2 text-gray-500 dark:text-gray-400">
                                     <svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -141,7 +141,7 @@
                 </div>
 
                 <!-- Broker Fields -->
-                <div id="brokerFields" class="mt-6 space-y-6" style="display: {{ $user->role == 'broker' ? 'block' : 'none' }};">
+                <div id="brokerFields" class="mt-6 space-y-6" style="display: {{ $user->hasRole('broker') ? 'block' : 'none' }};">
                     <h3 class="text-base font-medium text-gray-800 dark:text-white/90 mb-4">Broker Information</h3>
                     
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -237,7 +237,7 @@
                 </div>
 
                 <!-- Borrower Fields -->
-                <div id="borrowerFields" class="mt-6 space-y-6" style="display: {{ $user->role == 'borrower' ? 'block' : 'none' }};">
+                <div id="borrowerFields" class="mt-6 space-y-6" style="display: {{ $user->hasRole('borrower') ? 'block' : 'none' }};">
                     <h3 class="text-base font-medium text-gray-800 dark:text-white/90 mb-4">Borrower Information</h3>
                     
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">

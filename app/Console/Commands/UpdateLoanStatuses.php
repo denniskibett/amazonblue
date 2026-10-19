@@ -55,21 +55,25 @@ class UpdateLoanStatuses extends Command
             $this->line("🔍 Filtering by status: {$statusFilter}");
         }
 
-        // Exclude final statuses (repaid, written_off, rejected)
-        if (!$specificLoan) {
-            $query->whereNotIn('status', [
-                Loan::STATUS_REPAID,
-                Loan::STATUS_WRITTEN_OFF,
-                Loan::STATUS_REJECTED,
-            ]);
-        }
+        // Only loans that have been disbursed can become overdue: never touch
+        // pending / approved / rejected, and skip final statuses (repaid, written_off).
+        $query->whereNotIn('status', [
+            Loan::STATUS_PENDING,
+            Loan::STATUS_APPROVED,
+            Loan::STATUS_REJECTED,
+            Loan::STATUS_REPAID,
+            Loan::STATUS_WRITTEN_OFF,
+        ]);
 
-        // If not force, exclude forbearance and recovery
+        // If not force, exclude recovery and forbearance that is still running
+        // (expired forbearance is picked up so it can move to overdue)
         if (!$force) {
-            $query->whereNotIn('status', [
-                Loan::STATUS_FORBEARANCE,
-                Loan::STATUS_RECOVERY,
-            ]);
+            $query->where('status', '!=', Loan::STATUS_RECOVERY)
+                ->where(function ($q) {
+                    $q->where('status', '!=', Loan::STATUS_FORBEARANCE)
+                        ->orWhereNull('forbearance_until')
+                        ->orWhere('forbearance_until', '<', now());
+                });
         }
 
         $loans = $query->get();
@@ -198,7 +202,7 @@ class UpdateLoanStatuses extends Command
 
         // Calculate days overdue
         $daysOverdue = $loan->calculateDaysOverdue();
-        $threshold = $loan->getNplThreshold();
+        $threshold = $loan->getDefaultThresholdDays();
 
         // Update days overdue field
         if (!$dryRun) {
@@ -213,7 +217,7 @@ class UpdateLoanStatuses extends Command
         // CASE 1: Not overdue
         if ($daysOverdue <= 0) {
             if (in_array($oldStatus, [Loan::STATUS_OVERDUE, Loan::STATUS_DEFAULTED])) {
-                $newStatus = Loan::STATUS_ACTIVE;
+                $newStatus = Loan::STATUS_DISBURSED;
                 $shouldUpdate = true;
                 $reason = 'Loan is no longer overdue';
                 
@@ -229,7 +233,7 @@ class UpdateLoanStatuses extends Command
                 $loan->useGraceDays((int) $daysOverdue);
             }
             if (in_array($oldStatus, [Loan::STATUS_OVERDUE, Loan::STATUS_DEFAULTED])) {
-                $newStatus = Loan::STATUS_ACTIVE;
+                $newStatus = Loan::STATUS_DISBURSED;
                 $shouldUpdate = true;
                 $reason = "Grace days used: {$daysOverdue} days";
             }
@@ -244,17 +248,22 @@ class UpdateLoanStatuses extends Command
                 $loan->markAsDefaulted($reason);
             }
         }
-        // CASE 4: Overdue (but not defaulted yet)
-        elseif ($daysOverdue > 0 && $oldStatus !== Loan::STATUS_OVERDUE) {
+        // CASE 4: Overdue (but not defaulted yet). A loan already defaulted stays
+        // defaulted - without this guard every later run flipped defaulted -> overdue.
+        elseif ($daysOverdue > 0 && !in_array($oldStatus, [Loan::STATUS_OVERDUE, Loan::STATUS_DEFAULTED], true)) {
             $newStatus = Loan::STATUS_OVERDUE;
             $shouldUpdate = true;
             $reason = "Overdue: {$daysOverdue} days";
         }
 
-        // Apply changes
-        if ($shouldUpdate && !$dryRun) {
-            $loan->status = $newStatus;
-            $loan->save();
+        // Apply changes (also persists days_overdue / last_overdue_check when the status is unchanged)
+        if (!$dryRun) {
+            if ($shouldUpdate) {
+                $loan->status = $newStatus;
+            }
+            if ($loan->isDirty()) {
+                $loan->save();
+            }
         }
 
         return [

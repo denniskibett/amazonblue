@@ -146,15 +146,7 @@ class DebtRecoveryCase extends Model
         return $this->hasMany(Communication::class, 'case_id');
     }
 
-    public function timelines()
-    {
-        return $this->hasMany(RecoveryTimeline::class, 'case_id');
-    }
-
-    public function tasks()
-    {
-        return $this->hasMany(RecoveryTask::class, 'case_id');
-    }
+    // timelines() / tasks() removed: recovery_timelines and recovery_tasks tables do not exist.
 
     public function agencyAssignments()
     {

@@ -267,21 +267,52 @@ class CustomerWallets
     }
 
     /**
-     * Partner wallets vs the partner journal (partner_transactions), plus each wallet vs its own log.
+     * EVERY partner wallet vs the partner journal (partner_transactions), plus each wallet vs its own log.
+     *
+     * A wallet with no journal rows must hold 0, and a journal group with no wallet is reported as
+     * missing: checking only the journal groups is what hid the House Account's 4.42M double count.
      */
     public function checkPartners(): array
     {
         $issues = [];
-        $journal = PartnerTransaction::selectRaw('partner_id, wallet_slug, sum(amount) as total')->groupBy('partner_id', 'wallet_slug')->get();
-        foreach ($journal as $row) {
-            $wallet = Partner::find($row->partner_id)?->getWallet($row->wallet_slug);
+        $journal = PartnerTransaction::selectRaw('partner_id, wallet_slug, sum(amount) as total')->groupBy('partner_id', 'wallet_slug')->get()
+            ->mapWithKeys(fn ($r) => [$r->partner_id . ':' . $r->wallet_slug => round((float) $r->total, 4)]);
+        $wallets = Wallet::where('holder_type', (new Partner)->getMorphClass())->get()
+            ->keyBy(fn ($w) => $w->holder_id . ':' . $w->slug);
+
+        $keys = $journal->keys()->merge($wallets->keys())->unique()->sort(SORT_NATURAL)->values();
+        foreach ($keys as $key) {
+            [$partnerId, $slug] = explode(':', $key, 2);
+            $wallet = $wallets[$key] ?? null;
+            $expected = $journal[$key] ?? 0.0;
             $actual = $wallet ? round((float) $wallet->balanceFloat, 4) : null;
-            if ($actual === null || abs($actual - round((float) $row->total, 4)) >= 0.0001) {
-                $issues[] = ['partner' => $row->partner_id, 'wallet' => $row->wallet_slug, 'journal' => round((float) $row->total, 4), 'balance' => $actual];
+            if ($actual === null || abs($actual - $expected) >= 0.0001) {
+                $issues[] = ['partner' => (int) $partnerId, 'wallet' => $slug, 'journal' => $expected, 'balance' => $actual];
             }
         }
 
-        return ['checked' => $journal->count(), 'issues' => $issues, 'integrity' => $this->integrityIssues('App\\Models\\Partner')];
+        return ['checked' => $keys->count(), 'issues' => $issues, 'integrity' => $this->integrityIssues('App\\Models\\Partner'),
+            'slug_mismatches' => $this->journalSlugMismatches()];
+    }
+
+    /**
+     * Journal rows whose wallet posting (same reference) went to a different wallet than the row says.
+     * While any exist the journal itself is wrong, so wallets must NOT be aligned to it: fix the journal
+     * first (database/sql/2026_10_16_partner_journal_wallet_slug.sql).
+     */
+    public function journalSlugMismatches(): array
+    {
+        return DB::table('partner_transactions as pt')
+            ->join('transactions as t', DB::raw("json_unquote(json_extract(t.meta, '$.reference'))"), '=', 'pt.reference')
+            ->join('wallets as w', function ($j) {
+                $j->on('w.id', '=', 't.wallet_id')->on('w.holder_id', '=', 'pt.partner_id')
+                    ->where('w.holder_type', (new Partner)->getMorphClass());
+            })
+            ->whereColumn('pt.wallet_slug', '<>', 'w.slug')
+            ->groupBy('pt.partner_id', 'pt.wallet_slug', 'w.slug')
+            ->get([DB::raw('pt.partner_id as partner'), DB::raw('pt.wallet_slug as journal_says'), DB::raw('w.slug as posted_to'),
+                DB::raw('count(*) as `rows`'), DB::raw('sum(pt.amount) as amount')])
+            ->map(fn ($r) => (array) $r)->all();
     }
 
     /**
@@ -306,23 +337,43 @@ class CustomerWallets
     }
 
     /**
-     * Make a partner wallet's transaction log agree with the journal: recalculate the balance from the
-     * log, then post one correcting entry so balance = log = journal.
+     * Bring a partner wallet to its journal total with one compensating entry (never a balance edit,
+     * never a deletion). The stored balance is first recalculated from the wallet's own log, so the
+     * entry is computed against what the log really says. Returns the KES posted (+deposit / -withdrawal).
+     *
+     * Refuses while journal rows point at the wrong wallet (see journalSlugMismatches), which is what
+     * made the 2026-10-15 repair deposit 4.42M into the House principal wallet.
      */
-    public function repairPartnerWallet(Partner $partner, string $slug, float $journalTotal): float
+    public function correctPartnerWallet(Partner $partner, string $slug, float $journalTotal, string $reason, bool $dryRun = false): float
     {
+        if ($this->journalSlugMismatches()) {
+            throw new \RuntimeException('Partner journal rows point at the wrong wallet; run database/sql/2026_10_16_partner_journal_wallet_slug.sql before correcting wallets.');
+        }
         $wallet = $partner->getWallet($slug);
         if (! $wallet) {
             return 0.0;
         }
 
-        return DB::transaction(function () use ($wallet, $journalTotal) {
+        return DB::transaction(function () use ($wallet, $journalTotal, $reason, $dryRun, $partner, $slug) {
+            Wallet::whereKey($wallet->getKey())->lockForUpdate()->first();
+            $dp = (int) ($wallet->decimal_places ?? 4);
+            $log = (int) Transaction::where('wallet_id', $wallet->getKey())->where('confirmed', 1)
+                ->selectRaw("coalesce(sum(case when type = 'deposit' then amount else -abs(amount) end), 0) as total")->value('total');
+            $diff = (int) round($journalTotal * (10 ** $dp)) - $log;
+            if ($dryRun) {
+                return $diff / (10 ** $dp);
+            }
+
             $wallet->refreshBalance();
             $wallet->refresh();
-            $dp = (int) ($wallet->decimal_places ?? 4);
-            $diff = (int) round($journalTotal * (10 ** $dp)) - (int) $wallet->balance;
             if ($diff !== 0) {
-                $meta = ['source' => 'reconcile', 'description' => 'Align wallet with partner journal'];
+                $meta = [
+                    'source' => 'correction',
+                    'reason' => $reason,
+                    'reference' => sprintf('CORR-P%d-%s-%s', $partner->id, strtoupper($slug), now()->format('YmdHis')),
+                    'journal_total' => round($journalTotal, 4),
+                    'description' => 'Correction: align wallet with partner journal',
+                ];
                 $diff > 0 ? $wallet->deposit($diff, $meta) : $wallet->forceWithdraw(-$diff, $meta);
             }
 

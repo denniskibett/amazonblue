@@ -5,6 +5,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Investment extends Model
 {
@@ -326,74 +327,151 @@ class Investment extends Model
     }
 
     /**
-     * Add partner funding via the NEW pivot.
+     * Add partner funding: an investment_fundings row, plus the partner's contribution through the
+     * partner journal (principal wallet + partner_transactions row linked to this investment/funding).
      */
-    public function addPartnerFunding(int $partnerId, float $amount, string $transactionId = null): InvestmentFunding
+    public function addPartnerFunding(int $partnerId, float $amount, ?string $reference = null, ?string $notes = null): InvestmentFunding
     {
         $partner = Partner::find($partnerId);
-        if (!$partner) {
-            throw new \Exception('Partner not found');
+        if (! $partner) {
+            throw new \InvalidArgumentException('Partner not found.');
+        }
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Funding amount must be more than zero.');
         }
 
-        $partnerTransaction = $partner->addContribution(
-            $amount,
-            $transactionId,
-            "Investment funding for {$this->name}"
-        );
+        return DB::transaction(function () use ($partner, $amount, $reference, $notes) {
+            $funding = InvestmentFunding::create([
+                'investment_id' => $this->id,
+                'partner_id' => $partner->id,
+                'amount_committed' => $amount,
+                'amount_disbursed' => 0,
+                'amount_returned' => 0,
+                'status' => 'active',
+                'notes' => $notes ?: "Funding for {$this->name}",
+            ]);
 
-        $funding = InvestmentFunding::create([
-            'investment_id' => $this->id,
-            'partner_id' => $partnerId,
-            'partner_transaction_id' => $partnerTransaction->id,
-            'amount_committed' => $amount,
-            'amount_disbursed' => 0,
-            'amount_returned' => 0,
-            'status' => 'active',
-            'notes' => "Funding added for {$this->name}",
-        ]);
+            $journal = $partner->addContribution(
+                $amount,
+                $reference ?: 'INV-' . $this->id . '-F' . $funding->id,
+                "Investment funding for {$this->name}",
+                $this->id,
+                $funding->id
+            );
+            $funding->update(['partner_transaction_id' => $journal->id]);
 
-        // Keep totals in sync (legacy column)
-        $this->total_funding_raised = ($this->total_funding_raised ?? 0) + $amount;
-        $this->save();
+            $this->syncLegacyFunding();
 
-        // Also mirror in legacy funding_partners JSON for backward compatibility
-        $fundingPartners = $this->funding_partners ?? [];
-        $fundingPartners[] = [
-            'partner_id' => $partnerId,
-            'amount' => $amount,
-            'date' => now()->toDateString(),
-            'transaction_id' => $partnerTransaction->id,
-            'funding_id' => $funding->id,
-        ];
-        $this->funding_partners = $fundingPartners;
-        $this->save();
-
-        return $funding;
+            return $funding->fresh();
+        });
     }
 
     /**
-     * Record a disbursement against a specific funding row (proportional accounting).
-     * Falls back to the first active funding if $partnerId is null.
+     * Keep the legacy duplicates (total_funding_raised, funding_partners JSON) in step with the fundings.
+     */
+    public function syncLegacyFunding(): void
+    {
+        $fundings = $this->fundings()->get();
+        $this->total_funding_raised = (float) $fundings->sum('amount_committed');
+        $this->funding_partners = $fundings->map(fn ($f) => [
+            'partner_id' => $f->partner_id,
+            'amount' => (float) $f->amount_committed,
+            'date' => $f->created_at?->toDateString(),
+            'transaction_id' => $f->partner_transaction_id,
+            'funding_id' => $f->id,
+        ])->values()->toArray();
+        $this->save();
+    }
+
+    /**
+     * Funded by the house account only (or not linked to any partner yet, which the disbursement screen
+     * links to the house): AC lends its own money here, so there is no commitment to draw against.
+     */
+    public function isHouseLine(): bool
+    {
+        $partnerIds = $this->fundings()->where('status', '<>', 'cancelled')->pluck('partner_id')->unique();
+
+        return $partnerIds->isEmpty()
+            || Partner::whereIn('id', $partnerIds)->where('is_house_account', false)->doesntExist();
+    }
+
+    /**
+     * What partners committed and has not been drawn yet (active fundings).
+     */
+    public function remainingCommitted(?int $partnerId = null): float
+    {
+        return (float) $this->fundings()->active()
+            ->when($partnerId, fn ($q) => $q->where('partner_id', $partnerId))
+            ->get()->sum(fn ($f) => max(0, (float) $f->amount_committed - (float) $f->amount_disbursed));
+    }
+
+    /**
+     * Refuse a draw larger than what partners committed and haven't drawn (house lines are not capped).
+     */
+    public function assertCanDisburse(float $amount, ?int $partnerId = null): void
+    {
+        if ($this->isHouseLine()) {
+            return;
+        }
+        $remaining = $this->remainingCommitted($partnerId);
+        if (round($amount, 2) > round($remaining, 2)) {
+            throw new \DomainException(sprintf(
+                'KES %s is more than the KES %s still committed to investment "%s". Add funding first or reduce the amount.',
+                number_format($amount, 2), number_format($remaining, 2), $this->name
+            ));
+        }
+    }
+
+    /**
+     * Record a draw against the fundings: a committed row with room for it first, otherwise (house
+     * line only) an open house row with no commitment. A committed row settles when fully drawn; an
+     * open row (committed 0) never auto-settles, so tracking doesn't stop after the first draw.
      */
     public function recordFundingDisbursement(float $amount, ?int $partnerId = null): void
     {
-        $query = $this->fundings()->active();
+        $this->assertCanDisburse($amount, $partnerId);
 
-        if ($partnerId) {
-            $query->where('partner_id', $partnerId);
+        $fundings = $this->fundings()->active()
+            ->when($partnerId, fn ($q) => $q->where('partner_id', $partnerId))
+            ->orderBy('id')->lockForUpdate()->get();
+
+        $funding = $fundings->first(fn ($f) => (float) $f->amount_committed > 0 && round($f->remaining_to_disburse, 2) >= round($amount, 2))
+            ?? $fundings->first(fn ($f) => (float) $f->amount_committed <= 0);
+
+        if (! $funding && $this->isHouseLine()) {
+            $house = Partner::where('is_house_account', true)->orderByRaw("account_type = 'principal' desc")->orderBy('id')->first();
+            if (! $house) {
+                return;
+            }
+            $funding = InvestmentFunding::create([
+                'investment_id' => $this->id,
+                'partner_id' => $house->id,
+                'amount_committed' => 0,
+                'amount_disbursed' => 0,
+                'amount_returned' => 0,
+                'status' => 'active',
+                'notes' => 'Open house line: AC lends its own money, no commitment to draw against.',
+            ]);
+        }
+        // no single row has room: spread the draw over the committed rows in order (the cap check passed)
+        $parts = $funding ? [[$funding, $amount]] : [];
+        if (! $funding) {
+            $left = $amount;
+            foreach ($fundings->filter(fn ($f) => (float) $f->amount_committed > 0) as $f) {
+                $take = min($left, $f->remaining_to_disburse);
+                if ($take > 0) {
+                    $parts[] = [$f, $take];
+                    $left = round($left - $take, 2);
+                }
+            }
         }
 
-        $funding = $query->first();
-
-        if ($funding) {
-            $funding->amount_disbursed = (float) $funding->amount_disbursed + $amount;
-
-            // Auto-settle if fully disbursed
-            if ($funding->amount_disbursed >= $funding->amount_committed) {
-                $funding->status = 'settled';
+        foreach ($parts as [$row, $part]) {
+            $row->amount_disbursed = (float) $row->amount_disbursed + $part;
+            if ((float) $row->amount_committed > 0 && (float) $row->amount_disbursed >= (float) $row->amount_committed) {
+                $row->status = 'settled';
             }
-
-            $funding->save();
+            $row->save();
         }
     }
 
@@ -416,54 +494,67 @@ class Investment extends Model
         }
     }
 
-    public function fundDisbursement(float $amount, string $fundingSource = 'internal', ?int $partnerTransactionId = null): Disbursement
+    /**
+     * A disbursement funded by this investment. It must be to a loan: disbursements.loan_id is required
+     * (cash goes to a borrower), so an investment-only draw is refused with a clear message.
+     */
+    public function fundDisbursement(float $amount, string $fundingSource = 'internal', ?int $partnerTransactionId = null, ?int $loanId = null): Disbursement
     {
-        $disbursement = $this->disbursements()->create([
-            'loan_id' => null,
-            'amount' => $amount,
-            'transaction' => 'INV-DISB-' . strtoupper(uniqid()),
-            'mode' => 'investment',
-            'disburse_date' => now(),
-            'payment_date' => now(),
-            'partner_transaction_id' => $partnerTransactionId,
-            'funding_source' => $fundingSource,
-            'investment_id' => $this->id,
-        ]);
-
-        // Update the pivot for whatever partner(s) are funding this
-        if ($partnerTransactionId) {
-            $pt = PartnerTransaction::find($partnerTransactionId);
-            if ($pt) {
-                $this->recordFundingDisbursement($amount, $pt->partner_id);
-            }
-        } else {
-            $this->recordFundingDisbursement($amount);
+        $loan = $loanId ? Loan::find($loanId) : null;
+        if (! $loan) {
+            throw new \InvalidArgumentException('A disbursement must be linked to a loan: choose the loan this investment money is lent on.');
         }
 
-        return $disbursement;
+        return DB::transaction(function () use ($amount, $fundingSource, $partnerTransactionId, $loan) {
+            $partnerId = $partnerTransactionId ? PartnerTransaction::find($partnerTransactionId)?->partner_id : null;
+            $this->assertCanDisburse($amount, $partnerId);
+
+            $disbursement = $this->disbursements()->create([
+                'loan_id' => $loan->id,
+                'amount' => $amount,
+                'transaction' => 'INV-DISB-' . strtoupper(uniqid()),
+                'mode' => 'investment',
+                'disburse_date' => now(),
+                'payment_date' => now(),
+                'partner_transaction_id' => $partnerTransactionId,
+                'funding_source' => $fundingSource,
+                'investment_id' => $this->id,
+            ]);
+
+            $this->recordFundingDisbursement($amount, $partnerId);
+
+            return $disbursement;
+        });
     }
 
-    public function recordRepayment(float $amount, string $mode = 'bank_transfer', ?int $partnerTransactionId = null): Repayment
+    /**
+     * A repayment returned to this investment; like disbursements it must belong to a loan.
+     */
+    public function recordRepayment(float $amount, string $mode = 'bank_transfer', ?int $partnerTransactionId = null, ?int $loanId = null): Repayment
     {
-        $repayment = $this->repayments()->create([
-            'loan_id' => null,
-            'amount' => $amount,
-            'transaction' => 'INV-REP-' . strtoupper(uniqid()),
-            'repayment_date' => now(),
-            'mode' => $mode,
-            'partner_transaction_id' => $partnerTransactionId,
-            'investment_id' => $this->id,
-        ]);
-
-        // Track the return against the pivot
-        if ($partnerTransactionId) {
-            $pt = PartnerTransaction::find($partnerTransactionId);
-            if ($pt) {
-                $this->recordFundingReturn($amount, $pt->partner_id);
-            }
+        $loan = $loanId ? Loan::find($loanId) : null;
+        if (! $loan) {
+            throw new \InvalidArgumentException('A repayment must be linked to a loan: choose the loan this money was repaid on.');
         }
 
-        return $repayment;
+        return DB::transaction(function () use ($amount, $mode, $partnerTransactionId, $loan) {
+            $repayment = $this->repayments()->create([
+                'loan_id' => $loan->id,
+                'amount' => $amount,
+                'transaction' => 'INV-REP-' . strtoupper(uniqid()),
+                'repayment_date' => now(),
+                'mode' => $mode,
+                'partner_transaction_id' => $partnerTransactionId,
+                'investment_id' => $this->id,
+            ]);
+
+            // Track the return against the pivot
+            if ($partnerTransactionId && ($pt = PartnerTransaction::find($partnerTransactionId))) {
+                $this->recordFundingReturn($amount, $pt->partner_id);
+            }
+
+            return $repayment;
+        });
     }
 
     // ============ SCOPES ============

@@ -70,7 +70,7 @@ class InvestmentController extends Controller
         ];
 
         $partners = Partner::active()->get(['id', 'name', 'email', 'current_balance']);
-        $users = User::whereIn('role', ['admin', 'borrower'])->get(['id', 'name', 'email']);
+        $users = User::role(['admin', 'borrower'])->get(['id', 'name', 'email']);
 
         return view('investments.index', compact('investments', 'stats', 'partners', 'users'));
     }
@@ -258,22 +258,8 @@ class InvestmentController extends Controller
                     continue;
                 }
 
-                $partnerTransaction = $partner->addContribution(
-                    $row['amount_committed'],
-                    'INV-' . strtoupper(uniqid()),
-                    "Investment funding for {$investment->name}"
-                );
-
-                InvestmentFunding::create([
-                    'investment_id' => $investment->id,
-                    'partner_id' => $partner->id,
-                    'partner_transaction_id' => $partnerTransaction->id,
-                    'amount_committed' => $row['amount_committed'],
-                    'amount_disbursed' => 0,
-                    'amount_returned' => 0,
-                    'status' => 'active',
-                    'notes' => $row['notes'] ?? "Initial funding for {$investment->name}",
-                ]);
+                // funding row + the partner's contribution through the partner journal and wallet
+                $investment->addPartnerFunding($partner->id, (float) $row['amount_committed'], null, $row['notes'] ?? "Initial funding for {$investment->name}");
 
                 $totalCommitted += (float) $row['amount_committed'];
             }
@@ -282,22 +268,7 @@ class InvestmentController extends Controller
             if ($totalCommitted <= 0 && $request->filled('funding_partner_id') && $request->filled('funding_amount') && $request->funding_amount > 0) {
                 $partner = Partner::find($request->funding_partner_id);
                 if ($partner) {
-                    $partnerTransaction = $partner->addContribution(
-                        $request->funding_amount,
-                        'INV-' . strtoupper(uniqid()),
-                        "Investment funding for {$investment->name}"
-                    );
-
-                    InvestmentFunding::create([
-                        'investment_id' => $investment->id,
-                        'partner_id' => $partner->id,
-                        'partner_transaction_id' => $partnerTransaction->id,
-                        'amount_committed' => $request->funding_amount,
-                        'amount_disbursed' => 0,
-                        'amount_returned' => 0,
-                        'status' => 'active',
-                        'notes' => "Initial funding for {$investment->name}",
-                    ]);
+                    $investment->addPartnerFunding($partner->id, (float) $request->funding_amount, null, "Initial funding for {$investment->name}");
 
                     $totalCommitted += (float) $request->funding_amount;
                 }
@@ -439,7 +410,7 @@ class InvestmentController extends Controller
         ];
 
         $partners = Partner::active()->get(['id', 'name', 'email', 'current_balance']);
-        $users = User::whereIn('role', ['admin', 'borrower'])->get(['id', 'name', 'email']);
+        $users = User::role(['admin', 'borrower'])->get(['id', 'name', 'email']);
 
         return view('investments.show', compact('investment', 'data', 'partners', 'users'));
     }
@@ -532,22 +503,7 @@ class InvestmentController extends Controller
                     $partner = Partner::find($row['partner_id']);
                     if (!$partner) continue;
 
-                    $partnerTransaction = $partner->addContribution(
-                        $row['amount_committed'],
-                        'INV-' . strtoupper(uniqid()),
-                        "Additional funding for {$investment->name}"
-                    );
-
-                    InvestmentFunding::create([
-                        'investment_id' => $investment->id,
-                        'partner_id' => $partner->id,
-                        'partner_transaction_id' => $partnerTransaction->id,
-                        'amount_committed' => $row['amount_committed'],
-                        'amount_disbursed' => 0,
-                        'amount_returned' => 0,
-                        'status' => 'active',
-                        'notes' => $row['notes'] ?? "Additional funding for {$investment->name}",
-                    ]);
+                    $investment->addPartnerFunding($partner->id, (float) $row['amount_committed'], null, $row['notes'] ?? "Additional funding for {$investment->name}");
                 }
 
                 // Refresh totals & legacy JSON
@@ -590,6 +546,84 @@ class InvestmentController extends Controller
                 'message' => 'Failed to update investment: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Add a partner's funding to an investment: investment_fundings row + partner journal + wallet.
+     */
+    public function addFunding(Request $request, Investment $investment)
+    {
+        $validator = Validator::make($request->all(), [
+            'partner_id' => 'required|exists:partners,id',
+            'amount_committed' => 'required_without:amount|nullable|numeric|min:0.01',
+            'amount' => 'required_without:amount_committed|nullable|numeric|min:0.01',
+            'reference' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        try {
+            $funding = $investment->addPartnerFunding(
+                (int) $request->partner_id,
+                (float) ($request->amount_committed ?? $request->amount),
+                $request->reference,
+                $request->notes
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Funding added.',
+                'funding' => $funding->load('partner', 'partnerTransaction'),
+                'investment' => $investment->fresh(['fundings.partner']),
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to add funding: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Add a milestone (milestones JSON column).
+     */
+    public function addMilestone(Request $request, Investment $investment)
+    {
+        $validator = Validator::make($request->all(), [
+            'description' => 'required|string|max:1000',
+            'date' => 'required|date',
+            'status' => 'nullable|in:pending,in_progress,completed,missed',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $investment->addMilestone($request->description, $request->date, $request->status ?? 'pending');
+
+        return response()->json(['success' => true, 'message' => 'Milestone added.', 'milestones' => $investment->fresh()->milestones]);
+    }
+
+    /**
+     * Add a note (notes JSON column); category 'update' also goes to the updates timeline.
+     */
+    public function addNote(Request $request, Investment $investment)
+    {
+        $validator = Validator::make($request->all(), [
+            'content' => 'required_without:note|nullable|string|max:5000',
+            'note' => 'required_without:content|nullable|string|max:5000',
+            'category' => 'nullable|string|max:50',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $content = $request->input('content') ?? $request->input('note');
+        $category = $request->input('category', 'general');
+        $investment->addNote($content, $category);
+        if ($category === 'update') {
+            $investment->addUpdate($content);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Note added.', 'notes' => $investment->fresh()->latest_notes]);
     }
 
     /**

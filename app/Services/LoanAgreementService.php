@@ -7,7 +7,12 @@ use App\Models\User;
 use TCPDF;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use App\Services\LoanCalculator;
+use App\Support\PrivateFiles;
 
 class LoanAgreementService
 {
@@ -18,8 +23,38 @@ class LoanAgreementService
         $this->signatureService = new SignatureService();
     }
 
-    public function generateLoanAgreement(Loan $loan)
+    // Bump when the agreement wording changes; stored with each signed copy.
+    public const TEMPLATE_VERSION = '2026-10-18';
+
+    /**
+     * The agreement PDF for this loan (absolute path).
+     *
+     * Once the borrower has consented, the PDF is generated ONCE and frozen: its sha256 hash, signing
+     * time, signer IP / user agent (when $signer is the consent request) and template version are kept on
+     * the loan, and every later call (staff view, download, borrower view) returns that same file.
+     * Before consent it is an unsigned draft and is rebuilt from current data each time.
+     */
+    public function generateLoanAgreement(Loan $loan, ?Request $signer = null): string
     {
+        if ($frozen = $this->storedPath($loan)) {
+            return $frozen;
+        }
+
+        // one writer at a time, so two first views can't each freeze a different copy
+        return DB::transaction(function () use ($loan, $signer) {
+            DB::table('loans')->where('id', $loan->id)->lockForUpdate()->first(['id']);
+            if ($frozen = $this->storedPath($loan)) {
+                return $frozen;
+            }
+
+            return $this->render($loan, $signer);
+        });
+    }
+
+    private function render(Loan $loan, ?Request $signer): string
+    {
+        $loan->refresh();
+        $wasSigned = (bool) $loan->agreement_sha256;
         $pdf = new TCPDF();
 
         $pdf->SetCreator('AIMZONE VENTURES');
@@ -35,16 +70,50 @@ class LoanAgreementService
 
         $this->generateAgreementContent($pdf, $loan);
 
-        $filename = "agreements/loan_agreement_{$loan->id}.pdf";
-        $path = storage_path('app/public/' . $filename);
-
-        if (!file_exists(dirname($path))) {
-            mkdir(dirname($path), 0755, true);
+        // private disk: served only through the borrower's account and the staff loan routes
+        $relative = $loan->consent
+            ? "agreements/loan_agreement_{$loan->id}_" . Str::random(16) . '.pdf'
+            : "agreements/drafts/loan_agreement_{$loan->id}.pdf";
+        $contents = $pdf->Output('', 'S');
+        if (! Storage::disk(PrivateFiles::DISK)->put($relative, $contents)) {
+            throw new \RuntimeException("Could not save the agreement for loan #{$loan->id}.");
         }
 
-        $pdf->Output($path, 'F');
+        if (! $loan->consent) {
+            return Storage::disk(PrivateFiles::DISK)->path($relative);
+        }
 
-        return $path;
+        if ($wasSigned) {
+            // the frozen file has gone missing: rebuilt so the borrower still has a copy, original signing details kept
+            Log::error("Signed agreement file for loan #{$loan->id} was missing; regenerated", ['old_hash' => $loan->agreement_sha256]);
+        }
+        $fields = [
+            'agreement_path' => $relative,
+            'agreement_sha256' => hash('sha256', $contents),
+            'agreement_version' => self::TEMPLATE_VERSION,
+        ];
+        if (! $wasSigned) {
+            $fields += [
+                'agreement_signed_at' => $signer ? now() : ($loan->consent_date ?? now()),
+                'agreement_signer_ip' => $signer?->ip(),
+                'agreement_user_agent' => $signer ? Str::limit((string) $signer->userAgent(), 250, '') : null,
+            ];
+        }
+        // straight to the table: no loan events, updated_at untouched
+        DB::table('loans')->where('id', $loan->id)->update($fields);
+        $loan->forceFill($fields)->syncOriginal();
+
+        return Storage::disk(PrivateFiles::DISK)->path($relative);
+    }
+
+    /**
+     * The frozen, signed PDF on file for this loan (absolute path), or null if there is none yet.
+     */
+    public function storedPath(Loan $loan): ?string
+    {
+        $row = DB::table('loans')->where('id', $loan->id)->first(['agreement_path', 'agreement_sha256']);
+
+        return $row && $row->agreement_sha256 ? PrivateFiles::absolute($row->agreement_path) : null;
     }
 
     public function generateAgreementContent($pdf, Loan $loan)
@@ -55,7 +124,7 @@ class LoanAgreementService
         $guarantor = $loan->guarantor;
 
         // Company director (admin) – always used as the company witness on the Lender side
-        $companyDirector = User::where('role', 'admin')->orderBy('id', 'asc')->first();
+        $companyDirector = User::role('admin')->orderBy('id', 'asc')->first();
 
         $loanCalculator = new LoanCalculator();
         $metrics = $loanCalculator->calculateLoanMetrics($loan);
@@ -685,10 +754,7 @@ class LoanAgreementService
             return null;
         }
 
-        $relativePath = $user->signature;
-        $absolutePath = storage_path('app/public/' . $relativePath);
-
-        return file_exists($absolutePath) ? $absolutePath : null;
+        return PrivateFiles::absolute($user->signature);
     }
 
     private function getPeriodText($period, $unit)

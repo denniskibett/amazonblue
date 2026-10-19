@@ -70,5 +70,21 @@ class AppServiceProvider extends ServiceProvider
         }
         Loan::restored($rescore);
         Repayment::restored($rescore);
+
+        // Audit trail (audit_logs): who changed what, old/new values, IP. Never blocks the action.
+        foreach ([Loan::class, Repayment::class, Disbursement::class, \App\Models\Partner::class,
+                  \App\Models\PartnerTransaction::class, \App\Models\Investment::class, \App\Models\User::class,
+                  \App\Models\DebtRecoveryCase::class] as $audited) {
+            $audited::observe(\App\Observers\AuditObserver::class);
+        }
+        // Spatie role changes on users (needs permission.events_enabled = true)
+        \Illuminate\Support\Facades\Event::listen(\Spatie\Permission\Events\RoleAttachedEvent::class, function ($event) {
+            \App\Services\AuditTrail::record($event->model->getTable(), $event->model->getKey(), 'update', null,
+                ['roles_attached' => \App\Services\AuditTrail::roleNames($event->rolesOrIds)]);
+        });
+        \Illuminate\Support\Facades\Event::listen(\Spatie\Permission\Events\RoleDetachedEvent::class, function ($event) {
+            \App\Services\AuditTrail::record($event->model->getTable(), $event->model->getKey(), 'update',
+                ['roles_detached' => \App\Services\AuditTrail::roleNames($event->rolesOrIds)], null);
+        });
     }
 }

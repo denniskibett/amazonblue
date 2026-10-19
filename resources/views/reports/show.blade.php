@@ -93,6 +93,15 @@
                 </div>
                 @endif
 
+                @if(!empty($reportData['not_available']))
+                <div class="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
+                    <p class="font-medium">Not available yet (no data recorded in the system):</p>
+                    <ul class="mt-1 list-disc pl-5">
+                        @foreach($reportData['not_available'] as $item)<li>{{ $item }}</li>@endforeach
+                    </ul>
+                </div>
+                @endif
+
                 <!-- Chart Section -->
                 <div class="mb-6 rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6">
                     <div class="flex flex-col gap-5 mb-6 sm:flex-row sm:justify-between">

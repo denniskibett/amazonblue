@@ -394,15 +394,8 @@
                           if (filter_var($headerUser->avatar, FILTER_VALIDATE_URL)) {
                               $headerAvatarUrl = $headerUser->avatar;
                           } else {
-                              $path = $headerUser->avatar;
-                              if (str_starts_with($path, 'storage/')) {
-                                  $path = substr($path, 8);
-                              }
-                              // Ensure it has avatars/ prefix if not already
-                              if (!str_starts_with($path, 'avatars/') && !str_starts_with($path, 'profile-photos/')) {
-                                  $path = 'avatars/' . $path;
-                              }
-                              $headerAvatarUrl = asset('storage/' . $path);
+                              // KYC photo: private, served through files.user
+                              $headerAvatarUrl = $headerUser->documentUrl('photo');
                           }
                       }
                   }
@@ -464,7 +457,7 @@
           >
             @php
                 $currentUser = Auth::user();
-                $showEditProfile = !($currentUser && $currentUser->role === 'borrower' && $currentUser->isProfileLocked());
+                $showEditProfile = !($currentUser && $currentUser->hasRole('borrower') && $currentUser->isProfileLocked());
             @endphp
 
             @if($showEditProfile)

@@ -9,6 +9,10 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Interfaces\Customer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\PartnerLedger;
+use App\Support\Handle;
+use Bavix\Wallet\Models\Wallet as BavixWallet;
+use Illuminate\Support\Facades\DB;
 
 class Partner extends Model implements Wallet, Customer
 {
@@ -36,8 +40,19 @@ class Partner extends Model implements Wallet, Customer
         'bank_name',
         'swift_code',
         'tax_id',
-        'notes'
+        'notes',
+        'handle',
     ];
+
+    protected static function booted(): void
+    {
+        // wallet handle (rule 9): set once from the name when missing
+        static::saving(function (Partner $partner) {
+            if ((! $partner->exists || array_key_exists('handle', $partner->getAttributes())) && empty($partner->handle) && ($handle = Handle::forPartner($partner))) {
+                $partner->handle = $handle;
+            }
+        });
+    }
 
     protected $casts = [
         'current_balance' => 'decimal:2',
@@ -111,29 +126,23 @@ class Partner extends Model implements Wallet, Customer
 
     // ============ ACCESSORS ============
 
+    /**
+     * What the partner can withdraw now: the principal wallet (the journal and wallet move together).
+     */
     public function getAvailableBalanceAttribute()
     {
-        $used = $this->transactions()
-            ->where('type', 'contribution')
-            ->sum('amount') - $this->transactions()
-            ->where('type', 'repayment')
-            ->sum('amount');
-
-        return $this->current_balance - $used;
+        return (float) ($this->getWallet('principal')?->balanceFloat ?? 0);
     }
 
+    // journal (partner_transactions), not Bavix's transactions() relation which this model also has
     public function getTotalInvestedAttribute()
     {
-        return $this->transactions()
-            ->where('type', 'contribution')
-            ->sum('amount');
+        return (float) $this->ledgerEntries()->where('type', 'contribution')->sum('amount');
     }
 
     public function getTotalReturnedAttribute()
     {
-        return $this->transactions()
-            ->where('type', 'repayment')
-            ->sum('amount');
+        return (float) $this->ledgerEntries()->where('type', 'repayment')->sum('amount');
     }
 
     public function getNetPositionAttribute()
@@ -167,73 +176,83 @@ class Partner extends Model implements Wallet, Customer
 
     // ============ METHODS ============
 
-    public function addContribution(float $amount, ?string $reference = null, ?string $notes = null)
-    {
-        $this->total_contribution += $amount;
-        $this->current_balance += $amount;
-        $this->save();
+    /*
+     * Money movements go through the partner journal (PartnerLedger): one partner_transactions row and
+     * the matching Bavix wallet posting, atomically. Never through $this->transactions(), which is
+     * Bavix's own relation, and never by editing current_balance (a legacy column, left as it is).
+     */
 
-        return $this->transactions()->create([
-            'type' => 'contribution',
-            'amount' => $amount,
-            'balance_after' => $this->current_balance,
-            'reference' => $reference,
-            'notes' => $notes,
-            'transaction_date' => now()
-        ]);
-    }
-
-    public function withdrawPartnerBalance(float $amount, ?string $reference = null, ?string $notes = null)
+    /**
+     * Capital paid in by the partner: principal wallet + journal 'contribution'.
+     */
+    public function addContribution(float $amount, ?string $reference = null, ?string $notes = null, ?int $investmentId = null, ?int $investmentFundingId = null): PartnerTransaction
     {
-        if ($amount > $this->current_balance) {
-            throw new \Exception('Insufficient balance');
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Contribution must be more than zero.');
         }
 
-        $this->total_withdrawn += $amount;
-        $this->current_balance -= $amount;
-        $this->save();
-
-        return $this->transactions()->create([
-            'type' => 'withdrawal',
-            'amount' => -$amount,
-            'balance_after' => $this->current_balance,
-            'reference' => $reference,
-            'notes' => $notes,
-            'transaction_date' => now()
-        ]);
+        return app(PartnerLedger::class)->post(
+            $this, 'principal', 'contribution', $amount,
+            investmentId: $investmentId, investmentFundingId: $investmentFundingId,
+            reference: $reference ?: null, notes: $notes ?? 'Contribution'
+        );
     }
 
+    /**
+     * Pay money out to the partner from one of its wallets; refused if the wallet doesn't hold enough.
+     */
+    public function withdrawPartnerBalance(float $amount, ?string $reference = null, ?string $notes = null, string $walletSlug = 'principal'): PartnerTransaction
+    {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Withdrawal must be more than zero.');
+        }
+
+        return DB::transaction(function () use ($amount, $reference, $notes, $walletSlug) {
+            $wallet = $this->getWallet($walletSlug);
+            $available = 0.0;
+            if ($wallet) {
+                // one withdrawal at a time per wallet, so two requests can't both pass the balance check
+                BavixWallet::whereKey($wallet->getKey())->lockForUpdate()->first();
+                $wallet->refresh();
+                $available = (float) $wallet->balanceFloat;
+            }
+            if (round($amount, 4) > round($available, 4)) {
+                throw new \RuntimeException(sprintf('Insufficient balance: the %s wallet holds KES %s.', str_replace('_', ' ', $walletSlug), number_format($available, 2)));
+            }
+
+            return app(PartnerLedger::class)->post(
+                $this, $walletSlug, 'withdrawal', -$amount,
+                reference: $reference ?: null, notes: $notes ?? 'Withdrawal'
+            );
+        });
+    }
+
+    /**
+     * Money returned to the partner from a repayment: principal wallet + journal 'repayment'.
+     */
     public function recordRepayment(Repayment $repayment, float $amount): PartnerTransaction
     {
-        $this->current_balance += $amount;
-        $this->save();
-
-        return PartnerTransaction::create([
-            'type' => 'repayment',
-            'partner_id' => $this->id,
-            'amount' => $amount,
-            'balance_after' => $this->current_balance,
-            'reference' => $repayment->transaction,
-            'loan_id' => $repayment->loan_id,
-            'repayment_id' => $repayment->id,
-            'notes' => "Repayment from investment",
-            'transaction_date' => now()
-        ]);
+        return app(PartnerLedger::class)->post(
+            $this, 'principal', 'repayment', $amount,
+            loanId: $repayment->loan_id, repaymentId: $repayment->id,
+            reference: 'REP-' . $repayment->id . '-P' . $this->id,
+            notes: 'Repayment from investment', transactionDate: optional($repayment->repayment_date)->toDateString()
+        );
     }
 
-    public function distributeProfit(float $amount, ?string $notes = null): PartnerTransaction
+    /**
+     * Profit paid to the partner: interest wallet + journal 'profit_distribution'.
+     */
+    public function distributeProfit(float $amount, ?string $notes = null, ?int $loanId = null, ?string $reference = null): PartnerTransaction
     {
-        $this->current_balance += $amount;
-        $this->save();
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Profit must be more than zero.');
+        }
 
-        return PartnerTransaction::create([
-            'partner_id' => $this->id,
-            'type' => 'profit_distribution',
-            'amount' => $amount,
-            'balance_after' => $this->current_balance,
-            'notes' => $notes,
-            'transaction_date' => now()
-        ]);
+        return app(PartnerLedger::class)->post(
+            $this, 'interest', 'profit_distribution', $amount,
+            loanId: $loanId, reference: $reference, notes: $notes ?? 'Profit distribution'
+        );
     }
 
     // ============ SCOPES ============

@@ -91,7 +91,8 @@
           </li>
           <!-- Menu Item Dashboard -->
 
-          @if(Auth::user()->role === 'admin')
+          @if(Auth::user()->hasAnyRole([...\App\Models\User::BACK_OFFICE_ROLES, 'teller']))
+          @can('view users')
           <!-- Menu Item User Management -->
           <li>
             <a
@@ -125,6 +126,7 @@
             </a>
           </li>
           <!-- Menu Item User Management -->
+          @endcan
 
           @can('edit users')
           <!-- Menu Item KYC Reviews: borrower verifications waiting for staff -->
@@ -156,6 +158,7 @@
           </li>
           @endcan
 
+          @can('view loans')
           <!-- Menu Item Loan Portfolio -->
           <li>
             <a
@@ -189,7 +192,9 @@
             </a>
           </li>
           <!-- Menu Item Loan Portfolio -->
+          @endcan
 
+          @can('view disbursements')
           <!-- Menu Item Disbursements -->
           <li>
             <a
@@ -223,7 +228,9 @@
             </a>
           </li>
           <!-- Menu Item Disbursements -->
+          @endcan
 
+          @can('view recovery cases')
           <!-- Menu Item Debt Recovery -->
           <li>
             <a
@@ -265,10 +272,11 @@
             </a>
           </li>
           <!-- Menu Item Debt Recovery -->
+          @endcan
 
           @endif
 
-          @if(Auth::user()->role === 'borrower')
+          @if(Auth::user()->hasRole('borrower'))
           <!-- Menu Item My Loans -->
           <li>
             <a
@@ -385,7 +393,7 @@
           <!-- Menu Item My Recovery Status -->
           @endif
 
-          @if(Auth::user()->role === 'broker')
+          @if(Auth::user()->hasRole('broker'))
           <!-- Menu Item Loan Portfolio -->
           <li>
             <a
@@ -457,8 +465,8 @@
         </ul>
       </div>
 
-      <!-- Reports Group (for admin only) -->
-      @if(Auth::user()->role === 'admin' || Auth::user()->role === 'teller')
+      <!-- Reports Group (staff holding reports, partners or investments permissions) -->
+      @canany(['view reports', 'view partners', 'view investments'])
       <div>
         <h3 class="mb-4 text-xs uppercase leading-[20px] text-gray-400">
           <span
@@ -487,6 +495,7 @@
         </h3>
 
         <ul class="flex flex-col gap-4 mb-6">
+          @can('view reports')
           <!-- Menu Item Loan Reports -->
           <li>
             <a
@@ -554,7 +563,27 @@
             </a>
           </li>
           <!-- Menu Item Financial Summary -->
+          @endcan
 
+          @can('view audit log')
+          <!-- Menu Item Audit Log -->
+          <li>
+            <a
+              href="{{ route('audit-log.index') }}"
+              class="menu-item group {{ request()->routeIs('audit-log.*') ? 'menu-item-active' : 'menu-item-inactive' }}"
+            >
+              <svg class="{{ request()->routeIs('audit-log.*') ? 'menu-item-icon-active' : 'menu-item-icon-inactive' }}" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                Audit Log
+              </span>
+            </a>
+          </li>
+          <!-- Menu Item Audit Log -->
+          @endcan
+
+          @can('view partners')
           <!-- Menu Item Partners -->
           <li>
             <a
@@ -588,7 +617,9 @@
             </a>
           </li>
           <!-- Menu Item Partners -->
+          @endcan
 
+          @can('view investments')
           <!-- Menu Item Investments -->
           <li>
             <a
@@ -622,10 +653,11 @@
             </a>
           </li>
           <!-- Menu Item Investments -->
+          @endcan
 
         </ul>
       </div>
-      @endif
+      @endcanany
     </nav>
     <!-- Sidebar Menu -->
 

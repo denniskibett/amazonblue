@@ -1,11 +1,11 @@
 @php
     // Define $users at the very top based on user role
-    if (auth()->user()->role === 'admin') {
+    if (auth()->user()->hasAnyRole(\App\Models\User::BACK_OFFICE_ROLES)) {
         $users = $users ?? [];
-    } elseif (auth()->user()->role === 'broker') {
+    } elseif (auth()->user()->hasRole('broker')) {
         // Brokers only see their clients
         $users = $brokerClients ?? [];
-    } elseif (auth()->user()->role === 'teller') {
+    } elseif (auth()->user()->hasRole('teller')) {
         $users = $activeUsers ?? [];
     } else {
         // Regular users shouldn't see this page, but just in case
@@ -620,7 +620,7 @@
         </div>
       </div>
       
-      @if(auth()->user()->role === 'admin')
+      @if(auth()->user()->hasRole('admin'))
         <button @click="openCreateModal()"
                 class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03]">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -736,7 +736,7 @@
             // Get avatar URL - using the correct avatar storage path
             $avatarUrl = null;
             if ($user->avatar) {
-                $avatarUrl = Storage::url($user->avatar);
+                $avatarUrl = $user->documentUrl('photo');
             } elseif ($user->profile_photo_path) {
                 // Fallback to profile_photo_path if avatar doesn't exist
                 $avatarUrl = asset('storage/' . $user->profile_photo_path);
@@ -799,10 +799,10 @@
           
           <td class="py-3 hidden sm:table-cell">
             <span class="user-role inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                @if($user->role === 'admin') bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200
-                @elseif($user->role === 'broker') bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
-                @elseif($user->role === 'borrower') bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                @elseif($user->role === 'teller') bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                @if($user->hasRole('admin')) bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200
+                @elseif($user->hasRole('broker')) bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                @elseif($user->hasRole('borrower')) bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                @elseif($user->hasRole('teller')) bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
                 @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 @endif" 
                 data-sort-value="{{ $user->role }}">
               {{ ucfirst($user->role) }}
@@ -817,7 +817,7 @@
         {{ $completionPercentage }}%
       </span>
 
-      @if($user->role === 'borrower')
+      @if($user->hasRole('borrower'))
         <span
           class="text-xs
             {{ $completionPercentage >= 80
@@ -851,7 +851,7 @@
 
           <!-- Loan Stats -->
           <td class="py-3 hidden sm:table-cell">
-            @if($user->role === 'borrower')
+            @if($user->hasRole('borrower'))
             <div class="space-y-1">
               <div class="flex justify-between text-xs">
                 <span class="text-gray-500">Borrowed:</span>
@@ -890,7 +890,7 @@
                 </svg>
               </a>
               
-              @if(auth()->user()->role === 'admin')
+              @if(auth()->user()->hasRole('admin'))
               <button @click="openEditModal({{ $user->id }})" class="text-green-600 hover:text-green-900" title="Edit">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
@@ -929,7 +929,7 @@
                 <span class="text-gray-500 text-theme-xs dark:text-gray-400 user-email">
                   {{ $user->email }}
                 </span>
-                @if($user->role === 'borrower')
+                @if($user->hasRole('borrower'))
                 <div class="flex items-center mt-1">
                   <div class="w-16 bg-gray-200 rounded-full h-1.5 mr-2">
                     <div class="h-1.5 rounded-full {{ $completionPercentage >= 80 ? 'bg-green-500' : ($completionPercentage >= 50 ? 'bg-yellow-500' : 'bg-red-500') }}" 
@@ -950,7 +950,7 @@
                   @else bg-red-100 text-red-800 @endif">
                 {{ $user->status == 0 ? 'Active' : 'Inactive' }}
               </span>
-              @if($user->role === 'borrower')
+              @if($user->hasRole('borrower'))
               <div class="text-xs text-gray-500 text-center">
                 {{ $activeLoans }} active loans
               </div>
@@ -966,7 +966,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                 </svg>
               </a>
-              @if(auth()->user()->role === 'admin')
+              @if(auth()->user()->hasRole('admin'))
               <button @click="openEditModal({{ $user->id }})" class="text-green-600 hover:text-green-900">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />

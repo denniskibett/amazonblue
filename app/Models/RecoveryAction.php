@@ -25,6 +25,7 @@ class RecoveryAction extends Model
         'promised_amount',
         'promised_date',
         'amount_collected',
+        'repayment_id',
         'notes',
         'follow_up_date',
         'follow_up_notes',
@@ -38,6 +39,12 @@ class RecoveryAction extends Model
         'promised_amount' => 'decimal:2',
         'amount_collected' => 'decimal:2',
     ];
+
+    /** The Repayment created from this action's amount collected (recovery collections are real repayments). */
+    public function repayment()
+    {
+        return $this->belongsTo(Repayment::class);
+    }
 
     protected $appends = [
         'action_type_name',

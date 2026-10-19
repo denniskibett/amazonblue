@@ -1,5 +1,5 @@
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-  @if(auth()->user()->role === 'admin')
+  @if(auth()->user()->hasRole('admin'))
     <!-- Admin Cards -->
     <!-- Total Loans -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
@@ -137,7 +137,7 @@
       </div>
     </div>
 
-  @elseif(auth()->user()->role === 'broker')
+  @elseif(auth()->user()->hasRole('broker'))
     <!-- Broker Cards -->
     <!-- Active Loans -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">

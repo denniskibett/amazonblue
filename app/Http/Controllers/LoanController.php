@@ -84,43 +84,50 @@ class LoanController extends Controller
                 ->with('alert', ['type' => 'error', 'title' => 'Check your application', 'message' => $validator->errors()->first()]);
         }
 
-        $loan = DB::transaction(function () use ($user, $request, $eligibility) {
-            // one application at a time, even if the button is pressed twice
-            User::whereKey($user->id)->lockForUpdate()->first();
-            if ($eligibility->openLoan($user)) {
-                return null;
-            }
+        // loan, first cycle and signed agreement are saved together: if any part fails nothing is kept
+        // and the borrower is told, instead of seeing "Application sent" for a half-made loan
+        try {
+            $loan = DB::transaction(function () use ($user, $request, $eligibility) {
+                // one application at a time, even if the button is pressed twice
+                User::whereKey($user->id)->lockForUpdate()->first();
+                if ($eligibility->openLoan($user)) {
+                    return null;
+                }
 
-            return Loan::create([
-                'user_id' => $user->id,
-                'loan_type_id' => config('lending.borrower_loan_type_id'),
-                'amount' => $request->input('amount'),
-                'original_amount' => $request->input('amount'),
-                'borrow_date' => now()->toDateString(),
-                'status' => Loan::STATUS_PENDING,
-                'broker_status' => 0,
-                'reason' => 'Self-service application from the borrower dashboard.',
-                'consent' => true,
-                'consent_date' => now(),
-                'cycle' => 1,
+                $loan = Loan::create([
+                    'user_id' => $user->id,
+                    'loan_type_id' => config('lending.borrower_loan_type_id'),
+                    'amount' => $request->input('amount'),
+                    'original_amount' => $request->input('amount'),
+                    'borrow_date' => now()->toDateString(),
+                    'status' => Loan::STATUS_PENDING,
+                    'broker_status' => 0,
+                    'reason' => 'Self-service application from the borrower dashboard.',
+                    'consent' => true,
+                    'consent_date' => now(),
+                    'cycle' => 1,
+                ]);
+                $this->loanCalculator->createInitialCycle($loan);
+                // the KYC signature is already on file, so the agreement is signed (and frozen) now
+                $this->loanAgreementService->generateLoanAgreement($loan->fresh(), $request);
+
+                return $loan;
+            });
+        } catch (\Throwable $e) {
+            Log::error('Self-service application failed for user #' . $user->id, ['error' => $e->getMessage()]);
+
+            return $back->withInput()->with('alert', [
+                'type' => 'error',
+                'title' => 'We could not send your application',
+                'message' => 'Nothing was saved. Please try again in a few minutes, or contact us if it keeps happening.',
             ]);
-        });
+        }
 
         if (! $loan) {
             return $back->with('alert', ['type' => 'warning', 'title' => 'You already have a loan', 'message' => 'Your earlier application is still open.']);
         }
 
-        try {
-            $this->loanCalculator->createInitialCycle($loan);
-        } catch (\Exception $e) {
-            Log::error('Failed to create initial cycle for self-service loan #' . $loan->id, ['error' => $e->getMessage()]);
-        }
-        try {
-            // the KYC signature is already on file, so the agreement is signed
-            $this->loanAgreementService->generateLoanAgreement($loan->fresh());
-        } catch (\Exception $e) {
-            Log::error('Failed to generate agreement for self-service loan #' . $loan->id, ['error' => $e->getMessage()]);
-        }
+        \App\Support\CustomerNotifier::applicationReceived($loan);
 
         $quote = $eligibility->quote((float) $loan->amount, \Illuminate\Support\Carbon::parse($loan->borrow_date));
 
@@ -149,7 +156,7 @@ class LoanController extends Controller
         
         // Determine which user to save signature for
         $signatureUser = null;
-        if ($user->role === 'admin' || $user->role === 'teller') {
+        if ($user->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller'])) {
             $signatureUser = User::find($request->user_id);
         } else {
             $signatureUser = $user;
@@ -159,10 +166,10 @@ class LoanController extends Controller
         $forceCreate = $request->header('X-Force-Create') === 'true';
         
         // Set default values based on user role
-        if ($user->role === 'broker') {
+        if ($user->hasRole('broker')) {
             $requestData['broker_status'] = 1;
             $requestData['status'] = 'pending';
-        } elseif (!in_array($user->role, ['admin', 'teller'])) {
+        } elseif (!$user->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller'])) {
             $requestData['status'] = 'pending';
             $requestData['broker_status'] = 0;
         }
@@ -185,16 +192,16 @@ class LoanController extends Controller
         ];
         
         // User validation based on role
-        if ($user->role === 'admin' || $user->role === 'teller') {
+        if ($user->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller'])) {
             $rules['user_id'] = 'required|exists:users,id';
             $rules['broker_status'] = 'required|in:0,1';
-        } elseif ($user->role === 'broker') {
+        } elseif ($user->hasRole('broker')) {
             $rules['user_id'] = [
                 'required',
                 'exists:users,id',
                 function ($attribute, $value, $fail) use ($user) {
                     $isValidBorrower = User::where('id', $value)
-                        ->where('role', 'borrower')
+                        ->role('borrower')
                         ->whereHas('borrower', function($query) use ($user) {
                             $query->where('broker_id', $user->broker->id);
                         })
@@ -211,6 +218,9 @@ class LoanController extends Controller
             $requestData['broker_status'] = 0;
         }
         
+        // creating a loan straight into approved/disbursed/repaid needs the matching permission
+        $this->authorizeStatusChange($user, $requestData['status'] ?? 'pending', 'pending');
+
         try {
             // Get the user ID to check
             $userId = $requestData['user_id'] ?? ($request->user_id ?? null);
@@ -418,7 +428,7 @@ class LoanController extends Controller
             'loan_type_id'   => 'required|exists:loan_types,id',
             'amount'         => 'required|numeric|min:1',
             'borrow_date'    => 'required|date',
-            'status'         => 'required|in:pending,approved,disbursed,repaid,overdue,defaulted',
+            'status'         => 'required|in:pending,approved,disbursed,repaid,overdue,defaulted,rejected',
             'broker_status'  => 'required|in:0,1',
             'reason'         => 'required|string|min:10',
             'guarantor_id'   => 'nullable|exists:users,id',
@@ -426,7 +436,25 @@ class LoanController extends Controller
             'loan_officer_id' => 'nullable|exists:users,id',
             'consent'        => 'sometimes|boolean',
             'due_date'       => 'nullable|date',
+            'rejection_reason' => 'nullable|required_if:status,rejected|string|min:5|max:1000',
         ]);
+
+        // edit loans lets you change details; moving the status needs approve/disburse loans
+        $this->authorizeStatusChange($request->user(), $validated['status'], $loan->status);
+
+        // Rejection: only from pending/approved; reason goes to recovery_notes (reason = loan purpose)
+        $rejectionReason = $validated['rejection_reason'] ?? null;
+        unset($validated['rejection_reason']);
+        if ($validated['status'] === Loan::STATUS_REJECTED && $loan->status !== Loan::STATUS_REJECTED) {
+            if (!in_array($loan->status, [Loan::STATUS_PENDING, Loan::STATUS_APPROVED], true)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'status' => 'Only pending or approved loans can be rejected.',
+                ]);
+            }
+            $validated['recovery_notes'] = ($loan->recovery_notes ? $loan->recovery_notes . "\n" : '')
+                . 'Rejected by ' . ($request->user()->name ?? ('user #' . $request->user()->id))
+                . ' on ' . now()->format('Y-m-d H:i') . ': ' . $rejectionReason;
+        }
 
         // Handle consent update
         if ($request->has('consent') && $request->consent === '1' && !$loan->consent) {
@@ -511,19 +539,19 @@ class LoanController extends Controller
 
         try {
 
-            if ($user->role === 'admin') {
+            if ($user->hasAnyRole(User::BACK_OFFICE_ROLES)) {
 
                 $loan = $loanQuery
                     ->where('user_id', $id)
                     ->where('id', $loanId)
                     ->firstOrFail();
 
-            } elseif (in_array($user->role, ['broker', 'teller'])) {
+            } elseif ($user->hasAnyRole(['broker', 'teller'])) {
 
                 $loan = $loanQuery
                     ->findOrFail($loanId);
 
-            } elseif ($user->role === 'borrower') {
+            } elseif ($user->hasRole('borrower')) {
 
                 $loan = $loanQuery
                     ->where('id', $loanId)
@@ -656,7 +684,7 @@ class LoanController extends Controller
 
         // Only id and name: officers are rendered into the page's JavaScript,
         // so never send signature, KYC or next-of-kin columns to the browser.
-        $officers = User::whereIn('role', [
+        $officers = User::role([
             'admin',
             'teller'
         ])->orderBy('name')->get(['id', 'name']);
@@ -847,22 +875,22 @@ class LoanController extends Controller
         $users = collect();
         $loanTypes = LoanType::all();
 
-        if ($user->role === 'admin' || $user->role === 'teller') {
+        if ($user->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller'])) {
             $users = User::all();
             $loans = Loan::with('user')->where('status', '!=', 'repaid')->get();
             $all_borrower_loans = Loan::with('user')->get();
             
-            $guarantors = User::where('role', 'borrower')
+            $guarantors = User::role('borrower')
                 ->where('id', '!=', $request->user_id ?? $user->id)
                 ->get();
                 
-            $loanOfficers = User::whereIn('role', ['admin', 'teller'])->get();
+            $loanOfficers = User::role(['admin', 'teller'])->get();
             
-        } elseif ($user->role === 'broker') {
+        } elseif ($user->hasRole('broker')) {
             $users = User::whereHas('borrower', function($query) use ($user) {
                 $query->where('broker_id', $user->broker->id);
             })
-            ->where('role', 'borrower')
+            ->role('borrower')
             ->get();
             $loans = Loan::with('user')->where('status', '!=', 'repaid')
                 ->whereIn('user_id', $users->pluck('id'))
@@ -873,17 +901,17 @@ class LoanController extends Controller
         } else {
             $loans = $user->loans()->where('status', '!=', 'repaid')->get();
             $users = collect([$user]);
-            $guarantors = User::where('role', 'borrower')->where('id', '!=', $user->id)->get();
-            $loanOfficers = User::whereIn('role', ['admin', 'teller'])->get();
+            $guarantors = User::role('borrower')->where('id', '!=', $user->id)->get();
+            $loanOfficers = User::role(['admin', 'teller'])->get();
         }
 
         $signatureUser = null;
         $hasExistingSignature = false;
         $existingSignatureUrl = null;
 
-        if ($user->role === 'borrower') {
+        if ($user->hasRole('borrower')) {
             $signatureUser = $user;
-        } elseif (($user->role === 'admin' || $user->role === 'teller' || $user->role === 'broker') && $request->has('user_id')) {
+        } elseif (($user->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller', 'broker'])) && $request->has('user_id')) {
             $signatureUser = User::find($request->user_id);
         }
 
@@ -907,6 +935,55 @@ class LoanController extends Controller
     }
 
     /**
+     * Create-loan form with the borrower preselected (route users.loans.create).
+     */
+    public function createForUser(Request $request, User $user)
+    {
+        $request->merge(['user_id' => $user->id]);
+        // the create view preselects from old('user_id')
+        $request->session()->flashInput(array_merge($request->old() ?: [], ['user_id' => $user->id]));
+
+        return $this->create($request);
+    }
+
+    /**
+     * Reject a pending/approved loan application.
+     * Needs the same permission as approving (edit loans); the reason is
+     * appended to loans.recovery_notes (loans.reason holds the loan purpose).
+     */
+    public function reject(Request $request, Loan $loan)
+    {
+        $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
+
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|min:5|max:1000',
+        ]);
+
+        if (!in_array($loan->status, [Loan::STATUS_PENDING, Loan::STATUS_APPROVED], true)) {
+            $message = 'Only pending or approved loans can be rejected (this loan is ' . $loan->status . ').';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+            return back()->with('error', $message);
+        }
+
+        $note = 'Rejected by ' . ($request->user()->name ?? ('user #' . $request->user()->id))
+            . ' on ' . now()->format('Y-m-d H:i') . ': ' . $validated['rejection_reason'];
+
+        $loan->status = Loan::STATUS_REJECTED;
+        $loan->recovery_notes = ($loan->recovery_notes ? $loan->recovery_notes . "\n" : '') . $note;
+        $loan->save();
+
+        Log::info('Loan rejected', ['loan_id' => $loan->id, 'by' => $request->user()->id]);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Loan rejected.', 'status' => $loan->status]);
+        }
+
+        return redirect()->route('loans.show', $loan->id)->with('success', 'Loan rejected.');
+    }
+
+    /**
      * Show the form for editing the specified loan.
      */
     public function edit(Loan $loan)
@@ -915,11 +992,11 @@ class LoanController extends Controller
         $user = auth()->user();
         $this->authorizeLoanChange($user, $loan, 'edit loans');
         
-        if ($user->role === 'borrower' && $loan->user_id !== $user->id) {
+        if ($user->hasRole('borrower') && $loan->user_id !== $user->id) {
             abort(403, 'Unauthorized');
         }
         
-        if ($user->role === 'broker') {
+        if ($user->hasRole('broker')) {
             $broker = $user->broker;
             $isClient = $loan->user->borrower && $loan->user->borrower->broker_id === $broker->id;
             if (!$isClient && $loan->user_id !== $user->id) {
@@ -938,7 +1015,7 @@ class LoanController extends Controller
         $signatureUrl = null;
         if ($loan->user && $loan->user->signature) {
             $hasSignature = true;
-            $signatureUrl = asset('storage/' . $loan->user->signature);
+            $signatureUrl = $loan->user->documentUrl('signature');
         }
         
         // If this is an AJAX request, return JSON
@@ -955,11 +1032,11 @@ class LoanController extends Controller
             });
             
             // Get guarantors and loan officers for the dropdowns
-            $guarantors = User::where('role', 'borrower')
+            $guarantors = User::role('borrower')
                 ->where('id', '!=', $loan->user_id)
                 ->get(['id', 'name', 'email']);
                 
-            $loanOfficers = User::whereIn('role', ['admin', 'teller'])
+            $loanOfficers = User::role(['admin', 'teller'])
                 ->get(['id', 'name', 'email']);
             
             return response()->json([
@@ -991,10 +1068,10 @@ class LoanController extends Controller
         }
         
         // Otherwise return the edit view
-        $guarantors = User::where('role', 'borrower')
+        $guarantors = User::role('borrower')
             ->where('id', '!=', $loan->user_id)
             ->get();
-        $loanOfficers = User::whereIn('role', ['admin', 'teller'])->get();
+        $loanOfficers = User::role(['admin', 'teller'])->get();
         
         return view('loans.edit', [
             'loan' => $loan,
@@ -1172,7 +1249,7 @@ class LoanController extends Controller
      */
     public function rollover(Request $request, Loan $loan)
     {
-        if (!in_array(auth()->user()->role, ['admin', 'teller'])) {
+        if (! auth()->user()->can('rollover loans')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized action.'
@@ -1243,7 +1320,7 @@ class LoanController extends Controller
      */
     public function getRolloverPreview(Request $request, Loan $loan)
     {
-        if (!in_array(auth()->user()->role, ['admin', 'teller', 'borrower'])) {
+        if (! auth()->user()->can('view loans')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized action.'
@@ -1270,7 +1347,7 @@ class LoanController extends Controller
      */
     public function rolloverStatement(Loan $loan)
     {
-        if (!in_array(auth()->user()->role, ['admin', 'teller', 'borrower'])) {
+        if (! auth()->user()->can('view loans')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1284,7 +1361,7 @@ class LoanController extends Controller
      */
     public function getCycles(Loan $loan)
     {
-        if (!in_array(auth()->user()->role, ['admin', 'teller', 'borrower'])) {
+        if (! auth()->user()->can('view loans')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1446,7 +1523,7 @@ class LoanController extends Controller
         $caseNumber = 'DR-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
         // Find default assignee
-        $assignedTo = User::whereIn('role', ['admin', 'teller'])->first();
+        $assignedTo = User::role(['admin', 'teller'])->first();
 
         // Create the recovery case
         $case = DebtRecoveryCase::create([
@@ -1501,13 +1578,13 @@ class LoanController extends Controller
             'user.borrower.broker'
         ]);
     
-        if ($user->role === 'admin') {
+        if ($user->hasAnyRole(User::BACK_OFFICE_ROLES)) {
             $loan = $loanQuery->where('user_id', $id)
                         ->where('id', $loanId)
                         ->firstOrFail();
-        } elseif (in_array($user->role, ['broker', 'teller'])) {
+        } elseif ($user->hasAnyRole(['broker', 'teller'])) {
             $loan = $loanQuery->findOrFail($loanId);
-        } elseif ($user->role === 'borrower') {
+        } elseif ($user->hasRole('borrower')) {
             $loan = $loanQuery->where('id', $loanId)
                         ->where('user_id', $user->id)
                         ->whereIn('status', ['approved', 'disbursed'])
@@ -1671,15 +1748,16 @@ class LoanController extends Controller
         $loan = Loan::findOrFail($loanId);
         $user = auth()->user();
         
-        if (!in_array($user->role, ['admin', 'teller']) && 
+        if (!$user->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller']) && 
             $loan->user_id !== $user->id && 
-            !($user->role === 'broker' && $loan->broker_status == 1)) {
+            !($user->hasRole('broker') && $loan->broker_status == 1)) {
             abort(403, 'Unauthorized');
         }
 
+        // the frozen signed copy when there is one; otherwise generated (and frozen if consented)
         $filePath = $this->loanAgreementService->generateLoanAgreement($loan);
-        
-        return response()->download($filePath, "loan_agreement_{$loan->id}.pdf");
+
+        return response()->download($filePath, "loan_agreement_{$loan->id}.pdf", ['Content-Type' => 'application/pdf']);
     }
 
     /**
@@ -1690,15 +1768,19 @@ class LoanController extends Controller
         $loan = Loan::findOrFail($loanId);
         $user = auth()->user();
         
-        if (!in_array($user->role, ['admin', 'teller']) && 
+        if (!$user->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller']) && 
             $loan->user_id !== $user->id && 
-            !($user->role === 'broker' && $loan->broker_status == 1)) {
+            !($user->hasRole('broker') && $loan->broker_status == 1)) {
             abort(403, 'Unauthorized');
         }
 
+        // the frozen signed copy when there is one; otherwise generated (and frozen if consented)
         $filePath = $this->loanAgreementService->generateLoanAgreement($loan);
-        
-        return response()->file($filePath);
+
+        return response()->file($filePath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="loan_agreement_' . $loan->id . '.pdf"',
+        ]);
     }
 
     /**
@@ -1735,8 +1817,11 @@ class LoanController extends Controller
      */
     public function giveConsent(Loan $loan)
     {
-        $loan->giveConsent();
-        
+        // Loan has no giveConsent() method; set the consent fields directly.
+        if (!$loan->consent) {
+            $loan->update(['consent' => true, 'consent_date' => now()]);
+        }
+
         $signatureStatus = $this->signatureService->checkSignature($loan->user);
         if ($signatureStatus['hasSignature']) {
             $this->loanAgreementService->generateLoanAgreement($loan);
@@ -1753,10 +1838,10 @@ class LoanController extends Controller
         
         $loanTypes = LoanType::all();
         $users = User::where('status', 0)->get();
-        $guarantors = User::where('role', 'borrower')->where('status', 0)->get();
-        $loanOfficers = User::whereIn('role', ['admin', 'teller'])->where('status', 0)->get();
+        $guarantors = User::role('borrower')->where('status', 0)->get();
+        $loanOfficers = User::role(['admin', 'teller'])->where('status', 0)->get();
 
-        if ($user->role === 'admin') {
+        if ($user->hasAnyRole(User::BACK_OFFICE_ROLES)) {
             $allLoans = Loan::with([
                 'user.borrower',
                 'loanType',
@@ -1777,7 +1862,7 @@ class LoanController extends Controller
                 'loanOfficers' => $loanOfficers
             ]);
         }
-        elseif ($user->role === 'broker') { 
+        elseif ($user->hasRole('broker')) { 
             $broker = $user->broker;
 
             $brokerLoans = Loan::where('broker_status', 1)
@@ -1793,7 +1878,7 @@ class LoanController extends Controller
             $users = User::whereHas('borrower', function ($query) use ($user) {
                 $query->where('broker_id', $user->broker->id);
             })
-            ->where('role', 'borrower')
+            ->role('borrower')
             ->where('status', 0)
             ->get();
 
@@ -1808,7 +1893,7 @@ class LoanController extends Controller
                 'loanOfficers' => $loanOfficers
             ]);
         }
-        elseif ($user->role === 'borrower') {
+        elseif ($user->hasRole('borrower')) {
             $userLoans = Loan::where('user_id', $user->id)
                 ->with(['loanType', 'disbursements', 'repayments', 'cycles'])
                 ->orderBy('borrow_date', 'desc')
@@ -1830,7 +1915,7 @@ class LoanController extends Controller
             ];
 
             $users = collect([$user]);
-            $guarantors = User::where('role', 'borrower')->where('id', '!=', $user->id)->get();
+            $guarantors = User::role('borrower')->where('id', '!=', $user->id)->get();
 
             return view('loans.index', [
                 'userLoans' => $userLoans,
@@ -1842,7 +1927,7 @@ class LoanController extends Controller
                 'loanOfficers' => $loanOfficers
             ]);
         }
-        elseif ($user->role === 'teller') {
+        elseif ($user->hasRole('teller')) {
             $activeLoans = Loan::with(['user', 'loanType', 'cycles'])
                 ->where('status', 'active')
                 ->orderBy('borrow_date', 'desc')
@@ -2031,6 +2116,24 @@ class LoanController extends Controller
      * Changing or deleting a loan needs the matching permission (borrowers have neither),
      * and brokers may only touch their own clients' loans.
      */
+    /**
+     * Status moves are an approval decision, not a plain edit: disbursed needs 'disburse loans'
+     * (or 'approve loans'); any other change (approved, repaid, overdue, defaulted, back to pending)
+     * needs 'approve loans'. Brokers, loan officers and recovery officers hold neither.
+     */
+    private function authorizeStatusChange(User $user, string $to, ?string $from): void
+    {
+        if ($to === $from) {
+            return;
+        }
+
+        $allowed = $to === 'disbursed'
+            ? $user->canAny(['disburse loans', 'approve loans'])
+            : $user->can('approve loans');
+
+        abort_unless($allowed, 403, 'You are not allowed to set this loan to ' . $to . '.');
+    }
+
     private function authorizeLoanChange(User $user, Loan $loan, string $permission): void
     {
         abort_unless($user->can($permission), 403, 'You are not allowed to change loans.');

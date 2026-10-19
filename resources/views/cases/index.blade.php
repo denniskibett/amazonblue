@@ -4,7 +4,7 @@
 <div class="container mx-auto px-4 py-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Debt Recovery Cases</h2>
-        @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
+        @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller'))
         <button onclick="window.dispatchEvent(new CustomEvent('open-case-create'))" 
                 class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

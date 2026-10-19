@@ -1,8 +1,57 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-6" 
-     x-data='caseShow(@js($caseData))'>
+@php
+    // Plain array with only the fields the page script reads. Never @js() the Eloquent model:
+    // its user.borrower accessors run credit scoring per field and exhaust memory, and full user
+    // rows carry KYC data.
+    $fmtDate = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('M d, Y') : null;
+    $caseUser = $caseData->user;
+    $caseLoanRow = $caseData->loan;
+    $caseJs = [
+        'id' => $caseData->id,
+        'case_number' => $caseData->case_number,
+        'user_id' => $caseData->user_id,
+        'user_name' => $caseUser->name ?? null,
+        'user_email' => $caseUser->email ?? null,
+        'user_phone' => $caseUser->phone ?? null,
+        'user_initials' => $caseUser ? collect(explode(' ', trim($caseUser->name)))->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('') : '?',
+        'client_type' => $caseUser?->borrower?->getRawOriginal('client_type'),
+        'loan_id' => $caseData->loan_id,
+        'loan_amount' => $caseLoanRow ? (float) $caseLoanRow->amount : null,
+        'loan_status' => $caseLoanRow->status ?? null,
+        'loan_type' => $caseLoanRow?->loanType?->name,
+        'is_non_performing' => (bool) ($caseLoanRow->is_non_performing ?? false),
+        'days_overdue' => $caseLoanRow->days_overdue ?? 0,
+        'days_in_default' => $caseData->days_in_default,
+        'total_debt_amount' => (float) $caseData->total_debt_amount,
+        'remaining_balance' => (float) $caseData->remaining_balance,
+        'recovery_progress' => $caseData->recovery_progress,
+        'total_recovered' => (float) $caseData->actions->whereNotNull('repayment_id')->sum('amount_collected'),
+        'default_date_formatted' => $fmtDate($caseData->default_date),
+        'last_contact_date_formatted' => $fmtDate($caseData->last_contact_date),
+        'next_action_date_formatted' => $fmtDate($caseData->next_action_date),
+        'assigned_to_name' => $caseData->assignedTo->name ?? null,
+        'recovery_officer' => $caseData->assignedTo->name ?? null,
+        'recovery_strategy' => $caseData->recovery_strategy,
+        'notes' => $caseData->getAttribute('notes'),
+        'actions_count' => $caseData->actions->count(),
+        'created_at_diff' => optional($caseData->created_at)->diffForHumans(),
+        'updated_at_diff' => optional($caseData->updated_at)->diffForHumans(),
+        'payment_plans' => collect($caseData->paymentPlans ?? [])->map(fn ($p) => [
+            'id' => data_get($p, 'id'),
+            'installment_frequency' => data_get($p, 'installment_frequency'),
+            'status' => (string) data_get($p, 'status'),
+            'installment_amount' => data_get($p, 'installment_amount'),
+            'number_of_installments' => data_get($p, 'number_of_installments'),
+            'total_amount' => data_get($p, 'total_amount'),
+            'progress_percentage' => data_get($p, 'progress_percentage', 0),
+            'remaining_balance' => data_get($p, 'remaining_balance', 0),
+        ])->values(),
+    ];
+@endphp
+<div class="container mx-auto px-4 py-6"
+     x-data='caseShow(@js($caseJs))'>
     
     <!-- Breadcrumb -->
     <nav class="flex mb-6" aria-label="Breadcrumb">
@@ -86,7 +135,7 @@
                 </p>
             </div>
             <div class="flex items-center gap-2">
-                @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
+                @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller'))
                 <button @click="openEditCase()" 
                         class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -324,7 +373,7 @@
                             </svg>
                             <h4 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No activities recorded</h4>
                             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Start tracking recovery actions for this case</p>
-                            @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
+                            @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller'))
                                 <button @click="openAddActionModal()" 
                                         class="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -373,7 +422,7 @@
             </div>
 
             <!-- Quick Actions -->
-            @if(auth()->user()->role === 'admin' || auth()->user()->role === 'teller')
+            @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller'))
             <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Quick Actions</h3>
                 <div class="space-y-3">
@@ -393,7 +442,7 @@
                         Mark as Recovered
                     </button>
                     
-                    @if(auth()->user()->role === 'admin')
+                    @if(auth()->user()->hasRole('admin'))
                     <button @click="openWriteOffModal()" 
                             class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -440,6 +489,9 @@
 
 {{-- Include Alert Modal --}}
 @include('partials.modal.alert-modal')
+
+{{-- Add action / Write off dialogs (listen for open-add-action / open-write-off) --}}
+@include('partials.recovery.case-action-modals')
 
 @endsection
 

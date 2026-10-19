@@ -69,7 +69,7 @@
                    class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
                     Download Agreement
                 </a>
-                @if(in_array(auth()->user()->role, ['admin', 'teller']))
+                @if(auth()->user()->hasAnyRole(['admin', 'teller']))
                 <a href="{{ route('loans.edit', $loan->id) }}" 
                    class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">
                     Process Loan

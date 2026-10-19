@@ -6,6 +6,7 @@ use App\Models\Repayment;
 use App\Models\Loan;
 use App\Models\LoanCycle;
 use App\Services\RepaymentService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class RepaymentController extends Controller
@@ -23,15 +24,15 @@ class RepaymentController extends Controller
         
         $query = Repayment::with(['loan.borrower', 'loanCycle'])->latest();
         
-        if ($user->role === 'broker') {
+        if ($user->hasRole('broker')) {
             $query->whereHas('loan', function($q) use ($user) {
                 $q->where('broker_id', $user->id);
             });
-        } elseif ($user->role === 'teller') {
+        } elseif ($user->hasRole('teller')) {
             $query->whereHas('loan', function($q) {
                 $q->where('status', 'active');
             });
-        } elseif ($user->role === 'borrower') {
+        } elseif ($user->hasRole('borrower')) {
             $query->whereHas('loan', function($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
@@ -48,11 +49,11 @@ class RepaymentController extends Controller
         $loan_id = $request->get('loan_id');
         $loan = Loan::with('borrower')->findOrFail($loan_id);
         
-        if ($user->role === 'borrower' && $loan->user_id !== $user->id) {
+        if ($user->hasRole('borrower') && $loan->user_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }
         
-        if ($user->role === 'broker' && $loan->broker_id !== $user->id) {
+        if ($user->hasRole('broker') && $loan->broker_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }
         
@@ -142,11 +143,11 @@ class RepaymentController extends Controller
         $user = auth()->user();
         $loan = $repayment->loan;
         
-        if ($user->role === 'borrower' && $loan->user_id !== $user->id) {
+        if ($user->hasRole('borrower') && $loan->user_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }
         
-        if ($user->role === 'broker' && $loan->broker_id !== $user->id) {
+        if ($user->hasRole('broker') && $loan->broker_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }
         
@@ -159,11 +160,11 @@ class RepaymentController extends Controller
         $user = auth()->user();
         $loan = $repayment->loan;
         
-        if ($user->role === 'broker' && $loan->broker_id !== $user->id) {
+        if ($user->hasRole('broker') && $loan->broker_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }
         
-        if (!in_array($user->role, ['admin', 'broker'])) {
+        if (!$user->hasAnyRole(['admin', 'broker'])) {
             abort(403, 'Unauthorized action.');
         }
         
@@ -176,11 +177,11 @@ class RepaymentController extends Controller
         $user = auth()->user();
         $loan = $repayment->loan;
         
-        if ($user->role === 'broker' && $loan->broker_id !== $user->id) {
+        if ($user->hasRole('broker') && $loan->broker_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }
         
-        if (!in_array($user->role, ['admin', 'broker'])) {
+        if (!$user->hasAnyRole(['admin', 'broker'])) {
             abort(403, 'Unauthorized action.');
         }
         
@@ -213,7 +214,7 @@ class RepaymentController extends Controller
                 if ($dueDate && Carbon::now()->gt($dueDate)) {
                     $loan->status = Loan::STATUS_OVERDUE;
                 } else {
-                    $loan->status = Loan::STATUS_ACTIVE;
+                    $loan->status = Loan::STATUS_DISBURSED;
                 }
                 $loan->save();
             }

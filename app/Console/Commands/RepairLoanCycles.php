@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use App\Models\Loan;
 use App\Models\LoanCycle;
 use App\Services\LoanCalculator;
@@ -13,7 +14,8 @@ class RepairLoanCycles extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'loans:repair-cycles';
+    protected $signature = 'loans:repair-cycles
+                            {--dry-run : Run inside a transaction and roll back (shows what would change)}';
 
     /**
      * The console command description.
@@ -30,6 +32,40 @@ class RepairLoanCycles extends Command
     }
 
     public function handle()
+    {
+        $dryRun = (bool) $this->option('dry-run');
+        if ($dryRun) {
+            $this->warn('DRY RUN: all work runs inside a transaction that is rolled back - nothing is saved.');
+        }
+
+        $writes = ['insert' => 0, 'update' => 0, 'delete' => 0];
+        DB::listen(function ($query) use (&$writes) {
+            $verb = strtolower(strtok(ltrim($query->sql), ' '));
+            if (isset($writes[$verb])) {
+                $writes[$verb]++;
+            }
+        });
+
+        DB::beginTransaction();
+        try {
+            $result = $this->runWork();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+
+        if ($dryRun) {
+            DB::rollBack();
+            $this->warn("DRY RUN rolled back. Would have run: {$writes['insert']} inserts, {$writes['update']} updates, {$writes['delete']} deletes.");
+        } else {
+            DB::commit();
+            $this->info("Committed: {$writes['insert']} inserts, {$writes['update']} updates, {$writes['delete']} deletes.");
+        }
+
+        return $result ?? self::SUCCESS;
+    }
+
+    protected function runWork()
     {
         $this->info('======================================');
         $this->info('Loan Cycle Repair');

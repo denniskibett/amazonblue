@@ -2,7 +2,7 @@
 
 @php
   $initials = collect(explode(' ', trim($user->name)))->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('');
-  $avatar = $user->avatar ? \Illuminate\Support\Facades\Storage::disk('public')->url($user->avatar) : null;
+  $avatar = $user->avatar ? $user->documentUrl('photo') : null;
   $verification = match (true) {
     ! $isBorrower => null,
     $isVerified => ['Verified', 'green'],
@@ -19,7 +19,7 @@
       @if ($isVerified && $user->hasRole('borrower'))@include('home.partials.verified-tick', ['class' => 'on-avatar'])@endif</span>
     <div style="min-width:0">
       <h1>{{ $user->name }}@if ($isVerified && $user->hasRole('borrower'))@include('home.partials.verified-tick')@endif</h1>
-      <p>{{ $user->email }} · {{ $user->phone }}</p>
+      <p>@if ($user->handle)<strong>{{ '@' . $user->handle }}</strong> · @endif{{ $user->email }} · {{ $user->phone }}</p>
     </div>
   </section>
 
