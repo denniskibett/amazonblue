@@ -23,7 +23,7 @@
   <div class="a-stats four">
     <div class="a-stat"><span>You committed</span><b><x-az.money :amount="$committed" /></b></div>
     <div class="a-stat"><span>Lent to borrowers</span><b><x-az.money :amount="$drawn" /></b></div>
-    <div class="a-stat"><span>Returned to you</span><b><x-az.money :amount="$returned" /></b></div>
+    <div class="a-stat"><span>Returned to you</span><b>—</b></div>{{-- S-P3: not recorded yet (Phase 3) --}}
     <div class="a-stat"><span>Status</span><b>{{ $fundings->isNotEmpty() ? ucfirst($fundings->first()->status ?: 'active') : $investment->formatted_status }}</b></div>
   </div>
 

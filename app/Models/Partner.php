@@ -167,6 +167,16 @@ class Partner extends Model implements Wallet, Customer
     }
 
     /**
+     * Capital still lent out: disbursed − returned on fundings that weren't cancelled. Lending doesn't move the
+     * principal wallet yet (S-P1), so withdrawals of capital are capped at principal − this (Phase 3 replaces it).
+     */
+    public function lentOut(): float
+    {
+        return round(max(0, (float) $this->fundings()->where('status', '!=', 'cancelled')
+            ->sum(\Illuminate\Support\Facades\DB::raw('amount_disbursed - amount_returned'))), 2);
+    }
+
+    /**
      * Sum of all returned amounts across all pivot fundings.
      */
     public function getTotalFundingReturnedAttribute(): float

@@ -149,13 +149,23 @@ class PartnerAccount
             ->latest('transaction_date')->latest('id');
     }
 
-    /** Wallet balances the partner can ask to withdraw from (Bavix, read-only), keyed by slug. */
+    /**
+     * What the partner can ask to withdraw, keyed by wallet slug (Bavix, read-only).
+     * Capital (S-P1, interim until Phase 3): lending never moves the principal wallet, so the capital still
+     * lent out (investment_fundings disbursed − returned) is taken off; `wallet` keeps the raw balance.
+     */
     public function withdrawable(Partner $partner): array
     {
         $wallets = [];
         foreach (PartnerPortfolio::WALLETS as $slug => $label) {
-            $wallets[$slug] = ['label' => $label, 'balance' => (float) ($partner->getWallet($slug)?->balanceFloat ?? 0)];
+            $balance = (float) ($partner->getWallet($slug)?->balanceFloat ?? 0);
+            $wallets[$slug] = ['label' => $label, 'balance' => $balance, 'wallet' => $balance, 'lent_out' => 0.0];
         }
+
+        $lentOut = $partner->lentOut();
+        $wallets['principal']['lent_out'] = $lentOut;
+        $wallets['principal']['balance'] = max(0, round($wallets['principal']['wallet'] - $lentOut, 2));
+        $wallets['principal']['label'] = 'Capital not lent out';
 
         return $wallets;
     }

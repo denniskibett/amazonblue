@@ -53,7 +53,9 @@ class PartnerPortfolio
         return [
             'partner' => $partner,
             'wallets' => $wallets,
-            'available' => array_sum(array_column($wallets, 'balance')),
+            // what can be withdrawn: wallets minus capital still lent out (S-P1, PartnerAccount::withdrawable)
+            'lent_out' => $lentOut = $partner->lentOut(),
+            'available' => max(0, round(array_sum(array_column($wallets, 'balance')) - min($lentOut, max(0, $wallets['principal']['balance'])), 2)),
             'earned' => $earned,
             'earned_this_month' => $thisMonth,
             'breakdown' => collect($earningTypes)

@@ -196,6 +196,8 @@
                 <!-- Rollover Preview -->
                 <div class="mb-6 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                     <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Current Rollover Preview</h4>
+                    {{-- S-B3 interim until the Phase 2 cycle engine --}}
+                    <p class="mb-3 text-xs text-warning-700 dark:text-warning-400">Indicative only: the booked amount can differ when there are repayments or penalties. Check the Rollover Statement on the loan before you confirm, and agree the figure with the borrower.</p>
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                         <div>
                             <span class="text-gray-500 dark:text-gray-400">Current Balance</span>

@@ -7,6 +7,10 @@
   $bal = $progress['balance'];
   $date = fn ($d) => $d ? \Illuminate\Support\Carbon::parse($d)->format('j M Y') : '—';
   $kes = fn ($v) => 'KES ' . number_format((float) $v, 2);
+  // S-B6 (interim until Phase 2): the plan cycle is stored at 0% but its new_balance already includes interest,
+  // so the computed balance can disagree with staff. Show the stored figure as the agreed amount.
+  $agreed = $plan ? (float) $plan->new_balance : 0;
+  $left = $plan ? max(0, round($agreed - (float) ($bal['paid'] ?? 0), 2)) : 0;
 @endphp
 
 @section('content')
@@ -30,9 +34,9 @@
           <dt>Plan period</dt><dd>Period {{ $plan->cycle_number }}</dd>
           <dt>Starts</dt><dd>{{ $date($plan->start_date) }}</dd>
           <dt>Pay by</dt><dd>{{ $date($plan->due_date) }}</dd>
-          <dt>Interest for the plan</dt><dd>{{ rtrim(rtrim(number_format((float) $plan->interest_rate, 2), '0'), '.') }}%</dd>
+          <dt>Agreed amount</dt><dd>{{ $kes($agreed) }}</dd>
           @if ($bal)<dt>Paid so far</dt><dd>{{ $kes($bal['paid']) }}</dd>@endif
-          <dt class="total">Amount to pay under the plan</dt><dd class="total">{{ $kes($bal['due'] ?? $plan->new_balance) }}</dd>
+          <dt class="total">Left to pay under the plan</dt><dd class="total">{{ $kes($left) }}</dd>
         </dl>
         @if ($loan->forbearance_until)
           <p class="muted" style="font-size:13px;margin-top:12px">Late penalties are paused until {{ $date($loan->forbearance_until) }} while you keep to the plan.</p>
@@ -46,7 +50,7 @@
             Thank you. Pay by {{ $date($plan->due_date) }} to keep the plan.
           </x-az.alert>
         @else
-          <p>Please read the plan. By accepting you agree to pay {{ $kes($bal['due'] ?? $plan->new_balance) }} by {{ $date($plan->due_date) }}.</p>
+          <p>Please read the plan. By accepting you agree to pay {{ $kes($left) }} by {{ $date($plan->due_date) }}.</p>
           <ul class="bj-next">
             <li>If you miss the plan, the loan goes back to overdue and penalties apply again.</li>
             <li>You can pay early or in parts by M-Pesa at any time.</li>
@@ -54,7 +58,7 @@
           <div class="bj-actions">
             <x-az.confirm id="accept-plan" :action="route('account.plan.accept', $loan)" trigger="I accept this plan" trigger-class="btn btn-primary"
               title="Accept this payment plan?" confirm="Yes, I accept" cancel="Not yet">
-              You agree to pay {{ $kes($bal['due'] ?? $plan->new_balance) }} by {{ $date($plan->due_date) }}. We record the date and time you accepted.
+              You agree to pay {{ $kes($left) }} by {{ $date($plan->due_date) }}. We record the date and time you accepted.
             </x-az.confirm>
             <a class="btn btn-ghost" href="{{ route('account.help', ['loan' => $loan->id]) }}">I have a question</a>
           </div>

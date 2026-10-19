@@ -9,7 +9,7 @@
                 Loan Statistics
             </h3>
             <p class="mt-1 text-gray-500 text-theme-sm dark:text-gray-400 font-outfit">
-                Loan activity overview
+                Loan activity overview. Amounts are the recorded loan amount, which includes interest added at each extension.{{-- S-S1 interim until Phase 7 --}}
             </p>
         </div>
 

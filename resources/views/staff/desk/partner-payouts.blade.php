@@ -27,6 +27,6 @@
         </tr>
       @endforeach
     </x-staff.table>
-    <p class="mt-2 text-theme-xs text-gray-500">Available = the sum of the partner's wallets (capital, interest, broker fees), as on the partner's own statement.</p>
+    <p class="mt-2 text-theme-xs text-gray-500">Available = the partner's wallets (capital, interest, broker fees) minus capital still lent out to borrowers. Partners can request up to this.</p>
   @endif
 @endsection

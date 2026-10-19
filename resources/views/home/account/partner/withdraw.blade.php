@@ -26,6 +26,9 @@
       <div class="a-stat"><span>{{ $w['label'] }}</span><b><x-az.money :amount="$w['balance']" /></b></div>
     @endforeach
   </div>
+  @if ($wallets['principal']['lent_out'] > 0)
+    <p class="muted" style="font-size:12.5px">Capital KES {{ number_format($wallets['principal']['wallet'], 2) }}, of which KES {{ number_format($wallets['principal']['lent_out'], 2) }} is lent out to borrowers and comes back as they repay.</p>
+  @endif
 
   <div class="a-grid two">
     <section class="a-card">

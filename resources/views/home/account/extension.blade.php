@@ -34,17 +34,12 @@
       <div class="a-sec-h"><h2>What an extension costs</h2><span class="badge-s st-pending">Indicative</span></div>
       @if ($preview)
         <p class="muted" style="font-size:13.5px">If our team agrees, the amount still owed moves into a new repayment period and interest for that period is added.</p>
+        {{-- S-B3 (Stage 4 Phase 0): the preview amount and date differ from what an extension books, so only the rate is shown until Phase 2 --}}
         <dl class="a-break" style="margin-top:12px">
-          <dt>Owed today</dt><dd>KES {{ number_format((float) $preview['final_outstanding'], 2) }}</dd>
-          <dt>Interest for the new period ({{ rtrim(rtrim(number_format((float) $preview['interest_rate'], 2), '0'), '.') }}%)</dt><dd>KES {{ number_format((float) $preview['interest_to_capitalize'], 2) }}</dd>
-          <dt>New due date</dt><dd>{{ $date($preview['new_due_date_raw']) }}</dd>
-          <dt class="total">New amount to repay</dt><dd class="total">KES {{ number_format((float) $preview['new_balance'], 2) }}</dd>
+          <dt>Interest for the new period</dt><dd>{{ rtrim(rtrim(number_format((float) $preview['interest_rate'], 2), '0'), '.') }}% of the amount still owed</dd>
         </dl>
-        <x-az.alert type="warn" title="This is an estimate" style="margin-top:14px">
-          Extension pricing is being reworked. Our team confirms the exact cost and date with you before anything changes on your loan.
-          @if (\Illuminate\Support\Carbon::parse($preview['new_due_date_raw'])->lte(today()))
-            The date above counts from your original due date, so it is already close; the team will agree a workable date with you.
-          @endif
+        <x-az.alert type="warn" title="We'll confirm the cost before anything changes" style="margin-top:14px">
+          Our team works out the exact amount and the new due date and agrees them with you before anything changes on your loan.
         </x-az.alert>
       @else
         <x-az.placeholder dependency="rollover pricing rework" title="Cost preview not available for this loan">

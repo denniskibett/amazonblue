@@ -23,7 +23,7 @@
           <dl class="a-dl">
             <div><dt>Committed</dt><dd><x-az.money :amount="$funding->amount_committed" /></dd></div>
             <div><dt>Lent to borrowers</dt><dd><x-az.money :amount="$funding->amount_disbursed" /></dd></div>
-            <div><dt>Returned</dt><dd><x-az.money :amount="$funding->amount_returned" /></dd></div>
+            <div><dt>Returned</dt><dd>—</dd></div>{{-- S-P3: not recorded yet (Phase 3) --}}
             <div><dt>Loans</dt><dd>{{ $loanCounts[$inv->id] ?? 0 }}</dd></div>
           </dl>
           @if ($used !== null)

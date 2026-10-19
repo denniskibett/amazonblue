@@ -30,6 +30,9 @@
       <p class="label">Available balance</p>
       <p class="big"><x-az.money :amount="$portfolio['available']" /></p>
       <p class="sub"><x-az.money :amount="$portfolio['earned_this_month']" /> earned this month · <x-az.money :amount="$portfolio['earned']" /> all time</p>
+      @if ($portfolio['lent_out'] > 0)
+        <p class="sub">Not counting <x-az.money :amount="$portfolio['lent_out']" /> of your capital lent out to borrowers.</p>
+      @endif
       <div class="row">
         <a class="btn btn-light" href="{{ route('account.partner.funds') }}">Add funds</a>
         <a class="btn btn-glass" href="{{ route('account.partner.withdraw') }}">Withdraw</a>
@@ -71,6 +74,7 @@
       <div class="a-grid">
         <section class="a-card">
           <div class="a-sec-h"><h2>How you earn</h2><a href="{{ route('account.partner.earnings') }}">By month</a></div>
+          <p class="muted" style="font-size:12.5px">Earnings up to 7 Oct 2026; newer earnings are being calculated and will be added.</p>{{-- S-P2 interim until Phase 3 --}}
           @forelse ($portfolio['breakdown'] as $row)
             @php $share = $portfolio['earned'] > 0 ? round($row['total'] / $portfolio['earned'] * 100) : 0; @endphp
             <div style="margin-top:12px">
@@ -88,7 +92,7 @@
             <div><dt>Capital added</dt><dd><x-az.money :amount="$home['principal_in']" /></dd></div>
             <div><dt>Committed to investments</dt><dd><x-az.money :amount="$portfolio['committed']" /></dd></div>
             <div><dt>Lent to borrowers</dt><dd><x-az.money :amount="$portfolio['disbursed']" /></dd></div>
-            <div><dt>Returned</dt><dd><x-az.money :amount="$portfolio['returned']" /></dd></div>
+            <div><dt>Returned</dt><dd>—</dd></div>{{-- S-P3: not recorded yet (Phase 3) --}}
             <div><dt>Loans open now</dt><dd>{{ $home['open_loans'] }} of {{ $home['loans'] }}</dd></div>
           </dl>
         </section>

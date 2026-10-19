@@ -283,8 +283,8 @@
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">
           <div>
-            <p class="text-theme-sm text-gray-700 dark:text-gray-400">
-              Total Interest
+            <p class="text-theme-sm text-gray-700 dark:text-gray-400" title="Rate × recorded amount, which includes interest added at each extension (S-S1)">
+              Total Interest (estimated)
             </p>
           </div>
           <span class="text-theme-xs text-gray-500 dark:text-gray-400">

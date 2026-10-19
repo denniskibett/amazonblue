@@ -32,6 +32,7 @@
       <p class="label">Earned {{ $year ? 'in ' . $year : 'all time' }}</p>
       <p class="big"><x-az.money :amount="$total" /></p>
       <p class="sub">{{ $by_month->count() }} {{ \Illuminate\Support\Str::plural('month', $by_month->count()) }} with earnings</p>
+      <p class="sub">Earnings up to 7 Oct 2026; newer earnings are being calculated and will be added.</p>{{-- S-P2 interim until Phase 3 --}}
     </section>
 
     <div class="a-stats four">

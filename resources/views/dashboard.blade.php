@@ -53,7 +53,7 @@
                     <p class="text-xl font-bold text-gray-800 dark:text-white/90">{{ $activeRecoveryCases ?? 0 }}</p>
                 </div>
                 <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Total Recovery Debt</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400" title="Recorded amount; includes interest added at each extension (S-S1)">Total Recovery Debt (recorded amount)</p>
                     <p class="text-xl font-bold text-gray-800 dark:text-white/90">KES {{ number_format($totalRecoveryDebt ?? 0, 2) }}</p>
                 </div>
                 <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
