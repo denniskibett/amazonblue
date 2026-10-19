@@ -235,12 +235,6 @@
                                 <option value="approved" {{ old('status') == 'approved' ? 'selected' : '' }} class="text-gray-700 dark:bg-gray-900 dark:text-gray-400">
                                     Approved
                                 </option>
-                                <option value="disbursed" {{ old('status') == 'disbursed' ? 'selected' : '' }} class="text-gray-700 dark:bg-gray-900 dark:text-gray-400">
-                                    Disbursed
-                                </option>
-                                <option value="repaid" {{ old('status') == 'repaid' ? 'selected' : '' }} class="text-gray-700 dark:bg-gray-900 dark:text-gray-400">
-                                    Repaid
-                                </option>
                             </select>
                             <span class="pointer-events-none absolute top-1/2 right-4 z-30 -translate-y-1/2 text-gray-500 dark:text-gray-400">
                                 <svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

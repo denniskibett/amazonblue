@@ -218,7 +218,8 @@ class LoanController extends Controller
             $requestData['broker_status'] = 0;
         }
         
-        // creating a loan straight into approved/disbursed/repaid needs the matching permission
+        // creating a loan straight into approved needs the matching permission; disbursed/repaid never by form
+        $this->refuseMoneyStatus($requestData['status'] ?? 'pending', null);
         $this->authorizeStatusChange($user, $requestData['status'] ?? 'pending', 'pending');
 
         try {
@@ -428,7 +429,8 @@ class LoanController extends Controller
             'loan_type_id'   => 'required|exists:loan_types,id',
             'amount'         => 'required|numeric|min:1',
             'borrow_date'    => 'required|date',
-            'status'         => 'required|in:pending,approved,disbursed,repaid,overdue,defaulted,rejected',
+            // the loan's own status is always accepted, so editing details of e.g. a forbearance loan keeps it
+            'status'         => ['required', \Illuminate\Validation\Rule::in(['pending', 'approved', 'disbursed', 'repaid', 'overdue', 'defaulted', 'rejected', $loan->status])],
             'broker_status'  => 'required|in:0,1',
             'reason'         => 'required|string|min:10',
             'guarantor_id'   => 'nullable|exists:users,id',
@@ -439,7 +441,8 @@ class LoanController extends Controller
             'rejection_reason' => 'nullable|required_if:status,rejected|string|min:5|max:1000',
         ]);
 
-        // edit loans lets you change details; moving the status needs approve/disburse loans
+        // edit loans lets you change details; moving the status needs approve loans; disbursed/repaid never by edit
+        $this->refuseMoneyStatus($validated['status'], $loan->status);
         $this->authorizeStatusChange($request->user(), $validated['status'], $loan->status);
 
         // A rejected loan reopens (back to pending) only when staff update its details in the same save
@@ -2137,6 +2140,20 @@ class LoanController extends Controller
      * (or 'approve loans'); any other change (approved, repaid, overdue, defaulted, back to pending)
      * needs 'approve loans'. Brokers, loan officers and recovery officers hold neither.
      */
+    /**
+     * G2: `disbursed` and `repaid` are set only by the Disburse and Receive payment paths, which record the money.
+     * Saving a form with the loan's current status is fine.
+     */
+    private function refuseMoneyStatus(string $to, ?string $from): void
+    {
+        $paths = [Loan::STATUS_DISBURSED => 'Use Disburse to send the money.', Loan::STATUS_REPAID => 'Use Receive payment to record the money.'];
+        if ($to !== $from && isset($paths[$to])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => 'A loan can\'t be set to ' . $to . ' by editing it. ' . $paths[$to],
+            ]);
+        }
+    }
+
     private function authorizeStatusChange(User $user, string $to, ?string $from): void
     {
         if ($to === $from) {

@@ -72,7 +72,11 @@
                 <label for="status" class="block mb-1 font-semibold">Loan Status</label>
                 <select name="status" id="status" class="w-full p-2 border rounded-md" required>
                     @php
-                        $statuses = ['pending' => 'Pending', 'approved' => 'Approved', 'disbursed' => 'Disbursed', 'repaid' => 'Repaid'];
+                        // disbursed/repaid come only from Disburse and Receive payment (G2); keep the current one selectable
+                        $statuses = ['pending' => 'Pending', 'approved' => 'Approved'];
+                        if (! isset($statuses[$loan->status]) && $loan->status !== 'rejected') {
+                            $statuses[$loan->status] = ucfirst(str_replace('_', ' ', $loan->status));
+                        }
                         if (in_array($loan->status, ['pending', 'approved', 'rejected'])) {
                             $statuses['rejected'] = 'Rejected';
                         }
