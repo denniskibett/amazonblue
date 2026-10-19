@@ -34,3 +34,10 @@ Schedule::command('loans:check-integrity --csv --notify')
     ->timezone('Africa/Nairobi')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/loan-integrity.log'));
+
+// audit_logs retention (decision 23, config lending.retention); deletes only rows past their limit
+Schedule::command('audit:prune')
+    ->monthlyOn(1, '03:00')
+    ->timezone('Africa/Nairobi')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/audit-prune.log'));

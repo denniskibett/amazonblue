@@ -63,4 +63,21 @@ return [
         // smallest top-up / withdrawal request a partner can send
         'min_amount' => (int) env('PARTNER_FUNDING_MIN_AMOUNT', 1000),
     ],
+
+    /*
+    | audit_logs retention (decision 23, owner default 20 Oct 2026). `php artisan audit:prune` (monthly, dry-run
+    | first) deletes only rows past these limits; a table in none of the groups is never pruned.
+    |   money:  kept 7 years; rows about a loan are kept until 7 years after the loan closed
+    |   kyc:    kept while the person or business exists, then 7 years after the record was deleted
+    |   access: role and permission changes, kept 2 years
+    */
+    'retention' => [
+        'money_years' => 7,
+        'kyc_years' => 7,
+        'access_years' => 2,
+        'money_tables' => ['loans', 'repayments', 'disbursements', 'partners', 'partner_transactions', 'investments',
+            'debt_recovery_cases', 'payment_claims', 'system'],
+        'kyc_tables' => ['users' => 'users', 'businesses' => 'businesses'],
+        'access_tables' => ['roles', 'permissions', 'model_has_roles'],
+    ],
 ];
