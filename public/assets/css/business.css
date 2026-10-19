@@ -1,0 +1,257 @@
+/* Business KYC (resources/views/home/business). Loaded only on those pages; uses the tokens in styles.css. */
+
+.biz-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--sage);
+  color: var(--sage-d);
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.biz-who b {
+  display: block;
+  font-size: 14px;
+}
+.biz-who > div {
+  flex: 1;
+  min-width: 0;
+}
+.biz-ref {
+  font-family: var(--num);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.biz-av {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--sage-d);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+.biz-av.sage { background: var(--sage); color: var(--sage-d); }
+.biz-av.apricot { background: var(--apricot); color: var(--apricot-d); }
+.biz-av.cloud { background: var(--cloud); color: var(--ink-blue); }
+.biz-av.sand { background: var(--sand); color: var(--sand-d); }
+.a-row .biz-av { background: var(--cloud); color: var(--ink-blue); }
+
+.biz-ready {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.biz-ready li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.biz-ready .chip {
+  flex: none;
+}
+.biz-ready b {
+  display: block;
+  font-size: 15px;
+}
+.biz-ready span {
+  font-size: 13px;
+  color: var(--slate);
+}
+.biz-small {
+  font-size: 13.5px;
+  margin: 0;
+}
+.biz-err {
+  color: var(--rose-d);
+  font-size: 13px;
+  margin-top: -6px;
+}
+.biz-opt {
+  font-weight: 500;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* directors & owners */
+.biz-sec-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.biz-total {
+  font-family: var(--num);
+  font-size: 13px;
+  color: var(--slate);
+}
+.biz-total.over {
+  color: var(--rose-d);
+  font-weight: 600;
+}
+.biz-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--cloud);
+  overflow: hidden;
+}
+.biz-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--ink-blue);
+}
+.biz-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.biz-people li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.biz-people .t {
+  flex: 1;
+  min-width: 140px;
+}
+.biz-people .t b {
+  display: block;
+  font-size: 15px;
+}
+.biz-people .t > span {
+  font-size: 13px;
+  color: var(--slate);
+}
+.biz-pill {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--cloud);
+  color: var(--slate);
+}
+.biz-pill.ok { background: var(--sage); color: var(--sage-d); }
+.biz-pill.amber { background: var(--apricot); color: var(--apricot-d); }
+.biz-pill.sand { background: var(--sand); color: var(--sand-d); }
+.biz-pill.err { background: var(--rose); color: var(--rose-d); }
+.biz-link {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-blue);
+  text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 10px 4px;
+  min-height: 44px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.biz-link.danger {
+  color: var(--rose-d);
+}
+.biz-inline {
+  display: inline;
+  margin: 0;
+}
+.biz-add {
+  display: inline-block;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink-blue);
+  text-decoration: none;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  width: 100%;
+}
+.biz-form-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.biz-form-nav a {
+  color: var(--slate);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* account pages */
+.biz-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.biz-head h1 {
+  overflow-wrap: anywhere;
+}
+.biz-dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+  margin: 8px 0 0;
+}
+.biz-dl div {
+  min-width: 0;
+}
+.biz-dl dt {
+  font-size: 12.5px;
+  color: var(--slate);
+}
+.biz-dl dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  font-size: 14.5px;
+  overflow-wrap: anywhere;
+}
+.biz-dl .num,
+.num.biz-total {
+  font-family: var(--num);
+}
+.biz-ph {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+@media (min-width: 900px) {
+  .biz-ph {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.biz-actions {
+  margin-top: 16px;
+}
+.biz-card .a-sec-h a,
+.biz-entry {
+  text-decoration: none;
+}
+.biz-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+@media (max-width: 520px) {
+  .biz-dl {
+    grid-template-columns: 1fr;
+  }
+  .biz-who .biz-ref {
+    display: none;
+  }
+}

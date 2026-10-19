@@ -82,7 +82,7 @@
       </div>
       <div class="row">
         <a class="btn btn-light" href="{{ route('account.loan', $loan) }}">View loan</a>
-        @if ($sent)<a class="btn btn-glass" href="#repay">How to repay</a>@endif
+        @if ($sent)<a class="btn btn-glass" href="{{ route('account.repay', $loan) }}">Repay</a>@endif
       </div>
     </section>
   @elseif ($product)
@@ -99,6 +99,11 @@
         <a class="btn btn-glass" href="{{ route('account.loans') }}">My loans</a>
       </div>
     </section>
+  @endif
+
+  {{-- what the current (or just-ended) loan's state means: under review, approved, rejected, overdue, recovery... (App\Support\BorrowerLoanState) --}}
+  @if ($stateLoan = \App\Support\BorrowerLoanState::homeLoan($user, $loan))
+    @include('home.account.partials.loan-state', ['loan' => $stateLoan, 'progress' => $loan && $stateLoan->is($loan) ? $progress : app(\App\Services\LoanProgress::class)->for($stateLoan), 'onHome' => true])
   @endif
 
   {{-- borrowing limit --}}
@@ -123,7 +128,7 @@
     <a class="a-action" href="{{ route('account.borrow') }}"><span class="chip"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></span>Borrow</a>
     <a class="a-action" href="{{ route('account.loans') }}"><span class="chip sage"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" /></svg></span>My loans</a>
     <a class="a-action" href="{{ $isVerified ? route('account.profile') : route('kyc.personal') }}"><span class="chip sand"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z" /></svg></span>{{ $isVerified ? 'Verified' : 'Verify' }}</a>
-    <a class="a-action" href="https://wa.me/254701607959" target="_blank" rel="noopener"><span class="chip apricot"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1.1-4.9A8 8 0 1 1 21 12z" /></svg></span>Help</a>
+    <a class="a-action" href="{{ route('account.help') }}"><span class="chip apricot"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1.1-4.9A8 8 0 1 1 21 12z" /></svg></span>Help</a>
   </div>
 
   <div class="a-grid two">
@@ -184,17 +189,22 @@
         </section>
       @endif
 
-      {{-- how to repay --}}
-      @if ($loan && in_array($loan->status, ['disbursed', 'active', 'overdue', 'forbearance']))
+      {{-- repay: call to action to the repay screen + "I've paid" claims from this session (Concerns\BorrowerRepayment) --}}
+      @if ($loan && in_array($loan->status, ['disbursed', 'active', 'overdue', 'forbearance', 'defaulted', 'recovery']))
         <section class="a-card" id="repay">
-          <div class="a-sec-h"><h2>How to repay</h2></div>
-          <ol class="a-timeline" style="margin-top:8px">
-            <li><span class="dot">1</span><div><b>Send by M-Pesa</b><span>Pay the amount due, or part of it, by M-Pesa.</span></div></li>
-            <li><span class="dot">2</span><div><b>Share the confirmation</b><span>Send the M-Pesa message to us on <a href="https://wa.me/254701607959" target="_blank" rel="noopener">WhatsApp</a>.</span></div></li>
-            <li><span class="dot">3</span><div><b>We record it</b><span>Your balance here updates once our team records the payment.</span></div></li>
-          </ol>
+          <div class="rp-cta">
+            <span class="chip {{ $progress['is_late'] || in_array($loan->status, ['defaulted', 'recovery']) ? 'apricot' : 'sage' }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3zM3 10h18M7 15h4" /></svg></span>
+            <span class="t">
+              <b>Repay by M-Pesa</b>
+              <span>{{ in_array($loan->status, ['defaulted', 'recovery']) ? 'Your loan is with our recovery team. See how to pay.' : 'Pay all or part of ' . $kes($progress['balance']['due'] ?? 0) . ', then tell us the M-Pesa code.' }}</span>
+            </span>
+          </div>
+          <a class="btn btn-primary btn-block" style="margin-top:14px" href="{{ route('account.repay', $loan) }}">Repay</a>
         </section>
+        @include('home.account.repay._claims', ['loan' => $loan])
       @endif
     </div>
   </div>
+
+  @include('home.business.partials.account-card')
 @endsection

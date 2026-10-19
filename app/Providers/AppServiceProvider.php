@@ -74,7 +74,7 @@ class AppServiceProvider extends ServiceProvider
         // Audit trail (audit_logs): who changed what, old/new values, IP. Never blocks the action.
         foreach ([Loan::class, Repayment::class, Disbursement::class, \App\Models\Partner::class,
                   \App\Models\PartnerTransaction::class, \App\Models\Investment::class, \App\Models\User::class,
-                  \App\Models\DebtRecoveryCase::class] as $audited) {
+                  \App\Models\DebtRecoveryCase::class, \App\Models\Business::class] as $audited) {
             $audited::observe(\App\Observers\AuditObserver::class);
         }
         // Spatie role changes on users (needs permission.events_enabled = true)

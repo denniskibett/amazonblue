@@ -29,6 +29,25 @@ class PrivateFileController extends Controller
     }
 
     /**
+     * A company document (business KYC): the owner, a member with a user account, or staff with `view users`.
+     */
+    public function business(Request $request, \App\Models\Business $business, string $document)
+    {
+        abort_unless($business->isVisibleTo($request->user()), 404);
+        $doc = $business->documents()->whereKey((int) $document)->first();
+        $path = PrivateFiles::absolute($doc?->path);
+        abort_unless($path, 404);
+
+        $name = \Illuminate\Support\Str::slug($doc->type) . '.' . pathinfo($path, PATHINFO_EXTENSION);
+
+        return response()->file($path, [
+            'Cache-Control' => 'private, max-age=3600',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Disposition' => 'inline; filename="' . $name . '"',
+        ]);
+    }
+
+    /**
      * Staff who work with customer records (users, KYC reviews or loans).
      */
     public static function isStaffReviewer(User $viewer): bool

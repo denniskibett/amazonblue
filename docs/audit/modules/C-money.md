@@ -243,3 +243,62 @@ Tested on a clone of `loans_main` (dropped afterwards). Loan calculation, repaym
 - AC structure (decision 5), and handle rules (decision 7: implemented as first+last word, numbered by id; a broker's partner record shares the user's handle).
 - Partner #5 broker_fee repair deposit (+116,519.99) cause still unknown; the wallet now matches the journal.
 - Not fixed here: `LoanCalculator::distributeRepaymentToPartners` (no caller) still calls `$broker->withdraw(...)` with Bavix's signature; editing investment fundings in `update` changes `amount_committed` without a journal adjustment, and removing a funding row leaves its contribution journal row; WalletsBootstrap decimals/role filter; `PartnerController@getStats` reads non-existent `total_contribution`.
+
+## Stage 2: partner self-service
+
+*2026-10-19, branch `stage-2-ui`. Walkthrough with screenshots: [docs/stage2/walkthroughs/partner.md](../../stage2/walkthroughs/partner.md). No schema change, no wallet posting from the partner side, no calculation change.*
+
+**What partners can do now** (`auth` + `role:partner`, own data only; another partner's investment or an unlinked loan → 404)
+
+| Screen | Route (name) | Data source |
+|---|---|---|
+| Home | `/account` for partner-only users, `/account/partner` (`account.partner.home`) | PartnerPortfolio::summary (Bavix wallet balances = available) + PartnerAccount::home (journal sums: interest earned = profit_distribution + interest + penalty_share; broker fees = broker_fee_earned; capital added = contribution) |
+| Investments, detail | `/account/partner/investments[/{id}]` | `investment_fundings` rows of the partner (committed / drawn / returned), Investment `milestones` / `updates` / `notes` JSON (notes with category internal/staff hidden), journal rows with that `investment_id` |
+| Funded loans, detail | `/account/partner/loans[/{loan}]` | loans whose disbursement has `investment_id` in the partner's investments, plus `loans.partner_id` = partner (brokers); LoanProgress for balance and % repaid; journal rows for that loan. Borrower shown by initials + @handle only |
+| Earnings | `/account/partner/earnings` | journal rows of the four earning types, grouped by month and type in PHP |
+| Statement | `/account/statement` (`account.statement`, now `partnerStatement`) + `/account/statement.csv` | journal, filter by wallet + from/to; CSV streams the same rows |
+| Add funds | `/account/partner/add-funds` (GET/POST) | instructions from `config('lending.partner_funding')`; "I've sent funds" → `AuditTrail` row (`partners`, partner id, `create`, `{request: partner_funds_sent, …}`) + `CustomerNotifier::partnerRequest` (StaffAlert to admins, link to `partners.show`) |
+| Withdraw | `/account/partner/withdraw` (GET/POST) | wallet balances (Bavix, read-only); amount ≤ chosen wallet's balance (checked server-side); payout = partner bank account, else M-Pesa on the partner phone; `x-az.confirm`; audit row `{request: partner_withdrawal, …}` + StaffAlert. Nothing stored or posted: staff pay out and record it with `Partner::withdrawPartnerBalance` |
+
+A user with both borrower and partner roles gets a Borrowing / Partner switcher in the account layout. Partner pages pass `'area' => 'partner'` to the layout, which then shows the partner tabs: Home, Investments, Loans, Statement, Profile. A partner-role user with no `partners` row sees a "being set up" state on every partner page; the statement used to 404 for them.
+
+**Files**
+- `app/Http/Controllers/Concerns/PartnerSelfService.php` (trait, used by HomeController)
+- `app/Services/PartnerAccount.php` (read-only queries)
+- `app/Support/CustomerNotifier.php` (`partnerRequest`)
+- views `resources/views/home/account/partner.blade.php`, `statement.blade.php`, `partner/{setup,investments,investment,loans,loan,earnings,funds,withdraw}.blade.php`
+- layout `home/layouts/account.blade.php` (partner nav + switcher)
+- `routes/web.php`
+- styles.css ("Partner self-service" block)
+- `config/lending.php` and `.env.example`
+
+`HomeController@accountStatement` is no longer routed.
+
+**Config** `lending.partner_funding`:
+
+| Key | Env | Default |
+|---|---|---|
+| `bank_name` | `PARTNER_FUNDING_BANK_NAME` | empty: info note instead of details |
+| `bank_account_name` | `PARTNER_FUNDING_BANK_ACCOUNT_NAME` | empty: info note instead of details |
+| `bank_account_number` | `PARTNER_FUNDING_BANK_ACCOUNT_NUMBER` | empty: info note instead of details |
+| `bank_branch` | `PARTNER_FUNDING_BANK_BRANCH` | empty: info note instead of details |
+| `bank_swift` | `PARTNER_FUNDING_BANK_SWIFT` | empty: info note instead of details |
+| `mpesa_paybill` | `PARTNER_FUNDING_MPESA_PAYBILL` | empty: info note instead of details |
+| `reference_prefix` | `PARTNER_FUNDING_REFERENCE_PREFIX` | `AZP-`, so partner 9 is AZP-0009 |
+| `min_amount` | `PARTNER_FUNDING_MIN_AMOUNT` | 1000 |
+
+**Stage 4 dependencies**
+- Funding requests table plus staff confirmation. Today the "I've sent funds" request is an email + audit row only.
+- Withdrawal requests table, maker-checker approval and the PartnerLedger posting on approval.
+- Online investing: fund overview → amount & tenor → subscription agreement (signed) → fund → confirmed. Today it is a placeholder on Investments.
+- Partner KYC (investor type, identity, suitability, payout & tax), which would also let partners maintain their own payout details.
+- Portfolio report PDF and tax certificate.
+- Request status tracking in the account.
+
+**Owner decisions**
+1. Bank account and paybill partners pay into, and the reference format (`AZP-0009` for now).
+2. Which investment notes partners may see. Today every note is shown except category `internal`/`staff`, and `update` notes are shown once, as updates.
+3. Whether a partner sees every loan drawn from an investment it co-funds with others. Today it does, because the share per loan is not attributed.
+4. Whether withdrawals may come from any wallet (capital, interest, broker fees), or only from earnings and matured capital.
+5. Whether to show the borrower's @handle to partners or only the initials.
+6. Minimum top-up and withdrawal amounts.

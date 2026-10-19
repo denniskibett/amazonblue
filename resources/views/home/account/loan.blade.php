@@ -14,9 +14,12 @@
     <a class="acct-back" href="{{ route('account.loans') }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>My loans</a>
     <div class="acct-head">
       <h1>{{ $kes($loan->amount) }}</h1>
-      <p>{{ $progress['reference'] }} · {{ $loan->loanType->name ?? '' }}</p>
+      <p>{{ $progress['reference'] }} · {{ $loan->loanType->name ?? '' }} · <x-az.status-badge :status="$progress['is_late'] && in_array($loan->status, ['disbursed', 'active']) ? 'overdue' : $loan->status" :label="$loan->status === 'forbearance' ? 'Payment plan' : null" /></p>
     </div>
   </div>
+
+  {{-- what this state means and what to do next (borrower journeys, App\Support\BorrowerLoanState) --}}
+  @include('home.account.partials.loan-state', ['loan' => $loan, 'progress' => $progress])
 
   <div class="a-grid two">
     <div class="a-grid">
@@ -30,6 +33,12 @@
             </div>
             <div class="ring" style="--p: {{ $loan->status === 'repaid' ? 100 : $progress['progress'] }}"><span>{{ $loan->status === 'repaid' ? 100 : $progress['progress'] }}%<small>repaid</small></span></div>
           </div>
+          {{-- repay journey (Concerns\BorrowerRepayment) --}}
+          @if (in_array($loan->status, ['disbursed', 'active', 'overdue', 'forbearance', 'defaulted', 'recovery']))
+            <div class="row"><a class="btn btn-light" href="{{ route('account.repay', $loan) }}">Repay</a></div>
+          @elseif ($loan->status === 'repaid')
+            <div class="row"><a class="btn btn-glass" href="{{ route('account.closed', $loan) }}">Loan closed · summary</a></div>
+          @endif
         </section>
         <div class="a-stats">
           <div class="a-stat"><span>Total to repay</span><b>{{ $kes($bal['total']) }}</b></div>
@@ -41,35 +50,17 @@
 
       <section class="a-card">
         <div class="a-sec-h"><h2>Progress</h2></div>
-        <ol class="a-timeline" style="margin-top:10px">
-          @foreach ($progress['timeline'] as $step)
-            @php $red = ($step['tone'] ?? null) === 'red'; @endphp
-            <li class="{{ $red ? 'red' : ($step['done'] ? 'done' : (($step['current'] ?? false) ? 'current' : '')) }}">
-              <span class="dot">{!! $step['done'] && ! $red ? $tick : $loop->iteration !!}</span>
-              <div>
-                <b>{{ $step['label'] }}@if ($step['date']) <small>· {{ $date($step['date']) }}</small>@endif</b>
-                <span>{{ $step['detail'] }}</span>
-              </div>
-            </li>
-          @endforeach
-        </ol>
+        <x-az.timeline :items="$progress['timeline']" style="margin-top:10px" />
       </section>
     </div>
 
     <div class="a-grid">
       <section class="a-card">
         <div class="a-sec-h"><h2>Payments</h2></div>
-        @forelse ($progress['repayments'] as $payment)
-          @php $kind = \App\Services\CustomerWallets::kind($payment->transaction); @endphp
-          <div class="a-row">
-            <span class="chip {{ $kind === 'cash' ? 'sage' : 'cloud' }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ $kind === 'cash' ? 'M12 19V5M5 12l7-7 7 7' : 'M4 12h16M14 6l6 6-6 6' }}" /></svg></span>
-            <span class="t"><b>{{ $kes($payment->amount) }}</b><span>{{ ['cash' => ($payment->mode ? ucfirst($payment->mode) : 'Payment'), 'rollover' => 'Rollover (moved to a new period)', 'discount' => 'Discount', 'bad_debt' => 'Written off'][$kind] }}{{ $kind === 'cash' && $payment->transaction ? ' · ' . $payment->transaction : '' }}</span></span>
-            <span class="amt"><small>{{ $date($payment->repayment_date) }}</small></span>
-          </div>
-        @empty
-          <p class="a-empty">No payments recorded yet. Pay by M-Pesa and our team records it here.</p>
-        @endforelse
+        @include('home.account.repay._payments', ['repayments' => $progress['repayments'], 'loan' => $loan])
       </section>
+
+      @include('home.account.repay._claims', ['loan' => $loan])
 
       @if ($progress['cycles']->count() > 1)
         <section class="a-card">
@@ -82,8 +73,10 @@
         </section>
       @endif
 
-      @if ($loan->consent)
-        <a class="btn btn-ghost btn-block" href="{{ route('account.agreement', $loan) }}">View signed loan agreement</a>
+      @include('home.account.partials.agreement-summary', ['loan' => $loan])
+
+      @if ($sent)
+        <a class="btn btn-ghost btn-block" href="{{ route('account.loan.statement', $loan) }}">Statement for this loan</a>
       @endif
     </div>
   </div>

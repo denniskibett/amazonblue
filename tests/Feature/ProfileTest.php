@@ -13,10 +13,7 @@ class ProfileTest extends TestCase
 
     public function test_profile_page_is_displayed(): void
     {
-        $user = User::factory()->create();
-        // /profile is in the staff area; a user with no role is a customer and is sent to /account
-        Role::findOrCreate('admin', 'web');
-        $user->assignRole('admin');
+        $user = $this->staffUser();
 
         $response = $this
             ->actingAs($user)
@@ -27,13 +24,13 @@ class ProfileTest extends TestCase
 
     public function test_profile_information_can_be_updated(): void
     {
-        $user = User::factory()->create();
+        $user = $this->staffUser();
 
         $response = $this
             ->actingAs($user)
-            ->patch('/profile', [
-                'name' => 'Test User',
-                'email' => 'test@example.com',
+            ->patch('/profile/update', [
+                'marital_status' => 'married',
+                'religion' => 'Christian',
             ]);
 
         $response
@@ -42,36 +39,41 @@ class ProfileTest extends TestCase
 
         $user->refresh();
 
-        $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->assertSame('married', $user->marital_status);
+        $this->assertSame('Christian', $user->religion);
     }
 
-    public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
+    public function test_name_and_email_are_not_changed_from_the_profile(): void
     {
-        $user = User::factory()->create();
+        // identity details are managed through KYC, not the profile form
+        $user = $this->staffUser();
+        $name = $user->name;
+        $email = $user->email;
 
-        $response = $this
+        $this
             ->actingAs($user)
-            ->patch('/profile', [
-                'name' => 'Test User',
-                'email' => $user->email,
-            ]);
-
-        $response
+            ->patch('/profile/update', [
+                'name' => 'Someone Else',
+                'email' => 'someone-else@example.com',
+                'religion' => 'None',
+            ])
             ->assertSessionHasNoErrors()
             ->assertRedirect('/profile');
 
-        $this->assertNotNull($user->refresh()->email_verified_at);
+        $user->refresh();
+
+        $this->assertSame($name, $user->name);
+        $this->assertSame($email, $user->email);
+        $this->assertNotNull($user->email_verified_at);
     }
 
     public function test_user_can_delete_their_account(): void
     {
-        $user = User::factory()->create();
+        $user = $this->staffUser();
 
         $response = $this
             ->actingAs($user)
-            ->delete('/profile', [
+            ->delete('/profile/destroy', [
                 'password' => 'password',
             ]);
 
@@ -80,17 +82,18 @@ class ProfileTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertGuest();
-        $this->assertNull($user->fresh());
+        // users are soft-deleted so their loan history stays intact
+        $this->assertSoftDeleted($user);
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void
     {
-        $user = User::factory()->create();
+        $user = $this->staffUser();
 
         $response = $this
             ->actingAs($user)
             ->from('/profile')
-            ->delete('/profile', [
+            ->delete('/profile/destroy', [
                 'password' => 'wrong-password',
             ]);
 
@@ -99,5 +102,17 @@ class ProfileTest extends TestCase
             ->assertRedirect('/profile');
 
         $this->assertNotNull($user->fresh());
+    }
+
+    /**
+     * /profile is in the staff area; a user with no role is a customer and is sent to /account.
+     */
+    private function staffUser(): User
+    {
+        $user = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $user->assignRole('admin');
+
+        return $user;
     }
 }

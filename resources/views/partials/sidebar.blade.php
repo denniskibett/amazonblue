@@ -158,6 +158,36 @@
           </li>
           @endcan
 
+          @can('view users')
+          <!-- Menu Item Business Reviews: business KYC waiting for staff -->
+          @php
+            $businessWaiting = \Illuminate\Support\Facades\Schema::hasTable('businesses') ? \App\Models\Business::where('status', 'submitted')->count() : 0;
+          @endphp
+          <li>
+            <a
+              href="{{ route('business-reviews.index') }}"
+              @click="selected = (selected === 'Businesses' ? '':'Businesses')"
+              class="menu-item group"
+              :class=" (selected === 'Businesses') || (page === 'business-reviews') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <svg
+                :class="(selected === 'Businesses') || (page === 'business-reviews') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"
+                width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M5 21V4h10v17M15 9h4v12M8 8h4M8 12h4M8 16h4M3 21h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                Business Reviews
+                @if ($businessWaiting)
+                <span class="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+                  {{ $businessWaiting }}
+                </span>
+                @endif
+              </span>
+            </a>
+          </li>
+          @endcan
+
           @can('view loans')
           <!-- Menu Item Loan Portfolio -->
           <li>
@@ -464,6 +494,8 @@
           @endif
         </ul>
       </div>
+
+      @include('partials.sidebar-staff-desk')
 
       <!-- Reports Group (staff holding reports, partners or investments permissions) -->
       @canany(['view reports', 'view partners', 'view investments'])

@@ -32,6 +32,12 @@ use Illuminate\View\View;
  */
 class HomeController extends Controller
 {
+    use Concerns\BusinessOnboarding; // business KYC: /account/business/*
+
+    use Concerns\BorrowerRepayment;
+    use Concerns\BorrowerJourneys;
+    use Concerns\PartnerSelfService;
+
     // Website pages served from resources/views/home
     public const PAGES = [
         'services', 'emergency-solutions', 'crb-solutions', 'asset-finance', 'commodities',

@@ -289,3 +289,52 @@ Verified on a clone (`loans_wp_e`): write-off set loan 461 to `written_off` with
 - Unused `admin/system/index.blade.php` still calls `route('system.debug')`; it would fail if anyone renders it. Delete it or keep it unused.
 - `User::recoveryTasks()`, `EventType::timelines()`, `RecoveryPriority::tasks()` still point to missing tables (left alone; User is being edited by the roles work).
 - Audit retention not set; rows are never pruned.
+
+## Stage 2: staff journeys
+
+This section covers the new staff desk pages under `/staff/*`. The walkthrough with screenshots is [docs/stage2/walkthroughs/staff.md](../../stage2/walkthroughs/staff.md).
+
+What did not change:
+- No schema, calculation, wallet or status rule changed.
+- Every action posts to an existing route.
+
+| Journey (§6 #) | Page / route | Gate (route middleware; buttons via @can) | Backed by |
+|---|---|---|---|
+| Approvals inbox | `/staff/inbox` `staff.inbox` | staff; each card by permission | counts only |
+| Manager/credit approval (19) | `/staff/approvals` | `view loans`; Approve = `approve loans`; Reject = `edit loans` + `approve loans` | `loans.update`, `loans.reject`; 4Cs from `loan_risk_assessments` (read-only) |
+| Teller disburse (6) | `/staff/disbursements/queue`, `/staff/disbursements/{loan}/disburse` | `view disbursements` / `create disbursements` | `disbursements.store` |
+| Teller receive payment (7) | `/staff/repayments/receive` | `create repayments` or `delete repayments` | `repayments.store`, with the loan's own cycles only |
+| Repayment reversal | `POST /staff/repayments/{id}/reverse` | `delete repayments`, plus the existing destroy's admin/broker role check | `RepaymentController@destroy` unchanged; reason recorded with `AuditTrail` |
+| Collections officer queue (11) | `/staff/collections` | `view recovery cases` | `cases.show` / `cases.create` |
+| Teller end of day (8) | `/staff/end-of-day` | `create repayments`, `create disbursements` or `view reports` | audit trail create rows; cash rule `CustomerWallets::kind` / `whereCash` / `DISBURSED_CASH_SQL` |
+| Roles & permissions (3) | `/staff/roles`; `POST /staff/roles/{role}/permissions` | view: `manage roles` or `view audit log`; edit: `manage roles` | Spatie `givePermissionTo` / `revokePermissionTo`, `permission:cache-reset`, `AuditTrail`; super-admin is immutable |
+| Admin products | `/staff/products` | `manage loan types` or `view reports` | `loan_types`, read-only |
+| Accountant reconciliation (18) | `/staff/wallets` | `reconcile wallets` or `view house reconciliation` | `CustomerWallets::checkBorrowers` / `checkPartners`; no repair |
+| Accountant partner distributions (18) | `/staff/partner-payouts` | `view partner statements` | `PartnerPortfolio::summary`, read-only |
+
+**Files:**
+- `app/Http/Controllers/Staff/{LoanDesk,CashDesk,Collections,Setup,Finance}Controller.php`
+- `resources/views/staff/desk/*`
+- `resources/views/components/desk/dialog.blade.php`
+- `resources/views/partials/sidebar-staff-desk.blade.php`, included from `sidebar.blade.php`
+- the routes block "STAGE 2 STAFF DESK" in `routes/web.php`
+
+**Placeholders (Stage 4 dependencies):**
+- six-account split preview
+- payment-confirmations inbox (confirmations arrive by email today)
+- M-Pesa B2C payout and maker-checker on disburse
+- approval limits per role
+- cash-up table ("close day")
+- restructure flow
+- collector performance
+- product editing with audit and term snapshotting
+- ledger and bank reconciliation
+- partner withdrawal requests and maker-checker
+- true reversal entries (today a reversal is a soft delete plus the reason in the audit log)
+
+**Owner decisions:**
+1. `loans.reject` needs only `edit loans` (teller, broker, recovery-officer). The screen shows Reject only with `approve loans` too. Should the route require it?
+2. `RepaymentController@destroy` still requires the admin or broker role on top of `delete repayments`, so managers and accountants cannot reverse.
+3. The approve path (`loans.update`) requires a loan purpose of 10 or more characters and clears consent unless it is re-sent. The screen re-sends consent, and asks for a purpose when one is missing.
+4. The disburse amount defaults to `original_amount`, else `loans.amount` (rule 7).
+5. Only super-admin holds `manage roles`, and there is no super-admin user yet.

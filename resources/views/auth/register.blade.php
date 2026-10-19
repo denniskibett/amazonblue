@@ -69,7 +69,7 @@
             </nav>
             <div class="kyc-head">
               <h1>Create your account</h1>
-              <p class="muted">Individual accounts borrow in your own name. Business accounts are coming soon.</p>
+              <p class="muted">Individual accounts borrow in your own name. Have a business? Register yourself first, then add your business from your account.</p>
               @if ($errors->any())
                 <div class="kyc-note error" role="alert">
                   <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5M12 16h.01M12 3l10 18H2z" /></svg>
@@ -93,7 +93,7 @@
                       d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21c1-4 4-6 7-6s6 2 7 6M16 3a4 4 0 0 1 0 8M18 15c2 1 3.5 3 4 6"
                     /></svg></span
                 ><span class="tc-text"
-                  ><b>Business<span class="tc-soon">Coming soon</span></b><span>Trade finance and business credit for a registered company.</span></span
+                  ><b>Business<span class="tc-soon">After sign-up</span></b><span>Register yourself first, then add your business from your account.</span></span
                 ><span class="tc-dot" aria-hidden="true"></span
               ></label>
             </div>
@@ -172,7 +172,7 @@
               <span class="muted text-xs">Have an account? <a href="{{ route('login') }}">Sign in</a></span
               ><button class="btn btn-primary" type="submit">
                 <span class="go-ind">Continue to personal details</span
-                ><span class="go-biz">Business accounts are coming soon</span>
+                ><span class="go-biz">Register yourself first</span>
               </button>
             </div>
           </form>
@@ -181,7 +181,7 @@
     </div>
     @include('home.partials.toast')
     <script>
-      // Business sign-up isn't open yet: keep Individual selected and say so
+      // A business is added from the account after the person registers and verifies: keep Individual selected and say so
       document.addEventListener('DOMContentLoaded', function () {
         var ind = document.getElementById('rt-ind'),
           biz = document.getElementById('rt-biz'),
@@ -191,7 +191,7 @@
           ind.checked = true;
           ind.dispatchEvent(new Event('change', { bubbles: true }));
           toast.querySelector('[data-msg]').textContent =
-            'Business accounts are coming soon. Register as an individual for now.';
+            'Register yourself first, then add your business from your account.';
           toast.classList.add('show');
           setTimeout(function () {
             toast.classList.remove('show');

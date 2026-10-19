@@ -47,6 +47,34 @@ Route::get('/files/users/{user}/{document}', [PrivateFileController::class, 'use
     ->middleware('auth')
     ->whereIn('document', array_keys(\App\Support\PrivateFiles::USER_DOCUMENTS))
     ->name('files.user');
+// company documents: the owner, members with a user account, staff with `view users` (Business::isVisibleTo)
+Route::get('/files/businesses/{business}/{document}', [PrivateFileController::class, 'business'])
+    ->middleware('auth')
+    ->whereNumber('document')
+    ->name('files.business');
+
+// ============ BUSINESS KYC (borrower adds a business; Concerns\BusinessOnboarding; own businesses only) ============
+Route::middleware(['auth', 'role:borrower'])->prefix('account/business')->name('account.business.')
+    ->controller(HomeController::class)->group(function () {
+        Route::get('/', 'businessIndex')->name('index');
+        Route::get('/start', 'businessStart')->name('start');
+        Route::get('/new', 'businessCreate')->name('create');
+        Route::post('/new', 'businessStore')->name('store');
+        Route::get('/{business}', 'businessShow')->whereNumber('business')->name('show');
+        Route::get('/{business}/details', 'businessDetails')->name('details');
+        Route::post('/{business}/details', 'businessUpdateDetails')->name('details.update');
+        Route::get('/{business}/members', 'businessMembers')->name('members');
+        Route::post('/{business}/members', 'businessStoreMember')->name('members.store');
+        Route::post('/{business}/members/next', 'businessMembersNext')->name('members.next');
+        Route::delete('/{business}/members/{member}', 'businessRemoveMember')->name('members.destroy');
+        Route::get('/{business}/documents', 'businessDocuments')->name('documents');
+        Route::post('/{business}/documents', 'businessStoreDocuments')->name('documents.store');
+        Route::get('/{business}/financials', 'businessFinancials')->name('financials');
+        Route::post('/{business}/financials', 'businessStoreFinancials')->name('financials.store');
+        Route::get('/{business}/review', 'businessReview')->name('review');
+        Route::post('/{business}/review', 'businessSubmit')->name('submit');
+        Route::get('/{business}/submitted', 'businessSubmitted')->name('submitted');
+    });
 
 // ============ CUSTOMER ACCOUNT (borrowers & partners; website design, mobile first) ============
 Route::middleware('auth')->prefix('account')->name('account.')->group(function () {
@@ -60,9 +88,43 @@ Route::middleware('auth')->prefix('account')->name('account.')->group(function (
             Route::get('/loans/{loan}', 'accountLoan')->name('loan');
             Route::get('/loans/{loan}/agreement', 'accountAgreement')->name('agreement');
             Route::get('/loans/{loan}/agreement.pdf', 'accountAgreementFile')->name('agreement.file');
+
+            // repayment journey (Concerns\BorrowerRepayment): own loans only, 404 otherwise
+            Route::get('/repay', 'accountRepayStart')->name('repay.start');
+            Route::get('/loans/{loan}/repay', 'accountRepay')->name('repay');
+            Route::post('/loans/{loan}/repay/confirm', 'accountRepayConfirm')->name('repay.confirm'); // rate-limited in the controller (5 per 10 min per borrower)
+            Route::get('/loans/{loan}/closed', 'accountLoanClosed')->name('closed');
+            Route::get('/loans/{loan}/receipts/{repayment}', 'accountReceipt')->name('receipt');
+
+            // borrower journeys (Concerns\BorrowerJourneys): own loans only, 404 otherwise; requests = audit row + staff email
+            Route::get('/loans/{loan}/extension', 'accountExtension')->name('extension');
+            Route::post('/loans/{loan}/extension', 'requestExtension')->middleware('throttle:3,10')->name('extension.request');
+            Route::get('/loans/{loan}/plan', 'accountPlan')->name('plan');
+            Route::post('/loans/{loan}/plan', 'acceptPlan')->middleware('throttle:3,10')->name('plan.accept');
+            Route::get('/loans/{loan}/statement', 'accountLoanStatement')->name('loan.statement');
+            Route::get('/statement-of-account', 'accountLoanStatement')->name('soa');
+            Route::get('/notifications', 'accountNotifications')->name('notifications');
+            Route::get('/help', 'accountHelp')->name('help');
+            Route::post('/help', 'sendHelp')->middleware('throttle:5,10')->name('help.send');
         });
 
-        Route::middleware('role:partner')->get('/statement', 'accountStatement')->name('statement');
+        // partner self-service (Concerns\PartnerSelfService): own data only; requests = audit row + staff email, no posting
+        Route::middleware('role:partner')->group(function () {
+            Route::get('/statement', 'partnerStatement')->name('statement');
+            Route::get('/statement.csv', 'partnerStatementCsv')->name('partner.statement.csv');
+            Route::prefix('partner')->name('partner.')->group(function () {
+                Route::get('/', 'partnerHome')->name('home');
+                Route::get('/investments', 'partnerInvestments')->name('investments');
+                Route::get('/investments/{investment}', 'partnerInvestment')->whereNumber('investment')->name('investment');
+                Route::get('/loans', 'partnerLoans')->name('loans');
+                Route::get('/loans/{loan}', 'partnerLoan')->name('loan');
+                Route::get('/earnings', 'partnerEarnings')->name('earnings');
+                Route::get('/add-funds', 'partnerFunds')->name('funds');
+                Route::post('/add-funds', 'partnerFundsStore')->middleware('throttle:5,10')->name('funds.store');
+                Route::get('/withdraw', 'partnerWithdraw')->name('withdraw');
+                Route::post('/withdraw', 'partnerWithdrawStore')->middleware('throttle:5,10')->name('withdraw.store');
+            });
+        });
     });
 
     // the application itself (fixed product, limits, verification) lives with the other loan logic
@@ -106,6 +168,15 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             Route::get('/{user}', 'show')->name('show')->middleware('permission:view users');
             Route::post('/{user}/approve', 'approve')->name('approve')->middleware('permission:edit users');
             Route::post('/{user}/reject', 'reject')->name('reject')->middleware('permission:edit users');
+        });
+
+    // ============ BUSINESS REVIEWS (staff verify business KYC) ============
+    Route::prefix('business-reviews')->name('business-reviews.')
+        ->controller(\App\Http\Controllers\BusinessReviewController::class)->group(function () {
+            Route::get('/', 'index')->name('index')->middleware('permission:view users');
+            Route::get('/{business}', 'show')->name('show')->middleware('permission:view users');
+            Route::post('/{business}/approve', 'approve')->name('approve')->middleware('permission:edit users');
+            Route::post('/{business}/reject', 'reject')->name('reject')->middleware('permission:edit users');
         });
 
     // ============ USER LOAN ROUTES ============
@@ -201,10 +272,10 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('signature.save')
             ->middleware('permission:edit loans');
 
-        // Reject a pending/approved application (same permission as approving via edit)
+        // Reject a pending/approved application: an approval decision, so 'approve loans'
         Route::patch('/reject', [LoanController::class, 'reject'])
             ->name('reject')
-            ->middleware('permission:edit loans');
+            ->middleware('permission:approve loans');
     });
 
     // Removed (no view/JS used them, controller methods never existed):
@@ -376,6 +447,37 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         // system.debug removed: no method, and only the unused admin/system/index.blade.php called it.
     });
 
+    // ============ STAGE 2 STAFF DESK (docs/stage2/walkthroughs/staff.md) ============
+    // Read-only screens and forms; every money/status action posts to the existing routes
+    // (loans.update, loans.reject, disbursements.store, repayments.store, cases.*).
+    Route::prefix('staff')->name('staff.')->group(function () {
+        Route::get('inbox', [\App\Http\Controllers\Staff\LoanDeskController::class, 'inbox'])->name('inbox');
+        Route::get('approvals', [\App\Http\Controllers\Staff\LoanDeskController::class, 'approvals'])
+            ->name('approvals')->middleware('permission:view loans');
+        Route::get('disbursements/queue', [\App\Http\Controllers\Staff\LoanDeskController::class, 'disbursementQueue'])
+            ->name('disbursements.queue')->middleware('permission:view disbursements');
+        Route::get('disbursements/{loan}/disburse', [\App\Http\Controllers\Staff\LoanDeskController::class, 'disburseForm'])
+            ->name('disbursements.disburse')->middleware('permission:create disbursements');
+        Route::get('repayments/receive', [\App\Http\Controllers\Staff\CashDeskController::class, 'receive'])
+            ->name('repayments.receive')->middleware('permission:create repayments|delete repayments');
+        Route::post('repayments/{repayment}/reverse', [\App\Http\Controllers\Staff\CashDeskController::class, 'reverse'])
+            ->name('repayments.reverse')->middleware('permission:delete repayments');
+        Route::get('end-of-day', [\App\Http\Controllers\Staff\CashDeskController::class, 'endOfDay'])
+            ->name('end-of-day')->middleware('permission:create repayments|create disbursements|view reports');
+        Route::get('collections', [\App\Http\Controllers\Staff\CollectionsController::class, 'index'])
+            ->name('collections')->middleware('permission:view recovery cases');
+        Route::get('roles', [\App\Http\Controllers\Staff\SetupController::class, 'roles'])
+            ->name('roles')->middleware('permission:manage roles|view audit log');
+        Route::post('roles/{role}/permissions', [\App\Http\Controllers\Staff\SetupController::class, 'updateRolePermission'])
+            ->name('roles.permissions')->middleware('permission:manage roles');
+        Route::get('products', [\App\Http\Controllers\Staff\SetupController::class, 'products'])
+            ->name('products')->middleware('permission:manage loan types|view reports');
+        Route::get('wallets', [\App\Http\Controllers\Staff\FinanceController::class, 'wallets'])
+            ->name('wallets')->middleware('permission:reconcile wallets|view house reconciliation');
+        Route::get('partner-payouts', [\App\Http\Controllers\Staff\FinanceController::class, 'partnerPayouts'])
+            ->name('partner-payouts')->middleware('permission:view partner statements');
+    });
+
     // ============ AUDIT LOG (read-only) ============
     Route::get('audit-log', [\App\Http\Controllers\AuditLogController::class, 'index'])
         ->name('audit-log.index')
@@ -411,6 +513,12 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         })->name($view);
     }
 });
+
+// ============ STAGE 2 COMPONENT GALLERIES (local only; docs/stage2/README.md) ============
+if (app()->environment('local')) {
+    Route::middleware('auth')->get('/_components', fn () => view('stage2.components-customer'))->name('stage2.components');
+    Route::middleware(['auth', 'staff'])->get('/staff/_components', fn () => view('stage2.components-staff'))->name('stage2.components.staff');
+}
 
 // Auth Routes
 require __DIR__.'/auth.php';

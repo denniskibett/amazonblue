@@ -231,6 +231,12 @@ class User extends Authenticatable implements Wallet
         return $this->hasOne(Borrower::class, 'user_id');
     }
 
+    // businesses this user added (business KYC); see App\Models\Business
+    public function businesses()
+    {
+        return $this->hasMany(Business::class, 'owner_user_id');
+    }
+
     public function broker()
     {
         return $this->hasOne(Broker::class);

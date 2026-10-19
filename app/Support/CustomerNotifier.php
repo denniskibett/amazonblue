@@ -11,7 +11,7 @@ use App\Notifications\StaffAlert;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Emails for the customer journey (KYC submitted / approved / rejected, application received) and the
+ * Emails for the customer journey (KYC and business KYC submitted / approved / rejected, application received) and the
  * matching heads-up to admins. Sending never breaks the request: a mail failure is logged and ignored.
  */
 class CustomerNotifier
@@ -48,6 +48,74 @@ class CustomerNotifier
             'Open the loan',
             route('loans.show', $loan),
         ));
+    }
+
+    /**
+     * Interim (Stage 2): a borrower says they paid by M-Pesa and typed the confirmation code. Nothing is
+     * stored yet (Stage 4: payment claims table + reconciliation), so staff get the details by email and
+     * record the repayment the usual way after checking M-Pesa.
+     */
+    public static function paymentClaimed(Loan $loan, float $amount, string $code, ?string $paidFrom = null): void
+    {
+        $user = $loan->user;
+        $reference = str_pad((string) $loan->id, 5, '0', STR_PAD_LEFT);
+        self::toStaff(new StaffAlert(
+            'Payment to confirm: loan #' . $reference . ', KES ' . number_format($amount, 2) . ', code ' . $code,
+            ($user?->name ?? 'A borrower') . ' says they paid KES ' . number_format($amount, 2) . ' by M-Pesa on loan #' . $reference
+                . ' (loan id ' . $loan->id . '). M-Pesa code: ' . $code . '.'
+                . ($paidFrom ? ' Paid from: ' . $paidFrom . '.' : '')
+                . ' Claimed ' . now()->format('j M Y H:i') . '. Check the M-Pesa statement, then record the repayment.',
+            'Record the repayment',
+            \Illuminate\Support\Facades\Route::has('users.loans.repayments.create') && $loan->user_id
+                ? route('users.loans.repayments.create', [$loan->user_id, $loan->id])
+                : route('loans.show', $loan),
+        ));
+    }
+
+    /**
+     * Interim (Stage 2): a borrower asked for something from their account (extension, payment-plan
+     * acceptance, a question about a loan). Nothing is stored apart from the audit row; staff get the
+     * details by email and follow up. Stage 4: requests table with approval.
+     */
+    public static function borrowerRequest(User $user, string $subject, string $line, ?Loan $loan = null): void
+    {
+        self::toStaff(new StaffAlert(
+            $subject,
+            $user->name . ' (user id ' . $user->id . ', ' . ($user->phone ?: $user->email) . '): ' . $line
+                . ' Sent ' . now()->format('j M Y H:i') . ' from their account.',
+            $loan ? 'Open the loan' : 'Open the customer',
+            $loan ? route('loans.show', $loan) : (\Illuminate\Support\Facades\Route::has('users.show') ? route('users.show', $user) : url('/dashboard')),
+        ));
+    }
+
+    public static function businessSubmitted(\App\Models\Business $business): void
+    {
+        $owner = $business->owner;
+        if ($owner) {
+            self::send($owner, new \App\Notifications\BusinessSubmitted($business->id, $business->legal_name, $business->reference()));
+        }
+        self::toStaff(new StaffAlert(
+            'New business to review: ' . $business->legal_name . ' (' . $business->reference() . ')',
+            ($owner?->name ?? 'A borrower') . ' has submitted ' . $business->legal_name . ' for verification. Check the documents, directors and shareholders.',
+            'Review business',
+            route('business-reviews.show', $business),
+        ));
+    }
+
+    public static function businessReviewed(\App\Models\Business $business, bool $approved, ?string $note = null): void
+    {
+        if ($business->owner) {
+            self::send($business->owner, new \App\Notifications\BusinessReviewed($business->id, $business->legal_name, $approved, $note));
+        }
+    }
+
+    /**
+     * Partner self-service request (funds sent / withdrawal): heads-up to admins with a link to the partner.
+     * Nothing is stored or posted; staff record the money from the partner page (Stage 4: requests table).
+     */
+    public static function partnerRequest(\App\Models\Partner $partner, string $subject, string $line): void
+    {
+        self::toStaff(new StaffAlert($subject, $line, 'Open the partner', route('partners.show', $partner)));
     }
 
     private static function send(User $user, $notification): void

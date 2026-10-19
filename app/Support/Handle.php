@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
  *  - companies (partners of type corporate/business/company): the whole name compacted
  *    (IMAGINE-NATION AGENCY LIMITED -> imaginenationagencylimited)
  *  - collisions get 2, 3, ... appended (ianokoth, ianokoth2); a handle is unique across users AND
- *    partners, so @handle always points at one wallet holder; the one exception is a partner linked to
+ *    partners (and businesses), so @handle always points at one wallet holder; the one exception is a partner linked to
  *    a user (a broker's partner record), which shares that user's handle
  */
 class Handle
@@ -50,6 +50,18 @@ class Handle
         return self::unique($base ?: 'partner', 'partners', $partner->getKey());
     }
 
+    /**
+     * A business (set when staff approve it): the trading name, else the legal name, compacted.
+     */
+    public static function forBusiness(\App\Models\Business $business): ?string
+    {
+        if (! self::enabled('businesses')) {
+            return null;
+        }
+
+        return self::unique(self::compact($business->trading_name ?: $business->legal_name) ?: 'business', 'businesses', $business->getKey());
+    }
+
     public static function fromPersonName(?string $name): string
     {
         $words = array_values(array_filter(array_map([self::class, 'compact'], preg_split('/\s+/', trim((string) $name)))));
@@ -72,7 +84,7 @@ class Handle
     {
         $base = substr($base, 0, 60);
         $taken = collect();
-        foreach (['users', 'partners'] as $table) {
+        foreach (['users', 'partners', 'businesses'] as $table) {
             if (! self::enabled($table)) {
                 continue;
             }

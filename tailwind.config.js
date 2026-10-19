@@ -1,6 +1,12 @@
 const defaultTheme = require("tailwindcss/defaultTheme");
 const forms = require("@tailwindcss/forms");
 const autoprefixer = require("autoprefixer");
+// shared Aimzone tokens (same palette as the website CSS): docs/stage2/DESIGN-TOKENS.md
+const az = require("./resources/design/tokens.cjs");
+const statusColors = (map) =>
+  Object.fromEntries(
+    Object.entries(map).map(([k, [bg, fg]]) => [k.replace(/_/g, "-"), { bg: az.color[bg], fg: az.color[fg] }])
+  );
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -14,12 +20,15 @@ module.exports = {
     "./src/**/*.{html,js}"
   ],
   darkMode: "class",
+  // status badges build their class names from the status, so keep them all
+  safelist: [{ pattern: /^(bg|text|border)-(status|pay)-/ }],
   theme: {
     extend: {
       fontFamily: {
         sans: ["Figtree", ...defaultTheme.fontFamily.sans], // Makes Figtree the default font
         outfit: ["Outfit", "sans-serif"], // Optional font (use with `font-outfit`)
         figtree: ["Figtree", "sans-serif"],
+        sora: ["Sora", "sans-serif"],
 
       },
       screens: {
@@ -39,6 +48,12 @@ module.exports = {
         "theme-xs": ["12px", "18px"],
       },
       colors: {
+        // Aimzone palette: bg-az-ink-blue, text-az-sage-d, border-az-line ...
+        az: az.color,
+        // loan status: bg-status-overdue-bg text-status-overdue-fg
+        status: statusColors(az.loanStatus),
+        // payment state: bg-pay-received-bg text-pay-received-fg
+        pay: statusColors(az.paymentStatus),
         current: "currentColor",
         transparent: "transparent",
         white: "#FFFFFF",
@@ -132,6 +147,12 @@ module.exports = {
         "theme-md": "0px 4px 8px -2px rgba(16, 24, 40, 0.10), 0px 2px 4px -2px rgba(16, 24, 40, 0.06)",
         "theme-lg": "0px 12px 16px -4px rgba(16, 24, 40, 0.08), 0px 4px 6px -2px rgba(16, 24, 40, 0.03)",
         "theme-xs": "0px 1px 2px 0px rgba(16, 24, 40, 0.05)",
+      },
+      borderRadius: {
+        "az-sm": az.radius.sm,
+        "az-md": az.radius.md,
+        "az-lg": az.radius.lg,
+        "az-xl": az.radius.xl,
       },
       zIndex: {
         1: "1",

@@ -242,3 +242,74 @@ Live deploy, in order:
 4. `php artisan optimize:clear` (routes, views and config changed).
 5. Confirm `APP_DEBUG=false` and mail settings (`MAIL_MAILER`, `MAIL_FROM_ADDRESS`) on live; check `https://<site>/storage/agreements/` URLs now return 404.
 6. Make sure `storage/app/private` is not web-reachable (it is outside `public/`; only `public/storage -> storage/app/public` is linked).
+
+## Stage 2: repayment journey
+
+Journey B (borrower M-Pesa repayment). Customer side only, website design, mobile first. The money path is unchanged: RepaymentController/RepaymentService, LoanCalculator, allocation, the "repaid" rule and `loans.amount` are not touched, and no schema changed. Amounts due, penalty and paid figures come only from `LoanProgress` (limit from `BorrowingEligibility`). Walkthrough with screenshots: [docs/stage2/walkthroughs/repay.md](../../stage2/walkthroughs/repay.md).
+
+**Code:** `app/Http/Controllers/Concerns/BorrowerRepayment.php` (trait used by HomeController), views `resources/views/home/account/repay/{show,none,closed,receipt,_claims,_payments}.blade.php`, `rp-*` block in `public/assets/css/styles.css` (incl. print CSS), `CustomerNotifier::paymentClaimed`. Home (`borrower.blade.php`): the "How to repay" card is replaced by a "Repay" card + session claims; the hero button goes to the repay screen. Loan detail (`loan.blade.php`): Repay / "Loan closed" button, payments link to receipts with Received / Book entry badges, session claims.
+
+**Routes** (all `auth` + `role:borrower`; another borrower's loan or a repayment of another loan → 404):
+
+| Route | Name | What |
+|---|---|---|
+| GET `/account/repay` | `account.repay.start` | Redirects to the open loan's repay screen; empty state when there is no open loan |
+| GET `/account/loans/{loan}/repay` | `account.repay` | Amount due now, due date, full / other amount (1 … amount due), STK button, Paybill instructions, "I've paid" form, received payments. Repaid → redirect to `account.closed` |
+| POST `/account/loans/{loan}/repay/confirm` | `account.repay.confirm` | "I've paid": M-Pesa code (10 letters/digits), amount (1 … due), phone. 5 per 10 minutes per borrower (own RateLimiter key). Code already on a repayment of this loan → error with the receipt number. Same code twice in a session → not re-sent |
+| GET `/account/loans/{loan}/closed` | `account.closed` | Facility closed (status repaid): total paid, closed date, how it ended (CreditAssessment history), limit, Borrow again |
+| GET `/account/loans/{loan}/receipts/{repayment}` | `account.receipt` | Printable receipt `RCPT-<repayment id>`: date, amount, method, M-Pesa reference, loan, recorded time. Non-cash rows (`CustomerWallets::kind` ≠ cash) are titled "Book entry" (`ENTRY-<id>`), "not a receipt". No balance after (LoanProgress has no per-payment balance) |
+
+**States on the repay screen:** pay (disbursed/active/overdue/forbearance), overdue notice (due date, penalty from LoanProgress, penalty rate from the loan type), recovery (defaulted/recovery: "Contact the recovery team", no STK, Paybill + "I've paid" still offered), not yet (pending/approved), nothing to repay (rejected), written off (contact us), nothing due (balance 0 but not marked repaid).
+
+**Config** (`config/lending.php` → `mpesa`, env in `.env.example`): `paybill` (`MPESA_PAYBILL`, empty → placeholder "Paybill number to be confirmed by Aimzone (owner decision)"), `account_format` (`MPESA_ACCOUNT_FORMAT`: `loan_number` default, `phone`, `id_number`), `enabled` (`MPESA_ENABLED`, false), `stk_enabled` (`MPESA_STK_ENABLED`, false → STK button disabled with a Stage 4 placeholder).
+
+**Interim "I've paid" (no storage):** each claim sends a StaffAlert email to admins ("Payment to confirm: loan #00545, KES …, code …", with borrower, loan id, amount, code, phone, time and a "Record the repayment" link to `users.loans.repayments.create`), writes an `audit_logs` row (`table_name = payment_claims`, `record_id` = loan id, `action = create`, `new_values.event = payment_claimed`), and is kept in the borrower's session (`repay_claims`) only; lost on sign-out. A claim shows "Checking" until a repayment with the same code is recorded, then "Received" with its receipt link.
+
+**STK design stub:** with `APP_ENV=local` and `?demo=1` the STK card runs a client-side flow (sending → waiting for PIN with a 60 s countdown → received / failed / timed out); `&state=<sending|waiting|received|failed|timeout>` opens a state directly for screenshots. Nothing is sent; never rendered outside local.
+
+**Payment confirmations (staff):** no staff screen yet. Staff get the email above and record the repayment the usual way (RepaymentController). The staff queue for these claims is built later by another journey.
+
+**Stage 4 dependencies:** Daraja STK push (+ callback) behind `stk_enabled`; C2B validation/confirmation callbacks behind `enabled`; a `payment_claims` table with reconciliation against M-Pesa statements (replaces session + email + audit row, and feeds the staff queue); borrower "Payment received" email when a repayment is recorded (design "Emails › Payment received"); balance after on receipts (needs the per-payment balance / allocation work); clearance letter on the closed screen (placeholder).
+
+**Owner decisions:** official Paybill (or till) number; account number format (loan number, phone or ID); recovery team contact (today the general WhatsApp number); whether claims should also notify tellers / recovery officers (today `admin`, `super-admin`).
+
+## Stage 2: borrower journeys
+
+Built 19 Oct 2026 on branch `stage-2-ui` (journey set D1). Walkthrough with screenshots: [docs/stage2/walkthroughs/borrower.md](../../stage2/walkthroughs/borrower.md). No schema, calculation or wallet changes.
+
+| Journey | Status now | Route (all `auth` + `role:borrower`, own loans only, 404 otherwise) | Records |
+|---|---|---|---|
+| Loan state screens (under review, approved, rejected, overdue, defaulted / recovery, written off, payment plan) | Built | account home + `account.loan` | none (read-only) |
+| Rollover / extension request | Built (interim) | `account.extension` GET, `account.extension.request` POST (throttle 3/10 min) | audit row + staff email |
+| Payment-plan acceptance | Built (interim) | `account.plan` GET, `account.plan.accept` POST (throttle 3/10 min) | audit row + staff email |
+| Statement of account | Built | `account.soa` (all loans), `account.loan.statement` (one loan); `?from=&to=` | none |
+| Notifications centre | Built (derived) | `account.notifications` | none |
+| Help / contact about a loan | Built | `account.help` GET, `account.help.send` POST (throttle 5/10 min) | audit row + staff email |
+| Per-loan terms | Built | loan page "Your loan terms" (agreement_signed_at / consent_date, agreement_version, agreement_sha256) → `account.agreement` | none |
+| Borrow in five steps | Built (views only) | `account.borrow`; POST unchanged (`LoanController@apply`) | as before |
+
+**Code:** `app/Http/Controllers/Concerns/BorrowerJourneys.php` (trait used by HomeController), `app/Support/BorrowerLoanState.php` (state copy, rejection reason, recovery case, last request), `CustomerNotifier::borrowerRequest`, views `home/account/{extension,plan,statement-of-account,notifications,help}.blade.php`, `home/account/partials/{loan-state,agreement-summary}.blade.php`, `borrow.blade.php` (rewritten as steps), small edits to `borrower.blade.php`, `loan.blade.php`, `loans.blade.php`, `home/layouts/account.blade.php`; CSS block "borrower journeys" (`.bj-*`, print rules) in `public/assets/css/styles.css`; routes in `routes/web.php`.
+
+**Where the figures come from:**
+- Balance, due date, lateness: `LoanProgress::for` (unchanged). Days overdue = today minus the due date it returns.
+- Overdue "what happens next": penalty rate from `loan_types.penalty_rate`; default threshold from `LoanCalculator::calculateCycleBalance(...)['default_threshold_days']` (read-only call).
+- Extension preview: `LoanCalculator::getRolloverPreview($loan)`; checked to save nothing (`calculateCycleBalance`, `calculateRolloverDueDate`, `getActiveCycle` only read). Shown only for statuses `executeRollover` accepts (disbursed, active, overdue) and labelled indicative.
+- Rejection reason: the last `Rejected by <name> on <date>: <reason>` line in `loans.recovery_notes` (the format `LoanController` writes); only the reason is shown.
+- Recovery: the borrower's own `DebtRecoveryCase` (case number, status name, assigned officer, default date, last contact, next action date). No amounts from the case.
+- Statement: `disbursements` (net of fees, as `DISBURSED_CASH_SQL`) and `repayments`, not deleted; each line tagged by `CustomerWallets::kind` (cash, rollover, discount, bad_debt, non_cash); totals count cash only.
+
+**Interim storage (Stage 4 replaces):** extension requests, plan acceptances and help messages are `audit_logs` rows with `table_name = 'borrower_requests'`, `action = 'create'` (the column is an enum), `record_id` = loan id (0 for a help message with no loan), `new_values.type` = `extension_request` | `payment_plan_accepted` | `help_message`. "You asked on …" / "You accepted on …" read the latest such row. Staff (admin, super-admin) get a `StaffAlert` email linking to the loan.
+
+**Stage 4 dependencies:** borrower requests table with staff approval and status shown to the borrower; proper consent storage for payment plans (signed plan, version, IP); rollover pricing rework (the preview's new due date counts from the original due date, so for an overdue loan it can be today or past); ledger of charges for a running balance on the statement; notifications table + SMS gateway (approval, money sent, reminders, payment received, overdue); more products in Borrow.
+
+**Findings while building:**
+- `PaymentMethod::methodType()` points at a missing `App\Models\PaymentMethodType` class (any `whereHas('methodType')` throws). The borrow view uses a subquery instead.
+- The rollover preview and LoanProgress show large "owed today" figures for long-overdue loans (e.g. KES 114,000 on a KES 5,000 written-off loan) because of the compounding penalty (Stage 4, penalty rules). The written-off statement hides "owed today".
+- There is no "loan approved" or "money sent" email; the state copy says the M-Pesa message is the signal.
+
+**Owner decisions:**
+1. Recovery team contact: today the general number +254 701 607 959 (same as WhatsApp). A separate line?
+2. Wording for written-off loans (is the balance still collectable; does settling change the record?).
+3. How long a rejection stays on the account home (30 days now) and whether to set a wait before re-applying (none today).
+4. Whether borrowers may see the name of their recovery officer (shown now, from `assigned_to`).
+5. Extension policy to state on the screen (how many times, cost basis) once Stage 4 pricing is set.

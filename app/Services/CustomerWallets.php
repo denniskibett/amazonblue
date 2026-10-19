@@ -37,6 +37,8 @@ class CustomerWallets
         'rollover' => ['ROLL', 'CARRY FORWARD'],
         'discount' => ['DISCOUNT', 'WAIVE'],
         'bad_debt' => ['BAD DEBT', 'WRITE OFF', 'WRITE-OFF'],
+        // book entries the owner confirmed are not money received (19 Oct 2026)
+        'non_cash' => ['TO BE PAID', 'BROKER FEE', 'SPLIT'],
     ];
 
     // what was actually sent for a disbursement (net of fees when recorded)

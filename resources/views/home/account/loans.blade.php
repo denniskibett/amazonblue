@@ -15,6 +15,11 @@
     <h1>My loans</h1>
     <p>Every loan you've taken with us, newest first.</p>
   </div>
+  <nav class="a-filter" aria-label="Loan documents">
+    <a href="{{ route('account.soa') }}">Statement of account</a>
+    <a href="{{ route('account.notifications') }}">Notifications</a>
+    <a href="{{ route('account.help') }}">Help</a>
+  </nav>
 
   <section class="a-card">
     @if ($loans->isEmpty())

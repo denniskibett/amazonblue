@@ -442,6 +442,21 @@ class LoanController extends Controller
         // edit loans lets you change details; moving the status needs approve/disburse loans
         $this->authorizeStatusChange($request->user(), $validated['status'], $loan->status);
 
+        // A rejected loan reopens (back to pending) only when staff update its details in the same save
+        // (owner, 19 Oct 2026). Letting the customer edit it themselves is a Stage 4 item.
+        if ($loan->status === Loan::STATUS_REJECTED && $validated['status'] !== Loan::STATUS_REJECTED) {
+            $changed = collect(['loan_type_id', 'amount', 'borrow_date', 'reason', 'due_date', 'guarantor_id', 'guarantor_relationship'])
+                ->filter(fn ($field) => array_key_exists($field, $validated) && $this->loanFieldChanged($loan, $field, $validated[$field]));
+            if ($validated['status'] !== Loan::STATUS_PENDING || $changed->isEmpty()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'status' => 'A rejected loan can only go back to pending, and only after you update its details.',
+                ]);
+            }
+            $validated['recovery_notes'] = ($loan->recovery_notes ? $loan->recovery_notes . "\n" : '')
+                . 'Reopened by ' . ($request->user()->name ?? ('user #' . $request->user()->id))
+                . ' on ' . now()->format('Y-m-d H:i') . ' after updating: ' . $changed->implode(', ');
+        }
+
         // Rejection: only from pending/approved; reason goes to recovery_notes (reason = loan purpose)
         $rejectionReason = $validated['rejection_reason'] ?? null;
         unset($validated['rejection_reason']);
@@ -953,7 +968,8 @@ class LoanController extends Controller
      */
     public function reject(Request $request, Loan $loan)
     {
-        $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
+        // rejecting is an approval decision (owner, 19 Oct 2026)
+        $this->authorizeLoanChange($request->user(), $loan, 'approve loans');
 
         $validated = $request->validate([
             'rejection_reason' => 'required|string|min:5|max:1000',
@@ -2132,6 +2148,24 @@ class LoanController extends Controller
             : $user->can('approve loans');
 
         abort_unless($allowed, 403, 'You are not allowed to set this loan to ' . $to . '.');
+    }
+
+    /**
+     * Whether a submitted value differs from the loan's current one (dates compared as days, numbers as numbers).
+     */
+    private function loanFieldChanged(Loan $loan, string $field, $value): bool
+    {
+        $current = $loan->getRawOriginal($field);
+        if (in_array($field, ['borrow_date', 'due_date'], true)) {
+            $day = fn ($v) => blank($v) ? null : \Illuminate\Support\Carbon::parse($v)->toDateString();
+
+            return $day($value) !== $day($current);
+        }
+        if (is_numeric($value) && is_numeric($current)) {
+            return (float) $value !== (float) $current;
+        }
+
+        return (string) $value !== (string) $current;
     }
 
     private function authorizeLoanChange(User $user, Loan $loan, string $permission): void
