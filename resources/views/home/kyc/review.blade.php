@@ -5,6 +5,17 @@
     <h1>Review &amp; submit</h1>
     <p class="muted">Check everything is right before you send it.</p>
   </div>
+  @unless (auth()->user()->hasVerifiedEmail())
+    {{-- decision 17: email confirmed before KYC is submitted (kyc.submit has the `verified` middleware) --}}
+    <x-az.alert type="warn" title="Confirm your email first">
+      We sent a link to {{ auth()->user()->email }}. Open it, then come back and submit. Check your spam folder if you can't find it.
+      <form method="POST" action="{{ route('verification.send') }}" style="margin-top:8px">
+        @csrf
+        <button type="submit" class="btn btn-ghost">Send the link again</button>
+      </form>
+      @if (session('status') === 'verification-link-sent')<p style="margin-top:6px">A new link is on its way.</p>@endif
+    </x-az.alert>
+  @endunless
   <form class="kyc-form" method="POST" action="{{ route('kyc.submit') }}" data-validate data-server novalidate>
     @csrf
     @foreach ($sections as $section)

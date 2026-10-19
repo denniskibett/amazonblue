@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,7 +13,7 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Traits\HasWallet;
 use Bavix\Wallet\Traits\HasWallets;
 
-class User extends Authenticatable implements Wallet
+class User extends Authenticatable implements MustVerifyEmail, Wallet
 {
     use HasFactory, Notifiable, SoftDeletes, HasRoles, HasWallet, HasWallets;
 
@@ -205,6 +206,16 @@ class User extends Authenticatable implements Wallet
     /**
      * Where this user lands after signing in.
      */
+    /**
+     * Customers verify their email before they submit KYC (P1 #17, decision 17; `verified` on kyc.submit).
+     * Staff accounts are made by admins and count as verified, so the `verified` middleware on the staff
+     * routes doesn't lock out existing staff whose address was never confirmed.
+     */
+    public function hasVerifiedEmail(): bool
+    {
+        return ! is_null($this->email_verified_at) || $this->isStaff();
+    }
+
     public function homeRoute(): string
     {
         return $this->isCustomer() ? 'account.home' : 'dashboard';

@@ -38,7 +38,7 @@ Route::middleware(['auth', 'role:borrower'])->prefix('kyc')->name('kyc.')->contr
     Route::get('/contacts', 'kycContacts')->name('contacts');
     Route::post('/contacts', 'storeKycContacts')->name('contacts.store');
     Route::get('/review', 'kycReview')->name('review');
-    Route::post('/review', 'submitKyc')->name('submit');
+    Route::post('/review', 'submitKyc')->middleware('verified')->name('submit'); // email confirmed first (decision 17)
     Route::get('/submitted', 'kycSubmitted')->name('submitted');
 });
 
