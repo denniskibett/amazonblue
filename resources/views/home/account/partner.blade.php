@@ -93,7 +93,8 @@
             <div><dt>Committed to investments</dt><dd><x-az.money :amount="$portfolio['committed']" /></dd></div>
             <div><dt>Lent to borrowers</dt><dd><x-az.money :amount="$portfolio['disbursed']" /></dd></div>
             <div><dt>Returned</dt><dd>—</dd></div>{{-- S-P3: not recorded yet (Phase 3) --}}
-            <div><dt>Loans open now</dt><dd>{{ $home['open_loans'] }} of {{ $home['loans'] }}</dd></div>
+            <div><dt>Funded loans open now</dt><dd>{{ $home['open_loans'] }} of {{ $home['loans'] }}</dd></div>
+            @if ($home['brokered_loans'] > 0)<div><dt>Brokered loans</dt><dd><a href="{{ route('account.partner.loans', ['list' => 'brokered']) }}">{{ $home['brokered_loans'] }}</a></dd></div>@endif
           </dl>
         </section>
       </div>

@@ -36,6 +36,7 @@ class PartnerAccount
         return [
             'investments' => $this->fundings($partner)->count(),
             'loans' => $this->fundedLoans($partner)->count(),
+            'brokered_loans' => $this->brokeredLoans($partner)->count(),
             'open_loans' => $this->fundedLoans($partner)->whereIn('status', ['disbursed', 'active', 'overdue', 'forbearance', 'defaulted', 'recovery'])->count(),
             'interest_earned' => (float) $partner->ledgerEntries()->whereIn('type', ['profit_distribution', 'interest', 'penalty_share'])->sum('amount'),
             'broker_fees' => (float) $partner->ledgerEntries()->where('type', 'broker_fee_earned')->sum('amount'),
@@ -65,16 +66,29 @@ class PartnerAccount
     /** Loans linked to the partner (see class comment). */
     public function fundedLoans(Partner $partner, ?int $investmentId = null): Builder
     {
-        $investmentIds = $investmentId ? collect([$investmentId]) : $this->investmentIds($partner);
-        $viaInvestment = Disbursement::query()->whereIn('investment_id', $investmentIds->all() ?: [0])->select('loan_id');
+        return Loan::query()->whereIn('id', $this->viaInvestment($partner, $investmentId));
+    }
 
-        return Loan::query()
-            ->where(function ($q) use ($viaInvestment, $partner, $investmentId) {
-                $q->whereIn('id', $viaInvestment);
-                if (! $investmentId) {
-                    $q->orWhere('partner_id', $partner->id);
-                }
-            });
+    /**
+     * Loans the partner brought in as a broker (`loans.partner_id`) and doesn't fund through an investment (G6).
+     * Phase 3 links brokers by broker_partner_id; until then this is the broker list.
+     */
+    public function brokeredLoans(Partner $partner): Builder
+    {
+        return Loan::query()->where('partner_id', $partner->id)->whereNotIn('id', $this->viaInvestment($partner));
+    }
+
+    /** Every loan the partner may open: funded or brokered. */
+    public function visibleLoans(Partner $partner): Builder
+    {
+        return Loan::query()->where(fn ($q) => $q->whereIn('id', $this->viaInvestment($partner))->orWhere('partner_id', $partner->id));
+    }
+
+    private function viaInvestment(Partner $partner, ?int $investmentId = null): Builder
+    {
+        $investmentIds = $investmentId ? collect([$investmentId]) : $this->investmentIds($partner);
+
+        return Disbursement::query()->whereIn('investment_id', $investmentIds->all() ?: [0])->select('loan_id');
     }
 
     /** Borrower as the partner may see them: initials and @handle, never ID number or phone. */

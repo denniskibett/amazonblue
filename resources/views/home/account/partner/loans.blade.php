@@ -2,22 +2,31 @@
 
 @section('content')
   <div class="acct-head">
-    <h1>Funded loans</h1>
-    <p>Loans paid out from investments you fund{{ \App\Models\Loan::where('partner_id', $partner->id)->exists() ? ', and loans you brought in' : '' }}</p>
+    <h1>{{ $list === 'brokered' ? 'Brokered loans' : 'Funded loans' }}</h1>
+    <p>{{ $list === 'brokered' ? 'Loans you brought in as a broker. You earn broker fees on these; your capital is not lent on them unless they also show under Funded.' : 'Loans paid out from investments you fund' }}</p>
   </div>
 
+  {{-- G6: funded (investment link) and brokered (loans.partner_id) are separate lists --}}
+  @if ($counts['brokered'] > 0)
+    <nav class="a-filter" aria-label="Which loans">
+      <a href="{{ route('account.partner.loans') }}" @if ($list === 'funded') aria-current="page" @endif>Funded · {{ $counts['funded'] }}</a>
+      <a href="{{ route('account.partner.loans', ['list' => 'brokered']) }}" @if ($list === 'brokered') aria-current="page" @endif>Brokered · {{ $counts['brokered'] }}</a>
+    </nav>
+  @endif
+
   @if ($total > 0)
+    @php $listQuery = $list === 'brokered' ? ['list' => 'brokered'] : []; @endphp
     <nav class="a-filter" aria-label="Filter by status">
-      <a href="{{ route('account.partner.loans') }}" @if (! $status) aria-current="page" @endif>All · {{ $total }}</a>
-      <a href="{{ route('account.partner.loans', ['status' => 'open']) }}" @if ($status === 'open') aria-current="page" @endif>Open</a>
-      <a href="{{ route('account.partner.loans', ['status' => 'repaid']) }}" @if ($status === 'repaid') aria-current="page" @endif>Repaid</a>
-      <a href="{{ route('account.partner.loans', ['status' => 'closed']) }}" @if ($status === 'closed') aria-current="page" @endif>Written off</a>
+      <a href="{{ route('account.partner.loans', $listQuery) }}" @if (! $status) aria-current="page" @endif>All · {{ $total }}</a>
+      <a href="{{ route('account.partner.loans', $listQuery + ['status' => 'open']) }}" @if ($status === 'open') aria-current="page" @endif>Open</a>
+      <a href="{{ route('account.partner.loans', $listQuery + ['status' => 'repaid']) }}" @if ($status === 'repaid') aria-current="page" @endif>Repaid</a>
+      <a href="{{ route('account.partner.loans', $listQuery + ['status' => 'closed']) }}" @if ($status === 'closed') aria-current="page" @endif>Written off</a>
     </nav>
   @endif
 
   <section class="a-card">
     @if ($loans->isEmpty())
-      <x-az.empty :title="$total ? 'No loans in this group' : 'No funded loans yet'"
+      <x-az.empty :title="$total ? 'No loans in this group' : ($list === 'brokered' ? 'No brokered loans' : 'No funded loans yet')"
         :message="$total ? 'Try another filter.' : 'When a loan is paid out from an investment you fund, it shows here with its status and repayments. Borrowers are shown by initials only.'">
         @unless ($total)<a class="btn btn-ghost" href="{{ route('account.partner.investments') }}">Your investments</a>@endunless
       </x-az.empty>

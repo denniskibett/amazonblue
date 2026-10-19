@@ -70,21 +70,26 @@ trait PartnerSelfService
         }
         $status = $request->query('status');
         $groups = ['open' => ['disbursed', 'active', 'overdue', 'forbearance', 'defaulted', 'recovery'], 'repaid' => ['repaid'], 'closed' => ['written_off', 'rejected']];
+        // G6: loans funded through an investment and loans brought in as a broker are separate lists
+        $list = $request->query('list') === 'brokered' ? 'brokered' : 'funded';
+        $query = fn () => $list === 'brokered' ? $account->brokeredLoans($partner) : $account->fundedLoans($partner);
 
         return view('home.account.partner.loans', [
             'partner' => $partner,
+            'list' => $list,
             'status' => array_key_exists((string) $status, $groups) ? $status : null,
-            'loans' => $account->fundedLoans($partner)
+            'loans' => $query()
                 ->when(array_key_exists((string) $status, $groups), fn ($q) => $q->whereIn('status', $groups[$status]))
                 ->with('user')->latest('id')->paginate(20)->withQueryString(),
-            'total' => $account->fundedLoans($partner)->count(),
+            'total' => $query()->count(),
+            'counts' => ['funded' => $account->fundedLoans($partner)->count(), 'brokered' => $account->brokeredLoans($partner)->count()],
         ]);
     }
 
     public function partnerLoan(Request $request, PartnerAccount $account, Loan $loan): View
     {
         $partner = $account->partnerFor($request->user());
-        abort_unless($partner && $account->fundedLoans($partner)->whereKey($loan->id)->exists(), 404);
+        abort_unless($partner && $account->visibleLoans($partner)->whereKey($loan->id)->exists(), 404);
 
         return view('home.account.partner.loan', $account->loanDetail($partner, $loan) + ['partner' => $partner]);
     }
