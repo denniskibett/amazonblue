@@ -51,7 +51,7 @@ class PaymentMethod extends Model
 
     public function methodType()
     {
-        return $this->belongsTo(PaymentMethodType::class);
+        return $this->belongsTo(PaymentMethodType::class, 'method_type_id');
     }
 
     // ============ ACCESSORS ============

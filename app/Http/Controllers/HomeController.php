@@ -80,7 +80,12 @@ class HomeController extends Controller
         $lines = [
             'User-agent: *',
             'Disallow: /dashboard',
+            'Disallow: /account',
             'Disallow: /kyc',
+            'Disallow: /storage',
+            'Disallow: /files',
+            'Disallow: /system',
+            'Disallow: /verify-email',
             'Disallow: /login',
             'Disallow: /register',
             'Disallow: /forgot-password',

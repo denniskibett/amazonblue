@@ -105,8 +105,8 @@ class SystemController extends Controller
             'name', 'slogan', 'timezone', 'date_format', 'time_format',
             'currency', 'currency_symbol', 'primary_color', 'secondary_color',
             'contact_email', 'contact_phone', 'address', 'meta_description',
-            'meta_keywords', 'pagination_limit', 'custom_css', 'custom_js'
-        ]);
+            'meta_keywords', 'pagination_limit',
+        ]); // custom_css / custom_js no longer accepted: stored, never rendered, and custom JS is a stored-XSS risk (D S5)
 
         // Handle location data
         if ($request->has('location_country') || $request->has('location_city')) {

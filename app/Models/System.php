@@ -17,7 +17,7 @@ class System extends Model
         'currency', 'currency_symbol', 'primary_color', 'secondary_color',
         'contact_email', 'contact_phone', 'address', 'location', 'meta_description',
         'meta_keywords', 'maintenance_mode', 'pagination_limit',
-        'custom_css', 'custom_js', 'settings', 'website_pages', 'social_media'
+        'settings', 'website_pages', 'social_media'
     ];
 
     protected $casts = [

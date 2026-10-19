@@ -393,8 +393,6 @@ public static function logoUrl($type = 'light')
     public static function timeFormat() { return self::get('time_format', 'H:i:s'); }
     public static function currencyCode() { return self::get('currency', 'KES'); }
     public static function currencySymbol() { return self::get('currency_symbol', 'KSh'); }
-    public static function customCss() { return self::get('custom_css'); }
-    public static function customJs() { return self::get('custom_js'); }
     public static function googleAnalyticsId() { return config('services.google.analytics_id') ?? self::get('settings.integrations.google_analytics'); }
     public static function twoFactorAuthEnabled() { return (bool) self::get('settings.security.two_factor_auth', false); }
 }

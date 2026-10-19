@@ -444,10 +444,10 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         // where partners send money: super-admin only (+ current password, audit row, admin email)
         Route::put('/partner-funding', [SystemController::class, 'updatePartnerFunding'])
             ->name('partner-funding.update')->middleware('role:super-admin');
-        Route::get('/clear-cache', [SystemController::class, 'clearCache'])->name('clear-cache');
+        Route::post('/clear-cache', [SystemController::class, 'clearCache'])->name('clear-cache');
         Route::get('/backup', [SystemController::class, 'backupDatabase'])->name('backup');
         Route::post('/toggle-maintenance', [SystemController::class, 'toggleMaintenance'])->name('toggle-maintenance');
-        // system.debug removed: no method, and only the unused admin/system/index.blade.php called it.
+        // system.debug removed (no method); the unused admin/system/index.blade.php was deleted in Stage 4 Phase 0.
     });
 
     // ============ STAGE 2 STAFF DESK (docs/stage2/walkthroughs/staff.md) ============
@@ -486,35 +486,7 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         ->name('audit-log.index')
         ->middleware('permission:view audit log');
 
-    // Static Pages
-    $staticPages = [
-        'index' => 'index',
-        'invoice' => 'invoice',
-        '404' => '404',
-        'messages' => 'messages',
-        'alerts' => 'alerts',
-        'blank' => 'blank',
-        'calendar' => 'calendar',
-        'form-elements' => 'form-elements',
-        'basic-tables' => 'basic-tables',
-        'avatars' => 'avatars',
-        'badge' => 'badge',
-        'buttons' => 'buttons',
-        'images' => 'images',
-        'videos' => 'videos',
-        'signin' => 'signin',
-        'signup' => 'signup',
-        'image' => 'image',
-        'line-chart' => 'line-chart',
-        'bar-chart' => 'bar-chart',
-        'dash' => 'dash',
-    ];
-
-    foreach ($staticPages as $path => $view) {
-        Route::get('/' . $path, function () use ($view) {
-            return view($view);
-        })->name($view);
-    }
+    // TailAdmin demo pages (calendar, charts, buttons, …) removed in Stage 4 Phase 0: no links, open to any staff.
 });
 
 // ============ STAGE 2 COMPONENT GALLERIES (local only; docs/stage2/README.md) ============
