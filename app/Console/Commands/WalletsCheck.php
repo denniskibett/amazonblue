@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Partner;
 use App\Services\CustomerWallets;
+use App\Services\Ledger;
 use Illuminate\Console\Command;
 
 /**
@@ -11,6 +12,7 @@ use Illuminate\Console\Command;
  *  - borrower cash wallets vs real cash in the disbursements and repayments tables
  *  - partner wallets vs the partner journal (partner_transactions)
  *  - every wallet's stored balance vs the sum of its own transactions
+ *  - the ledger (gl- wallets): trial balance 0, and cash per borrower vs their borrower wallet
  */
 class WalletsCheck extends Command
 {
@@ -75,6 +77,24 @@ class WalletsCheck extends Command
                 $this->line(sprintf('  repaired partner #%d %s (correcting entry %s)', $partnerId, $slug, number_format($posted, 4)));
             }
             $this->info('Repaired. Run wallets:check again to confirm.');
+        }
+
+        if (Ledger::enabled() || \Bavix\Wallet\Models\Wallet::where('slug', 'like', 'gl-%')->exists()) {
+            $this->newLine();
+            $this->info('Ledger (gl- wallets)');
+            $ledger = app(Ledger::class);
+            $tb = $ledger->trialBalance();
+            $this->line(sprintf('  %d account(s); trial balance %s (must be 0)', $tb['accounts'], number_format($tb['total'], 4)));
+            if (abs($tb['total']) >= 0.0001) {
+                $problems++;
+                $this->warn('  the ledger does not balance');
+            }
+            $c = $ledger->checkBorrowerCash();
+            $this->line("  {$c['checked']} borrower(s): ledger cash vs borrower wallet");
+            foreach ($c['issues'] as $i) {
+                $problems++;
+                $this->warn(sprintf('  user #%d: ledger %s, wallet %s', $i['user'], number_format($i['ledger'], 2), $i['wallet'] === null ? 'missing' : number_format($i['wallet'], 2)));
+            }
         }
 
         $this->newLine();

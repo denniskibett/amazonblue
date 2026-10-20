@@ -147,6 +147,30 @@ class LedgerTest extends TestCase
         $this->assertSame(0.0, $this->ledger->trialBalance()['total']);
     }
 
+    public function test_backfill_dry_run_changes_nothing_and_two_runs_post_the_same_rows(): void
+    {
+        $loan = $this->loan();
+        $this->disburse($loan, 5000);
+        $this->repay($loan, 6000, 'QK1');
+        $this->repay($loan, 500, 'CREDIT DISCOUNT');
+        $this->repay($loan, 6000, 'ROLL OVER');
+
+        $this->artisan('ledger:backfill --dry-run')->assertSuccessful();
+        $this->assertSame(0, \Bavix\Wallet\Models\Wallet::where('slug', 'like', 'gl-%')->count(), 'dry run leaves no wallet behind');
+
+        $this->artisan('ledger:backfill')->assertFailed(); // refuses while the switch is off
+
+        config(['lending.ledger.enabled' => true]);
+        $this->artisan('ledger:backfill')->assertSuccessful();
+        $rows = Transaction::where('meta->source', 'ledger')->orderBy('id')->get(['uuid', 'wallet_id', 'type', 'amount'])->toArray();
+        $this->assertCount(6, $rows); // 3 posted sources x (withdraw + deposit); the rollover is not posted
+
+        $this->artisan('ledger:backfill')->assertSuccessful();
+        $this->assertSame($rows, Transaction::where('meta->source', 'ledger')->orderBy('id')->get(['uuid', 'wallet_id', 'type', 'amount'])->toArray());
+        $this->assertSame(0.0, $this->ledger->trialBalance()['total']);
+        $this->assertEqualsWithDelta(-1500, $this->ledger->account($loan, 'gl-receivable')->balanceFloatNum, 0.0001); // 5000 - 6000 cash - 500 discount
+    }
+
     private function loan(): Loan
     {
         $typeId = DB::table('loan_types')->insertGetId(['name' => 'Emergency 10 Days', 'period' => 10, 'unit' => 'days', 'interest_rate' => 20, 'penalty_rate' => 10]);

@@ -331,7 +331,9 @@ class CustomerWallets
             ->join('transactions as t', DB::raw("json_unquote(json_extract(t.meta, '$.reference'))"), '=', 'pt.reference')
             ->join('wallets as w', function ($j) {
                 $j->on('w.id', '=', 't.wallet_id')->on('w.holder_id', '=', 'pt.partner_id')
-                    ->where('w.holder_type', (new Partner)->getMorphClass());
+                    ->where('w.holder_type', (new Partner)->getMorphClass())
+                    // the ledger's own postings carry the journal reference too; they are not journal wallets
+                    ->where('w.slug', 'not like', 'gl-%');
             })
             ->whereColumn('pt.wallet_slug', '<>', 'w.slug')
             ->groupBy('pt.partner_id', 'pt.wallet_slug', 'w.slug')
