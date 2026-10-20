@@ -349,6 +349,22 @@ class EngineV2Test extends TestCase
         $this->assertMoney(1478.00, $this->balance(529, 2)['penalty']);
     }
 
+    public function test_a_payment_booked_to_a_carried_cycle_after_it_closed_still_counts(): void
+    {
+        // loan 506: cycle 1 (8,000 at 20%) rolled on its due date 10-01 carrying 8,000; its 1,600 interest was paid 10-02
+        $this->loanRow(506, 2, 8000, 8000, '2026-08-31', '2026-11-01', 'disbursed', 2, 30);
+        $this->cycleRow(547, 506, 1, 0, 1600, 9600, 20, '2026-08-31', '2026-10-01', 'completed', 'Initial');
+        $this->cycleRow(601, 506, 2, 8000, 1600, 9600, 20, '2026-10-01', '2026-11-01', 'active', 'Loan rollover - Cycle 2');
+        $this->repay(506, 547, 1600, '2026-10-02', 'UJ2C286DO0');
+        Carbon::setTestNow('2026-10-20 10:00');
+
+        $c1 = $this->balance(506, 1);
+        $this->assertMoney(1600.00, $c1['interest_paid']);
+        $this->assertMoney(0.00, $c1['penalty']);                // no penalty after the carry-over day
+        $this->assertMoney(8000.00, $c1['owed_on_close']);
+        $this->assertMoney(0.00, $c1['carry_difference']);       // was -1,600 before the fix
+    }
+
     private function balance(int $loanId, int $cycleNumber): array
     {
         $loan = Loan::findOrFail($loanId);

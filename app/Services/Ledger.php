@@ -105,7 +105,8 @@ class Ledger
             return ['legs' => [], 'note' => 'deleted'];
         }
         if ($kind !== 'cash') {
-            return ['legs' => [], 'note' => "{$kind}: book entry, posted from Phase 2"];
+            // legacy ROLL OVER chains stay separate loans and their book entries stay out of the books (decision 6)
+            return ['legs' => [], 'note' => "{$kind}: legacy book entry, not posted (decision 6)"];
         }
         $gross = (float) $d->amount;
         $fee = (float) $d->processing_fee;
@@ -130,7 +131,7 @@ class Ledger
         }
         $debit = ['cash' => 'gl-cash', 'discount' => 'gl-discounts', 'bad_debt' => 'gl-bad-debt'][$kind] ?? null;
         if (! $debit) {
-            return ['legs' => [], 'note' => "{$kind}: book entry, posted from Phase 2/3"];
+            return ['legs' => [], 'note' => "{$kind}: legacy book entry, not posted (decision 6)"];
         }
 
         return ['legs' => [
@@ -386,7 +387,9 @@ class Ledger
             ->pluck('total', 'holder_id');
         foreach (\App\Models\LoanCycle::query()->selectRaw('loan_id, max(cycle_number) as n')->groupBy('loan_id')->get() as $row) {
             $cycle = \App\Models\LoanCycle::where('loan_id', $row->loan_id)->where('cycle_number', $row->n)->first();
-            $owed = \App\Services\Loans\CycleBalance::at($cycle)['final_outstanding'];
+            $b = \App\Services\Loans\CycleBalance::at($cycle);
+            // an overpayment leaves the borrower in credit: the receivable goes below 0 by that much
+            $owed = round($b['final_outstanding'] - $b['overpaid'], 2);
             $ledger = round((float) ($balances[$row->loan_id] ?? 0) / (10 ** self::dp()), 2);
             $checked++;
             if (abs($owed - $ledger) >= 0.01) {

@@ -35,6 +35,8 @@ class CycleBalance
         $due = Carbon::parse($terms['due'])->startOfDay();
         $asOfDay = Carbon::parse($asOf)->startOfDay();
         $waived = $terms['waived_until'] ? Carbon::parse($terms['waived_until'])->startOfDay() : null;
+        // a carried cycle: no penalty after the day it was carried, but payments booked to it still count
+        $penaltyUntil = ! empty($terms['penalty_until']) ? Carbon::parse($terms['penalty_until'])->startOfDay() : null;
 
         $principal = self::cents($terms['principal']);
         $interest = (int) round($principal * (float) $terms['interest_rate'] / 100);
@@ -87,7 +89,8 @@ class CycleBalance
         for ($d = $due->copy()->addDay(), $n = 1; $d->lte($asOfDay); $d->addDay(), $n++) {
             $day = $d->toDateString();
             $base = $s['p'] + $s['i'];
-            if ($base > 0 && $n > $grace && ! ($waived && $d->lte($waived)) && $rate > 0 && $s['accrued'] < $cap) {
+            $stopped = $penaltyUntil && $d->gt($penaltyUntil);
+            if ($base > 0 && ! $stopped && $n > $grace && ! ($waived && $d->lte($waived)) && $rate > 0 && $s['accrued'] < $cap) {
                 $charge = min((int) round($base * $rate / 100), $cap - $s['accrued']);
                 $s['pen'] += $charge;
                 $s['accrued'] += $charge;
@@ -100,7 +103,7 @@ class CycleBalance
         }
 
         $closing = $s['p'] + $s['i'] + $s['pen'];
-        $late = $closing > 0 && $asOfDay->gt($due);
+        $late = $closing > 0 && $asOfDay->gt($due) && ! $penaltyUntil;
         $daysOverdue = $late ? (int) $due->diffInDays($asOfDay) : 0;
 
         return [
@@ -183,9 +186,18 @@ class CycleBalance
         // only a carried cycle stops early; the latest cycle always runs to the day asked (a repaid cycle whose
         // payment is later reversed must start charging again)
         $closedOn = $next ? ($cycle->closed_on?->toDateString() ?? Carbon::parse($next->start_date)->toDateString()) : null;
-        $day = $closedOn !== null && $closedOn < $asOf ? $closedOn : $asOf;
+        $payments = self::paymentsFor($cycle);
+        $terms = self::termsFor($cycle);
+        $day = $asOf;
+        if ($closedOn !== null) {
+            // penalty stops on the carry-over day; a payment booked to this cycle after it still counts here
+            $terms['penalty_until'] = $closedOn;
+            $lastPaid = collect($payments)->pluck('date')->filter(fn ($d) => $d <= $asOf)->max();
+            $day = max($closedOn, $lastPaid ?? $closedOn);
+            $day = min($day, $asOf);
+        }
 
-        $b = self::compute(self::termsFor($cycle), self::paymentsFor($cycle), $day)
+        $b = self::compute($terms, $payments, $day)
             + ['cycle_id' => $cycle->id, 'cycle_number' => $cycle->cycle_number, 'closed_on' => $closedOn];
         $b['carried_forward'] = $next ? $next->lentPrincipal() : null;
         $b['carry_difference'] = $next ? round($b['final_outstanding'] - $next->lentPrincipal(), 2) : null;
