@@ -129,6 +129,17 @@ class LedgerTest extends TestCase
         $this->assertSame([], app(CustomerWallets::class)->checkPartners()['issues']);
     }
 
+    public function test_the_house_accounts_own_share_is_not_posted_as_a_cost_ac_owes_itself(): void
+    {
+        $house = Partner::where('is_house_account', true)->first();
+        $share = $house->distributeProfit(4420.50, 'Backfilled house interest');
+        $capital = $house->addContribution(50000, 'AC-CAPITAL-1');
+
+        $this->assertSame([], $this->ledger->planPartnerTransaction($share)['legs']);
+        $this->assertStringContainsString('house account', $this->ledger->planPartnerTransaction($share)['note']);
+        $this->assertCount(1, $this->ledger->planPartnerTransaction($capital)['legs'], 'AC capital paid in is still posted');
+    }
+
     public function test_ledger_wallets_must_use_the_ledger_decimal_places(): void
     {
         $loan = $this->loan();

@@ -34,14 +34,16 @@ Debit-side accounts (asset, expense) carry positive balances. Credit-side accoun
 - rollover and `non_cash` book entries (they wait for Phase 2's engine and decision 6);
 - partner journal types that move money between a partner's own buckets (Phase 3).
 
+**The house account's own share is not posted** (added after the live dry run on 20 Oct). The 7 Oct backfill put 4,420,156.64 into the house account's "earnings": 462 `profit_distribution` rows and 4 `penalty_share` rows. That is AC's own share of interest, not a cost AC owes itself. It becomes income when Phase 3 splits repayments. Partner #5's 125,296.96 (broker fees and penalty share) is posted.
+
 `gl-receivable` goes **negative** on most loans in Phase 1. That's expected: cash repaid includes interest and penalty, and Phase 1 doesn't book what was charged. Phase 2 books the charges.
 
 ### Local dry run (live mirror)
 
 | | Rows | Note |
 |---|---|---|
-| `money:backfill-columns` | 800 repayments, 629 disbursements | **0** rows where the stored kind differs from the text rule; `created_by` filled 0 (the mirror has no audit create rows) |
-| `ledger:backfill` | 1,926 read, 1,403 posted, 523 not posted | not posted: 482 rollovers, 26 `non_cash`, 15 `discount` disbursements |
+| `money:backfill-columns` | 800 repayments, 629 disbursements (live: 802 and 631, 0 differ) | **0** rows where the stored kind differs from the text rule; `created_by` filled 0 (the mirror has no audit create rows) |
+| `ledger:backfill` | 1,926 read, 937 posted, 989 not posted | not posted: 482 rollovers, 26 `non_cash`, 15 `discount` disbursements, 466 house-account shares |
 | Trial balance | 0.0000 | a second run posts 0 transfers |
 | Ledger cash vs borrower wallet | 75 of 75 equal | after `wallets:sync` on the mirror, whose wallets were 28 postings behind |
 

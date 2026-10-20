@@ -151,6 +151,11 @@ class Ledger
                 return ['legs' => [], 'note' => "{$pt->type} from the {$pt->wallet_slug} wallet: not a ledger account"];
             }
         }
+        // the house partner IS AC: its "earnings" are AC's own share of interest, not a cost AC owes itself
+        // (the 7 Oct backfill put 4.42M there). They become interest income when Phase 3 splits repayments.
+        if ($partnerSlug === 'gl-earnings' && $partner->is_house_account) {
+            return ['legs' => [], 'note' => "{$pt->type} to the house account: AC's own share, booked as income from Phase 3"];
+        }
 
         // a positive journal amount credits the partner: the partner account gives, the AC account receives
         return ['legs' => [

@@ -76,6 +76,12 @@ class LedgerBackfill extends Command
                         $sum['not_posted']++;
                         $notes[$source . ': ' . $plan['note']] = ($notes[$source . ': ' . $plan['note']] ?? 0) + 1;
                         $csv[] = [$source, $row->id, $date, $ref, $what, '', '', '', (float) ($row->amount ?? 0), 0, $plan['note']];
+                        // posted earlier under an older rule: the sync reverses it, and the CSV says so
+                        foreach ($steps as $st) {
+                            $csv[] = [$source, $row->id, $date, $ref, $what, $st['leg'], $name($st['from']), $name($st['to']), 0,
+                                round($st['minor'] / (10 ** Ledger::dp()), 4), 'reverses an earlier posting'];
+                        }
+                        $sum['transfers'] += count($steps);
                         continue;
                     }
                     $sum['posted']++;
