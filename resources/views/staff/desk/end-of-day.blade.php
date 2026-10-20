@@ -82,7 +82,37 @@
 
   <p class="mb-6 text-theme-xs text-gray-500">“Entered by” is the person who recorded each row (older rows: the audit log’s create entry). Book entries (rollover, discount, write-off, broker fee …) are recorded but are not money.</p>
 
-  <x-staff.placeholder class="print:hidden" dependency="cash-up table" title="Close the day">
-    Counting the till, recording the difference and locking the day need a cash-up table and a supervisor sign-off (Stage 4).
-  </x-staff.placeholder>
+  {{-- Close the day (Stage 4 Phase 5): count, record the variance, a manager approves --}}
+  <section class="rounded-2xl border border-gray-200 bg-white p-5 print:hidden dark:border-gray-800 dark:bg-white/[0.03]">
+    <h2 class="mb-2 text-base font-semibold text-gray-800 dark:text-white/90">Close the day</h2>
+    @if ($close)
+      @php $exp = json_decode($close->expected, true) ?: []; $cnt = json_decode($close->counted, true) ?: []; @endphp
+      <dl class="grid grid-cols-2 gap-2 text-theme-sm sm:grid-cols-4">
+        @foreach (array_unique(array_merge(array_keys($exp), array_keys($cnt))) as $m)
+          <div><dt class="capitalize text-gray-500">{{ str_replace('_', ' ', $m) }}</dt><dd>expected <x-staff.money :amount="$exp[$m] ?? 0" :currency="false" /> · counted <x-staff.money :amount="$cnt[$m] ?? 0" :currency="false" /></dd></div>
+        @endforeach
+      </dl>
+      <p class="mt-2 text-theme-sm">Variance <x-staff.money :amount="$close->variance" tone="auto" sign /> · {{ $close->status === 'approved' ? 'approved' : 'waiting for a manager' }}@if ($close->note) · {{ $close->note }}@endif</p>
+      @if ($close->status !== 'approved' && (int) $close->teller_id !== (int) auth()->id() && auth()->user()->can('view reports'))
+        <form method="POST" action="{{ route('staff.end-of-day.approve', $close->id) }}" class="mt-3">@csrf
+          <button class="rounded-lg bg-brand-500 px-3 py-1.5 text-theme-xs font-medium text-white hover:bg-brand-600">Approve cash-up</button></form>
+      @endif
+    @elseif ((int) $teller?->id === (int) auth()->id())
+      <form method="POST" action="{{ route('staff.end-of-day.close') }}" class="space-y-3">
+        @csrf
+        <input type="hidden" name="date" value="{{ $date->toDateString() }}">
+        <p class="text-theme-sm text-gray-500">Count what you hold for each way you were paid today. Cash paid out comes off "cash".</p>
+        <div class="flex flex-wrap gap-3">
+          @foreach (array_unique(array_merge(['cash', 'mpesa'], array_keys($byMode->all()))) as $m)
+            <label class="text-theme-sm"><span class="mb-1 block capitalize text-gray-500">{{ str_replace('_', ' ', $m) }}</span>
+              <input name="counted[{{ $m }}]" type="number" step="0.01" min="0" class="h-10 w-36 rounded-lg border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
+          @endforeach
+        </div>
+        <input name="note" maxlength="500" placeholder="Note (optional)" class="h-10 w-full max-w-md rounded-lg border border-gray-300 px-2 text-theme-sm dark:border-gray-700 dark:bg-gray-900">
+        <button class="rounded-lg bg-brand-500 px-4 py-2 text-theme-sm font-medium text-white hover:bg-brand-600">Close the day</button>
+      </form>
+    @else
+      <p class="text-theme-sm text-gray-500">Not closed yet. The teller closes their own day.</p>
+    @endif
+  </section>
 @endsection

@@ -139,6 +139,53 @@ class CashDeskController extends Controller
             ? User::role(['teller', 'admin', 'manager', 'recovery-officer', 'accountant'])->orderBy('name')->get(['id', 'name'])
             : collect();
 
-        return view('staff.desk.end-of-day', compact('date', 'teller', 'disbursements', 'repayments', 'totals', 'byMode', 'tellers'));
+        $close = DB::table('teller_day_closes')->where('teller_id', $tellerId)->where('day', $date->toDateString())->first();
+
+        return view('staff.desk.end-of-day', compact('date', 'teller', 'disbursements', 'repayments', 'totals', 'byMode', 'tellers', 'close'));
+    }
+
+    /**
+     * Close the day (Stage 4 Phase 5): the teller enters what they counted per mode; expected = the cash they
+     * recorded that day per mode (cash paid out comes off the "cash" mode). Variance = counted - expected.
+     * Once closed it can't be redone; a manager approves it.
+     */
+    public function closeDay(Request $request)
+    {
+        $user = $request->user();
+        $date = rescue(fn () => Carbon::parse($request->input('date', today()->toDateString()))->startOfDay(), today(), false);
+        $data = $request->validate(['counted' => 'required|array', 'counted.*' => 'nullable|numeric|min:0', 'note' => 'nullable|string|max:500']);
+        if (DB::table('teller_day_closes')->where('teller_id', $user->id)->where('day', $date->toDateString())->exists()) {
+            return back()->with('error', 'This day is already closed.');
+        }
+        $repIds = DB::table('repayments')->where('created_by', $user->id)->whereDate('created_at', $date)->whereNull('deleted_at')->pluck('id');
+        $expected = CustomerWallets::whereCash(Repayment::whereIn('id', $repIds))->get(['mode', 'amount'])
+            ->groupBy(fn ($r) => strtolower($r->mode ?: 'unspecified'))->map(fn ($g) => round((float) $g->sum('amount'), 2))->all();
+        $paidOut = (float) CustomerWallets::whereCash(Disbursement::where('created_by', $user->id)->whereDate('created_at', $date))
+            ->sum(DB::raw(CustomerWallets::DISBURSED_CASH_SQL));
+        if ($paidOut > 0) {
+            $expected['cash'] = round(($expected['cash'] ?? 0) - $paidOut, 2);
+        }
+        $counted = collect($data['counted'])->map(fn ($v) => round((float) $v, 2))->all();
+        $variance = round(array_sum($counted) - array_sum($expected), 2);
+        DB::table('teller_day_closes')->insert(['teller_id' => $user->id, 'day' => $date->toDateString(), 'expected' => json_encode($expected),
+            'counted' => json_encode($counted), 'variance' => $variance, 'note' => $data['note'] ?? null, 'status' => 'closed',
+            'closed_by' => $user->id, 'created_at' => now(), 'updated_at' => now()]);
+        AuditTrail::record('teller_day_closes', $user->id, 'create', null, ['day' => $date->toDateString(), 'expected' => $expected, 'counted' => $counted, 'variance' => $variance]);
+
+        return back()->with('success', 'Day closed. Variance KES ' . number_format($variance, 2) . '. A manager approves it next.');
+    }
+
+    /** A manager (not the teller) approves a closed day. */
+    public function approveDay(Request $request, int $close)
+    {
+        $row = DB::table('teller_day_closes')->find($close);
+        abort_unless($row, 404);
+        if ((int) $row->teller_id === (int) $request->user()->id) {
+            return back()->with('error', 'Someone other than the teller approves the cash-up.');
+        }
+        DB::table('teller_day_closes')->where('id', $close)->update(['status' => 'approved', 'approved_by' => $request->user()->id, 'approved_at' => now(), 'updated_at' => now()]);
+        AuditTrail::record('teller_day_closes', $close, 'update', ['status' => $row->status], ['status' => 'approved']);
+
+        return back()->with('success', 'Cash-up approved.');
     }
 }

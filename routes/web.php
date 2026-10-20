@@ -503,6 +503,10 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('payments.reconcile')->middleware('permission:create repayments|view reports');
         Route::post('repayments/{repayment}/reverse', [\App\Http\Controllers\Staff\CashDeskController::class, 'reverse'])
             ->name('repayments.reverse')->middleware('permission:delete repayments');
+        Route::post('end-of-day/close', [\App\Http\Controllers\Staff\CashDeskController::class, 'closeDay'])
+            ->name('end-of-day.close')->middleware('permission:create repayments|create disbursements');
+        Route::post('end-of-day/{close}/approve', [\App\Http\Controllers\Staff\CashDeskController::class, 'approveDay'])
+            ->name('end-of-day.approve')->middleware('permission:view reports');
         Route::get('end-of-day', [\App\Http\Controllers\Staff\CashDeskController::class, 'endOfDay'])
             ->name('end-of-day')->middleware('permission:create repayments|create disbursements|view reports');
         Route::get('collections', [\App\Http\Controllers\Staff\CollectionsController::class, 'index'])
