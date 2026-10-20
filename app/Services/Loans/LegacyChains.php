@@ -119,6 +119,9 @@ class LegacyChains
                 $cycle->forceFill(['loan_id' => $root->id, 'cycle_number' => $next + $i + 1,
                     'notes' => trim(($cycle->notes ? $cycle->notes . ' | ' : '') . 'Legacy loan #' . $c->id . ' (ROLL OVER), merged 21 Oct 2026')])->saveQuietly();
             }
+            $movedDisb = DB::table('disbursements')->where('loan_id', $c->id)->pluck('id');
+            $movedRep = DB::table('repayments')->where('loan_id', $c->id)->pluck('id');
+            $carried = LoanCycle::where('loan_id', $root->id)->where('cycle_number', $next)->value('id');
             foreach (self::MOVE as $table) {
                 DB::table($table)->where('loan_id', $c->id)->update(['loan_id' => $root->id]);
             }
@@ -128,13 +131,14 @@ class LegacyChains
             // load its wallet's holder to reverse anything posted there
             if (\App\Services\Ledger::enabled()) {
                 $ledger = app(\App\Services\Ledger::class);
-                foreach (\App\Models\Disbursement::where('loan_id', $root->id)->get() as $d) {
+                foreach (\App\Models\Disbursement::whereIn('id', $movedDisb)->get() as $d) {
                     $ledger->syncDisbursement($d);
                 }
-                foreach (\App\Models\Repayment::withTrashed()->where('loan_id', $root->id)->get() as $r) {
+                foreach (\App\Models\Repayment::withTrashed()->whereIn('id', $movedRep)->get() as $r) {
                     $ledger->syncRepayment($r);
                 }
-                foreach (LoanCycle::where('loan_id', $root->id)->get() as $cy) {
+                // the moved cycles, and the root cycle they were carried from (its carry difference)
+                foreach (LoanCycle::whereIn('id', $cycles->pluck('id')->push($carried)->filter())->get() as $cy) {
                     $ledger->syncLoanCycle($cy);
                 }
             }
