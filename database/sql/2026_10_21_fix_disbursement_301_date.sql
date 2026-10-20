@@ -8,16 +8,20 @@
 -- Run:             mysql <database> < database/sql/2026_10_21_fix_disbursement_301_date.sql
 -- =====================================================================================
 
-SET @wrong = (SELECT COUNT(*) FROM disbursements WHERE id = 301 AND disburse_date = '2026-12-26' AND payment_date = '2026-12-05');
+-- The owner corrected disburse_date to 2025-12-26 directly in CyberPanel; this script fixes whichever of the two
+-- columns is still wrong, so it is correct whether or not that edit was made first.
+SET @old_d = (SELECT disburse_date FROM disbursements WHERE id = 301);
+SET @old_p = (SELECT payment_date FROM disbursements WHERE id = 301);
+SET @wrong = (SELECT COUNT(*) FROM disbursements WHERE id = 301 AND (disburse_date = '2026-12-26' OR payment_date = '2026-12-05'));
 
 INSERT INTO audit_logs (table_name, record_id, action, old_values, new_values, user_id, ip_address, user_agent, created_at)
 SELECT 'disbursements', 301, 'update',
-  '{"disburse_date":"2026-12-26","payment_date":"2026-12-05"}',
+  CONCAT('{"disburse_date":"', @old_d, '","payment_date":"', @old_p, '"}'),
   '{"disburse_date":"2025-12-26","payment_date":"2025-12-26","reason":"wrong year; owner confirmed 21 Oct 2026"}',
   NULL, NULL, 'database/sql/2026_10_21_fix_disbursement_301_date.sql', NOW()
 FROM DUAL WHERE @wrong = 1;
 
 UPDATE disbursements SET disburse_date = '2025-12-26', payment_date = '2025-12-26', updated_at = NOW()
-WHERE id = 301 AND disburse_date = '2026-12-26' AND payment_date = '2026-12-05';
+WHERE id = 301 AND (disburse_date = '2026-12-26' OR payment_date = '2026-12-05');
 
 SELECT id, loan_id, disburse_date, payment_date, amount FROM disbursements WHERE id = 301;
