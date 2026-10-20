@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\CustomerWallets;
 use App\Models\Repayment;
 use App\Models\Loan;
 use App\Models\LoanCycle;
@@ -189,11 +190,23 @@ class RepaymentController extends Controller
             abort(403, 'Unauthorized action.');
         }
         
+        if ($repayment->reversal()->exists()) {
+            return response()->json(['message' => 'Repayment #' . $repayment->id . ' has already been reversed.'], 422);
+        }
+        if (config('lending.ledger.reversals') && $repayment->reversal_of_id !== null && ! $repayment->created_at?->isToday()) {
+            return response()->json(['message' => 'A reversal can only be undone on the day it was entered. Record the payment again instead.'], 422);
+        }
+
         $loanId = $repayment->loan_id;
         $cycleId = $repayment->loan_cycle_id;
-        
-        // Delete the repayment
-        $repayment->delete();
+
+        // Entered before today: post a reversal and keep the original (switch lending.ledger.reversals).
+        // Entered today, or with the switch off: delete it as before.
+        if (config('lending.ledger.reversals') && $repayment->reversal_of_id === null && ! $repayment->created_at?->isToday()) {
+            $reversal = $this->reverseRepayment($repayment, (string) (request('reason') ?: 'Reversed by ' . $user->name));
+        } else {
+            $repayment->delete();
+        }
         
         // ============ UPDATE THE CYCLE STATUS ============
         $cycle = LoanCycle::find($cycleId);
@@ -225,7 +238,30 @@ class RepaymentController extends Controller
         }
         
         return response()->json([
-            'message' => 'Repayment deleted successfully!'
+            'message' => isset($reversal) ? 'Repayment reversed (reversal #' . $reversal->id . ').' : 'Repayment deleted successfully!',
+            'reversal_id' => isset($reversal) ? $reversal->id : null,
         ], 200);
+    }
+
+    /**
+     * A reversal: a new repayment for minus the amount, dated like the original (so every balance reads as
+     * if it were never paid, exactly as a delete did) and pointing at it. The original is kept.
+     */
+    private function reverseRepayment(Repayment $original, string $reason): Repayment
+    {
+        return Repayment::create([
+            'loan_id' => $original->loan_id,
+            'loan_cycle_id' => $original->loan_cycle_id,
+            'amount' => -1 * (float) $original->amount,
+            'processing_fee' => -1 * (float) $original->processing_fee,
+            'net_amount' => $original->net_amount === null ? null : -1 * (float) $original->getRawOriginal('net_amount'),
+            'transaction' => mb_substr('REVERSAL #' . $original->id . ' ' . $original->transaction, 0, 255),
+            'kind' => CustomerWallets::kindOf($original),
+            'mode' => $original->mode,
+            'repayment_date' => $original->repayment_date,
+            'investment_id' => $original->investment_id,
+            'reversal_of_id' => $original->id,
+            'notes' => $reason,
+        ]);
     }
 }

@@ -81,15 +81,20 @@ class CashDeskController extends Controller
         }
 
         if ($response->getStatusCode() >= 300) {
-            return redirect($back)->with('error', 'The repayment could not be reversed.');
+            $why = json_decode($response->getContent(), true)['message'] ?? null;
+
+            return redirect($back)->with('error', 'The repayment could not be reversed.' . ($why ? ' ' . $why : ''));
         }
 
-        AuditTrail::record('repayments', $repayment->id, 'delete', $snapshot, [
+        $reversalId = json_decode($response->getContent(), true)['reversal_id'] ?? null;
+        AuditTrail::record('repayments', $repayment->id, $reversalId ? 'update' : 'delete', $snapshot, [
             'reversal_reason' => $data['reason'],
-            'via' => 'staff repayment desk (delete; true reversal entries are Stage 4)',
+            'reversal_id' => $reversalId,
+            'via' => $reversalId ? 'staff repayment desk (reversal entry)' : 'staff repayment desk (same-day delete)',
         ]);
 
-        return redirect($back)->with('success', 'Repayment #' . $repayment->id . ' reversed. The reason is in the audit log.');
+        return redirect($back)->with('success', 'Repayment #' . $repayment->id . ' reversed'
+            . ($reversalId ? ' by reversal #' . $reversalId . '; the original is kept' : '') . '. The reason is in the audit log.');
     }
 
     /** Today's disbursements and repayments entered by a teller (from the audit trail), cash vs book. */

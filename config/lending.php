@@ -79,6 +79,11 @@ return [
 
         'decimal_places' => 4,
 
+        // Deleting a repayment entered before today posts a reversal instead: a new row for minus the
+        // amount, on the original's date, pointing at it (repayments.reversal_of_id). The original stays.
+        // Same-day mistakes are still deleted (owner, 20 Oct 2026). Off = every delete is a soft delete.
+        'reversals' => (bool) env('LENDING_REVERSALS_ENABLED', false),
+
         // holder: house = the house partner (AC), loan = each loan, partner = each partner
         'accounts' => [
             'gl-cash' => ['holder' => 'house', 'type' => 'asset', 'name' => 'Cash (bank and M-Pesa)'],
