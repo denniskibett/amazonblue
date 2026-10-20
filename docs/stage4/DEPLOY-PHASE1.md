@@ -121,12 +121,11 @@ Debit-side accounts (asset, expense) carry positive balances. Credit-side accoun
 | Ledger storage | Keep it in bavix (wallets and transfers), not new tables. Use the existing tables for everything. | Phase 1 |
 | Decision 3: broker rate | `brokers.interest_broker` is the single source. **AC funds the broker's client:** the broker gets `interest_broker` (40%). **The broker funds AC's client (tops up our loan):** the broker gets `100 − interest_broker` (60%) and AC keeps 40%. `brokers.interest_client` is no longer used for the split. | Phase 3 |
 | Broker-funded loan defaults | AC guarantees the broker's **principal** only. The broker loses the interest share, and AC pays the principal back. | Phase 3 (write-off posting) |
-| Fixed-return partners (e.g. 3% a month) | **Simple** interest on **committed** money, not only what is lent out. It is an AC cost that builds up daily. `investments.interest_rate` holds the rate (per month for the 3% partners). Funds are locked for the term. At maturity or a normal cash-out: principal plus interest, paid on the spot. **Leaving early:** principal plus interest for completed months only; the part-month is forfeited. | Phase 3 |
+| Fixed-return partners (e.g. 3% a month) | **Simple** interest on **committed** money, not only what is lent out. It is an AC cost that builds up daily. `investments.interest_rate` holds the rate (per month for the 3% partners). Funds are locked for the term. At maturity or a normal cash-out: principal plus interest, paid on the spot. **Leaving early:** principal plus interest for completed months only; the part-month is forfeited. Months are calendar months. Money left in after the term starts a new locked term. Loan-funding brokers earn per loan, counted from the funding date (disbursement). | Phase 3 |
 | Decision 5: non-cash words | Deprecated. Rows store their kind; the old rows were converted by the backfill. | Phase 1 |
 | Reversals | Soft delete for same-day mistakes only; anything older gets a reversal entry. | Phase 1 |
 | M-Pesa recording | Automatic (C2B/STK callbacks) and manual entry both go through one path. The receipt number is unique, so a payment recorded both ways counts once. | Phase 4 |
 | `loan_ledger` | Drop it. | Phase 1 |
 
 **Still open for Phase 3:**
-- what happens after the lock term ends if the partner stays (a new term, or month-to-month);
-- whether interest builds up for a month counted from the funding date or from the calendar month.
+- the first, part calendar month of a fixed-rate term: paid pro rata, or interest starts on the 1st of the next month.
