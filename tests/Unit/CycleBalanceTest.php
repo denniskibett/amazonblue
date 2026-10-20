@@ -106,4 +106,23 @@ class CycleBalanceTest extends TestCase
         $b = CycleBalance::compute($this->t529(), [['date' => '2026-10-20', 'amount' => 20000]], '2026-10-17');
         $this->assertSame(17280.0 + 1728.0, $b['final_outstanding']);
     }
+
+    public function test_each_payment_row_gets_its_own_share_of_penalty_interest_and_principal(): void
+    {
+        $t = ['principal' => 5000, 'interest_rate' => 20, 'start' => '2026-10-01', 'due' => '2026-10-10', 'penalty_rate' => 10,
+            'grace_days' => 0, 'threshold_days' => 30, 'waived_until' => null, 'cap' => 'none'];
+        $b = CycleBalance::compute($t, [
+            ['id' => 1, 'date' => '2026-10-05', 'amount' => 500],                 // on time: interest
+            ['id' => 2, 'date' => '2026-10-11', 'amount' => 1000],                // day 1 late: 550 penalty, 450 interest
+            ['id' => 3, 'date' => '2026-10-11', 'amount' => 1000],                //   same day, recorded after: 50 interest, 950 principal
+            ['id' => 4, 'date' => '2026-10-12', 'amount' => 900], ['id' => 5, 'date' => '2026-10-12', 'amount' => -900], // reversed
+        ], '2026-10-12');
+        $a = $b['allocations'];
+        $this->assertSame(['penalty' => 0.0, 'interest' => 500.0, 'principal' => 0.0, 'overpaid' => 0.0], $a[1]);
+        $this->assertSame(['penalty' => 550.0, 'interest' => 450.0, 'principal' => 0.0, 'overpaid' => 0.0], $a[2]);
+        $this->assertSame(['penalty' => 0.0, 'interest' => 50.0, 'principal' => 950.0, 'overpaid' => 0.0], $a[3]);
+        $this->assertSame(2000.0, array_sum($a[2]) + array_sum($a[3]));
+        $this->assertArrayNotHasKey(4, $a, 'a payment reversed the same day is split into nothing');
+        $this->assertEqualsWithDelta($b['penalty_paid'] + $b['interest_paid'] + $b['principal_paid'], 2500, 0.001);
+    }
 }

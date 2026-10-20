@@ -23,6 +23,12 @@ class BackfillBrokerFees extends Command
 
     public function handle(LoanCalculator $calculator, PartnerLedger $ledger): int
     {
+        if (\App\Services\Loans\RepaymentSplit::enabled()) {
+            $this->error('Not with lending.split.enabled: repayments are split one by one (allocations:restate replaced this backfill).');
+
+            return 1;
+        }
+
         $apply   = (bool) $this->option('apply');
         $partner = Partner::find((int) $this->option('partner'));
 

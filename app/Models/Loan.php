@@ -53,6 +53,7 @@ class Loan extends Model
         'broker_status',
         'partner_id',       
         'broker_rate',
+        'broker_penalty_rate', // broker's share of penalty, percent (Stage 4 Phase 3)
         'reason',
         'guarantor_id',
         'guarantor_relationship', 

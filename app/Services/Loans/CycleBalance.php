@@ -41,42 +41,79 @@ class CycleBalance
         $principal = self::cents($terms['principal']);
         $interest = (int) round($principal * (float) $terms['interest_rate'] / 100);
 
-        // one net amount per day, up to the as-of day
+        // one net amount per day, up to the as-of day (and the rows behind it, for per-payment allocation)
         $byDay = [];
+        $rowsByDay = [];
         foreach ($payments as $p) {
             $day = Carbon::parse($p['date'])->toDateString();
             if ($day <= $asOfDay->toDateString()) {
                 $byDay[$day] = ($byDay[$day] ?? 0) + self::cents($p['amount']);
+                if (isset($p['id'])) {
+                    $rowsByDay[$day][] = [(int) $p['id'], self::cents($p['amount'])];
+                }
             }
         }
         ksort($byDay);
+        $alloc = [];   // repayment id => [penalty, interest, principal, overpaid] in cents
 
         $s = [
             'p' => $principal, 'i' => $interest, 'pen' => 0,               // unpaid
             'paid_p' => 0, 'paid_i' => 0, 'paid_pen' => 0, 'over' => 0,
             'accrued' => 0, 'days' => 0, 'last_penalty_day' => null, 'settled_on' => null,
         ];
-        $apply = function (int $amount, string $day) use (&$s) {
+        $apply = function (int $amount, string $day, ?int $rowId = null) use (&$s, &$alloc, &$rowsByDay) {
             if ($amount <= 0) {
                 return;
             }
+            $takes = [];
             foreach ([['pen', 'paid_pen'], ['i', 'paid_i'], ['p', 'paid_p']] as [$bucket, $paid]) {
                 $take = min($amount, $s[$bucket]);
                 $s[$bucket] -= $take;
                 $s[$paid] += $take;
                 $amount -= $take;
+                $takes[] = $take;
             }
+            $takes[] = $amount;
             $s['over'] += $amount;
             if ($s['settled_on'] === null && $s['p'] + $s['i'] + $s['pen'] === 0) {
                 $s['settled_on'] = $day;
             }
+            if ($rowId !== null) {
+                $alloc[$rowId] = $takes;
+
+                return;
+            }
+            // a day with a reversal: its net split goes to the positive rows in proportion; the last takes the rounding
+            $rows = array_values(array_filter($rowsByDay[$day] ?? [], fn ($r) => $r[1] > 0));
+            $total = array_sum(array_column($rows, 1));
+            $left = $takes;
+            foreach ($rows as $k => [$id, $cents]) {
+                $share = $k === count($rows) - 1 ? $left
+                    : array_map(fn ($t) => (int) floor($t * $cents / $total), $takes);
+                $alloc[$id] = $share;
+                $left = array_map(fn ($a, $b) => $a - $b, $left, $share);
+            }
+        };
+
+        // a day's payments: one by one in the order recorded, or netted when the day has a reversal
+        $payDay = function (string $day, int $net) use ($apply, &$rowsByDay) {
+            $rows = $rowsByDay[$day] ?? [];
+            if ($rows && min(array_column($rows, 1)) > 0 && array_sum(array_column($rows, 1)) === $net) {
+                usort($rows, fn ($a, $b) => $a[0] <=> $b[0]);
+                foreach ($rows as [$id, $cents]) {
+                    $apply($cents, $day, $id);
+                }
+
+                return;
+            }
+            $apply($net, $day);
         };
 
         // on time: everything paid up to and including the due date
         $paidByDue = 0;
         foreach ($byDay as $day => $amount) {
             if ($day <= $due->toDateString()) {
-                $apply($amount, $day);
+                $payDay($day, $amount);
                 $paidByDue += $amount;
             }
         }
@@ -98,7 +135,7 @@ class CycleBalance
                 $s['last_penalty_day'] = $day;
             }
             if (isset($byDay[$day])) {
-                $apply($byDay[$day], $day);
+                $payDay($day, $byDay[$day]);
             }
         }
 
@@ -137,6 +174,9 @@ class CycleBalance
             'interest_rate' => (float) $terms['interest_rate'],
             'penalty_waived_until' => $terms['waived_until'],
             'as_of' => $asOfDay->toDateString(),
+            // per repayment row: what it paid of penalty, interest and principal, and any overpayment (KES)
+            'allocations' => array_map(fn ($a) => ['penalty' => $a[0] / 100.0, 'interest' => $a[1] / 100.0,
+                'principal' => $a[2] / 100.0, 'overpaid' => $a[3] / 100.0], $alloc),
         ];
     }
 
@@ -167,8 +207,8 @@ class CycleBalance
     public static function paymentsFor(LoanCycle $cycle): array
     {
         return Repayment::where('loan_cycle_id', $cycle->id)->orderBy('repayment_date')->orderBy('id')
-            ->get(['repayment_date', 'amount', 'kind', 'transaction'])
-            ->map(fn ($r) => ['date' => Carbon::parse($r->repayment_date)->toDateString(), 'amount' => (float) $r->amount,
+            ->get(['id', 'repayment_date', 'amount', 'kind', 'transaction'])
+            ->map(fn ($r) => ['id' => $r->id, 'date' => Carbon::parse($r->repayment_date)->toDateString(), 'amount' => (float) $r->amount,
                 'kind' => \App\Services\CustomerWallets::kindOf($r)])
             ->all();
     }

@@ -14,6 +14,7 @@ class Investment extends Model
     protected $fillable = [
         'name', 'type', 'sector', 'sub_sector',
         'facility_type',
+        'return_type',   // house | loan_share | fixed_rate (Stage 4 Phase 3)
         'duration_days',
         'interest_rate',
         'country', 'region', 'city', 'address',

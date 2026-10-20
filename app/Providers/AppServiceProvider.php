@@ -114,6 +114,26 @@ class AppServiceProvider extends ServiceProvider
         foreach (['saved', 'deleted', 'restored'] as $event) {
             Repayment::{$event}(fn ($r) => $charges([$r->loan_cycle_id, $r->getOriginal('loan_cycle_id')]));
         }
+
+        // Phase 3 (lending.split.enabled, engine v2): split every repayment of the cycle between broker, funder
+        // and AC after commit (one payment's split depends on the ones before it)
+        foreach (['saved', 'deleted', 'restored'] as $event) {
+            Repayment::{$event}(function ($r) {
+                if (! \App\Services\Loans\RepaymentSplit::enabled()) {
+                    return;
+                }
+                $cycles = array_unique(array_filter([$r->loan_cycle_id, $r->getOriginal('loan_cycle_id')]));
+                DB::afterCommit(function () use ($cycles) {
+                    foreach ($cycles as $id) {
+                        try {
+                            app(\App\Services\Loans\RepaymentSplit::class)->syncCycle((int) $id);
+                        } catch (\Throwable $e) {
+                            Log::error("Repayment split failed for cycle #{$id}", ['error' => $e->getMessage()]);
+                        }
+                    }
+                });
+            });
+        }
         \App\Models\LoanCycle::saved(fn ($c) => $charges([$c->id, \App\Models\LoanCycle::where('loan_id', $c->loan_id)
             ->where('cycle_number', $c->cycle_number - 1)->value('id')]));
 

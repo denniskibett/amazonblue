@@ -79,6 +79,22 @@ return [
         'cap' => env('LENDING_PENALTY_CAP', 'in_duplum'),
     ],
 
+    /*
+    | Splitting repayments (Stage 4 Phase 3). Each cash repayment is split by the cycle's waterfall (penalty,
+    | interest, principal) and the shares are posted to the partner journal and the ledger:
+    |  - brokered loan, AC's money: the broker earns loans.broker_rate % of the interest paid and
+    |    loans.broker_penalty_rate % of the penalty paid; AC keeps the rest;
+    |  - loan funded by a loan_share line of a broker: the broker earns 100 - brokers.interest_broker % of the
+    |    interest; principal paid goes back to the line's capital (lent -> available);
+    |  - fixed_rate lines earn their monthly rate from partners:accrue-fixed, not from repayments.
+    | Off = nothing is split (the 7 Oct backfill stands).
+    */
+    'split' => [
+        'enabled' => (bool) env('LENDING_SPLIT_ENABLED', false),
+        // decision 4 (owner default): a broker earns half the penalty unless brokers.penalty_broker says otherwise
+        'default_broker_penalty_rate' => 50,
+    ],
+
     'rollover' => [
         // cycles 2..N keep the previous cycle's rate; from cycle N+1 staff must set a rate or use a payment plan (owner)
         'same_rate_cycles' => 4,

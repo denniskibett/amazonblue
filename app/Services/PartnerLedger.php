@@ -30,13 +30,14 @@ class PartnerLedger
         ?int $investmentFundingId = null,
         ?string $reference = null,
         ?string $notes = null,
-        ?string $transactionDate = null
+        ?string $transactionDate = null,
+        bool $force = false
     ): PartnerTransaction {
         $reference = $reference ?: 'TX-' . $partner->id . '-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4));
 
         return DB::transaction(function () use (
             $partner, $walletSlug, $type, $amount, $loanId, $repaymentId,
-            $investmentId, $investmentFundingId, $reference, $notes, $transactionDate
+            $investmentId, $investmentFundingId, $reference, $notes, $transactionDate, $force
         ) {
             // -------- Idempotency guard --------
             // The unique index is on (reference, wallet_slug). If a matching row
@@ -69,6 +70,9 @@ class PartnerLedger
             ];
             if ($minor >= 0) {
                 $wallet->deposit($minor, $meta);
+            } elseif ($force) {
+                // an adjustment (e.g. a reversed repayment's share) may take the wallet below zero: the partner owes it
+                $wallet->forceWithdraw(abs($minor), $meta);
             } else {
                 // throws InsufficientFunds rather than letting a partner wallet go below zero
                 $wallet->withdraw(abs($minor), $meta);

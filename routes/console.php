@@ -42,6 +42,13 @@ Schedule::command('loans:check-integrity --csv --notify')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/loan-integrity.log'));
 
+// fixed-rate partners: their monthly simple interest for the month that just ended (owner, 21 Oct 2026)
+Schedule::command('partners:accrue-fixed')
+    ->monthlyOn(1, '02:30')
+    ->timezone('Africa/Nairobi')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/partners-fixed.log'));
+
 // audit_logs retention (decision 23, config lending.retention); deletes only rows past their limit
 Schedule::command('audit:prune')
     ->monthlyOn(1, '03:00')
