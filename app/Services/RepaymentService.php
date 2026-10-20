@@ -64,6 +64,12 @@ class RepaymentService
      */
     protected function checkLoanRepaymentStatus(Loan $loan): void
     {
+        if (LoanCalculator::v2()) {
+            \App\Services\Loans\LoanStatus::apply($loan);
+
+            return;
+        }
+
         $totalDisbursed = $loan->disbursements()->sum('amount');
         $totalRepaid = $loan->repayments()->sum('amount');
         $outstandingBalance = $totalDisbursed - $totalRepaid;

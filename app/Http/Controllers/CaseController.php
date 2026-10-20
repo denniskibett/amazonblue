@@ -728,6 +728,15 @@ public function show(string $id)
                 throw new \Exception('Recovered status not found.');
             }
 
+            // v2: "recovered" records nothing and needs the balance at 0; collections are recorded as repayments first
+            if (\App\Services\LoanCalculator::v2() && $case->loan) {
+                $cycle = $case->loan->cycles()->orderByDesc('cycle_number')->first();
+                $owed = $cycle ? \App\Services\Loans\CycleBalance::at($cycle)['final_outstanding'] : 0;
+                if ($owed > 0) {
+                    throw new \DomainException('The loan still owes KES ' . number_format($owed, 2) . '. Record the collections as repayments first.');
+                }
+            }
+
             $case->update([
                 'status_id' => $recoveredStatus->id,
                 'updated_by' => Auth::id(),

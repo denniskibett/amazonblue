@@ -88,6 +88,13 @@ class AppServiceProvider extends ServiceProvider
         }
         Repayment::restored($post('syncRepayment'));
 
+        // v2 (Stage 4 Phase 2): the loan row follows its cycles (amount, original_amount, cycle, due date)
+        \App\Models\LoanCycle::saved(function ($cycle) {
+            if (\App\Services\LoanCalculator::v2() && ($loan = Loan::withTrashed()->find($cycle->loan_id))) {
+                \App\Services\Loans\LoanSync::fromCycles($loan);
+            }
+        });
+
         // Re-score the borrower's 4Cs whenever a loan, repayment or disbursement changes, so their
         // assessments follow the repayment journey. Batched: one re-score per borrower per request.
         $rescore = function ($model) {

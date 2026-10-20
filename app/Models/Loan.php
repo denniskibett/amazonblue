@@ -365,6 +365,12 @@ class Loan extends Model
      */
     public function updateNplStatus(): void
     {
+        if (\App\Services\LoanCalculator::v2()) {
+            \App\Services\Loans\LoanStatus::apply($this);
+
+            return;
+        }
+
         $running = [self::STATUS_DISBURSED, self::STATUS_OVERDUE, self::STATUS_FORBEARANCE];
         if (!in_array($this->status, $running, true) || $this->isForbearanceActive()) {
             return;

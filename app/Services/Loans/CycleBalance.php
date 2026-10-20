@@ -180,7 +180,9 @@ class CycleBalance
         $asOf ??= now()->toDateString();
         $next = LoanCycle::where('loan_id', $cycle->loan_id)->where('cycle_number', '>', $cycle->cycle_number)
             ->orderBy('cycle_number')->first();
-        $closedOn = $cycle->closed_on?->toDateString() ?? ($next ? Carbon::parse($next->start_date)->toDateString() : null);
+        // only a carried cycle stops early; the latest cycle always runs to the day asked (a repaid cycle whose
+        // payment is later reversed must start charging again)
+        $closedOn = $next ? ($cycle->closed_on?->toDateString() ?? Carbon::parse($next->start_date)->toDateString()) : null;
         $day = $closedOn !== null && $closedOn < $asOf ? $closedOn : $asOf;
 
         $b = self::compute(self::termsFor($cycle), self::paymentsFor($cycle), $day)

@@ -194,6 +194,10 @@ class UpdateLoanStatuses extends Command
             }
         }
 
+        if (\App\Services\LoanCalculator::v2()) {
+            return $this->processLoanV2($loan, $dryRun);
+        }
+
         // Get due date
         $dueDate = $loan->getDueDate();
         if (!$dueDate) {
@@ -273,5 +277,33 @@ class UpdateLoanStatuses extends Command
             'reason' => $reason,
             'skipped' => !$shouldUpdate && !$skipped,
         ];
+    }
+
+    /**
+     * v2 (Stage 4 Phase 2): the status follows the latest cycle's balance (Loans\LoanStatus), so a loan that has
+     * been paid is never marked overdue, and one that owes nothing becomes repaid. Default (with its recovery
+     * case) still happens here, once the cycle is past its threshold.
+     */
+    private function processLoanV2(Loan $loan, bool $dryRun): array
+    {
+        $old = $loan->status;
+        $d = \App\Services\Loans\LoanStatus::decide($loan);
+        if (! $d) {
+            return ['updated' => false, 'skipped' => true, 'old_status' => $old, 'new_status' => $old, 'reason' => 'Left alone'];
+        }
+        $defaults = $d['status'] !== Loan::STATUS_REPAID && $d['balance']['is_defaulted'] && ! $loan->default_triggered;
+        $new = $defaults ? Loan::STATUS_DEFAULTED : $d['status'];
+        $reason = $defaults
+            ? "Default triggered: {$d['balance']['days_overdue']} days overdue (threshold: {$d['balance']['default_threshold_days']} days)"
+            : $d['reason'];
+
+        if (! $dryRun) {
+            \App\Services\Loans\LoanStatus::apply($loan);
+            if ($defaults) {
+                $loan->refresh()->markAsDefaulted($reason);
+            }
+        }
+
+        return ['updated' => $new !== $old, 'skipped' => $new === $old, 'old_status' => $old, 'new_status' => $new, 'reason' => $reason];
     }
 }

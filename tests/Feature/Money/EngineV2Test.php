@@ -227,6 +227,68 @@ class EngineV2Test extends TestCase
         $this->assertSame('2026-02-14', \App\Services\Loans\Period::add(Carbon::parse('2026-01-31'), 2, 'weeks')->toDateString());
     }
 
+    public function test_461_a_small_collection_does_not_mark_the_loan_repaid(): void
+    {
+        $this->loan461();
+        Carbon::setTestNow('2026-10-20 10:00');
+        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $teller = \App\Models\User::factory()->create();
+        $teller->assignRole('teller');
+
+        $this->actingAs($teller)->postJson('/repayments', [
+            'loan_id' => 461, 'loan_cycle_id' => 608, 'amount' => 5000, 'repayment_date' => '2026-10-20', 'transaction' => 'V2-461', 'mode' => 'cash',
+        ])->assertOk();
+
+        $loan = Loan::findOrFail(461);
+        $this->assertSame('disbursed', $loan->status);          // v1: repaid (P1 #10)
+        $this->assertSame('active', LoanCycle::findOrFail(608)->status);
+        $this->assertMoney(39352.00, LoanCycle::findOrFail(608)->closing_balance);
+        $this->assertMoney(36960.00, $loan->amount);             // current principal, from cycle 2
+        $this->assertMoney(85600.00, $loan->original_amount);    // cycle 1
+    }
+
+    public function test_paying_in_full_repays_and_removing_the_payment_reopens(): void
+    {
+        $this->loan529();
+        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $admin = \App\Models\User::factory()->create();
+        $admin->assignRole('admin');
+        Carbon::setTestNow('2026-10-17 10:00');
+
+        $this->actingAs($admin)->postJson('/repayments', [
+            'loan_id' => 529, 'loan_cycle_id' => 606, 'amount' => 16258, 'repayment_date' => '2026-10-17', 'transaction' => 'V2-529', 'mode' => 'mpesa',
+        ])->assertOk();
+        $this->assertSame('repaid', Loan::findOrFail(529)->status);
+        $c = LoanCycle::findOrFail(606);
+        $this->assertSame('completed', $c->status);
+        $this->assertSame('2026-10-17', $c->closed_on->toDateString());
+
+        Carbon::setTestNow('2026-10-19 10:00');
+        $paid = \App\Models\Repayment::where('transaction', 'V2-529')->firstOrFail();
+        $this->actingAs($admin)->deleteJson('/repayments/' . $paid->id)->assertOk();
+        $loan = Loan::findOrFail(529);
+        $this->assertSame('overdue', $loan->status);
+        $this->assertSame('active', LoanCycle::findOrFail(606)->status);
+        $this->assertMoney(14780 + 3 * 1478, LoanCycle::findOrFail(606)->closing_balance); // penalty runs again to 10-19
+    }
+
+    public function test_the_nightly_status_job_reads_the_balance(): void
+    {
+        $this->loan529();                                        // late since 10-16
+        $this->loanRow(700, 1, 10000, 10000, '2026-09-01', '2026-09-11', 'disbursed', 1, 30);
+        $this->cycleRow(700, 700, 1, 0, 2000, 12000, 20, '2026-09-01', '2026-09-11', 'active', 'Initial');
+        $this->repay(700, 700, 12000, '2026-09-10', 'PAID-ON-TIME');   // paid, but left "disbursed" (S-S6)
+        Carbon::setTestNow('2026-10-20 10:00');
+
+        $this->artisan('loans:update-statuses --dry-run')->assertSuccessful();
+        $this->assertSame('disbursed', Loan::findOrFail(700)->status);
+
+        $this->artisan('loans:update-statuses')->assertSuccessful();
+        $this->assertSame('repaid', Loan::findOrFail(700)->status); // v1 would mark it overdue from the date alone
+        $this->assertSame('overdue', Loan::findOrFail(529)->status);
+        $this->assertSame(4, (int) Loan::findOrFail(529)->days_overdue);
+    }
+
     private function balance(int $loanId, int $cycleNumber): array
     {
         $loan = Loan::findOrFail($loanId);

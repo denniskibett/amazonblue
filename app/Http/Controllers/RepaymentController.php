@@ -79,7 +79,14 @@ class RepaymentController extends Controller
 
         // Create repayment
         $repayment = Repayment::create($validated);
-        
+
+        // v2 (Stage 4 Phase 2): status follows the cycle balance, never totals of all repayments
+        if (\App\Services\LoanCalculator::v2()) {
+            \App\Services\Loans\LoanStatus::apply(Loan::findOrFail($validated['loan_id']));
+
+            return response()->json(['success' => true, 'message' => 'Repayment created successfully.', 'repayment' => $repayment]);
+        }
+
         // ============ UPDATE THE CYCLE ============
         $cycle = LoanCycle::find($validated['loan_cycle_id']);
         if ($cycle) {
@@ -136,6 +143,9 @@ class RepaymentController extends Controller
         $validated['net_amount'] = $validated['amount'] - $validated['processing_fee'];
 
         $repayment->update($validated);
+        if (\App\Services\LoanCalculator::v2()) {
+            \App\Services\Loans\LoanStatus::apply($repayment->loan);
+        }
 
         return response()->json([
             'message' => 'Repayment updated successfully!',
@@ -206,6 +216,15 @@ class RepaymentController extends Controller
             $reversal = $this->reverseRepayment($repayment, (string) (request('reason') ?: 'Reversed by ' . $user->name));
         } else {
             $repayment->delete();
+        }
+
+        if (\App\Services\LoanCalculator::v2()) {
+            \App\Services\Loans\LoanStatus::apply(Loan::findOrFail($loanId));
+
+            return response()->json([
+                'message' => isset($reversal) ? 'Repayment reversed (reversal #' . $reversal->id . ').' : 'Repayment deleted successfully!',
+                'reversal_id' => isset($reversal) ? $reversal->id : null,
+            ], 200);
         }
         
         // ============ UPDATE THE CYCLE STATUS ============
