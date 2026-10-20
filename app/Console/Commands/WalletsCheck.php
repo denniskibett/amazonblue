@@ -89,6 +89,11 @@ class WalletsCheck extends Command
                 $problems++;
                 $this->warn('  the ledger does not balance');
             }
+            if (\App\Services\LoanCalculator::v2()) {
+                // informational: differences come from rows the ledger does not post yet (legacy chains, non_cash)
+                $r = $ledger->checkReceivables();
+                $this->line(sprintf('  %d loan(s): ledger receivable vs owed; %d differ (see loans:restate CSV)', $r['checked'], count($r['issues'])));
+            }
             $c = $ledger->checkBorrowerCash();
             $this->line("  {$c['checked']} borrower(s): ledger cash vs borrower wallet");
             foreach ($c['issues'] as $i) {

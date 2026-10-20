@@ -7,6 +7,7 @@ use App\Models\Loan;
 use App\Models\Partner;
 use App\Models\PartnerTransaction;
 use App\Models\Repayment;
+use App\Services\LoanCalculator;
 use Bavix\Wallet\External\Dto\Extra;
 use Bavix\Wallet\External\Dto\Option;
 use Bavix\Wallet\Models\Transaction;
@@ -163,6 +164,41 @@ class Ledger
         ], 'note' => null];
     }
 
+    /**
+     * What a cycle charges (engine v2 only): its interest, the penalty run so far (or up to the day it was
+     * carried), and, for a carried cycle, the difference between what it owed and what the next cycle took
+     * over. With these and the payments, a loan's gl-receivable equals what the borrower owes.
+     */
+    public function planLoanCycle(\App\Models\LoanCycle $cycle): array
+    {
+        if (! LoanCalculator::v2()) {
+            return ['legs' => [], 'note' => 'engine v1: charges are not booked'];
+        }
+        $loan = Loan::withTrashed()->find($cycle->loan_id);
+        if (! $loan) {
+            return ['legs' => [], 'note' => 'loan not found'];
+        }
+        $b = \App\Services\Loans\CycleBalance::at($cycle);
+        $receivable = $this->account($loan, 'gl-receivable');
+        $legs = [
+            ['leg' => 'interest', 'from' => $this->houseAccount('gl-interest-income'), 'to' => $receivable, 'amount' => $b['interest']],
+            ['leg' => 'penalty', 'from' => $this->houseAccount('gl-penalty-income'), 'to' => $receivable, 'amount' => $b['penalty']],
+        ];
+        if ($b['carried_forward'] !== null) {
+            // carried + more than owed: the borrower was charged the extra; less: it was forgiven
+            $legs[] = ['leg' => 'carry', 'from' => $this->houseAccount('gl-rollover-adjustments'), 'to' => $receivable,
+                'amount' => round($b['carried_forward'] - $b['owed_on_close'], 2)];
+        }
+
+        return ['legs' => array_values(array_filter($legs, fn ($l) => abs($l['amount']) >= 0.005)), 'note' => null];
+    }
+
+    public function syncLoanCycle(\App\Models\LoanCycle $cycle): array
+    {
+        return $this->sync('loan_cycle', $cycle->id, $this->planLoanCycle($cycle)['legs'],
+            ['loan_id' => $cycle->loan_id, 'date' => now()->toDateString(), 'source' => 'ledger', 'reference' => 'Cycle ' . $cycle->cycle_number]);
+    }
+
     // ---------------------------------------------------------------- posting
 
     public function syncDisbursement(Disbursement $d): array
@@ -294,6 +330,15 @@ class Ledger
 
     // ---------------------------------------------------------------- reading
 
+    /** An account's balance in KES, from its own postings (not the cached wallets.balance). */
+    public function balance(Wallet $wallet): float
+    {
+        $minor = (int) Transaction::where('wallet_id', $wallet->getKey())->where('confirmed', 1)
+            ->selectRaw("coalesce(sum(case when type = 'deposit' then amount else -abs(amount) end), 0) as total")->value('total');
+
+        return round($minor / (10 ** self::dp()), 4);
+    }
+
     /**
      * Every ledger account's balance (KES), and their total, which must be 0 because every entry balances.
      *
@@ -302,8 +347,12 @@ class Ledger
     public function trialBalance(): array
     {
         $types = collect(config('lending.ledger.accounts'))->map(fn ($a) => $a['type']);
-        $rows = DB::table('wallets')->where('slug', 'like', 'gl-%')->whereNull('deleted_at')
-            ->groupBy('slug')->get(['slug', DB::raw('sum(balance) as total'), DB::raw('count(*) as n')]);
+        // from the postings themselves, so a stale wallets.balance can't hide or invent a difference
+        $rows = DB::table('wallets as w')->leftJoin('transactions as t', function ($j) {
+            $j->on('t.wallet_id', '=', 'w.id')->where('t.confirmed', 1)->whereNull('t.deleted_at');
+        })->where('w.slug', 'like', 'gl-%')->whereNull('w.deleted_at')->groupBy('w.slug')
+            ->get(['w.slug as slug', DB::raw("coalesce(sum(case when t.type = 'deposit' then t.amount else -abs(t.amount) end), 0) as total"),
+                DB::raw('count(distinct w.id) as n')]);
         $byType = [];
         foreach ($rows as $r) {
             $type = $types[$r->slug] ?? 'unknown';
@@ -315,6 +364,37 @@ class Ledger
             'by_type' => array_map(fn ($v) => round($v, 4), $byType),
             'accounts' => (int) $rows->sum('n'),
         ];
+    }
+
+    /**
+     * Engine v2: per loan, the ledger receivable vs what the latest cycle says is owed. They differ only where
+     * a row is not posted (legacy ROLL OVER chains, non_cash book entries) or cycle 1 lent a different amount
+     * from what was disbursed.
+     *
+     * @return array{checked: int, issues: array<int, array>}
+     */
+    public function checkReceivables(): array
+    {
+        $issues = [];
+        $checked = 0;
+        $morph = (new Loan)->getMorphClass();
+        // from the postings themselves, not the cached wallets.balance
+        $balances = DB::table('wallets as w')->join('transactions as t', 't.wallet_id', '=', 'w.id')
+            ->where('w.holder_type', $morph)->where('w.slug', 'gl-receivable')->where('t.confirmed', 1)->whereNull('t.deleted_at')
+            ->groupBy('w.holder_id')
+            ->selectRaw("w.holder_id as holder_id, sum(case when t.type = 'deposit' then t.amount else -abs(t.amount) end) as total")
+            ->pluck('total', 'holder_id');
+        foreach (\App\Models\LoanCycle::query()->selectRaw('loan_id, max(cycle_number) as n')->groupBy('loan_id')->get() as $row) {
+            $cycle = \App\Models\LoanCycle::where('loan_id', $row->loan_id)->where('cycle_number', $row->n)->first();
+            $owed = \App\Services\Loans\CycleBalance::at($cycle)['final_outstanding'];
+            $ledger = round((float) ($balances[$row->loan_id] ?? 0) / (10 ** self::dp()), 2);
+            $checked++;
+            if (abs($owed - $ledger) >= 0.01) {
+                $issues[] = ['loan' => (int) $row->loan_id, 'owed' => $owed, 'ledger' => $ledger, 'difference' => round($ledger - $owed, 2)];
+            }
+        }
+
+        return ['checked' => $checked, 'issues' => $issues];
     }
 
     /**

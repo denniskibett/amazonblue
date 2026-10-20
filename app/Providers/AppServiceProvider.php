@@ -95,6 +95,28 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
+        // v2 + ledger: a payment or a cycle change re-books the cycle's charges (penalty depends on payments;
+        // a new cycle settles the carry difference of the one before it)
+        $charges = function (array $cycleIds) {
+            if (! Ledger::enabled() || ! \App\Services\LoanCalculator::v2()) {
+                return;
+            }
+            DB::afterCommit(function () use ($cycleIds) {
+                foreach (\App\Models\LoanCycle::whereIn('id', array_filter($cycleIds))->get() as $c) {
+                    try {
+                        app(Ledger::class)->syncLoanCycle($c);
+                    } catch (\Throwable $e) {
+                        Log::error("Ledger charges failed for cycle #{$c->id}", ['error' => $e->getMessage()]);
+                    }
+                }
+            });
+        };
+        foreach (['saved', 'deleted', 'restored'] as $event) {
+            Repayment::{$event}(fn ($r) => $charges([$r->loan_cycle_id, $r->getOriginal('loan_cycle_id')]));
+        }
+        \App\Models\LoanCycle::saved(fn ($c) => $charges([$c->id, \App\Models\LoanCycle::where('loan_id', $c->loan_id)
+            ->where('cycle_number', $c->cycle_number - 1)->value('id')]));
+
         // Re-score the borrower's 4Cs whenever a loan, repayment or disbursement changes, so their
         // assessments follow the repayment journey. Batched: one re-score per borrower per request.
         $rescore = function ($model) {

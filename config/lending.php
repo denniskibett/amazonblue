@@ -111,6 +111,11 @@ return [
             'gl-capital' => ['holder' => 'partner', 'type' => 'liability', 'name' => 'Partner capital'],
             'gl-earnings' => ['holder' => 'partner', 'type' => 'liability', 'name' => 'Partner earnings payable'],
             'gl-fee-income' => ['holder' => 'house', 'type' => 'income', 'name' => 'Fee income'],
+            // engine v2 (Stage 4 Phase 2): what each cycle charges, booked to the loan's receivable
+            'gl-interest-income' => ['holder' => 'house', 'type' => 'income', 'name' => 'Interest income'],
+            'gl-penalty-income' => ['holder' => 'house', 'type' => 'income', 'name' => 'Penalty income'],
+            // a cycle carried into the next for more (+) or less (-, a write-down) than it owed
+            'gl-rollover-adjustments' => ['holder' => 'house', 'type' => 'income', 'name' => 'Rollover adjustments'],
             'gl-partner-share' => ['holder' => 'house', 'type' => 'expense', 'name' => 'Partner and broker shares'],
             'gl-discounts' => ['holder' => 'house', 'type' => 'expense', 'name' => 'Discounts and waivers'],
             'gl-bad-debt' => ['holder' => 'house', 'type' => 'expense', 'name' => 'Bad debts written off'],

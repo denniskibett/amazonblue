@@ -53,6 +53,10 @@ class LedgerBackfill extends Command
             'repayment' => fn () => Repayment::withTrashed()->orderBy('id')->lazy(),
             'partner_transaction' => fn () => PartnerTransaction::query()->orderBy('id')->lazy(),
         ];
+        if (\App\Services\LoanCalculator::v2()) {
+            // engine v2: each cycle's interest, penalty and carry difference
+            $sources['loan_cycle'] = fn () => \App\Models\LoanCycle::query()->orderBy('id')->lazy();
+        }
 
         if ($dry) {
             DB::beginTransaction();
@@ -65,6 +69,7 @@ class LedgerBackfill extends Command
                         'disbursement' => [$ledger->planDisbursement($row), CustomerWallets::kindOf($row), $row->disburse_date, $row->transaction],
                         'repayment' => [$ledger->planRepayment($row), CustomerWallets::kindOf($row), $row->repayment_date, $row->transaction],
                         'partner_transaction' => [$ledger->planPartnerTransaction($row), $row->type, $row->transaction_date, $row->reference],
+                        'loan_cycle' => [$ledger->planLoanCycle($row), 'cycle ' . $row->cycle_number . ' of loan ' . $row->loan_id, $row->start_date, null],
                     };
                     $date = $date ? \Illuminate\Support\Carbon::parse($date)->toDateString() : '';
                     // a real run posts through the same path as live saves (with the row's date, reference, loan)

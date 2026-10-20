@@ -22,6 +22,13 @@ Schedule::command('loans:update-statuses')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/loan-statuses.log'));
 
+// engine v2 + ledger: book each open cycle's penalty for the day (does nothing while either switch is off)
+Schedule::command('ledger:accrue')
+    ->dailyAt('01:15')
+    ->timezone('Africa/Nairobi')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/ledger-accrue.log'));
+
 Schedule::command('loans:detect-npl')
     ->dailyAt('01:30')
     ->timezone('Africa/Nairobi')
