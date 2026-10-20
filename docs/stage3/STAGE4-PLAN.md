@@ -136,6 +136,8 @@ Tick off each step of `DEPLOY-2026-10-18.md` and the Stage 2 deploy (SUMMARY "To
 
 ## 2. Phase 2: cycle engine (rules 5, 6, 7, 8): the core money fix
 
+> **Built 21 October 2026** behind `LENDING_ENGINE=v2`, with the owner's decisions in §9. That includes the in-duplum cap (on until the lawyer says otherwise), the 4-cycle rate rule, and the rule that history keeps its booked carries (differences are reported and posted as rollover adjustments). Two departures from the text below: `loan_cycles` also gets `principal` and `balance_as_of`, and REPAID_BUT_OWES loans stay repaid unless the owner names them. Runbook and rehearsal results: [DEPLOY-PHASE2.md](../stage4/DEPLOY-PHASE2.md).
+
 **Blocking owner decisions:** 1 (penalty rate and cap), 2 (meaning of `loans.amount`, restate?), 6 (legacy chains), 11 (rollover rate, waivers), 12 (cycle-1 start, NPL threshold). See §9.
 
 | Current | Target |
