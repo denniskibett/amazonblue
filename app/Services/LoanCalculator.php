@@ -8,6 +8,7 @@ use App\Models\Investment;
 use App\Models\Partner;
 use App\Models\PartnerTransaction;
 use App\Services\Loans\CycleBalance;
+use App\Services\Loans\Rollover;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -708,6 +709,10 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, ?Carbon $cal
      */
     public function executeRollover(Loan $loan, array $options = []): array
     {
+        if (self::v2()) {
+            return $this->executeRolloverV2($loan, $options);
+        }
+
         if (!in_array($loan->status, ['active', 'overdue', 'disbursed'])) {
             throw new \Exception('This loan is not eligible for rollover.');
         }
@@ -1008,6 +1013,10 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, ?Carbon $cal
      */
     public function getRolloverPreview(Loan $loan): array
     {
+        if (self::v2()) {
+            return $this->rolloverPreviewV2($loan);
+        }
+
         if (!$loan->loanType) {
             throw new \Exception('Loan type not found for loan #' . $loan->id);
         }
@@ -1410,6 +1419,88 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, ?Carbon $cal
                 'default_threshold' => $defaultThresholdDays,
                 'is_defaulted' => ($loan->status === 'defaulted' || $isDefaulted),
             ],
+        ];
+    }
+
+    /** executeRollover under v2: Loans\Rollover books exactly what preview() shows. Same result shape as v1. */
+    private function executeRolloverV2(Loan $loan, array $options): array
+    {
+        $r = app(Rollover::class)->execute($loan, $options);
+        $type = $loan->loanType;
+
+        return [
+            'success' => true,
+            'message' => 'Loan extended. New balance: KES ' . number_format($r['new_balance'], 2),
+            'data' => [
+                'cycle' => $r['created'],
+                'new_balance' => $r['new_balance'],
+                'cycle_number' => $r['new_cycle'],
+                'due_date' => $r['due_date'],
+                'due_date_formatted' => Carbon::parse($r['due_date'])->format('M d, Y'),
+                'start_date' => $r['start_date'],
+                'start_date_formatted' => Carbon::parse($r['start_date'])->format('M d, Y'),
+                'start_date_reason' => Carbon::parse($r['rollover_date'])->gt(Carbon::parse($r['cycle']->due_date)) ? 'last_penalty_day' : 'due_date',
+                'previous_due_date' => Carbon::parse($r['cycle']->due_date)->toDateString(),
+                'last_repayment_date' => null,
+                'is_fully_settled' => false,
+                'interest_capitalized' => $r['interest'],
+                'interest_rate_used' => $r['interest_rate'],
+                'previous_balance' => $r['principal'],
+                'waive_penalty' => $r['waive_penalty'],
+                'cycle_calculation' => $r['balance'],
+                'period' => (int) ($type->period ?? 0),
+                'period_unit' => $type->unit ?? null,
+                'engine' => 'v2',
+            ],
+        ];
+    }
+
+    /** getRolloverPreview under v2: the same plan execute books, in the v1 preview shape. */
+    private function rolloverPreviewV2(Loan $loan): array
+    {
+        $p = app(Rollover::class)->preview($loan);
+        $b = $p['balance'];
+        $cycle = $p['cycle'];
+        $type = $loan->loanType;
+
+        return [
+            'loan_type_id' => $loan->loan_type_id,
+            'loan_type_name' => $type->name,
+            'period' => (int) $type->period,
+            'period_unit' => $type->unit,
+            'period_display' => $this->getPeriodDisplay($loan),
+            'interest_rate' => $p['interest_rate'],
+            'current_cycle' => $cycle->cycle_number,
+            'current_due_date' => Carbon::parse($cycle->due_date)->format('M d, Y'),
+            'current_balance' => $b['final_outstanding'],
+            'principal' => $b['principal'],
+            'outstanding_at_due' => $b['outstanding_at_due'],
+            'repayments_before_due' => $b['repayments_before_due'],
+            'repayments_after_due' => $b['repayments_after_due'],
+            'outstanding_after_due' => $b['unpaid_penalty'],
+            'days_overdue' => $b['days_overdue'],
+            'days_subject_to_penalty' => $b['days_subject_to_penalty'],
+            'penalty' => $b['penalty'],
+            'final_outstanding' => $b['final_outstanding'],
+            'is_overdue' => $b['is_overdue'],
+            'is_defaulted' => $b['is_defaulted'],
+            'default_threshold_days' => $b['default_threshold_days'],
+            'partner_data' => [],
+            'net_earnings' => 0,
+            'pl' => 0,
+            'principal_returned' => $b['principal_paid'],
+            'principal_remaining' => $b['unpaid_principal'],
+            'new_cycle' => $p['new_cycle'],
+            'new_start_date' => Carbon::parse($p['start_date'])->format('M d, Y'),
+            'new_due_date' => Carbon::parse($p['due_date'])->format('M d, Y'),
+            'new_due_date_raw' => $p['due_date'],
+            'interest_to_capitalize' => $p['interest'],
+            'new_principal' => $p['principal'],
+            'new_balance' => $p['new_balance'],
+            'original_principal' => (float) ($loan->original_amount ?? $loan->amount),
+            'total_capitalized_interest' => $loan->capitalized_interest ?? 0,
+            'cycle_calculation' => $b,
+            'engine' => 'v2',
         ];
     }
 

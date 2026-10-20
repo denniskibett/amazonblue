@@ -34,9 +34,17 @@
       <div class="a-sec-h"><h2>What an extension costs</h2><span class="badge-s st-pending">Indicative</span></div>
       @if ($preview)
         <p class="muted" style="font-size:13.5px">If our team agrees, the amount still owed moves into a new repayment period and interest for that period is added.</p>
-        {{-- S-B3 (Stage 4 Phase 0): the preview amount and date differ from what an extension books, so only the rate is shown until Phase 2 --}}
+        {{-- v1: the preview differs from what an extension books (S-B3), so only the rate is shown.
+             v2 (Stage 4 Phase 2): preview and booking are the same calculation, so the figures are shown. --}}
         <dl class="a-break" style="margin-top:12px">
-          <dt>Interest for the new period</dt><dd>{{ rtrim(rtrim(number_format((float) $preview['interest_rate'], 2), '0'), '.') }}% of the amount still owed</dd>
+          @if (($preview['engine'] ?? null) === 'v2')
+            <dt>Still owed today</dt><dd>KES {{ number_format((float) $preview['new_principal'], 2) }}</dd>
+            <dt>Interest for the new period ({{ rtrim(rtrim(number_format((float) $preview['interest_rate'], 2), '0'), '.') }}%)</dt><dd>KES {{ number_format((float) $preview['interest_to_capitalize'], 2) }}</dd>
+            <dt>New amount to repay</dt><dd>KES {{ number_format((float) $preview['new_balance'], 2) }}</dd>
+            <dt>New due date</dt><dd>{{ $preview['new_due_date'] }}</dd>
+          @else
+            <dt>Interest for the new period</dt><dd>{{ rtrim(rtrim(number_format((float) $preview['interest_rate'], 2), '0'), '.') }}% of the amount still owed</dd>
+          @endif
         </dl>
         <x-az.alert type="warn" title="We'll confirm the cost before anything changes" style="margin-top:14px">
           Our team works out the exact amount and the new due date and agrees them with you before anything changes on your loan.
