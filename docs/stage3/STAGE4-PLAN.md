@@ -74,6 +74,8 @@ Tick off each step of `DEPLOY-2026-10-18.md` and the Stage 2 deploy (SUMMARY "To
 
 ## 1. Phase 1: ledger foundation (no figures change yet)
 
+> **Revised 20 October 2026 (owner):** the ledger is kept in **bavix wallets and transfers**, not in the three `ledger_*` tables below. There are no new tables. Each account is a `gl-` wallet; each entry is a transfer with a deterministic uuid. Partner contributions, earnings and payouts are posted too. What was built, and the runbook, are in [DEPLOY-PHASE1.md](../stage4/DEPLOY-PHASE1.md). The rest of this section is the original plan, kept for reference.
+
 **Goal:** a double-entry ledger that every later phase posts to. It runs **in parallel** with today's records; nothing reads it for balances yet.
 
 | Current | Target |
@@ -439,6 +441,16 @@ On apply it posts **difference** journals per partner and wallet, which reconcil
 - **Super-admin:** sysadmin only.
 
 Also: partner funding details are editable on `/system`, super-admin only, with a password check, audit row and admin email (SUMMARY addendum). Maker-checker on that change waits for Phase 5.
+
+**Decided 20 October 2026 (Phase 1; details in [DEPLOY-PHASE1.md](../stage4/DEPLOY-PHASE1.md)):**
+
+- **Ledger:** kept in bavix, using the existing tables; `loan_ledger` dropped.
+- **Decision 3:** `brokers.interest_broker` is the single source. AC funds the broker's client: the broker gets `interest_broker` (40%). The broker funds AC's client: the broker gets `100 − interest_broker` (60%).
+- **Broker-funded defaults:** AC guarantees the broker's principal only.
+- **Fixed-return partners** (e.g. 3% a month): charged on committed money. Still open: whether it is paid monthly or added to the balance, and whether `investments.interest_rate` holds the monthly rate.
+- **Decision 5:** non-cash words are deprecated; rows store their kind.
+- **Reversals:** soft delete for same-day mistakes only; anything older gets a reversal entry.
+- **M-Pesa (Phase 4):** automatic callbacks and manual entry share one path, and the receipt number is unique.
 
 Each decision has a recommended default. If the owner accepts the default, the phase proceeds on it.
 
