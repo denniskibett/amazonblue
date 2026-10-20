@@ -510,3 +510,11 @@ if (app()->environment('local')) {
 
 // Auth Routes
 require __DIR__.'/auth.php';
+
+// ============ M-PESA (Daraja) CALLBACKS: Stage 4 Phase 4 ============
+// no session or CSRF (bootstrap/app.php); a secret path segment and an optional IP allowlist instead
+Route::prefix('mpesa/{secret}')->middleware('throttle:120,1')->name('mpesa.')->group(function () {
+    Route::post('c2b/validation', [\App\Http\Controllers\MpesaCallbackController::class, 'validation'])->name('c2b.validation');
+    Route::post('c2b/confirmation', [\App\Http\Controllers\MpesaCallbackController::class, 'confirmation'])->name('c2b.confirmation');
+    Route::post('stk', [\App\Http\Controllers\MpesaCallbackController::class, 'stk'])->name('stk');
+});

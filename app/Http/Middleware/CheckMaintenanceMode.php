@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 class CheckMaintenanceMode
 {
     // reachable while the switch is on, so staff can still sign in
-    private const OPEN = ['login', 'logout', 'forgot-password', 'reset-password', 'reset-password/*', 'up'];
+    private const OPEN = ['mpesa/*', 'login', 'logout', 'forgot-password', 'reset-password', 'reset-password/*', 'up'];
 
     public function handle(Request $request, Closure $next): Response
     {

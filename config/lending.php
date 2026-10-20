@@ -39,10 +39,36 @@ return [
         'paybill' => env('MPESA_PAYBILL'),
         // What the borrower types as "Account no.": loan_number (e.g. 545) | phone (their registered phone) | id_number.
         'account_format' => env('MPESA_ACCOUNT_FORMAT', 'loan_number'),
-        // Stage 4: C2B callbacks record payments automatically. Off until the integration exists.
+        // Stage 4 Phase 4: C2B confirmations record payments automatically. Off = callbacks are refused.
         'enabled' => (bool) env('MPESA_ENABLED', false),
-        // Stage 4: "Pay with M-Pesa" sends an STK push to the borrower's phone. Off: the button is shown disabled.
+        // "Pay with M-Pesa" sends an STK push to the borrower's phone. Off: the button is shown disabled.
         'stk_enabled' => (bool) env('MPESA_STK_ENABLED', false),
+        // "I've paid" claims are stored (payment_claims) and shown on every device; off = the Stage 2 email + session
+        'claims_enabled' => (bool) env('MPESA_CLAIMS_ENABLED', false),
+
+        // Daraja. sandbox until the owner adds the production details (then MPESA_ENV=production).
+        'env' => env('MPESA_ENV', 'sandbox'),
+        'base_url' => [
+            'sandbox' => 'https://sandbox.safaricom.co.ke',
+            'production' => 'https://api.safaricom.co.ke',
+        ],
+        'consumer_key' => env('MPESA_CONSUMER_KEY'),
+        'consumer_secret' => env('MPESA_CONSUMER_SECRET'),
+        // the shortcode payments go to (C2B) and that STK pushes are made for; 174379 is Safaricom's sandbox
+        'shortcode' => env('MPESA_SHORTCODE', '174379'),
+        // Lipa na M-Pesa online passkey; the default is Safaricom's published sandbox passkey for 174379
+        'passkey' => env('MPESA_PASSKEY', 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'),
+        // CustomerPayBillOnline (paybill) or CustomerBuyGoodsOnline (till)
+        'transaction_type' => env('MPESA_TRANSACTION_TYPE', 'CustomerPayBillOnline'),
+        // secret path segment in the callback URLs (/mpesa/<secret>/...); set a long random value
+        'callback_secret' => env('MPESA_CALLBACK_SECRET'),
+        // public base for callback URLs (https, reachable by Safaricom); defaults to APP_URL
+        'callback_base' => env('MPESA_CALLBACK_BASE'),
+        // Safaricom's callback IPs; empty = any IP (sandbox). Comma-separated in the env.
+        'allowed_ips' => array_filter(array_map('trim', explode(',', (string) env('MPESA_ALLOWED_IPS', '')))),
+        // automatic matching: the account number must be an open loan's number; the payer's phone must be the
+        // borrower's, unless Safaricom hid it, in which case the amount must not be more than is owed
+        'match_other_payers' => (bool) env('MPESA_MATCH_OTHER_PAYERS', false),
     ],
 
     // Partner self-service (account › Partner › Add funds / Withdraw). Stage 2 shows instructions and emails staff;

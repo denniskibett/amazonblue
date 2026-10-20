@@ -47,6 +47,27 @@ class Repayment extends Model
         });
         static::creating(function (self $row) {
             $row->created_by ??= auth()->id();
+            // an M-Pesa receipt is recorded once, whichever way it arrives (callback or by hand; Stage 4 Phase 4)
+            $code = strtoupper(trim((string) $row->transaction));
+            if ($row->kind === 'cash' && preg_match('/^[A-Z0-9]{10}$/', $code) && ! $row->reversal_of_id) {
+                $dup = self::where('transaction', $code)->whereNull('reversal_of_id')->first();
+                if ($dup) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'transaction' => "M-Pesa receipt {$code} is already recorded (repayment #{$dup->id}, loan #{$dup->loan_id}).",
+                    ]);
+                }
+            }
+        });
+        // typed by hand before Daraja's callback: the callback, when it comes, finds this row (PaymentRecorder::match);
+        // one already waiting in the queue is linked now, and the borrower's claim reads "received"
+        static::created(function (self $row) {
+            $code = strtoupper(trim((string) $row->transaction));
+            if ($row->kind !== 'cash' || ! preg_match('/^[A-Z0-9]{10}$/', $code)) {
+                return;
+            }
+            MpesaTransaction::where('trans_id', $code)->whereIn('status', ['unmatched', 'received'])
+                ->update(['status' => 'matched', 'repayment_id' => $row->id, 'loan_id' => $row->loan_id, 'note' => 'Recorded by hand', 'updated_at' => now()]);
+            app(\App\Services\Mpesa\PaymentRecorder::class)->settleClaims($code, $row);
         });
     }
 
