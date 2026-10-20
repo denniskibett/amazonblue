@@ -68,7 +68,7 @@ return [
     |
     */
 
-    'timezone' => env('APP_TIMEZONE', 'UTC'),
+    'timezone' => env('APP_TIMEZONE', 'Africa/Nairobi'), // business days, due dates and "today" are Nairobi's (owner, 21 Oct 2026)
 
     /*
     |--------------------------------------------------------------------------
