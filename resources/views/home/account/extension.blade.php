@@ -18,9 +18,20 @@
   </div>
 
   @if ($asked)
-    <x-az.alert type="info" title="You asked on {{ $asked->created_at->format('j M Y') }}">
-      Our team has your request and will call you. You can send another if something has changed.
-    </x-az.alert>
+    @php $st = $asked->status ?? 'open'; @endphp
+    @if ($st === 'approved')
+      <x-az.alert type="ok" title="Extension agreed on {{ \Illuminate\Support\Carbon::parse($asked->decided_at)->format('j M Y') }}">
+        Your loan was extended. The new amount and due date are on your loan page.@if (! empty($asked->decision_note)) {{ $asked->decision_note }}@endif
+      </x-az.alert>
+    @elseif ($st === 'declined')
+      <x-az.alert type="warn" title="We couldn't agree this extension">
+        {{ $asked->decision_note ?: 'Talk to us about the other options.' }}
+      </x-az.alert>
+    @else
+      <x-az.alert type="info" title="You asked on {{ $asked->created_at->format('j M Y') }}">
+        Our team has your request and will call you. You can send another if something has changed.
+      </x-az.alert>
+    @endif
   @endif
 
   @unless ($canAsk)

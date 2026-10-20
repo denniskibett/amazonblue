@@ -484,6 +484,14 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::post('sign-offs/{approval}', [\App\Http\Controllers\Staff\SignOffsController::class, 'decide'])
             ->name('sign-offs.decide')->middleware('permission:approve loans|delete repayments|write off loan|edit partners');
 
+        // borrower and partner requests (Stage 4 Phase 5)
+        Route::get('requests', [\App\Http\Controllers\Staff\RequestsController::class, 'index'])
+            ->name('requests')->middleware('permission:rollover loans|edit partners');
+        Route::post('requests/borrower/{id}', [\App\Http\Controllers\Staff\RequestsController::class, 'borrower'])
+            ->name('requests.borrower')->middleware('permission:rollover loans');
+        Route::post('requests/partner/{id}', [\App\Http\Controllers\Staff\RequestsController::class, 'partner'])
+            ->name('requests.partner')->middleware('permission:edit partners');
+
         // M-Pesa payments queue (Stage 4 Phase 4)
         Route::get('payments', [\App\Http\Controllers\Staff\PaymentsController::class, 'index'])
             ->name('payments')->middleware('permission:create repayments');

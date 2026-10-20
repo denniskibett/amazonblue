@@ -8,6 +8,7 @@
       ['staff.disbursements.queue', 'Disbursement queue', $u->can('view disbursements'), 'M3 7h18v10H3zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'],
       ['staff.repayments.receive', 'Receive payment', $u->canAny(['create repayments', 'delete repayments']), 'M12 8c4 0 7-1 7-2.5S16 3 12 3 5 4 5 5.5 8 8 12 8zM5 5.5v6C5 13 8 14 12 14s7-1 7-2.5v-6M5 11.5v6C5 19 8 20 12 20s7-1 7-2.5v-6'],
       ['staff.collections', 'Collections', $u->can('view recovery cases'), 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01'],
+      ['staff.requests', 'Requests', $u->canAny(['rollover loans', 'edit partners']), 'M4 4h16v12H5.2L4 17.2zM8 9h8M8 12h5'],
       ['staff.sign-offs', 'Second sign-offs', $u->canAny(['approve loans', 'delete repayments', 'write off loan', 'edit partners']), 'M9 12l2 2 4-4M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z'],
       ['staff.payments', 'M-Pesa payments', $u->can('create repayments'), 'M7 3h10v18H7zM11 18h2'],
       ['staff.end-of-day', 'End of day', $u->canAny(['create repayments', 'create disbursements', 'view reports']), 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM8 7h8'],

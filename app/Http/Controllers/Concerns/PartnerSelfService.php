@@ -179,6 +179,7 @@ trait PartnerSelfService
         ], [], ['transaction_code' => 'transaction code', 'sent_on' => 'date sent']);
         $amount = round((float) $data['amount'], 2);
 
+        app(\App\Services\Requests::class)->partner('funding', $partner, $amount, null, $data['transaction_code'], $data['note'] ?? null, $request->user());
         AuditTrail::record('partners', $partner->id, 'create', null, [
             'request' => 'partner_funds_sent', 'amount' => $amount, 'method' => $data['method'],
             'transaction_code' => $data['transaction_code'], 'sent_on' => $data['sent_on'], 'note' => $data['note'] ?? null,
@@ -232,6 +233,7 @@ trait PartnerSelfService
             return back()->withInput()->withErrors(['amount' => 'We have no payout details for you yet. Message us to add a bank account or M-Pesa number first.']);
         }
 
+        app(\App\Services\Requests::class)->partner('withdrawal', $partner, $amount, $data['wallet'], null, $data['note'] ?? null, $request->user());
         AuditTrail::record('partners', $partner->id, 'create', null, [
             'request' => 'partner_withdrawal', 'amount' => $amount, 'wallet' => $data['wallet'],
             'available' => $available, 'payout' => $payout['label'], 'note' => $data['note'] ?? null,

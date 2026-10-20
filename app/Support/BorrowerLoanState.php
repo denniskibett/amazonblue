@@ -160,8 +160,16 @@ class BorrowerLoanState
     }
 
     /** The latest interim request of a type the borrower sent about this loan (an audit row), if any. */
-    public static function lastRequest(Loan $loan, string $type): ?AuditLog
+    public static function lastRequest(Loan $loan, string $type): ?object
     {
+        // Stage 4 Phase 5: stored requests carry their status and the staff decision
+        if (\App\Services\Requests::enabled()) {
+            $stored = \App\Services\Requests::latestBorrower($loan, ['extension_request' => 'extension', 'payment_plan_accepted' => 'plan'][$type] ?? $type);
+            if ($stored) {
+                return $stored;
+            }
+        }
+
         return AuditLog::where('table_name', self::REQUESTS)->where('record_id', $loan->id)
             ->where('user_id', $loan->user_id)->where('new_values->type', $type)
             ->latest('id')->first();

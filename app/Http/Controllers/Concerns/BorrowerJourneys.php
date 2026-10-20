@@ -72,6 +72,7 @@ trait BorrowerJourneys
         AuditTrail::record(BorrowerLoanState::REQUESTS, $loan->id, 'create', null, [
             'type' => 'extension_request', 'loan_id' => $loan->id, 'loan_status' => $loan->status, 'reason' => $data['reason'],
         ]);
+        app(\App\Services\Requests::class)->borrower('extension', $request->user(), $loan, $data['reason'], ['loan_status' => $loan->status]);
         CustomerNotifier::borrowerRequest($request->user(), 'Extension request: loan #' . $ref,
             'asks for an extension (rollover) of loan #' . $ref . ' (status ' . $loan->status . '). Reason: "' . $data['reason'] . '". Review it and, if agreed, run the rollover from the loan page.', $loan);
 
@@ -105,6 +106,11 @@ trait BorrowerJourneys
         $cycle = $loan->cycles()->where('status', 'active')->orderByDesc('cycle_number')->first();
 
         $ref = str_pad((string) $loan->id, 5, '0', STR_PAD_LEFT);
+        $terms = ['cycle_id' => $cycle?->id, 'cycle_number' => $cycle?->cycle_number, 'balance' => (string) $cycle?->new_balance,
+            'rate' => (string) $cycle?->interest_rate, 'due' => $cycle?->due_date?->format('Y-m-d'), 'waived_until' => $cycle?->penalty_waived_until?->format('Y-m-d')];
+        // consent stored with the exact terms accepted (version = the plan cycle, hash of its terms)
+        app(\App\Services\Requests::class)->borrower('plan', $request->user(), $loan, null,
+            ['version' => 'cycle-' . ($cycle?->id ?? 0), 'terms' => $terms, 'terms_sha256' => hash('sha256', json_encode($terms))]);
         AuditTrail::record(BorrowerLoanState::REQUESTS, $loan->id, 'create', null, [
             'type' => 'payment_plan_accepted', 'loan_id' => $loan->id, 'cycle_id' => $cycle?->id,
             'cycle_number' => $cycle?->cycle_number, 'plan_balance' => $cycle?->new_balance,
