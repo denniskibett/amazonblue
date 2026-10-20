@@ -75,3 +75,23 @@ Run each command separately; check the output before the next.
 
 - **Before step 6:** remove `LENDING_SPLIT_ENABLED`, then run `optimize:clear`.
 - **After step 6:** the journal is append-only. Either restore `pre_phase3_*`, or post reversing rows for the `SPLIT-R%` and `RESTATE-LEGACY-%` references.
+
+## Done on live (21 October 2026, 02:16 Nairobi)
+
+- The owner asked that AC's share be recorded on the house account too, so that all parties add up to what was collected (`f0f00f1`).
+- Steps:
+  - backup `pre_phase3_*`;
+  - `partners:link` applied (SHA `6d00a7dc…`, 388 changes);
+  - `LENDING_SPLIT_ENABLED=true`;
+  - `allocations:restate` applied (SHA `bcae6630…`, identical to the rehearsal on a fresh copy).
+- Results: 492 split rows from 368 repayments. **Interest + penalty collected in cash: KES 3,329,122.52, all of it shared out** (difference 0.00).
+
+  | Party | Interest | Penalty |
+  |---|---|---|
+  | ISIRO AGENCIES (#5) | 76,616.96 | 118,107.92 |
+  | Obiri Victor (#8) | 1,600.00 | 0.00 |
+  | House Account (#6), AC | 2,065,501.03 | 1,067,296.61 |
+
+- The 7 Oct backfill rows stay in the journal, each reversed by one `RESTATE-LEGACY-…` row.
+- Partner wallets equal the journal; the ledger trial balance is 0.0000; all wallets reconcile.
+- From now on, every repayment recorded, edited or reversed is split as it is saved.
