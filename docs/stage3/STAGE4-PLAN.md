@@ -447,7 +447,8 @@ Also: partner funding details are editable on `/system`, super-admin only, with 
 - **Ledger:** kept in bavix, using the existing tables; `loan_ledger` dropped.
 - **Decision 3:** `brokers.interest_broker` is the single source. AC funds the broker's client: the broker gets `interest_broker` (40%). The broker funds AC's client: the broker gets `100 − interest_broker` (60%).
 - **Broker-funded defaults:** AC guarantees the broker's principal only.
-- **Fixed-return partners** (e.g. 3% a month): charged on committed money. Still open: whether it is paid monthly or added to the balance, and whether `investments.interest_rate` holds the monthly rate.
+- **Fixed-return partners** (e.g. 3% a month): **simple** interest on **committed** money, as an AC cost. `investments.interest_rate` holds the rate; for the 3% partners it is per month. Funds are **locked** for the line's term (`duration_days` / `maturity_date`). At maturity or a normal cash-out, the partner is paid principal plus interest on the spot. **Leaving early:** principal plus interest for **completed months only**; the part-month is forfeited.
+- **One standard for partner arrangements** (proposed for Phase 3; `investments.return_type`): `house` (AC's own money); `loan_share` (a broker or partner funds AC's loans: 100 − `interest_broker` of the interest, principal guaranteed by AC); `fixed_rate` (long-term partner, as above). An introducer broker whose clients AC funds earns `interest_broker` through the loan's broker link, with no investment line.
 - **Decision 5:** non-cash words are deprecated; rows store their kind.
 - **Reversals:** soft delete for same-day mistakes only; anything older gets a reversal entry.
 - **M-Pesa (Phase 4):** automatic callbacks and manual entry share one path, and the receipt number is unique.
