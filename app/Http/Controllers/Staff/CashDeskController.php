@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\AuditTrail;
 use App\Services\CustomerWallets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -105,9 +106,13 @@ class CashDeskController extends Controller
         $tellerId = $user->can('view reports') && $request->filled('teller') ? (int) $request->query('teller') : $user->id;
         $teller = User::find($tellerId, ['id', 'name']);
 
-        // disbursements / repayments carry no "entered by"; the audit trail's create row does
-        $created = fn (string $table) => AuditLog::where('table_name', $table)->where('action', 'create')
-            ->where('user_id', $tellerId)->whereDate('created_at', $date)->pluck('record_id');
+        // "entered by" = created_by (Stage 4 Phase 1); rows from before the column was filled fall back to the
+        // audit trail's create row
+        $created = fn (string $table) => DB::table($table)->where('created_by', $tellerId)->whereDate('created_at', $date)->pluck('id')
+            ->merge(AuditLog::where('table_name', $table)->where('action', 'create')->where('user_id', $tellerId)
+                ->whereDate('created_at', $date)->pluck('record_id')
+                ->filter(fn ($id) => DB::table($table)->where('id', $id)->whereNull('created_by')->exists()))
+            ->unique()->values();
 
         $disbIds = $created('disbursements');
         $repIds = $created('repayments');

@@ -112,6 +112,26 @@ class MoneyColumnsTest extends TestCase
         $this->assertSame($teller->id, (int) DB::table('repayments')->value('created_by'));
     }
 
+    public function test_end_of_day_lists_what_each_teller_entered_from_created_by(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $teller = User::factory()->create();
+        $teller->assignRole('teller');
+        $other = User::factory()->create();
+        $loan = $this->loan();
+
+        $this->actingAs($teller);
+        Repayment::create(['loan_id' => $loan->id, 'amount' => 1500, 'repayment_date' => now(), 'transaction' => 'QKMINE01']);
+        $this->actingAs($other);
+        Repayment::create(['loan_id' => $loan->id, 'amount' => 900, 'repayment_date' => now(), 'transaction' => 'QKOTHER2']);
+        // an older row without created_by still shows from its audit create entry
+        $legacy = DB::table('repayments')->insertGetId(['loan_id' => $loan->id, 'amount' => 300, 'repayment_date' => now()->toDateString(), 'transaction' => 'QKLEGACY', 'created_at' => now()]);
+        DB::table('audit_logs')->insert(['table_name' => 'repayments', 'record_id' => $legacy, 'action' => 'create', 'user_id' => $teller->id, 'created_at' => now()]);
+
+        $this->actingAs($teller)->get('/staff/end-of-day')->assertOk()
+            ->assertSee('QKMINE01')->assertSee('QKLEGACY')->assertDontSee('QKOTHER2');
+    }
+
     private function loan(): Loan
     {
         $typeId = DB::table('loan_types')->insertGetId(['name' => 'Emergency 10 Days', 'period' => 10, 'unit' => 'days', 'interest_rate' => 20, 'penalty_rate' => 10]);

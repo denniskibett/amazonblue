@@ -1,4 +1,4 @@
-{{-- Teller · end of day. What one teller entered on one day (from the audit trail), real cash vs book entries.
+{{-- Teller · end of day. What one teller entered on one day (created_by, else the audit trail), real cash vs book entries.
      Read-only and printable; closing the day (cash-up) is Stage 4. --}}
 @extends('layouts.app')
 
@@ -80,7 +80,7 @@
     </x-staff.table></div>
   @endif
 
-  <p class="mb-6 text-theme-xs text-gray-500">“Entered by” comes from the audit log (create rows since the audit trail was switched on). Book entries (rollover, discount, write-off, broker fee …) are recorded but are not money.</p>
+  <p class="mb-6 text-theme-xs text-gray-500">“Entered by” is the person who recorded each row (older rows: the audit log’s create entry). Book entries (rollover, discount, write-off, broker fee …) are recorded but are not money.</p>
 
   <x-staff.placeholder class="print:hidden" dependency="cash-up table" title="Close the day">
     Counting the till, recording the difference and locking the day need a cash-up table and a supervisor sign-off (Stage 4).
