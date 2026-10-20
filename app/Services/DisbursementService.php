@@ -56,6 +56,11 @@ class DisbursementService
             $loan->total_processing_fees = ($loan->total_processing_fees ?? 0) + $processingFee;
             $loan->save();
 
+            // v2 (decision 12): the first real cash sent starts cycle 1, so the due date runs from that day
+            if (LoanCalculator::v2() && CustomerWallets::kindOf($disbursement) === 'cash') {
+                \App\Services\Loans\CycleOne::startOnDisbursement($loan, $disbursement);
+            }
+
             return $disbursement;
         });
     }

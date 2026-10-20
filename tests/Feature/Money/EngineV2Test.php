@@ -289,6 +289,27 @@ class EngineV2Test extends TestCase
         $this->assertSame(4, (int) Loan::findOrFail(529)->days_overdue);
     }
 
+    public function test_cycle_one_starts_when_the_money_is_sent(): void
+    {
+        Carbon::setTestNow('2026-10-01 09:00');
+        $this->loanRow(800, 1, 5000, 5000, '2026-10-01', '2026-10-11', 'approved', 1, 30);
+        $loan = Loan::findOrFail(800);
+        $cycle = $this->calc->createInitialCycle($loan);
+        $this->assertSame('2026-10-11', $cycle->due_date->toDateString());
+        $this->assertSame('10.000', (string) $cycle->fresh()->penalty_rate);
+
+        $service = app(\App\Services\DisbursementService::class);
+        $service->createDisbursement($loan, ['amount' => 5000, 'transaction' => 'QD800', 'disburse_date' => '2026-10-05']);
+        $c1 = LoanCycle::where('loan_id', 800)->where('cycle_number', 1)->firstOrFail();
+        $this->assertSame('2026-10-05', $c1->start_date->toDateString());
+        $this->assertSame('2026-10-15', $c1->due_date->toDateString());      // v1: stays 10-11 (from the application)
+        $this->assertSame('2026-10-15', Carbon::parse(Loan::findOrFail(800)->due_date)->toDateString());
+
+        // a second disbursement moves nothing
+        $service->createDisbursement($loan->fresh(), ['amount' => 100, 'transaction' => 'QD800B', 'disburse_date' => '2026-10-09']);
+        $this->assertSame('2026-10-15', $c1->fresh()->due_date->toDateString());
+    }
+
     private function balance(int $loanId, int $cycleNumber): array
     {
         $loan = Loan::findOrFail($loanId);

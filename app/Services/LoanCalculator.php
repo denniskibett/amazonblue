@@ -34,6 +34,9 @@ class LoanCalculator
         $borrowDate = Carbon::parse($loan->borrow_date);
         $period = (int) $loan->loanType->period;
         $unit = $loan->loanType->unit;
+        if (self::v2()) {
+            return \App\Services\Loans\Period::add($borrowDate, $period, (string) $unit);
+        }
 
         $dueDate = $borrowDate->copy();
         
@@ -652,7 +655,7 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, ?Carbon $cal
             'due_date' => $dueDate,
             'status' => 'active',
             'notes' => 'Initial loan cycle - ' . $loanType->name,
-        ]);
+        ] + (self::v2() ? ['principal' => (float) $loan->amount] + \App\Services\Loans\CycleOne::terms($loan) : []));
 
         // Update the loan
         $loan->cycle = 1;
