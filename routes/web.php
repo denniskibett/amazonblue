@@ -157,6 +157,12 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         ->middlewareFor(['edit', 'update'], 'permission:edit users')
         ->middlewareFor('destroy', 'permission:delete users');
 
+    // add a missing photo / ID / signature for a customer (paste, drop or choose a file on the user page)
+    Route::post('/users/{user}/documents/{document}', [UserController::class, 'storeDocument'])
+        ->whereIn('document', array_keys(\App\Support\PrivateFiles::USER_DOCUMENTS))
+        ->name('users.documents.store')
+        ->middleware('permission:edit users');
+
     Route::get('/users/{user}/loans-data', [UserController::class, 'getUserLoansData'])
         ->name('users.loans-data')
         ->middleware('permission:view users');

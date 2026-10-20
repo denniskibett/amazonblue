@@ -44,6 +44,26 @@ class UserController extends Controller
         return view('users.index', compact('users', 'brokers'));
     }
 
+    /**
+     * Staff add (or replace) one personal document for a user: passport photo, ID front/back or signature.
+     * The image is pasted, dropped or chosen on the user page and saved on the private disk; the old file goes.
+     */
+    public function storeDocument(Request $request, User $user, string $document)
+    {
+        $request->validate(['file' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240']]);
+
+        $column = \App\Support\PrivateFiles::USER_DOCUMENTS[$document];
+        $folder = ['photo' => 'avatars', 'signature' => 'signatures'][$document] ?? 'id_cards';
+        $old = $user->{$column};
+
+        $user->update([$column => \App\Support\PrivateFiles::storeUpload($request->file('file'), $folder, $user)]);
+        if ($old && $old !== $user->{$column}) {
+            \App\Support\PrivateFiles::delete($old);
+        }
+
+        return response()->json(['success' => true, 'url' => $user->documentUrl($document)]);
+    }
+
     public function show(User $user)  
     {
         // Load user relationships with loans ordered by borrow_date descending (newest first)

@@ -97,7 +97,7 @@
                                  src="{{ $avatarUrl }}" 
                                  alt="Profile Picture" 
                                  class="h-full w-full object-cover"
-                                 onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&color=7F9CF5&background=EBF4FF&bold=true'">
+                                 onerror="this.onerror=null; this.src='{{ $user->initialsAvatarUri() }}'">
                         </div>
                         @if(!$isProfileLocked)
                         <button @click="openModal('avatarModal')"
@@ -653,7 +653,7 @@
                              src="{{ $avatarModalUrl }}" 
                              alt="Profile Picture" 
                              class="h-full w-full object-cover"
-                             onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&color=7F9CF5&background=EBF4FF&bold=true'">
+                             onerror="this.onerror=null; this.src='{{ $user->initialsAvatarUri() }}'">
                     </div>
                     
                     <input type="file" name="avatar" id="avatarInput" accept="image/*" @change="previewAvatar" class="hidden">

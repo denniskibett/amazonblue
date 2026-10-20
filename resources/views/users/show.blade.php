@@ -29,15 +29,7 @@
                                 class="h-full w-full object-cover"
                             >
                         @else
-                            @php
-                                $names = explode(' ', trim($user->name));
-                                $initials = strtoupper(
-                                    collect($names)
-                                        ->take(2)
-                                        ->map(fn($n) => substr($n, 0, 1))
-                                        ->implode('')
-                                );
-                            @endphp
+                            @php $initials = $user->getInitials(); @endphp
                     
                             <span class="text-xl font-semibold text-gray-600 dark:text-gray-300">
                                 {{ $initials }}
@@ -460,12 +452,8 @@
                                                 </a>
                                             </div>
                                         @else
-                                            <div class="h-48 w-full rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
-                                                <div class="text-center">
-                                                    <i class="fas fa-camera text-gray-400 dark:text-gray-500 text-3xl mx-auto mb-3"></i>
-                                                    <p class="text-sm text-gray-500 dark:text-gray-400">No Photo</p>
-                                                </div>
-                                            </div>
+                                            <x-staff.doc-drop :user="$user" document="photo" :initials="$user->getInitials()" title="Passport photo missing"
+                                                hint="A clear, recent head-and-shoulders photo of the customer, face visible." />
                                         @endif
                                     </div>
                                     @if($user->avatar)
@@ -511,12 +499,8 @@
                                                 </a>
                                             </div>
                                         @else
-                                            <div class="h-48 w-full rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
-                                                <div class="text-center">
-                                                    <i class="fas fa-id-card text-gray-400 dark:text-gray-500 text-3xl mx-auto mb-3"></i>
-                                                    <p class="text-sm text-gray-500 dark:text-gray-400">No ID Front</p>
-                                                </div>
-                                            </div>
+                                            <x-staff.doc-drop :user="$user" document="id-front" icon="fa-id-card" title="ID front missing"
+                                                hint="Front of the national ID (photo side), or the passport bio page." />
                                         @endif
                                     </div>
                                     @if($user->id_front_path)
@@ -562,12 +546,8 @@
                                                 </a>
                                             </div>
                                         @else
-                                            <div class="h-48 w-full rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
-                                                <div class="text-center">
-                                                    <i class="fas fa-id-card text-gray-400 dark:text-gray-500 text-3xl mx-auto mb-3"></i>
-                                                    <p class="text-sm text-gray-500 dark:text-gray-400">No ID Back</p>
-                                                </div>
-                                            </div>
+                                            <x-staff.doc-drop :user="$user" document="id-back" icon="fa-id-card" title="ID back missing"
+                                                hint="Back of the national ID. Not needed for a passport." />
                                         @endif
                                     </div>
                                     @if($user->id_back_path)
@@ -608,12 +588,8 @@
                                                 </a>
                                             </div>
                                         @else
-                                            <div class="h-48 w-full rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
-                                                <div class="text-center">
-                                                    <i class="fas fa-signature text-gray-400 dark:text-gray-500 text-3xl mx-auto mb-3"></i>
-                                                    <p class="text-sm text-gray-500 dark:text-gray-400">No Signature</p>
-                                                </div>
-                                            </div>
+                                            <x-staff.doc-drop :user="$user" document="signature" icon="fa-signature" title="Signature missing"
+                                                hint="The customer's signature on plain white paper, cropped close." />
                                         @endif
                                     </div>
                                     @if($user->signature)

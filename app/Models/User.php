@@ -545,26 +545,27 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
             return $this->documentUrl('photo');
         }
         
-        // Ultimate fallback - UI Avatars
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&color=7F9CF5&background=EBF4FF&bold=true';
+        // no photo: initials drawn here (no outside service gets the customer's name)
+        return $this->initialsAvatarUri();
     }
 
+    /** First letter of the first two names ("Mary Wanjiru Kamau" → "MW"); "U" when there is no name. */
     public function getInitials($limit = 2)
     {
-        if (!$this->name) {
-            return 'U';
-        }
-        
-        $nameParts = explode(' ', trim($this->name));
-        $initials = '';
-        
-        foreach ($nameParts as $part) {
-            if (!empty($part)) {
-                $initials .= strtoupper(substr($part, 0, 1));
-            }
-        }
-        
-        return substr($initials, 0, $limit) ?: 'U';
+        $initials = collect(preg_split('/\s+/u', trim((string) $this->name)))->filter()->take($limit)
+            ->map(fn ($part) => mb_strtoupper(mb_substr($part, 0, 1)))->implode('');
+
+        return $initials ?: 'U';
+    }
+
+    /** The initials as a round SVG image (data: URI), for any <img> that needs a picture when there is no photo. */
+    public function initialsAvatarUri(): string
+    {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="32" fill="#E8ECF8"/>'
+            . '<text x="32" y="32" dy=".35em" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-size="24" font-weight="600" fill="#1F2A6B">'
+            . e($this->getInitials()) . '</text></svg>';
+
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
     private function getSocialUrl($value, $baseUrl)
