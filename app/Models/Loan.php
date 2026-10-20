@@ -9,10 +9,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Log; 
 use Carbon\Carbon;
+use Bavix\Wallet\Traits\HasWallets;
 
 class Loan extends Model
 {
-    use HasFactory, SoftDeletes;
+    // HasWallets: the loan holds its ledger accounts (gl-receivable; App\Services\Ledger)
+    use HasFactory, SoftDeletes, HasWallets;
 
     // ============ STATUS CONSTANTS ============
     

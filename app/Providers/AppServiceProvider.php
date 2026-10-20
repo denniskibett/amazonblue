@@ -9,7 +9,9 @@ use App\Helpers\SystemHelper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Services\CustomerWallets;
+use App\Services\Ledger;
 use App\Models\Repayment;
+use App\Models\PartnerTransaction;
 use App\Models\Disbursement;
 use App\Models\Loan;
 use App\Services\CreditAssessment;
@@ -62,6 +64,29 @@ class AppServiceProvider extends ServiceProvider
             Repayment::{$event}($sync('syncRepayment'));
         }
         Repayment::restored($sync('syncRepayment'));
+
+        // The ledger (Stage 4 Phase 1, lending.ledger.enabled): the same records post their double entries
+        // in bavix wallets after commit. Off = nothing posted; ledger:backfill catches up when switched on.
+        $post = function (string $method) {
+            return function ($model) use ($method) {
+                if (! Ledger::enabled()) {
+                    return;
+                }
+                DB::afterCommit(function () use ($model, $method) {
+                    try {
+                        app(Ledger::class)->{$method}($model);
+                    } catch (\Throwable $e) {
+                        Log::error("Ledger posting failed for {$method} #{$model->id}", ['error' => $e->getMessage()]);
+                    }
+                });
+            };
+        };
+        foreach (['saved', 'deleted'] as $event) {
+            Disbursement::{$event}($post('syncDisbursement'));
+            Repayment::{$event}($post('syncRepayment'));
+            PartnerTransaction::{$event}($post('syncPartnerTransaction'));
+        }
+        Repayment::restored($post('syncRepayment'));
 
         // Re-score the borrower's 4Cs whenever a loan, repayment or disbursement changes, so their
         // assessments follow the repayment journey. Batched: one re-score per borrower per request.

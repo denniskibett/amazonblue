@@ -301,7 +301,8 @@ class CustomerWallets
         $issues = [];
         $journal = PartnerTransaction::selectRaw('partner_id, wallet_slug, sum(amount) as total')->groupBy('partner_id', 'wallet_slug')->get()
             ->mapWithKeys(fn ($r) => [$r->partner_id . ':' . $r->wallet_slug => round((float) $r->total, 4)]);
-        $wallets = Wallet::where('holder_type', (new Partner)->getMorphClass())->get()
+        // ledger accounts (gl-*) are checked by the ledger's own trial balance, not against the journal
+        $wallets = Wallet::where('holder_type', (new Partner)->getMorphClass())->where('slug', 'not like', 'gl-%')->get()
             ->keyBy(fn ($w) => $w->holder_id . ':' . $w->slug);
 
         $keys = $journal->keys()->merge($wallets->keys())->unique()->sort(SORT_NATURAL)->values();

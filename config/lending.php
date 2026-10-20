@@ -65,6 +65,54 @@ return [
     ],
 
     /*
+    | The ledger (Stage 4 Phase 1): double entry kept in bavix wallets. Every account is a wallet with a
+    | 'gl-' slug and 4 decimal places, held by the loan, the partner or the house partner (AC). Every
+    | movement is one bavix transfer (from = credit, to = debit), so each entry balances by construction
+    | and the sum of all gl- wallets is always 0. App\Services\Ledger posts; nothing reads it for balances
+    | yet. Off = nothing is posted; `ledger:backfill` catches up when it is switched on.
+    |
+    | Balances: a debit-side account (asset, expense) is positive; a credit-side one (liability, equity,
+    | income) is negative. Screens show credit-side balances with the sign flipped.
+    */
+    'ledger' => [
+        'enabled' => (bool) env('LENDING_LEDGER_ENABLED', false),
+
+        'decimal_places' => 4,
+
+        // holder: house = the house partner (AC), loan = each loan, partner = each partner
+        'accounts' => [
+            'gl-cash' => ['holder' => 'house', 'type' => 'asset', 'name' => 'Cash (bank and M-Pesa)'],
+            'gl-receivable' => ['holder' => 'loan', 'type' => 'asset', 'name' => 'Loan receivable'],
+            'gl-capital' => ['holder' => 'partner', 'type' => 'liability', 'name' => 'Partner capital'],
+            'gl-earnings' => ['holder' => 'partner', 'type' => 'liability', 'name' => 'Partner earnings payable'],
+            'gl-fee-income' => ['holder' => 'house', 'type' => 'income', 'name' => 'Fee income'],
+            'gl-partner-share' => ['holder' => 'house', 'type' => 'expense', 'name' => 'Partner and broker shares'],
+            'gl-discounts' => ['holder' => 'house', 'type' => 'expense', 'name' => 'Discounts and waivers'],
+            'gl-bad-debt' => ['holder' => 'house', 'type' => 'expense', 'name' => 'Bad debts written off'],
+        ],
+
+        // partner journal type => [partner account, AC account]. A positive journal amount credits the
+        // partner account (debit the AC one); a negative amount the reverse. Types not listed move money
+        // between a partner's own buckets (lent/available) and are posted from Phase 3.
+        'partner_types' => [
+            'contribution' => ['gl-capital', 'gl-cash'],
+            'withdrawal' => ['by_wallet', 'gl-cash'],
+            'profit_distribution' => ['gl-earnings', 'gl-partner-share'],
+            'broker_fee_earned' => ['gl-earnings', 'gl-partner-share'],
+            'penalty_share' => ['gl-earnings', 'gl-partner-share'],
+            'interest' => ['gl-earnings', 'gl-partner-share'],
+            'bonus' => ['gl-earnings', 'gl-partner-share'],
+        ],
+
+        // partner wallet slug => partner account, for 'by_wallet' (withdrawals)
+        'partner_wallets' => [
+            'principal' => 'gl-capital',
+            'interest' => 'gl-earnings',
+            'broker_fee' => 'gl-earnings',
+        ],
+    ],
+
+    /*
     | audit_logs retention (decision 23, owner default 20 Oct 2026). `php artisan audit:prune` (monthly, dry-run
     | first) deletes only rows past these limits; a table in none of the groups is never pruned.
     |   money:  kept 7 years; rows about a loan are kept until 7 years after the loan closed
