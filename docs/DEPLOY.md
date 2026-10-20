@@ -23,6 +23,18 @@ Up to step 5, a failure stops the script and the live site is untouched. It keep
 
 **Rollback by hand:** `bash /home/loans.sharet.africa/laravel/scripts/deploy-live.sh --rollback`
 
+## The live database is the source of truth
+
+The CyberPanel database on the server (`loans_main`) is the only real data. Every correction is made **there**: a `database/sql/*.sql` twin, an artisan command run on the server, or the app itself. Never fix data on the local copy and never push local data up.
+
+The local database is a throwaway copy. Refresh it from live before any work that needs current figures (dry runs, rehearsals, investigations):
+
+```bash
+scripts/pull-live-db.sh
+```
+
+It backs up the local database, takes one read-only `mysqldump --single-transaction` from the server, and replaces the local database with it. Copies are kept in `storage/app/private/db-pulls/`, which git ignores.
+
 ## Server layout
 
 | Path | What |
