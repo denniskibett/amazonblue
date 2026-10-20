@@ -25,6 +25,9 @@ class PrivateFiles
         'id-back' => 'id_back_path',
         'photo' => 'avatar',
         'signature' => 'signature',
+        'selfie-center' => 'selfie_center_path',
+        'selfie-left' => 'selfie_left_path',
+        'selfie-right' => 'selfie_right_path',
     ];
 
     /**

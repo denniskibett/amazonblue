@@ -49,7 +49,7 @@
     </div>
     @endunless
     <div class="kyc-nav">
-      <a href="{{ route('kyc.contacts') }}">Back</a><button class="btn btn-primary" type="submit">{{ $verified ? 'Save details' : 'Submit for review' }}</button>
+      <a href="{{ route('kyc.documents') }}">Back</a><button class="btn btn-primary" type="submit">{{ $verified ? 'Save details' : 'Submit for review' }}</button>
     </div>
   </form>
 @endsection

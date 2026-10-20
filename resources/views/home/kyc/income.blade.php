@@ -1,4 +1,4 @@
-@extends('home.layouts.kyc', ['step' => 4, 'title' => 'Income & payout'])
+@extends('home.layouts.kyc', ['step' => 3, 'title' => 'Income & payout'])
 
 @php
   $val = fn ($f) => old($f, $saved[$f] ?? null);
@@ -146,7 +146,7 @@
       @endif
     </div>
     <div class="kyc-nav">
-      <a href="{{ route('kyc.documents') }}">Back</a><button class="btn btn-primary" type="submit">Continue</button>
+      <a href="{{ route('kyc.personal') }}">Back</a><button class="btn btn-primary" type="submit">Continue</button>
     </div>
   </form>
 

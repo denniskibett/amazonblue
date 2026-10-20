@@ -430,7 +430,7 @@ class HomeController extends Controller
             ])->save();
         });
 
-        return redirect()->route('kyc.documents');
+        return redirect()->route('kyc.income');
     }
 
     // ============ KYC: DOCUMENTS ============
@@ -453,7 +453,8 @@ class HomeController extends Controller
             if ($user->id_type) {
                 $request->merge(['id_type' => $user->id_type]);
             }
-            foreach (['id_front' => $user->id_front_path, 'passport_bio' => $user->id_front_path, 'id_back' => $user->id_back_path, 'photo' => $user->avatar, 'signature_file' => $user->signature] as $field => $onFile) {
+            foreach (['id_front' => $user->id_front_path, 'passport_bio' => $user->id_front_path, 'id_back' => $user->id_back_path, 'photo' => $user->avatar, 'signature_file' => $user->signature]
+                + array_map(fn ($column) => $user->{$column}, self::SELFIES) as $field => $onFile) {
                 if ($onFile) {
                     $request->files->remove($field);
                 }
@@ -476,11 +477,17 @@ class HomeController extends Controller
             'photo' => [Rule::requiredIf(!$user->avatar), 'nullable', 'image', 'max:10240'],
             'signature_file' => ['nullable', 'image', 'max:10240'],
             'signature_data' => ['nullable', 'string', 'starts_with:data:image/png;base64,'],
+            'selfie_center' => [Rule::requiredIf(!$user->selfie_center_path), 'nullable', 'image', 'max:10240'],
+            'selfie_left' => [Rule::requiredIf(!$user->selfie_left_path), 'nullable', 'image', 'max:10240'],
+            'selfie_right' => [Rule::requiredIf(!$user->selfie_right_path), 'nullable', 'image', 'max:10240'],
         ], [
             'id_front.required' => 'Upload the front of your national ID.',
             'id_back.required' => 'Upload the back of your national ID.',
             'passport_bio.required' => 'Upload your passport bio page.',
             'photo.required' => 'Upload a passport-size photo.',
+            'selfie_center.required' => 'Take a selfie looking straight at the camera.',
+            'selfie_left.required' => 'Take a selfie with your head turned to your left.',
+            'selfie_right.required' => 'Take a selfie with your head turned to your right.',
         ]);
 
         if (!$user->signature && !$request->hasFile('signature_file') && !$request->filled('signature_data')) {
@@ -498,6 +505,11 @@ class HomeController extends Controller
         if ($request->hasFile('photo')) {
             $updates['avatar'] = $this->replaceFile($user->avatar, PrivateFiles::storeUpload($request->file('photo'), 'avatars', $user));
         }
+        foreach (self::SELFIES as $field => $column) {
+            if ($request->hasFile($field)) {
+                $updates[$column] = $this->replaceFile($user->{$column}, PrivateFiles::storeUpload($request->file($field), 'selfies', $user));
+            }
+        }
         $user->update($updates);
 
         if ($request->hasFile('signature_file')) {
@@ -509,7 +521,7 @@ class HomeController extends Controller
             }
         }
 
-        return redirect()->route('kyc.income');
+        return redirect()->route('kyc.review');
     }
 
     // ============ KYC: INCOME & PAYOUT ============
@@ -654,6 +666,9 @@ class HomeController extends Controller
     // guarantors are kept in contacts, marked by this relationship_specific value
     public const GUARANTOR = 'Guarantor';
 
+    // KYC selfies: form field => users column (face straight, turned left, turned right)
+    public const SELFIES = ['selfie_center' => 'selfie_center_path', 'selfie_left' => 'selfie_left_path', 'selfie_right' => 'selfie_right_path'];
+
     public function kycContacts(Request $request): View
     {
         $user = $request->user();
@@ -715,7 +730,7 @@ class HomeController extends Controller
             ])->save();
         });
 
-        return redirect()->route('kyc.review');
+        return redirect()->route('kyc.documents');
     }
 
     // ============ KYC: REVIEW & SUBMIT ============
@@ -789,7 +804,8 @@ class HomeController extends Controller
         $mask = fn ($v, $keep) => strlen($v) > $keep ? str_repeat('•', strlen($v) - $keep) . substr($v, -$keep) : $v;
 
         $personalDone = $user->id_number && $user->dob && $user->kra_pin && $address;
-        $docsDone = $user->id_front_path && ($passport || $user->id_back_path) && $user->avatar && $user->signature;
+        $selfiesDone = collect(self::SELFIES)->every(fn ($column) => filled($user->{$column}));
+        $docsDone = $user->id_front_path && ($passport || $user->id_back_path) && $user->avatar && $user->signature && $selfiesDone;
         $income = $this->incomeSaved($user);
         $incomeDone = $income['income_type'] && $mpesa && $income['net_salary'] !== null
             && collect(self::INCOME_FIELDS[$income['income_type']]['required'])->every(fn ($f) => filled($income[$f]));
@@ -806,16 +822,6 @@ class HomeController extends Controller
                     : 'Your name, ID, KRA PIN and address',
             ],
             [
-                'title' => 'Identity documents',
-                'href' => route('kyc.documents'),
-                'complete' => (bool) $docsDone,
-                'summary' => implode(' · ', [
-                    $user->id_front_path ? ($passport ? 'Passport bio page' : 'National ID front & back') : 'ID missing',
-                    $user->avatar ? 'photo' : 'photo missing',
-                    $user->signature ? 'signature' : 'signature missing',
-                ]),
-            ],
-            [
                 'title' => 'Income & payout',
                 'href' => route('kyc.income'),
                 'complete' => (bool) $incomeDone,
@@ -830,6 +836,17 @@ class HomeController extends Controller
                 'summary' => $contactsDone
                     ? implode(' · ', [$user->kin_name . ' (' . $user->kin_relation . ')', 'Guarantor ' . $guarantor->name])
                     : 'Who we call to confirm your details',
+            ],
+            [
+                'title' => 'Identity documents',
+                'href' => route('kyc.documents'),
+                'complete' => (bool) $docsDone,
+                'summary' => implode(' · ', [
+                    $user->id_front_path ? ($passport ? 'Passport bio page' : 'National ID front & back') : 'ID missing',
+                    $user->avatar ? 'photo' : 'photo missing',
+                    $selfiesDone ? '3 selfies' : 'selfies missing',
+                    $user->signature ? 'signature' : 'signature missing',
+                ]),
             ],
         ];
     }

@@ -1,10 +1,10 @@
 @php
-  // $title: page name. $step: 2 personal, 3 documents, 4 income, 5 contacts, 6 review, 7 submitted (all done)
+  // $title: page name. $step: 2 personal, 3 income, 4 contacts, 5 documents (last, camera work), 6 review, 7 submitted (all done)
   $steps = [
     2 => ['Personal', route('kyc.personal')],
-    3 => ['Documents', route('kyc.documents')],
-    4 => ['Income', route('kyc.income')],
-    5 => ['Contacts', route('kyc.contacts')],
+    3 => ['Income', route('kyc.income')],
+    4 => ['Contacts', route('kyc.contacts')],
+    5 => ['Documents', route('kyc.documents')],
     6 => ['Review', route('kyc.review')],
   ];
   $last = array_key_last($steps);

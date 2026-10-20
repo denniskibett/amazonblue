@@ -53,7 +53,7 @@ class UserController extends Controller
         $request->validate(['file' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240']]);
 
         $column = \App\Support\PrivateFiles::USER_DOCUMENTS[$document];
-        $folder = ['photo' => 'avatars', 'signature' => 'signatures'][$document] ?? 'id_cards';
+        $folder = str_starts_with($document, 'selfie-') ? 'selfies' : (['photo' => 'avatars', 'signature' => 'signatures'][$document] ?? 'id_cards');
         $old = $user->{$column};
 
         $user->update([$column => \App\Support\PrivateFiles::storeUpload($request->file('file'), $folder, $user)]);

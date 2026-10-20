@@ -2,7 +2,8 @@
 
 @php
     // documents are private: served through files.user (owner or staff only)
-    $doc = fn ($path) => $path ? $user->documentUrl(array_search($path, ['id-front' => $user->id_front_path, 'id-back' => $user->id_back_path, 'photo' => $user->avatar, 'signature' => $user->signature], true)) : null;
+    $doc = fn ($path) => $path ? $user->documentUrl(array_search($path, ['id-front' => $user->id_front_path, 'id-back' => $user->id_back_path, 'photo' => $user->avatar, 'signature' => $user->signature,
+        'selfie-center' => $user->selfie_center_path, 'selfie-left' => $user->selfie_left_path, 'selfie-right' => $user->selfie_right_path], true)) : null;
     $isPdf = fn ($path) => $path && str_ends_with(strtolower($path), '.pdf');
     $card = 'rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]';
     $label = 'text-xs text-gray-500 dark:text-gray-400';
@@ -17,6 +18,9 @@
         'National ID: back' => $user->id_type === 'passport' ? null : $user->id_back_path,
         'Passport photo' => $user->avatar,
         'Signature' => $user->signature,
+        'Selfie: straight' => $user->selfie_center_path,
+        'Selfie: turned left' => $user->selfie_left_path,
+        'Selfie: turned right' => $user->selfie_right_path,
     ];
 @endphp
 

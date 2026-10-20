@@ -1,4 +1,4 @@
-@extends('home.layouts.kyc', ['step' => 5, 'title' => 'Contacts'])
+@extends('home.layouts.kyc', ['step' => 4, 'title' => 'Contacts'])
 
 @section('content')
   <div class="kyc-head">

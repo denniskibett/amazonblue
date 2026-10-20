@@ -602,7 +602,28 @@
                                     @endif
                                 </div>
                             </div>
-                        </div>
+
+                            <!-- Selfies (KYC: straight, left, right) -->
+                            <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+                                @foreach (['selfie-center' => ['selfie_center_path', 'Selfie: straight', 'Customer looking straight at the camera, face fully visible.'],
+                                           'selfie-left' => ['selfie_left_path', 'Selfie: turned left', 'Customer with the head turned to their left (side of the face).'],
+                                           'selfie-right' => ['selfie_right_path', 'Selfie: turned right', 'Customer with the head turned to their right (other side).']] as $docKey => [$column, $docTitle, $docHint])
+                                    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+                                        <div class="mb-4 flex items-center justify-between">
+                                            <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ $docTitle }}</h4>
+                                            <span class="rounded-full px-2 py-1 text-xs font-medium {{ $user->{$column} ? 'bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-500' : 'bg-gray-100 text-gray-600 dark:bg-gray-500/15 dark:text-gray-400' }}">{{ $user->{$column} ? 'Uploaded' : 'Missing' }}</span>
+                                        </div>
+                                        @if ($user->{$column})
+                                            <a href="{{ $user->documentUrl($docKey) }}" target="_blank" class="block">
+                                                <img src="{{ $user->documentUrl($docKey) }}" alt="{{ $docTitle }}" class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700">
+                                            </a>
+                                        @else
+                                            <x-staff.doc-drop :user="$user" :document="$docKey" icon="fa-user" :title="$docTitle . ' missing'" :hint="$docHint" />
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+</div>
 
                         <!-- Employment Tab Content -->
                         @if($user->hasRole('borrower'))
