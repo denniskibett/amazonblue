@@ -104,3 +104,30 @@ Always start in a fresh shell in the live folder. The deploy moves the old folde
 - **Ledger:** with the engine back on v1, `php artisan ledger:backfill` reverses every cycle charge it posted. Cash postings stay.
 - **Code:** `deploy-live.sh --rollback`. The new columns are nullable, and the old code ignores them.
 - Keep v1 selectable for 30 days after the switch (plan §2). Then delete `Loan::calculatePenalties` and the v1 branches.
+
+## Done on live (21 October 2026, Nairobi time)
+
+- **00:43:** loan_cycles columns added (backup `pre_phase2_columns_*`). Deployed `ff1c987` (engine still v1).
+- **00:47:** disbursement #629 date corrected to 2026-10-12 (`database/sql/2026_10_21_fix_disbursement_629_date.sql`, audited).
+- **00:54:** app on Nairobi time (`APP_TIMEZONE=Africa/Nairobi`). Deployed `fcefaf9`.
+- **01:04:** disbursement #301: the owner set disburse_date to 2025-12-26 in CyberPanel; the payment date was set to match by `2026_10_21_fix_disbursement_301_date.sql`.
+- **01:33:** after the nightly jobs:
+  - backup `pre_phase2_apply_*`;
+  - dry run SHA `9a96d7da…`;
+  - `LENDING_ENGINE=v2`;
+  - `loans:restate --apply`. No `--reopen`: the owner kept all 57 repaid-but-owing loans repaid.
+  - Results: trial balance 0.0000, all wallets reconcile, the status job changes nothing.
+- **01:37:**
+  - `loans.merged_into_loan_id` added;
+  - deployed `0b219fa` (real-cash dashboard cards, the chain merge tool);
+  - `loans:merge-chains --dry-run`: 80 chains, 219 continuations, 16 not linked, SHA `0c558f44…`, identical to the rehearsal on a fresh copy.
+
+## Next: merging legacy ROLL OVER chains (owner, 21 Oct 2026)
+
+`loans:merge-chains --apply --confirm=<sha>`, after the owner signs `merge-chains-<date>.csv`. Rehearsal on a fresh copy of live:
+- 514 loan rows become **295 loans**;
+- trial balance 0.0000; all wallets reconcile;
+- repaid-but-owing drops from 57 to **44**;
+- loans whose ledger receivable differs from what they owe drop from 351 to **98**.
+
+Re-run `loans:restate --dry-run` and `--apply` after the merge, so the merged loans get their statuses from their new cycles.
