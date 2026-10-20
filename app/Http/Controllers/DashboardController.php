@@ -84,21 +84,20 @@ class DashboardController extends Controller
     private function getAdminData($user, $currentMonthStart)
     {
         return [
-            // Loan Metrics
-            'totalLoans' => Loan::count(),
-            'loansThisMonth' => Loan::where('created_at', '>=', $currentMonthStart)->count(),
-            'completedLoans' => Loan::where('status', Loan::STATUS_REPAID)->count(),
-            'completedThisMonth' => Loan::where('status', Loan::STATUS_REPAID)
+            // Loan Metrics: only loans that were actually sent money (a rollover, discount or write-off row is
+            // not a loan of its own), each counted once
+            'totalLoans' => $this->cashLoans()->count(),
+            'loansThisMonth' => $this->cashLoans($currentMonthStart)->count(),
+            'completedLoans' => $this->cashLoans()->where('status', Loan::STATUS_REPAID)->count(),
+            'completedThisMonth' => $this->cashLoans()->where('status', Loan::STATUS_REPAID)
                                         ->where('updated_at', '>=', $currentMonthStart)
                                         ->count(),
 
-            // Financial Metrics
-            'totalDisbursements' => Disbursement::sum('amount') ?? 0,
-            'disbursementsThisMonth' => Disbursement::where('disburse_date', '>=', $currentMonthStart)
-                                                ->sum('amount') ?? 0,
-            'totalRepayments' => Repayment::sum('amount') ?? 0,
-            'repaymentsThisMonth' => Repayment::where('created_at', '>=', $currentMonthStart)
-                                            ->sum('amount') ?? 0,
+            // Financial Metrics: real cash only (owner, 21 Oct 2026)
+            'totalDisbursements' => $this->cashDisbursed(),
+            'disbursementsThisMonth' => $this->cashDisbursed(fn ($q) => $q->where('disburse_date', '>=', $currentMonthStart)),
+            'totalRepayments' => $this->cashRepaid(),
+            'repaymentsThisMonth' => $this->cashRepaid(fn ($q) => $q->where('repayment_date', '>=', $currentMonthStart)),
 
             // Real cash only (no rollovers, discounts or write-offs): money that actually moved
             'cashDisbursed' => $this->cashDisbursed(),
@@ -174,13 +173,11 @@ class DashboardController extends Controller
     private function getTellerData($user, $currentMonthStart)
     {
         return [
-            'todaysDisbursements' => Disbursement::whereDate('disburse_date', today())
-                                            ->sum('amount') ?? 0,
-            'monthDisbursements' => Disbursement::where('disburse_date', '>=', $currentMonthStart)
-                                            ->sum('amount') ?? 0,
-            'collectedRepayments' => Repayment::sum('amount') ?? 0,
-            'monthRepayments' => Repayment::where('created_at', '>=', $currentMonthStart)
-                                    ->sum('amount') ?? 0,
+            // real cash only (owner, 21 Oct 2026)
+            'todaysDisbursements' => $this->cashDisbursed(fn ($q) => $q->whereDate('disburse_date', today())),
+            'monthDisbursements' => $this->cashDisbursed(fn ($q) => $q->where('disburse_date', '>=', $currentMonthStart)),
+            'collectedRepayments' => $this->cashRepaid(),
+            'monthRepayments' => $this->cashRepaid(fn ($q) => $q->where('repayment_date', '>=', $currentMonthStart)),
 
             // real cash only
             'cashDisbursedToday' => $this->cashDisbursed(fn ($q) => $q->whereDate('disburse_date', today())),
@@ -188,6 +185,19 @@ class DashboardController extends Controller
             'cashRepaid' => $this->cashRepaid(),
             'cashRepaidThisMonth' => $this->cashRepaid(fn ($q) => $q->where('created_at', '>=', $currentMonthStart)),
         ];
+    }
+
+    /**
+     * Loans that were sent real cash, each once; with $since, loans whose first cash went out on or after it.
+     */
+    private function cashLoans(?Carbon $since = null)
+    {
+        $first = CustomerWallets::whereCash(Disbursement::query()->whereNull('deleted_at'))
+            ->selectRaw('loan_id, MIN(disburse_date) as first_sent')->groupBy('loan_id');
+
+        return Loan::query()->joinSub($first, 'cash', 'cash.loan_id', '=', 'loans.id')
+            ->when($since, fn ($q) => $q->where('cash.first_sent', '>=', $since->toDateString()))
+            ->select('loans.*');
     }
 
     /**
