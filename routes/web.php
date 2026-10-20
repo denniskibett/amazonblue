@@ -478,6 +478,15 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('disbursements.disburse')->middleware('permission:create disbursements');
         Route::get('repayments/receive', [\App\Http\Controllers\Staff\CashDeskController::class, 'receive'])
             ->name('repayments.receive')->middleware('permission:create repayments|delete repayments');
+        // M-Pesa payments queue (Stage 4 Phase 4)
+        Route::get('payments', [\App\Http\Controllers\Staff\PaymentsController::class, 'index'])
+            ->name('payments')->middleware('permission:create repayments');
+        Route::post('payments/{transaction}/assign', [\App\Http\Controllers\Staff\PaymentsController::class, 'assign'])
+            ->name('payments.assign')->middleware('permission:create repayments');
+        Route::post('payments/claims/{claim}', [\App\Http\Controllers\Staff\PaymentsController::class, 'decideClaim'])
+            ->name('payments.claim')->middleware('permission:create repayments');
+        Route::post('payments/reconcile', [\App\Http\Controllers\Staff\PaymentsController::class, 'reconcile'])
+            ->name('payments.reconcile')->middleware('permission:create repayments|view reports');
         Route::post('repayments/{repayment}/reverse', [\App\Http\Controllers\Staff\CashDeskController::class, 'reverse'])
             ->name('repayments.reverse')->middleware('permission:delete repayments');
         Route::get('end-of-day', [\App\Http\Controllers\Staff\CashDeskController::class, 'endOfDay'])
