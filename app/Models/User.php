@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -79,6 +80,34 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
         'password',
         'remember_token',
     ];
+
+    // ID document types as stored; older rows and forms used labels ("National ID", "Passport")
+    public const ID_TYPES = [
+        'national_id' => 'National ID',
+        'passport' => 'Passport',
+        'drivers_license' => "Driver's licence",
+        'alien_id' => 'Alien ID',
+        'military_id' => 'Military ID',
+    ];
+
+    /** "National ID" / "national id" / "ID" → national_id, "Passport" → passport, …; unknown values pass through. */
+    public static function normaliseIdType(?string $value): ?string
+    {
+        if (blank($value)) {
+            return null;
+        }
+        $key = trim(preg_replace('/[^a-z]+/', '_', strtolower($value)), '_');
+
+        return ['id' => 'national_id', 'national' => 'national_id', 'driving_license' => 'drivers_license',
+            'driver_s_license' => 'drivers_license', 'driver_s_licence' => 'drivers_license', 'driving_licence' => 'drivers_license'][$key]
+            ?? (array_key_exists($key, self::ID_TYPES) ? $key : $value);
+    }
+
+    /** Reads and writes id_type in the standard form, so "National ID" on old rows matches the KYC form's national_id. */
+    protected function idType(): Attribute
+    {
+        return Attribute::make(get: fn ($value) => self::normaliseIdType($value), set: fn ($value) => self::normaliseIdType($value));
+    }
 
     protected function casts(): array
     {

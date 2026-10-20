@@ -78,6 +78,26 @@ class KycSelfiesTest extends TestCase
         $this->assertStringStartsWith('selfies/', $customer->fresh()->selfie_left_path);
     }
 
+    public function test_an_id_front_on_file_under_the_old_label_is_not_asked_for_again(): void
+    {
+        $user = $this->borrower();
+        \Illuminate\Support\Facades\DB::table('users')->where('id', $user->id)->update([
+            'id_type' => 'National ID', 'id_front_path' => 'id_cards/old-front.jpg', 'id_back_path' => 'id_cards/old-back.jpg',
+            'avatar' => 'avatars/old.jpg', 'signature' => 'signatures/old.png',
+        ]);
+        $user->refresh();
+        $this->assertSame('national_id', $user->id_type);
+
+        $this->actingAs($user)->post('/kyc/documents', [
+            'id_type' => 'national_id',
+            'selfie_center' => UploadedFile::fake()->image('c.jpg', 720, 960),
+            'selfie_left' => UploadedFile::fake()->image('l.jpg', 720, 960),
+            'selfie_right' => UploadedFile::fake()->image('r.jpg', 720, 960),
+        ])->assertSessionHasNoErrors()->assertRedirect(route('kyc.review'));
+        $this->assertSame('id_cards/old-front.jpg', $user->fresh()->id_front_path);
+        $this->assertSame('national_id', \Illuminate\Support\Facades\DB::table('users')->where('id', $user->id)->value('id_type'));
+    }
+
     private function borrower(): User
     {
         $user = User::factory()->create(['kyc_status' => null]);

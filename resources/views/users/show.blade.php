@@ -1067,11 +1067,9 @@
                                 </label>
                                 <select name="id_type" class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
                                     <option value="">Select ID Type</option>
-                                    <option value="National ID" {{ old('id_type', $user->id_type) == 'National ID' ? 'selected' : '' }}>National ID</option>
-                                    <option value="Passport" {{ old('id_type', $user->id_type) == 'Passport' ? 'selected' : '' }}>Passport</option>
-                                    <option value="Driving License" {{ old('id_type', $user->id_type) == 'Driving License' ? 'selected' : '' }}>Driving License</option>
-                                    <option value="Alien ID" {{ old('id_type', $user->id_type) == 'Alien ID' ? 'selected' : '' }}>Alien ID</option>
-                                    <option value="Military ID" {{ old('id_type', $user->id_type) == 'Military ID' ? 'selected' : '' }}>Military ID</option>
+                                    @foreach (\App\Models\User::ID_TYPES as $idValue => $idLabel)
+                                        <option value="{{ $idValue }}" @selected(\App\Models\User::normaliseIdType(old('id_type', $user->id_type)) === $idValue)>{{ $idLabel }}</option>
+                                    @endforeach
                                 </select>
                             </div>
 
