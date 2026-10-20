@@ -167,8 +167,9 @@ class CycleBalance
     public static function paymentsFor(LoanCycle $cycle): array
     {
         return Repayment::where('loan_cycle_id', $cycle->id)->orderBy('repayment_date')->orderBy('id')
-            ->get(['repayment_date', 'amount'])
-            ->map(fn ($r) => ['date' => Carbon::parse($r->repayment_date)->toDateString(), 'amount' => (float) $r->amount])
+            ->get(['repayment_date', 'amount', 'kind', 'transaction'])
+            ->map(fn ($r) => ['date' => Carbon::parse($r->repayment_date)->toDateString(), 'amount' => (float) $r->amount,
+                'kind' => \App\Services\CustomerWallets::kindOf($r)])
             ->all();
     }
 
@@ -187,6 +188,10 @@ class CycleBalance
         // payment is later reversed must start charging again)
         $closedOn = $next ? ($cycle->closed_on?->toDateString() ?? Carbon::parse($next->start_date)->toDateString()) : null;
         $payments = self::paymentsFor($cycle);
+        if ($next) {
+            // on a carried cycle a ROLL OVER row is the carry itself (merged legacy chains), not money paid
+            $payments = array_values(array_filter($payments, fn ($p) => ($p['kind'] ?? 'cash') !== 'rollover'));
+        }
         $terms = self::termsFor($cycle);
         $day = $asOf;
         if ($closedOn !== null) {
