@@ -78,6 +78,11 @@ class Requests
             DB::table('borrower_requests')->where('id', $id)->update(['status' => $approve ? 'approved' : 'declined',
                 'decision_note' => $note, 'decided_by' => $by->id, 'decided_at' => now(), 'updated_at' => now()]);
             AuditTrail::record('borrower_requests', $id, 'update', ['status' => 'open'], ['status' => $approve ? 'approved' : 'declined', 'note' => $note]);
+            if ($r->loan_id && ($loan = Loan::find($r->loan_id))) {
+                $text = $approve ? 'We agreed your ' . $r->type . ' request on loan ' . $loan->id . '. Your account shows the new terms.'
+                    : 'We couldn\'t agree your ' . $r->type . ' request on loan ' . $loan->id . '. ' . ($note ?: 'Talk to us about other options.');
+                DB::afterCommit(fn () => app(CustomerEvents::class)->loan('request_decided', $loan, ['approved' => $approve, 'text' => $text]));
+            }
         });
     }
 
@@ -93,6 +98,10 @@ class Requests
                 'Funds received (request #' . $r->id . ')') : null;
             DB::table('partner_requests')->where('id', $id)->update(['status' => $received ? 'done' : 'declined', 'prepared_by' => $by->id,
                 'partner_transaction_id' => $journal?->id, 'decision_note' => $note, 'updated_at' => now()]);
+            if ($received) {
+                $user = User::find(Partner::whereKey($r->partner_id)->value('user_id'));
+                DB::afterCommit(fn () => app(CustomerEvents::class)->partner('funds_confirmed', $user, (float) $r->amount));
+            }
         });
     }
 

@@ -132,6 +132,25 @@ return [
         'enabled' => (bool) env('LENDING_REQUESTS_ENABLED', false),
     ],
 
+    /*
+    | Customer notifications (Stage 4 Phase 6): stored in the notification centre, emailed, and sent by SMS for
+    | approved, money sent, payment received, due in 3 days, due today, overdue (day 1 and 7), not approved,
+    | request decided, partner funds confirmed and withdrawal paid. Service messages only (no marketing).
+    | Sent through the queue; reminders go out at 09:00 Nairobi. Off = nothing is sent (Stage 2 emails stay).
+    */
+    'notifications' => [
+        'enabled' => (bool) env('NOTIFICATIONS_ENABLED', false),
+        'sms' => [
+            // log (writes to the log only) | africastalking
+            'driver' => env('SMS_DRIVER', 'log'),
+            'africastalking' => [
+                'username' => env('AT_USERNAME', 'sandbox'),
+                'api_key' => env('AT_API_KEY'),
+                'sender_id' => env('AT_SENDER_ID'),
+            ],
+        ],
+    ],
+
     'rollover' => [
         // cycles 2..N keep the previous cycle's rate; from cycle N+1 staff must set a rate or use a payment plan (owner)
         'same_rate_cycles' => 4,

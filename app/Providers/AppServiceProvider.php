@@ -115,6 +115,34 @@ class AppServiceProvider extends ServiceProvider
             Repayment::{$event}(fn ($r) => $charges([$r->loan_cycle_id, $r->getOriginal('loan_cycle_id')]));
         }
 
+        // Phase 6 (lending.notifications.enabled): customer messages, sent after the save commits
+        $events = app(\App\Services\CustomerEvents::class);
+        Loan::updated(function ($loan) use ($events) {
+            if (\App\Services\CustomerEvents::enabled() && $loan->wasChanged('status') && in_array($loan->status, ['approved', 'rejected'], true)) {
+                DB::afterCommit(fn () => $events->loan($loan->status, $loan));
+            }
+        });
+        Disbursement::created(function ($d) use ($events) {
+            if (\App\Services\CustomerEvents::enabled() && \App\Services\CustomerWallets::kindOf($d) === 'cash') {
+                DB::afterCommit(function () use ($d, $events) {
+                    $loan = Loan::find($d->loan_id);
+                    $due = \App\Models\LoanCycle::where('loan_id', $d->loan_id)->orderByDesc('cycle_number')->value('due_date');
+                    $loan && $events->loan('money_sent', $loan, ['amount' => (float) ($d->net_amount ?: $d->amount),
+                        'due' => $due ? \Illuminate\Support\Carbon::parse($due)->format('j M Y') : 'the due date']);
+                });
+            }
+        });
+        Repayment::created(function ($r) use ($events) {
+            if (\App\Services\CustomerEvents::enabled() && \App\Services\CustomerWallets::kindOf($r) === 'cash' && (float) $r->amount > 0 && ! $r->reversal_of_id) {
+                DB::afterCommit(function () use ($r, $events) {
+                    $loan = Loan::find($r->loan_id);
+                    $cycle = \App\Models\LoanCycle::where('loan_id', $r->loan_id)->orderByDesc('cycle_number')->first();
+                    $owed = $cycle && \App\Services\LoanCalculator::v2() ? \App\Services\Loans\CycleBalance::at($cycle)['final_outstanding'] : 0;
+                    $loan && $events->loan('payment_received', $loan, ['amount' => (float) $r->amount, 'ref' => (string) $r->transaction, 'owed' => $owed]);
+                });
+            }
+        });
+
         // Phase 3 (lending.split.enabled, engine v2): split every repayment of the cycle between broker, funder
         // and AC after commit (one payment's split depends on the ones before it)
         foreach (['saved', 'deleted', 'restored'] as $event) {

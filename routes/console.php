@@ -56,6 +56,19 @@ Schedule::command('approvals:digest')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/approvals-digest.log'));
 
+// customer reminders (Stage 4 Phase 6): due in 3 days, due today, late day 1 and 7
+Schedule::command('notifications:reminders')
+    ->dailyAt('09:00')
+    ->timezone('Africa/Nairobi')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/reminders.log'));
+
+// the queue (notifications, SMS): CyberPanel has no supervisor, so the scheduler drains it every minute
+Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->when(fn () => config('queue.default') === 'database');
+
 // audit_logs retention (decision 23, config lending.retention); deletes only rows past their limit
 Schedule::command('audit:prune')
     ->monthlyOn(1, '03:00')

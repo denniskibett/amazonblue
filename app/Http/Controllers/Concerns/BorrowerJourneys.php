@@ -221,6 +221,17 @@ trait BorrowerJourneys
                 : ['date' => $e['date'], 'title' => 'Payment recorded', 'detail' => $ref($e['loan_id']) . ' · KES ' . number_format($e['paid'], 2) . ($e['ref'] ? ' · ' . $e['ref'] : ''), 'tone' => 'ok', 'href' => route('account.loan', $e['loan_id'])]);
         }
 
+        // Stage 4 Phase 6: the messages actually sent (reminders, payment received...) are shown too, and marked read
+        if (\App\Services\CustomerEvents::enabled()) {
+            foreach ($user->notifications()->latest()->take(30)->get() as $n) {
+                $updates->push(['date' => $n->created_at, 'title' => $n->data['title'] ?? 'Update', 'detail' => $n->data['body'] ?? '',
+                    'tone' => in_array($n->data['event'] ?? '', ['overdue', 'rejected'], true) ? 'err' : 'info', 'href' => $n->data['url'] ?? null]);
+            }
+            $user->unreadNotifications()->update(['read_at' => now()]);
+            // the stored message replaces the same event rebuilt from records
+            $updates = $updates->unique(fn ($u) => $u['title'] . '|' . Carbon::parse($u['date'])->toDateString());
+        }
+
         return view('home.account.notifications', [
             'user' => $user,
             'updates' => $updates->sortByDesc(fn ($u) => Carbon::parse($u['date'])->timestamp)->take(20)->values(),

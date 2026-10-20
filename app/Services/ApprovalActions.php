@@ -50,6 +50,8 @@ class ApprovalActions
         $journal = $partner->withdrawPartnerBalance((float) $r->amount, 'PAYOUT-PR' . $r->id, 'Payout (request #' . $r->id . ')', $r->wallet_slug ?: 'principal');
         DB::table('partner_requests')->where('id', $r->id)->update(['status' => 'done', 'approved_by' => $checker->id,
             'partner_transaction_id' => $journal->id, 'updated_at' => now()]);
+        $user = User::find($partner->user_id);
+        DB::afterCommit(fn () => app(CustomerEvents::class)->partner('withdrawal_paid', $user, (float) $r->amount));
 
         return $journal;
     }
