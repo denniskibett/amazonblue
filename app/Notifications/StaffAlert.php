@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\Emails;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -21,10 +22,6 @@ class StaffAlert extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject($this->subject)
-            ->line($this->line)
-            ->action($this->actionText, $this->actionUrl)
-            ->salutation('Aimzone Ventures system');
+        return Emails::mail(Emails::staffAlert($this->subject, $this->line, $this->actionText, $this->actionUrl));
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\Emails;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -21,19 +22,11 @@ class BusinessReviewed extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $mail = (new MailMessage)->greeting('Hi ' . strtok((string) $notifiable->name, ' ') . ',')->salutation('Aimzone Ventures');
-
         if ($this->approved) {
-            return $mail->subject($this->name . ' is verified')
-                ->line('Good news: ' . $this->name . ' is verified and linked to your account.')
-                ->line('Business loans and trade finance will appear in your account as soon as they open.')
-                ->action('View my business', route('account.business.show', $this->businessId));
+            return Emails::mail(Emails::kybApproved($this->name, route('account.business.show', $this->businessId)));
         }
 
-        return $mail->subject($this->name . ': your details need a quick update')
-            ->line('We could not verify ' . $this->name . ' yet. Here is what our team asked for:')
-            ->line('"' . $this->note . '"')
-            ->line('Update the details in your account and send them again; we will review them straight away.')
-            ->action('Update my business', route('account.business.review', $this->businessId));
+        return Emails::mail(Emails::kycActionNeeded(Emails::firstName($notifiable->name), (string) $this->note,
+            route('account.business.review', $this->businessId), 'the details of ' . $this->name));
     }
 }

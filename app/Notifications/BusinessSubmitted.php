@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\Emails;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -21,12 +22,6 @@ class BusinessSubmitted extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('We have your business details (' . $this->reference . ')')
-            ->greeting('Hi ' . strtok((string) $notifiable->name, ' ') . ',')
-            ->line('Thanks for sending the details of ' . $this->name . '. Our team will check the documents and may call you to confirm, usually within two working days.')
-            ->line('Your reference is ' . $this->reference . '. We will email you as soon as it is done.')
-            ->action('View my business', route('account.business.show', $this->businessId))
-            ->salutation('Aimzone Ventures');
+        return Emails::mail(Emails::kybSubmitted($this->name, $this->reference, route('account.business.show', $this->businessId)));
     }
 }

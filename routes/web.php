@@ -451,6 +451,13 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::put('/partner-funding', [SystemController::class, 'updatePartnerFunding'])
             ->name('partner-funding.update')->middleware('role:super-admin');
         Route::post('/clear-cache', [SystemController::class, 'clearCache'])->name('clear-cache');
+        // every branded email with sample values (App\Support\Emails::samples)
+        Route::get('/emails', fn () => view('emails.preview', ['samples' => \App\Support\Emails::samples()]))->name('emails');
+        Route::get('/emails/{n}', function (int $n) {
+            $m = array_values(\App\Support\Emails::samples())[$n] ?? abort(404);
+
+            return view('emails.branded', ['m' => $m]);
+        })->whereNumber('n')->name('emails.show');
         Route::get('/backup', [SystemController::class, 'backupDatabase'])->name('backup');
         Route::post('/toggle-maintenance', [SystemController::class, 'toggleMaintenance'])->name('toggle-maintenance');
         // system.debug removed (no method); the unused admin/system/index.blade.php was deleted in Stage 4 Phase 0.

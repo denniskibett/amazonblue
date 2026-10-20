@@ -31,6 +31,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Laravel's own account emails in the branded design (App\Support\Emails)
+        \Illuminate\Auth\Notifications\VerifyEmail::toMailUsing(fn ($user, string $url) => \App\Support\Emails::mail(
+            \App\Support\Emails::verifyEmail(\App\Support\Emails::firstName($user->name), $url)));
+        \Illuminate\Auth\Notifications\ResetPassword::toMailUsing(fn ($user, string $token) => \App\Support\Emails::mail(
+            \App\Support\Emails::passwordReset(
+                url(route('password.reset', ['token' => $token, 'email' => $user->getEmailForPasswordReset()], false)),
+                (int) config('auth.passwords.' . config('auth.defaults.passwords') . '.expire', 60))));
+
         System::updated(function ($system) {
             SystemHelper::clearCache();
         });

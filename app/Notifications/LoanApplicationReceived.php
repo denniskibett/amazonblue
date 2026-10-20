@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Loan;
+use App\Support\Emails;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -24,12 +25,7 @@ class LoanApplicationReceived extends Notification
     {
         $number = str_pad((string) $this->loan->id, 5, '0', STR_PAD_LEFT);
 
-        return (new MailMessage)
-            ->subject('Application received: loan #' . $number)
-            ->greeting('Hi ' . strtok((string) $notifiable->name, ' ') . ',')
-            ->line('We have your application for KES ' . number_format((float) $this->loan->amount, 2) . ' (loan #' . $number . ').')
-            ->line('Our team will review it shortly. Once approved, the money is sent to your M-Pesa and we will let you know.')
-            ->action('View my loan', route('account.loan', $this->loan))
-            ->salutation('Aimzone Ventures');
+        return Emails::mail(Emails::applicationReceived(Emails::firstName($notifiable->name),
+            'KES ' . number_format((float) $this->loan->amount, 2), 'Loan #' . $number, route('account.loan', $this->loan)));
     }
 }

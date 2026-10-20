@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\Emails;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -21,18 +22,8 @@ class KycReviewed extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $mail = (new MailMessage)->greeting('Hi ' . strtok((string) $notifiable->name, ' ') . ',')->salutation('Aimzone Ventures');
+        $first = Emails::firstName($notifiable->name);
 
-        if ($this->approved) {
-            return $mail->subject('You are verified')
-                ->line('Good news: your details are verified. You can now apply for a loan from your account.')
-                ->action('Borrow now', route('account.borrow'));
-        }
-
-        return $mail->subject('Your details need a quick update')
-            ->line('We could not verify your details yet. Here is what our team asked for:')
-            ->line('"' . $this->note . '"')
-            ->line('Update them in your account and send them again; we will review them straight away.')
-            ->action('Update my details', route('kyc.review'));
+        return Emails::mail($this->approved ? Emails::kycApproved($first) : Emails::kycActionNeeded($first, (string) $this->note));
     }
 }

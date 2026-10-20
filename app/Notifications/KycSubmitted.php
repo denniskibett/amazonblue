@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\Emails;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -21,12 +22,6 @@ class KycSubmitted extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('We have your details (' . $this->reference . ')')
-            ->greeting('Hi ' . strtok((string) $notifiable->name, ' ') . ',')
-            ->line('Thanks for sending your verification details. Our team will check them and call your next of kin and guarantor, usually within one working day.')
-            ->line('Your reference is ' . $this->reference . '. We will email you as soon as it is done.')
-            ->action('View my account', route('account.home'))
-            ->salutation('Aimzone Ventures');
+        return Emails::mail(Emails::kycSubmitted(Emails::firstName($notifiable->name), $this->reference, now()->format('j M Y')));
     }
 }
