@@ -19,7 +19,8 @@ Book entries (rollover, discount, write-off) earn nobody anything. A reversed or
 ## On live today (house money only)
 
 - One funding line exists: General Lending Book (house). No partner line has been funded yet, so `loan_share` and `fixed_rate` are built and tested but have no live data.
-- Brokers: **ISIRO AGENCIES** (#5, 23 loans) and **Obiri Victor** (#8, 1 loan). Obiri has no `brokers` row, so he gets the default 50% penalty share.
+- Brokers: **ISIRO AGENCIES** (#5, 23 loans) and **Obiri Victor** (#8, 1 loan). Obiri has no `brokers` row; the owner confirmed his 50% penalty share (21 Oct 2026).
+- A non-broker partner funding a `loan_share` line earns `partners.profit_share_rate` % of the interest (owner confirmed, 21 Oct 2026).
 
 ## The two sign-offs
 
