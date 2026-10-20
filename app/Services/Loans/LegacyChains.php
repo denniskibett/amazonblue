@@ -124,6 +124,21 @@ class LegacyChains
             }
             DB::table('assets')->where('collateral_for_loan_id', $c->id)->update(['collateral_for_loan_id' => $root->id]);
 
+            // move the ledger postings to the root's receivable now: once the continuation is hidden, bavix can't
+            // load its wallet's holder to reverse anything posted there
+            if (\App\Services\Ledger::enabled()) {
+                $ledger = app(\App\Services\Ledger::class);
+                foreach (\App\Models\Disbursement::where('loan_id', $root->id)->get() as $d) {
+                    $ledger->syncDisbursement($d);
+                }
+                foreach (\App\Models\Repayment::withTrashed()->where('loan_id', $root->id)->get() as $r) {
+                    $ledger->syncRepayment($r);
+                }
+                foreach (LoanCycle::where('loan_id', $root->id)->get() as $cy) {
+                    $ledger->syncLoanCycle($cy);
+                }
+            }
+
             $c->forceFill(['merged_into_loan_id' => $root->id])->saveQuietly();
             $c->deleteQuietly();
             $last = $c;

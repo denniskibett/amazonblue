@@ -76,6 +76,23 @@ class LegacyChainsTest extends TestCase
         $this->assertEqualsWithDelta(6000, (float) $loan->amount, 0.01);
     }
 
+    public function test_with_the_ledger_on_the_postings_follow_the_rows_to_the_first_loan(): void
+    {
+        config(['lending.ledger.enabled' => true]);
+        \App\Models\Partner::create(['name' => 'House Account', 'email' => 'house@example.test', 'type' => 'company', 'account_type' => 'principal', 'is_house_account' => true]);
+        $this->artisan('ledger:backfill')->assertSuccessful();
+        $ledger = app(\App\Services\Ledger::class);
+
+        $this->artisan('loans:merge-chains --dry-run')->assertSuccessful();
+        $sha = hash('sha256', Storage::disk('local')->get('reports/merge-chains-2026-10-21.csv'));
+        $this->artisan('loans:merge-chains --apply --confirm=' . $sha)->assertSuccessful();
+
+        $this->assertEqualsWithDelta(0, $ledger->balance($ledger->account(Loan::findOrFail(1001), 'gl-receivable')), 0.01, 'owes nothing');
+        $this->assertEqualsWithDelta(0, $ledger->balance($ledger->account(Loan::withTrashed()->findOrFail(1002), 'gl-receivable')), 0.01, 'nothing left on the hidden loan');
+        $this->assertSame(0.0, $ledger->trialBalance()['total']);
+        $this->assertSame([], $ledger->checkReceivables()['issues']);
+    }
+
     public function test_a_continuation_with_no_closed_loan_nearby_is_left_alone_and_listed(): void
     {
         DB::table('repayments')->where('id', 4001)->update(['repayment_date' => '2025-12-01']);
