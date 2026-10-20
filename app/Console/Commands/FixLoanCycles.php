@@ -25,6 +25,12 @@ class FixLoanCycles extends Command
 
     public function handle()
     {
+        if (\App\Services\LoanCalculator::v2()) {
+            $this->error('Not with engine v2: this command sets loans.amount to principal + interest. Cycles are kept by the v2 engine (loans:restate).');
+
+            return 1;
+        }
+
         $dryRun = (bool) $this->option('dry-run');
         if ($dryRun) {
             $this->warn('DRY RUN: all work runs inside a transaction that is rolled back - nothing is saved.');

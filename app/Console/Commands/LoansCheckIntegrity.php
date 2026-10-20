@@ -65,6 +65,25 @@ class LoansCheckIntegrity extends Command
         return self::SUCCESS;
     }
 
+    /** v2: repaid loans whose latest cycle still owes by the v2 rule (penalty included, payments in order). */
+    private function repaidWithBalanceV2(): array
+    {
+        $out = [];
+        foreach (DB::table('loans')->where('status', 'repaid')->whereNull('deleted_at')->orderBy('id')->pluck('id') as $id) {
+            $cycle = \App\Models\LoanCycle::where('loan_id', $id)->orderByDesc('cycle_number')->first();
+            if (! $cycle) {
+                continue;
+            }
+            $b = \App\Services\Loans\CycleBalance::at($cycle);
+            if ($b['final_outstanding'] > 0.01) {
+                $out[] = ['loan_id' => $id, 'cycle' => $cycle->cycle_number, 'cycle_balance' => $b['full_balance'],
+                    'paid_on_cycle' => $b['total_repayments'], 'still_owed' => $b['final_outstanding']];
+            }
+        }
+
+        return $out;
+    }
+
     /** @return array<string, list<array<string, mixed>>> */
     public function findings(): array
     {
@@ -74,7 +93,7 @@ class LoansCheckIntegrity extends Command
             ->whereRaw('c.cycle_number = (SELECT MAX(c2.cycle_number) FROM loan_cycles c2 WHERE c2.loan_id = c.loan_id)');
 
         return [
-            'repaid_with_balance' => $rows(DB::table('loans as l')
+            'repaid_with_balance' => \App\Services\LoanCalculator::v2() ? $this->repaidWithBalanceV2() : $rows(DB::table('loans as l')
                 ->joinSub($lastCycle->select('c.id', 'c.loan_id', 'c.cycle_number', 'c.new_balance'), 'lc', 'lc.loan_id', '=', 'l.id')
                 ->leftJoin('repayments as r', fn ($j) => $j->on('r.loan_cycle_id', '=', 'lc.id')->whereNull('r.deleted_at'))
                 ->where('l.status', 'repaid')->whereNull('l.deleted_at')
