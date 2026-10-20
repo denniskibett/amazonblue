@@ -453,6 +453,12 @@ Also: partner funding details are editable on `/system`, super-admin only, with 
 - **Reversals:** soft delete for same-day mistakes only; anything older gets a reversal entry.
 - **M-Pesa (Phase 4):** automatic callbacks and manual entry share one path, and the receipt number is unique.
 
+**Decided 20 October 2026 (Phase 2, partly):**
+
+- **Decision 2:** principal comes from `loan_cycles`. The original principal is cycle 1's principal; the current principal is the latest cycle's. `loans.amount` is not a source of truth.
+- **Decision 11:** a rollover keeps the previous cycle's rate for the first 4 cycles. After that, staff move the loan to forbearance or set a new rate.
+- **Decision 1:** the owner says 10% a day is **not** intended. The intended rate and cap are still to be confirmed.
+
 Each decision has a recommended default. If the owner accepts the default, the phase proceeds on it.
 
 | # | Decision | Blocks | Recommended default |
