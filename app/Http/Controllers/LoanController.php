@@ -504,6 +504,17 @@ class LoanController extends Controller
             }
         }
 
+        // maker-checker (Stage 4 Phase 5): approving above the approver's limit waits for a second approver
+        $pendingApproval = null;
+        if (($validated['status'] ?? null) === Loan::STATUS_APPROVED && $loan->status === Loan::STATUS_PENDING) {
+            $approvals = app(\App\Services\Approvals::class);
+            $amount = (float) ($validated['amount'] ?? $loan->amount);
+            if ($approvals->needsSecond($request->user(), 'approve_loan', $amount)) {
+                $pendingApproval = $approvals->request($request->user(), 'approve_loan', 'loans', $loan->id, $amount);
+                $validated['status'] = $loan->status;
+            }
+        }
+
         $termsChanged = collect(['amount', 'loan_type_id', 'borrow_date'])
             ->contains(fn ($field) => array_key_exists($field, $validated) && $this->loanFieldChanged($loan, $field, $validated[$field]));
 
@@ -520,16 +531,20 @@ class LoanController extends Controller
         }
 
         // If AJAX request, return JSON
+        $message = $pendingApproval
+            ? 'Saved. KES ' . number_format((float) $pendingApproval->amount, 2) . ' is above your approval limit, so a second approver must approve it.'
+            : 'Loan updated successfully.';
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Loan updated successfully.',
+                'message' => $message,
+                'pending_approval' => (bool) $pendingApproval,
                 'loan' => $loan->fresh(['user', 'loanType', 'guarantor', 'loanOfficer'])
             ]);
         }
 
         return redirect()->route('loans.edit', $loan->id)
-                        ->with('success', 'Loan updated successfully.');
+                        ->with('success', $message);
     }
 
     /**

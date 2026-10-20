@@ -121,6 +121,17 @@ return [
         'default_broker_penalty_rate' => 50,
     ],
 
+    // Maker-checker (Stage 4 Phase 5, decision 14): approvals above approval_limits, write-offs, reversals and
+    // partner payouts need a second person with the same permission. Off = one person, as before.
+    'approvals' => [
+        'enabled' => (bool) env('LENDING_APPROVALS_ENABLED', false),
+    ],
+
+    // Borrower and partner requests stored with a status (Stage 4 Phase 5). Off = email + audit row, as in Stage 2.
+    'requests' => [
+        'enabled' => (bool) env('LENDING_REQUESTS_ENABLED', false),
+    ],
+
     'rollover' => [
         // cycles 2..N keep the previous cycle's rate; from cycle N+1 staff must set a rate or use a payment plan (owner)
         'same_rate_cycles' => 4,

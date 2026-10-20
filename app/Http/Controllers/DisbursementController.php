@@ -135,6 +135,16 @@ class DisbursementController extends Controller
 
         // ============ LOAN DISBURSEMENT ============
         $loan = Loan::find($validated['loan_id']);
+
+        // maker-checker (G8, decision 14): the person who approved the loan doesn't also send the money
+        if (\App\Services\Approvals::enabled()) {
+            $approver = \App\Models\AuditLog::where('table_name', 'loans')->where('record_id', $loan->id)->where('action', 'update')
+                ->where('new_values->status', 'approved')->latest('id')->value('user_id');
+            if ($approver && (int) $approver === (int) $request->user()->id) {
+                return response()->json(['message' => 'You approved this loan, so someone else must send the money.',
+                    'errors' => ['loan_id' => ['You approved this loan, so someone else must send the money.']]], 422);
+            }
+        }
         $cycle = $loan->getCurrentCycle();
 
         // no draw beyond what partners committed to the investment (house lines are not capped)

@@ -31,7 +31,8 @@ class DisbursementService
 
             // Get current active cycle or create one
             if (!$cycle) {
-                $cycle = $loan->getCurrentCycle() ?? $this->createInitialCycle($loan);
+                // LoanCalculator::createInitialCycle (this class's old copy called a method that doesn't exist)
+                $cycle = $loan->getCurrentCycle() ?? $this->loanCalculator->createInitialCycle($loan);
             }
 
             // Create disbursement
@@ -65,21 +66,4 @@ class DisbursementService
         });
     }
 
-    protected function createInitialCycle(Loan $loan): LoanCycle
-    {
-        $effectiveDueDate = $this->loanCalculator->getEffectiveDueDate($loan);
-        
-        return LoanCycle::create([
-            'loan_id' => $loan->id,
-            'cycle_number' => 1,
-            'previous_balance' => 0,
-            'interest_capitalized' => 0,
-            'new_balance' => $loan->amount,
-            'interest_rate' => $loan->loanType->interest_rate ?? 0,
-            'start_date' => $loan->borrow_date,
-            'due_date' => $effectiveDueDate,
-            'status' => 'active',
-            'notes' => 'Initial cycle',
-        ]);
-    }
 }

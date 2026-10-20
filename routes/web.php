@@ -478,6 +478,12 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('disbursements.disburse')->middleware('permission:create disbursements');
         Route::get('repayments/receive', [\App\Http\Controllers\Staff\CashDeskController::class, 'receive'])
             ->name('repayments.receive')->middleware('permission:create repayments|delete repayments');
+        // second sign-offs (Stage 4 Phase 5); each decision checks the action's own permission
+        Route::get('sign-offs', [\App\Http\Controllers\Staff\SignOffsController::class, 'index'])
+            ->name('sign-offs')->middleware('permission:approve loans|delete repayments|write off loan|edit partners');
+        Route::post('sign-offs/{approval}', [\App\Http\Controllers\Staff\SignOffsController::class, 'decide'])
+            ->name('sign-offs.decide')->middleware('permission:approve loans|delete repayments|write off loan|edit partners');
+
         // M-Pesa payments queue (Stage 4 Phase 4)
         Route::get('payments', [\App\Http\Controllers\Staff\PaymentsController::class, 'index'])
             ->name('payments')->middleware('permission:create repayments');

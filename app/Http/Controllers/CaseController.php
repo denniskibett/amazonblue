@@ -807,56 +807,20 @@ public function show(string $id)
         }
 
         try {
-            $writtenOffStatus = RecoveryStatus::where('slug', 'written_off')->first();
-            if (!$writtenOffStatus) {
-                throw new \Exception('Written off status not found.');
+            // maker-checker (Stage 4 Phase 5): a write-off needs a second person when approvals are on
+            $approvals = app(\App\Services\Approvals::class);
+            if ($approvals->needsSecond(Auth::user(), 'write_off', (float) $case->total_debt_amount)) {
+                $approvals->request(Auth::user(), 'write_off', 'debt_recovery_cases', $case->id, (float) $case->total_debt_amount,
+                    ['reason' => $request->write_off_reason]);
+                $msg = 'Write-off sent for a second approval. Nothing changes until someone else approves it.';
+
+                return ($request->ajax() || $request->wantsJson())
+                    ? response()->json(['success' => true, 'pending_approval' => true, 'message' => $msg])
+                    : redirect()->route('cases.show', $case)->with('success', $msg);
             }
 
-            // A write-off is not a payment: no Repayment is created. The outstanding debt stays on the
-            // case as the written-off amount and the loan is marked written_off (not repaid).
-            DB::transaction(function () use ($case, $request, $writtenOffStatus) {
-                $amount = (float) $case->total_debt_amount;
-                $reason = $request->write_off_reason;
-                $oldLoanStatus = $case->loan->status ?? null;
-                $oldCaseStatus = $case->status_id;
-                $summary = 'WRITTEN OFF ' . number_format($amount, 2) . ' on ' . now()->toDateString()
-                    . ' by ' . Auth::user()->name . '. Reason: ' . $reason;
-
-                $case->update([
-                    'status_id' => $writtenOffStatus->id,
-                    'notes' => ($case->notes ? $case->notes . "\n\n" : '') . $summary,
-                    'updated_by' => Auth::id(),
-                ]);
-
-                if ($case->loan) {
-                    $case->loan->update(['status' => Loan::STATUS_WRITTEN_OFF]);
-                }
-
-                RecoveryCaseNote::create([
-                    'case_id' => $case->id,
-                    'note_type' => 'alert',
-                    'note' => $summary,
-                    'created_by' => Auth::id(),
-                ]);
-
-                $otherType = ActionType::where('slug', 'other')->value('id');
-                if ($otherType) {
-                    RecoveryAction::create([
-                        'case_id' => $case->id,
-                        'action_type_id' => $otherType,
-                        'action_date' => now(),
-                        'performed_by' => Auth::id(),
-                        'outcome' => 'failed',
-                        'amount_collected' => 0,
-                        'notes' => $summary,
-                    ]);
-                }
-
-                AuditTrail::record('debt_recovery_cases', $case->id, 'update',
-                    ['status_id' => $oldCaseStatus, 'loan_status' => $oldLoanStatus],
-                    ['event' => 'write_off', 'status_id' => $writtenOffStatus->id, 'loan_id' => $case->loan_id,
-                     'loan_status' => Loan::STATUS_WRITTEN_OFF, 'written_off_amount' => $amount, 'reason' => $reason]);
-            });
+            // A write-off is not a payment: the case and loan become written_off (Loans\WriteOff)
+            app(\App\Services\Loans\WriteOff::class)->perform($case, (string) $request->write_off_reason, Auth::user());
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([

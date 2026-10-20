@@ -192,14 +192,16 @@ class RepaymentController extends Controller
         $user = auth()->user();
         $loan = $repayment->loan;
         
-        if ($user->hasRole('broker') && $loan->broker_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
+        // with maker-checker on, the permission plus a second person replaces the admin-role check (Stage 4 Phase 5)
+        if (! \App\Services\Approvals::enabled()) {
+            if ($user->hasRole('broker') && $loan->broker_id !== $user->id) {
+                abort(403, 'Unauthorized action.');
+            }
+            if (!$user->hasAnyRole(['admin', 'broker'])) {
+                abort(403, 'Unauthorized action.');
+            }
         }
-        
-        if (!$user->hasAnyRole(['admin', 'broker'])) {
-            abort(403, 'Unauthorized action.');
-        }
-        
+
         if ($repayment->reversal()->exists()) {
             return response()->json(['message' => 'Repayment #' . $repayment->id . ' has already been reversed.'], 422);
         }
@@ -213,7 +215,15 @@ class RepaymentController extends Controller
         // Entered before today: post a reversal and keep the original (switch lending.ledger.reversals).
         // Entered today, or with the switch off: delete it as before.
         if (config('lending.ledger.reversals') && $repayment->reversal_of_id === null && ! $repayment->created_at?->isToday()) {
-            $reversal = $this->reverseRepayment($repayment, (string) (request('reason') ?: 'Reversed by ' . $user->name));
+            $reason = (string) (request('reason') ?: 'Reversed by ' . $user->name);
+            $approvals = app(\App\Services\Approvals::class);
+            if ($approvals->needsSecond($user, 'reversal', (float) $repayment->amount)) {
+                $approvals->request($user, 'reversal', 'repayments', $repayment->id, (float) $repayment->amount, ['reason' => $reason]);
+
+                return response()->json(['message' => 'Reversal sent for a second approval. Nothing changes until someone else approves it.',
+                    'pending_approval' => true, 'reversal_id' => null], 202);
+            }
+            $reversal = app(\App\Services\Loans\Reversal::class)->reverse($repayment, $reason);
         } else {
             $repayment->delete();
         }
@@ -262,25 +272,4 @@ class RepaymentController extends Controller
         ], 200);
     }
 
-    /**
-     * A reversal: a new repayment for minus the amount, dated like the original (so every balance reads as
-     * if it were never paid, exactly as a delete did) and pointing at it. The original is kept.
-     */
-    private function reverseRepayment(Repayment $original, string $reason): Repayment
-    {
-        return Repayment::create([
-            'loan_id' => $original->loan_id,
-            'loan_cycle_id' => $original->loan_cycle_id,
-            'amount' => -1 * (float) $original->amount,
-            'processing_fee' => -1 * (float) $original->processing_fee,
-            'net_amount' => $original->net_amount === null ? null : -1 * (float) $original->getRawOriginal('net_amount'),
-            'transaction' => mb_substr('REVERSAL #' . $original->id . ' ' . $original->transaction, 0, 255),
-            'kind' => CustomerWallets::kindOf($original),
-            'mode' => $original->mode,
-            'repayment_date' => $original->repayment_date,
-            'investment_id' => $original->investment_id,
-            'reversal_of_id' => $original->id,
-            'notes' => $reason,
-        ]);
-    }
 }
