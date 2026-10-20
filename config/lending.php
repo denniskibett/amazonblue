@@ -65,6 +65,26 @@ return [
     ],
 
     /*
+    | The loan engine (Stage 4 Phase 2). v1 = the calculator as it was (LoanCalculator::calculateCycleBalance),
+    | kept for 30 days after switching. v2 = App\Services\Loans\CycleBalance: penalty runs daily on the unpaid
+    | balance only until it is paid, each payment clears penalty, then interest, then principal; rollover
+    | preview and booking use the same function; status follows the cycle balance; loans follow their cycles.
+    | Switch only after the owner signs the loans:restate dry-run CSV.
+    */
+    'engine' => env('LENDING_ENGINE', 'v1'),
+
+    'penalty' => [
+        // in_duplum: penalty charged on a cycle stops once it equals the principal still unpaid on the due date
+        // (owner 20 Oct 2026: on until the lawyer says otherwise). none: no cap.
+        'cap' => env('LENDING_PENALTY_CAP', 'in_duplum'),
+    ],
+
+    'rollover' => [
+        // cycles 2..N keep the previous cycle's rate; from cycle N+1 staff must set a rate or use a payment plan (owner)
+        'same_rate_cycles' => 4,
+    ],
+
+    /*
     | The ledger (Stage 4 Phase 1): double entry kept in bavix wallets. Every account is a wallet with a
     | 'gl-' slug and 4 decimal places, held by the loan, the partner or the house partner (AC). Every
     | movement is one bavix transfer (from = credit, to = debit), so each entry balances by construction
