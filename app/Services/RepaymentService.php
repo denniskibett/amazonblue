@@ -40,6 +40,7 @@ class RepaymentService
                 'processing_fee' => $processingFee,
                 'net_amount' => $netAmount,
                 'transaction' => $data['transaction'] ?? 'REPAYMENT',
+                'kind' => $data['kind'] ?? null,
                 'repayment_date' => $data['repayment_date'] ?? now(),
                 'mode' => $data['mode'] ?? 'bank_transfer',
                 'partner_transaction_id' => $data['partner_transaction_id'] ?? null,

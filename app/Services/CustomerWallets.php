@@ -41,13 +41,30 @@ class CustomerWallets
         'non_cash' => ['TO BE PAID', 'BROKER FEE', 'SPLIT'],
     ];
 
+    // what a money row can be (repayments.kind, disbursements.kind); anything else is read as unset
+    public const KINDS = ['cash', 'rollover', 'discount', 'bad_debt', 'non_cash'];
+
     // what was actually sent for a disbursement (net of fees when recorded)
     public const DISBURSED_CASH_SQL = 'COALESCE(NULLIF(net_amount, 0), amount)';
 
     // ---------------------------------------------------------------- cash rules
 
     /**
-     * cash | rollover | discount | bad_debt, from the transaction reference staff record.
+     * cash | rollover | discount | bad_debt | non_cash for a repayment or disbursement (model or DB row):
+     * the stored kind column, or kind() of its reference while the column is still empty.
+     */
+    public static function kindOf($row): string
+    {
+        $stored = data_get($row, 'kind');
+
+        return in_array($stored, self::KINDS, true) ? $stored : self::kind(data_get($row, 'transaction'));
+    }
+
+    /**
+     * cash | rollover | discount | bad_debt | non_cash, guessed from the transaction reference staff record.
+     *
+     * @deprecated Stage 4 Phase 1: rows store their kind; this is the fallback for rows not yet backfilled
+     *             and the default for a new row whose form sends no kind. Use kindOf() to read a row.
      */
     public static function kind(?string $reference): string
     {
@@ -64,15 +81,20 @@ class CustomerWallets
     }
 
     /**
-     * Limit a query to real cash: the SQL twin of kind() === 'cash'.
+     * Limit a query to real cash: the SQL twin of kindOf() === 'cash' (stored kind, else the reference text).
      */
-    public static function whereCash($query, string $column = 'transaction')
+    public static function whereCash($query, string $column = 'transaction', string $kindColumn = 'kind')
     {
-        return $query->where(function ($q) use ($column) {
-            $q->whereNull($column)->orWhere(function ($q) use ($column) {
-                foreach (array_merge(...array_values(self::NON_CASH)) as $marker) {
-                    $q->whereRaw('UPPER(' . $q->getGrammar()->wrap($column) . ') NOT LIKE ?', ['%' . $marker . '%']);
-                }
+        return $query->where(function ($q) use ($column, $kindColumn) {
+            $q->where($kindColumn, 'cash')->orWhere(function ($q) use ($column, $kindColumn) {
+                $q->where(fn ($q) => $q->whereNull($kindColumn)->orWhereNotIn($kindColumn, self::KINDS))
+                    ->where(function ($q) use ($column) {
+                        $q->whereNull($column)->orWhere(function ($q) use ($column) {
+                            foreach (array_merge(...array_values(self::NON_CASH)) as $marker) {
+                                $q->whereRaw('UPPER(' . $q->getGrammar()->wrap($column) . ') NOT LIKE ?', ['%' . $marker . '%']);
+                            }
+                        });
+                    });
             });
         });
     }
@@ -111,7 +133,7 @@ class CustomerWallets
 
     public function syncDisbursement(Disbursement $disbursement): void
     {
-        $cash = self::kind($disbursement->transaction) === 'cash' && ! self::isGone($disbursement);
+        $cash = self::kindOf($disbursement) === 'cash' && ! self::isGone($disbursement);
         $amount = (float) ($disbursement->net_amount ?: $disbursement->amount);
         $this->syncSource('disbursement', $disbursement->id, $disbursement->loan_id, $cash ? -$amount : 0.0, [
             'reference' => $disbursement->transaction,
@@ -121,7 +143,7 @@ class CustomerWallets
 
     public function syncRepayment(Repayment $repayment): void
     {
-        $cash = self::kind($repayment->transaction) === 'cash' && ! self::isGone($repayment);
+        $cash = self::kindOf($repayment) === 'cash' && ! self::isGone($repayment);
         $this->syncSource('repayment', $repayment->id, $repayment->loan_id, $cash ? (float) $repayment->amount : 0.0, [
             'reference' => $repayment->transaction,
             'date' => optional($repayment->repayment_date)->toDateString() ?? (string) $repayment->repayment_date,
@@ -195,13 +217,13 @@ class CustomerWallets
 
         foreach (Disbursement::whereIn('loan_id', $loanIds)->orderBy('id')->get() as $d) {
             $amount = (float) ($d->net_amount ?: $d->amount);
-            $posted = $this->syncSource('disbursement', $d->id, $d->loan_id, (self::kind($d->transaction) === 'cash' && ! self::isGone($d)) ? -$amount : 0.0,
+            $posted = $this->syncSource('disbursement', $d->id, $d->loan_id, (self::kindOf($d) === 'cash' && ! self::isGone($d)) ? -$amount : 0.0,
                 ['reference' => $d->transaction, 'date' => (string) $d->disburse_date]);
             $postings += $posted !== 0 ? 1 : 0;
             $minor += $posted;
         }
         foreach (Repayment::withTrashed()->whereIn('loan_id', $loanIds)->orderBy('id')->get() as $r) {
-            $posted = $this->syncSource('repayment', $r->id, $r->loan_id, (self::kind($r->transaction) === 'cash' && ! self::isGone($r)) ? (float) $r->amount : 0.0,
+            $posted = $this->syncSource('repayment', $r->id, $r->loan_id, (self::kindOf($r) === 'cash' && ! self::isGone($r)) ? (float) $r->amount : 0.0,
                 ['reference' => $r->transaction, 'date' => (string) $r->repayment_date]);
             $postings += $posted !== 0 ? 1 : 0;
             $minor += $posted;
@@ -246,11 +268,11 @@ class CustomerWallets
         $cashBy = fn ($rows) => $rows->groupBy('user_id')->map(fn ($g) => $g->sum('amount'));
 
         $disbursed = DB::table('disbursements as d')->join('loans as l', 'l.id', '=', 'd.loan_id')->whereNull('d.deleted_at')
-            ->get(['l.user_id', 'd.transaction', DB::raw('coalesce(nullif(d.net_amount, 0), d.amount) as amount')])
-            ->filter(fn ($r) => self::kind($r->transaction) === 'cash');
+            ->get(['l.user_id', 'd.transaction', 'd.kind', DB::raw('coalesce(nullif(d.net_amount, 0), d.amount) as amount')])
+            ->filter(fn ($r) => self::kindOf($r) === 'cash');
         $repaid = DB::table('repayments as r')->join('loans as l', 'l.id', '=', 'r.loan_id')->whereNull('r.deleted_at')
-            ->get(['l.user_id', 'r.transaction', 'r.amount'])
-            ->filter(fn ($r) => self::kind($r->transaction) === 'cash');
+            ->get(['l.user_id', 'r.transaction', 'r.kind', 'r.amount'])
+            ->filter(fn ($r) => self::kindOf($r) === 'cash');
         $out = $cashBy($disbursed);
         $in = $cashBy($repaid);
 

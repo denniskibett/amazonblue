@@ -58,7 +58,7 @@
       <section class="a-card">
         <div class="a-sec-h"><h2>Repayments</h2><span class="muted" style="font-size:13px">{{ $progress['repayments']->count() }}</span></div>
         @forelse ($progress['repayments'] as $payment)
-          @php $kind = \App\Services\CustomerWallets::kind($payment->transaction); @endphp
+          @php $kind = \App\Services\CustomerWallets::kindOf($payment); @endphp
           <div class="a-row">
             <span class="t"><b><x-az.money :amount="$payment->amount" /></b><span>{{ ['cash' => 'Payment', 'rollover' => 'Rolled over', 'discount' => 'Discount', 'bad_debt' => 'Written off', 'non_cash' => 'Book entry'][$kind] ?? 'Payment' }}</span></span>
             <span class="amt"><small>{{ $date($payment->repayment_date) }}</small></span>

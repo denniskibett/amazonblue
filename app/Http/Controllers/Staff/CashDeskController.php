@@ -122,7 +122,7 @@ class CashDeskController extends Controller
             'received_cash' => $repCash,
         ];
         $byMode = $repayments->whereNull('deleted_at')
-            ->filter(fn ($r) => CustomerWallets::kind($r->transaction) === 'cash')
+            ->filter(fn ($r) => CustomerWallets::kindOf($r) === 'cash')
             ->groupBy(fn ($r) => strtolower($r->mode ?: 'unspecified'))->map->sum('amount');
 
         $tellers = $user->can('view reports')

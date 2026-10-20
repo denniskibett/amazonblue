@@ -260,15 +260,15 @@ class HomeController extends Controller
         $loanIds = Loan::where('user_id', $user->id)->pluck('id');
 
         $sent = DB::table('disbursements')->whereIn('loan_id', $loanIds)->whereNull('deleted_at')
-            ->get(['loan_id', 'amount', 'net_amount', 'disburse_date as date', 'transaction'])
-            ->map(fn ($d) => ['kind' => 'sent', 'label' => 'Sent to your M-Pesa', 'amount' => (float) ($d->net_amount ?: $d->amount), 'date' => $d->date, 'loan_id' => $d->loan_id, 'ref' => $d->transaction]);
+            ->get(['loan_id', 'amount', 'net_amount', 'disburse_date as date', 'transaction', 'kind'])
+            ->map(fn ($d) => ['kind' => 'sent', 'label' => 'Sent to your M-Pesa', 'amount' => (float) ($d->net_amount ?: $d->amount), 'date' => $d->date, 'loan_id' => $d->loan_id, 'ref' => $d->transaction, 'money' => \App\Services\CustomerWallets::kindOf($d)]);
         $paid = DB::table('repayments')->whereIn('loan_id', $loanIds)->whereNull('deleted_at')
-            ->get(['loan_id', 'amount', 'repayment_date as date', 'transaction'])
-            ->map(fn ($r) => ['kind' => 'paid', 'label' => 'Payment received', 'amount' => (float) $r->amount, 'date' => $r->date, 'loan_id' => $r->loan_id, 'ref' => $r->transaction]);
+            ->get(['loan_id', 'amount', 'repayment_date as date', 'transaction', 'kind'])
+            ->map(fn ($r) => ['kind' => 'paid', 'label' => 'Payment received', 'amount' => (float) $r->amount, 'date' => $r->date, 'loan_id' => $r->loan_id, 'ref' => $r->transaction, 'money' => \App\Services\CustomerWallets::kindOf($r)]);
 
         // real cash only, like the wallet: rollovers, waivers and write-offs aren't money moving
         return $sent->concat($paid)
-            ->filter(fn ($item) => \App\Services\CustomerWallets::kind($item['ref']) === 'cash')
+            ->filter(fn ($item) => $item['money'] === 'cash')
             ->sortByDesc('date')->take(5)->values();
     }
 

@@ -5,6 +5,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Services\CustomerWallets;
 
 class Disbursement extends Model
 {
@@ -23,7 +24,9 @@ class Disbursement extends Model
         'partner_transaction_id',
         'funding_source',
         'investment_id',
-        'notes'
+        'notes',
+        'kind',          // cash | rollover | discount | bad_debt | non_cash (CustomerWallets::KINDS)
+        'created_by',
     ];
 
     protected $casts = [
@@ -34,7 +37,26 @@ class Disbursement extends Model
         'net_amount' => 'decimal:2'
     ];
 
+    protected static function booted(): void
+    {
+        // kind is stored (Stage 4 Phase 1). A form that sends no kind gets the old reading of the reference,
+        // and editing only the reference re-reads it, so screens behave as before until every form picks one.
+        static::saving(function (self $row) {
+            if (! in_array($row->kind, CustomerWallets::KINDS, true) || ($row->isDirty('transaction') && ! $row->isDirty('kind') && $row->exists)) {
+                $row->kind = CustomerWallets::kind($row->transaction);
+            }
+        });
+        static::creating(function (self $row) {
+            $row->created_by ??= auth()->id();
+        });
+    }
+
     // ============ RELATIONSHIPS ============
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
     public function loan()
     {

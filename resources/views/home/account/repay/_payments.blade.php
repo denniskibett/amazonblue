@@ -4,7 +4,7 @@
   $kindLabel = ['rollover' => 'Rollover (moved to a new period)', 'discount' => 'Discount', 'bad_debt' => 'Written off', 'non_cash' => 'Book entry (not cash)'];
 @endphp
 @forelse ($repayments as $payment)
-  @php $kind = \App\Services\CustomerWallets::kind($payment->transaction); @endphp
+  @php $kind = \App\Services\CustomerWallets::kindOf($payment); @endphp
   <a class="a-row" href="{{ route('account.receipt', [$loan, $payment]) }}">
     <span class="chip {{ $kind === 'cash' ? 'sage' : 'cloud' }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ $kind === 'cash' ? 'M12 19V5M5 12l7-7 7 7' : 'M4 12h16M14 6l6 6-6 6' }}" /></svg></span>
     <span class="t"><b>KES {{ number_format((float) $payment->amount, 2) }}</b><span>{{ $kind === 'cash' ? ($payment->mode ? (strtolower($payment->mode) === 'mpesa' ? 'M-Pesa' : ucfirst($payment->mode)) : 'Payment') . ($payment->transaction ? ' · ' . $payment->transaction : '') : $kindLabel[$kind] }} · {{ \Illuminate\Support\Carbon::parse($payment->repayment_date)->format('j M Y') }}</span></span>

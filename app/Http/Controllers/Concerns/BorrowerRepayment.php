@@ -153,7 +153,7 @@ trait BorrowerRepayment
             'user' => $request->user(),
             'loan' => $loan,
             'repayment' => $repayment,
-            'kind' => CustomerWallets::kind($repayment->transaction),
+            'kind' => CustomerWallets::kindOf($repayment),
         ]);
     }
 

@@ -72,6 +72,8 @@ class RepaymentController extends Controller
             'repayment_date' => 'required|date',
             'transaction' => 'nullable|string',
             'mode' => 'nullable|string',
+            // what the row is; left out, it is read from the reference as before (Repayment::booted)
+            'kind' => ['nullable', \Illuminate\Validation\Rule::in(\App\Services\CustomerWallets::KINDS)],
         ]);
 
         // Create repayment
@@ -123,6 +125,7 @@ class RepaymentController extends Controller
             'transaction' => 'required|string|max:255|unique:repayments,transaction,' . $repayment->id . ',id,loan_id,' . $repayment->loan_id,
             'mode' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
+            'kind' => ['nullable', \Illuminate\Validation\Rule::in(\App\Services\CustomerWallets::KINDS)],
         ]);
 
         // Recalculate processing fee

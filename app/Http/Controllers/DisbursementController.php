@@ -61,6 +61,7 @@ class DisbursementController extends Controller
             'payment_date' => 'nullable|date',
             'notes' => 'nullable|string',
             'funding_source' => 'nullable|in:internal,partner,mixed',
+            'kind' => ['nullable', \Illuminate\Validation\Rule::in(\App\Services\CustomerWallets::KINDS)],
             'investment_id' => 'nullable|exists:investments,id',
             'partner_transaction_id' => 'nullable|exists:partner_transactions,id',
         ];
@@ -190,6 +191,7 @@ class DisbursementController extends Controller
             'investment_id' => 'nullable|exists:investments,id',
             'partner_transaction_id' => 'nullable|exists:partner_transactions,id',
             'funding_source' => 'nullable|in:internal,partner,mixed',
+            'kind' => ['nullable', \Illuminate\Validation\Rule::in(\App\Services\CustomerWallets::KINDS)],
         ]);
 
         // Recalculate processing fee for loan disbursements

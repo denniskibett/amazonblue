@@ -42,6 +42,7 @@ class DisbursementService
                 'processing_fee' => $processingFee,
                 'net_amount' => $netAmount,
                 'transaction' => $data['transaction'] ?? 'DISBURSEMENT',
+                'kind' => $data['kind'] ?? null,
                 'mode' => $data['mode'] ?? 'bank_transfer',
                 'disburse_date' => $data['disburse_date'] ?? now(),
                 'payment_date' => $data['payment_date'] ?? now(),

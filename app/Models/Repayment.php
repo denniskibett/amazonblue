@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Services\CustomerWallets;
 
 class Repayment extends Model
 {
@@ -22,7 +23,10 @@ class Repayment extends Model
         'partner_transaction_id',
         'investment_id',
         'bavix_transaction_id',    // NEW: Link to Bavix
-        'notes'
+        'notes',
+        'kind',                    // cash | rollover | discount | bad_debt | non_cash (CustomerWallets::KINDS)
+        'created_by',
+        'reversal_of_id',          // a reversal is a new row pointing at the original
     ];
 
     protected $casts = [
@@ -32,7 +36,38 @@ class Repayment extends Model
         'repayment_date' => 'datetime',
     ];
 
+    protected static function booted(): void
+    {
+        // kind is stored (Stage 4 Phase 1). A form that sends no kind gets the old reading of the reference,
+        // and editing only the reference re-reads it, so screens behave as before until every form picks one.
+        static::saving(function (self $row) {
+            if (! in_array($row->kind, CustomerWallets::KINDS, true) || ($row->isDirty('transaction') && ! $row->isDirty('kind') && $row->exists)) {
+                $row->kind = CustomerWallets::kind($row->transaction);
+            }
+        });
+        static::creating(function (self $row) {
+            $row->created_by ??= auth()->id();
+        });
+    }
+
     // ============ RELATIONSHIPS ============
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** The row this one reverses. */
+    public function reversalOf()
+    {
+        return $this->belongsTo(self::class, 'reversal_of_id')->withTrashed();
+    }
+
+    /** The row that reverses this one, if any. */
+    public function reversal()
+    {
+        return $this->hasOne(self::class, 'reversal_of_id');
+    }
 
     public function loan()
     {

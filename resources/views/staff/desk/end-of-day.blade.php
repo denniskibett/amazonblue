@@ -4,7 +4,7 @@
 
 @php
   $card = 'rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]';
-  $kind = fn ($ref) => \App\Services\CustomerWallets::kind($ref);
+  $kind = fn ($row) => \App\Services\CustomerWallets::kindOf($row);
   $net = $totals['received_cash'] - $totals['disbursed_cash'];
 @endphp
 
@@ -45,7 +45,7 @@
   @else
     <div class="mb-6"><x-staff.table caption="Payments received" :headers="['#', 'Borrower', 'Loan', 'Mode', 'Reference', 'Kind', ['Amount', 'num']]">
       @foreach ($repayments as $p)
-        @php $k = $kind($p->transaction); @endphp
+        @php $k = $kind($p); @endphp
         <tr @class(['opacity-60 line-through' => $p->deleted_at])>
           <td>{{ $p->id }}</td>
           <td>{{ $p->loan->user->name ?? '—' }}</td>
@@ -65,7 +65,7 @@
   @else
     <div class="mb-6"><x-staff.table caption="Disbursements" :headers="['#', 'Borrower', 'Loan', 'Mode', 'Reference', 'Kind', ['Amount', 'num'], ['Sent (net)', 'num']]">
       @foreach ($disbursements as $d)
-        @php $k = $kind($d->transaction); @endphp
+        @php $k = $kind($d); @endphp
         <tr>
           <td>{{ $d->id }}</td>
           <td>{{ $d->loan->user->name ?? '—' }}</td>

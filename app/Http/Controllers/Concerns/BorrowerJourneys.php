@@ -170,16 +170,16 @@ trait BorrowerJourneys
 
         $sent = DB::table('disbursements')->whereIn('loan_id', $loanIds)->whereNull('deleted_at')
             ->where(fn ($q) => $range($q, 'disburse_date'))
-            ->get(['id', 'loan_id', 'amount', 'net_amount', 'disburse_date as date', 'transaction', 'mode'])
+            ->get(['id', 'loan_id', 'amount', 'net_amount', 'disburse_date as date', 'transaction', 'kind', 'mode'])
             ->map(fn ($d) => [
-                'date' => $d->date, 'loan_id' => $d->loan_id, 'ref' => $d->transaction, 'kind' => CustomerWallets::kind($d->transaction),
+                'date' => $d->date, 'loan_id' => $d->loan_id, 'ref' => $d->transaction, 'kind' => CustomerWallets::kindOf($d),
                 'type' => 'sent', 'sent' => (float) ($d->net_amount ?: $d->amount), 'paid' => 0.0, 'mode' => $d->mode, 'order' => 0, 'id' => $d->id,
             ]);
         $paid = DB::table('repayments')->whereIn('loan_id', $loanIds)->whereNull('deleted_at')
             ->where(fn ($q) => $range($q, 'repayment_date'))
-            ->get(['id', 'loan_id', 'amount', 'repayment_date as date', 'transaction', 'mode'])
+            ->get(['id', 'loan_id', 'amount', 'repayment_date as date', 'transaction', 'kind', 'mode'])
             ->map(fn ($r) => [
-                'date' => $r->date, 'loan_id' => $r->loan_id, 'ref' => $r->transaction, 'kind' => CustomerWallets::kind($r->transaction),
+                'date' => $r->date, 'loan_id' => $r->loan_id, 'ref' => $r->transaction, 'kind' => CustomerWallets::kindOf($r),
                 'type' => 'paid', 'sent' => 0.0, 'paid' => (float) $r->amount, 'mode' => $r->mode, 'order' => 1, 'id' => $r->id,
             ]);
 

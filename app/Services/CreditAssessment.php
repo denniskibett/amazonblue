@@ -166,8 +166,8 @@ class CreditAssessment
         }
 
         $payments = $loan->repayments->filter(fn ($r) => Carbon::parse($r->repayment_date)->lte($asOf));
-        $kinds = $payments->map(fn ($r) => CustomerWallets::kind($r->transaction))->unique();
-        $cash = (float) $payments->filter(fn ($r) => CustomerWallets::kind($r->transaction) === 'cash')->sum('amount');
+        $kinds = $payments->map(fn ($r) => CustomerWallets::kindOf($r))->unique();
+        $cash = (float) $payments->filter(fn ($r) => CustomerWallets::kindOf($r) === 'cash')->sum('amount');
         $lastPaid = $payments->max('repayment_date');
         $due = $loan->due_date ? Carbon::parse($loan->due_date)->endOfDay() : null;
 
@@ -460,8 +460,8 @@ class CreditAssessment
         }
 
         return (float) DB::table('disbursements')->whereIn('loan_id', $loans->pluck('id'))->whereNull('deleted_at')
-            ->get(['amount', 'net_amount', 'transaction'])
-            ->filter(fn ($d) => CustomerWallets::kind($d->transaction) === 'cash')
+            ->get(['amount', 'net_amount', 'transaction', 'kind'])
+            ->filter(fn ($d) => CustomerWallets::kindOf($d) === 'cash')
             ->sum(fn ($d) => (float) ($d->net_amount ?: $d->amount));
     }
 
