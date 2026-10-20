@@ -169,10 +169,35 @@ class CycleBalance
             ->all();
     }
 
+    /**
+     * A stored cycle's balance on a day. A cycle that was carried into a later one (rollover or payment plan)
+     * stops on the day it closed: its balance is read on that day, and what the next cycle took over is shown
+     * beside it. History is never re-carried: the next cycle keeps the principal it was booked with, and any
+     * difference (e.g. penalty the old code dropped on a rollover) is reported, not charged.
+     */
     public static function at(LoanCycle $cycle, ?string $asOf = null): array
     {
-        return self::compute(self::termsFor($cycle), self::paymentsFor($cycle), $asOf ?? now()->toDateString())
-            + ['cycle_id' => $cycle->id, 'cycle_number' => $cycle->cycle_number];
+        $asOf ??= now()->toDateString();
+        $next = LoanCycle::where('loan_id', $cycle->loan_id)->where('cycle_number', '>', $cycle->cycle_number)
+            ->orderBy('cycle_number')->first();
+        $closedOn = $cycle->closed_on?->toDateString() ?? ($next ? Carbon::parse($next->start_date)->toDateString() : null);
+        $day = $closedOn !== null && $closedOn < $asOf ? $closedOn : $asOf;
+
+        $b = self::compute(self::termsFor($cycle), self::paymentsFor($cycle), $day)
+            + ['cycle_id' => $cycle->id, 'cycle_number' => $cycle->cycle_number, 'closed_on' => $closedOn];
+        $b['carried_forward'] = $next ? $next->lentPrincipal() : null;
+        $b['carry_difference'] = $next ? round($b['final_outstanding'] - $next->lentPrincipal(), 2) : null;
+        if ($next) {
+            // carried into the next cycle: nothing is owed on this one any more
+            $b['owed_on_close'] = $b['final_outstanding'];
+            $b['final_outstanding'] = 0.0;
+            $b['is_overdue'] = false;
+            $b['is_defaulted'] = false;
+            $b['days_overdue'] = 0;
+            $b['is_fully_repaid'] = true;
+        }
+
+        return $b;
     }
 
     private static function cents($amount): int

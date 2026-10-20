@@ -7,6 +7,7 @@ use App\Models\LoanCycle;
 use App\Models\Investment;
 use App\Models\Partner;
 use App\Models\PartnerTransaction;
+use App\Services\Loans\CycleBalance;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -187,10 +188,14 @@ class LoanCalculator
      */
 
 
-public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calculationDate = null, array $options = []): array
+public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, ?Carbon $calculationDate = null, array $options = []): array
 {
     if (!$loan->loanType) {
         throw new \Exception('Loan type not found for loan #' . $loan->id);
+    }
+
+    if (self::v2()) {
+        return $this->cycleBalanceV2($loan, $cycle, $calculationDate);
     }
 
     $calculationDate = $calculationDate ?? Carbon::now();
@@ -372,6 +377,53 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
         'penalty_waived' => $isPaymentPlan,
     ];
 }
+
+    /** lending.engine = v2 (Stage 4 Phase 2): balances come from App\Services\Loans\CycleBalance. */
+    public static function v2(): bool
+    {
+        return config('lending.engine') === 'v2';
+    }
+
+    /**
+     * v2 cycle balance in the shape calculateCycleBalance has always returned, so every caller (screens,
+     * agreement, reports, partner backfills) moves to the new figures together. Honours $calculationDate.
+     */
+    private function cycleBalanceV2(Loan $loan, LoanCycle $cycle, ?Carbon $calculationDate): array
+    {
+        $b = CycleBalance::at($cycle, ($calculationDate ?? Carbon::now())->toDateString());
+        $partnerData = $this->calculatePartnerReturns($loan, [
+            'interest' => $b['interest'], 'penalty' => $b['penalty'], 'principal' => $b['principal'],
+            'outstanding_at_due' => $b['outstanding_at_due'], 'full_balance' => $b['full_balance'],
+            'total_repayments' => $b['total_repayments'],
+        ]);
+        $last = $cycle->loan?->repayments()->where('loan_cycle_id', $cycle->id)->max('repayment_date');
+        $partnerInterest = $partnerData['interest_share'] ?? 0;
+        $partnerPenalty = $partnerData['penalty_share'] ?? 0;
+        $netEarnings = ($b['interest'] + $b['penalty']) - ($partnerInterest + $partnerPenalty);
+
+        return $b + [
+            'previous_balance' => (float) $cycle->previous_balance,
+            'new_balance_from_db' => $cycle->new_balance,
+            'database_new_balance' => $cycle->new_balance,
+            'processing_fee_rate' => 0.0,
+            'processing_fee' => 0.0,
+            'outstanding_after_due' => $b['unpaid_penalty'],
+            'cycle_status' => $b['is_fully_repaid'] ? 'completed' : ($b['is_defaulted'] ? 'defaulted' : ($b['is_overdue'] ? 'overdue' : 'active')),
+            'last_repayment_date' => $last ? Carbon::parse($last) : null,
+            'due_date' => Carbon::parse($cycle->due_date)->startOfDay(),
+            'start_date' => Carbon::parse($cycle->start_date),
+            'calculation_date' => $calculationDate ?? Carbon::now(),
+            'interest_capitalized' => $cycle->interest_capitalized,
+            'partner_data' => $partnerData,
+            'net_earnings' => $netEarnings,
+            'pl' => $netEarnings - $b['unpaid_principal'],
+            'principal_recovered' => $b['principal_paid'],
+            'principal_lost' => $b['unpaid_principal'],
+            'is_payment_plan' => $b['penalty_waived_until'] !== null,
+            'penalty_waived' => $b['penalty_waived_until'] !== null,
+            'engine' => 'v2',
+        ];
+    }
 
     /**
      * Calculate partner returns with SEPARATE PRINCIPAL RETURN
@@ -1039,6 +1091,10 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
             throw new \InvalidArgumentException('Loan type or borrow date missing');
         }
 
+        if (self::v2()) {
+            return $this->loanMetricsV2($loan);
+        }
+
         $loanType = $loan->loanType;
         $loanAmount = $loan->amount;
         $basePenaltyRate = (float) $loanType->penalty_rate;
@@ -1354,6 +1410,103 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, Carbon $calc
                 'default_threshold' => $defaultThresholdDays,
                 'is_defaulted' => ($loan->status === 'defaulted' || $isDefaulted),
             ],
+        ];
+    }
+
+    /** calculateLoanMetrics under v2: the latest cycle's CycleBalance, in the same shape. */
+    private function loanMetricsV2(Loan $loan): array
+    {
+        $loanType = $loan->loanType;
+        $cycle = $loan->cycles()->orderByDesc('cycle_number')->first();
+        if (! $cycle) {
+            $due = ($this->calculateDueDate($loan) ?? Carbon::parse($loan->borrow_date)->addDays(30))->startOfDay();
+            $c = ['cycle_number' => 1, 'principal' => (float) $loan->amount, 'previous_balance' => 0, 'interest' => 0.0,
+                'interest_rate' => (float) $loanType->interest_rate, 'full_balance' => (float) $loan->amount,
+                'repayments_before_due' => 0.0, 'repayments_after_due' => 0.0, 'outstanding_at_due' => (float) $loan->amount,
+                'outstanding_after_due' => 0.0, 'penalty' => 0.0, 'penalty_rate' => (float) $loanType->penalty_rate,
+                'days_overdue' => 0, 'days_subject_to_penalty' => 0, 'final_outstanding' => (float) $loan->amount,
+                'total_repayments' => 0.0, 'is_overdue' => false, 'is_defaulted' => false,
+                'default_threshold_days' => (int) ($loan->npl_trigger_threshold ?: $loan->getNplThreshold()),
+                'grace_period_days' => (int) ($loanType->grace_period_days ?? 0), 'partner_data' => [], 'net_earnings' => 0.0,
+                'pl' => 0.0, 'principal_recovered' => 0.0, 'principal_lost' => (float) $loan->amount,
+                'is_payment_plan' => false, 'penalty_waived' => false, 'due_date' => $due];
+        } else {
+            $c = $this->cycleBalanceV2($loan, $cycle, null);
+        }
+        $partnerData = $c['partner_data'] ?? [];
+        $broker = collect($partnerData['partner_breakdown'] ?? [])->firstWhere('type', 'broker') ?? [];
+        $last = $loan->repayments()->max('repayment_date');
+        $defaulted = $loan->status === 'defaulted' || $c['is_defaulted'];
+
+        return [
+            'loan_type_id' => $loan->loan_type_id,
+            'loan_type_name' => $loanType->name,
+            'period' => (int) $loanType->period,
+            'period_unit' => $loanType->unit,
+            'period_display' => $this->getPeriodDisplay($loan),
+            'principal' => $c['principal'],
+            'interest' => $c['interest'],
+            'interest_rate' => $c['interest_rate'],
+            'principal_plus_interest' => $c['full_balance'],
+            'borrow_date' => Carbon::parse($loan->borrow_date),
+            'due_date' => $c['due_date'],
+            'last_repayment_date' => $last ? Carbon::parse($last) : null,
+            'days_late' => $c['days_subject_to_penalty'],
+            'days_overdue' => $c['days_overdue'],
+            'grace_period_days' => $c['grace_period_days'],
+            'base_penalty_rate' => $c['penalty_rate'],
+            'penalty_rate' => 0,
+            'penalty_amount' => $c['penalty'],
+            'repayments_before_due' => $c['repayments_before_due'],
+            'repayments_after_due' => $c['repayments_after_due'],
+            'outstanding_at_due' => $c['outstanding_at_due'],
+            'outstanding_after_due' => $c['outstanding_after_due'],
+            'final_outstanding' => $c['final_outstanding'],
+            'is_brokered' => (bool) ($partnerData['is_brokered'] ?? false),
+            'broker_fees' => $broker['interest_share'] ?? 0,
+            'brokerRate' => $broker['interest_rate'] ?? 0,
+            'broker_penalty_fees' => $broker['penalty_share'] ?? 0,
+            'total_broker_fees' => $broker['total_share'] ?? 0,
+            'client_type' => $loan->user->borrower->client_type ?? 0,
+            'partner_data' => $partnerData,
+            'net_earnings' => $c['net_earnings'],
+            'pl' => $c['pl'],
+            'principal_returned' => $partnerData['principal_returned'] ?? 0,
+            'principal_remaining' => $partnerData['principal_remaining'] ?? 0,
+            'principal_recovered' => $c['principal_recovered'],
+            'principal_lost' => $c['principal_lost'],
+            'partner_interest_share' => $partnerData['interest_share'] ?? 0,
+            'partner_penalty_share' => $partnerData['penalty_share'] ?? 0,
+            'total_repayments' => $c['total_repayments'],
+            'outstanding_balance' => $c['final_outstanding'],
+            'total_due' => $c['full_balance'] + $c['penalty'],
+            'is_overdue' => $c['is_overdue'],
+            'is_repaid' => $loan->status === 'repaid',
+            'is_defaulted' => $defaulted,
+            'default_threshold_days' => $c['default_threshold_days'],
+            'active_cycle' => $cycle ? [
+                'id' => $cycle->id,
+                'number' => $cycle->cycle_number,
+                'start_date' => $cycle->start_date->format('M d, Y'),
+                'due_date' => $cycle->due_date->format('M d, Y'),
+                'balance' => $cycle->new_balance,
+                'previous_balance' => $cycle->previous_balance,
+                'interest_capitalized' => $cycle->interest_capitalized,
+            ] : null,
+            'cycle_calculation' => $c + ['outstanding_after_repayments' => $c['final_outstanding']],
+            'penalty_breakdown' => [
+                'days_overdue' => $c['days_overdue'],
+                'grace_period_days' => $c['grace_period_days'],
+                'days_subject_to_penalty' => $c['days_subject_to_penalty'],
+                'daily_rate' => $c['penalty_rate'] . '%',
+                'outstanding_at_due' => $c['outstanding_at_due'],
+                'penalty_amount' => $c['penalty'],
+                'repayments_after_due' => $c['repayments_after_due'],
+                'outstanding_after_due' => $c['outstanding_after_due'],
+                'default_threshold' => $c['default_threshold_days'],
+                'is_defaulted' => $defaulted,
+            ],
+            'engine' => 'v2',
         ];
     }
 

@@ -862,6 +862,13 @@ class Loan extends Model
      */
     public function calculatePenalties(): float
     {
+        // v2: one penalty formula (CycleBalance); this v1 formula goes when v1 is retired
+        if (\App\Services\LoanCalculator::v2()) {
+            $cycle = $this->cycles()->orderByDesc('cycle_number')->first();
+
+            return $cycle ? (float) \App\Services\Loans\CycleBalance::at($cycle)['unpaid_penalty'] : 0.0;
+        }
+
         $penaltyAmount = 0;
         
         // If loan is overdue, calculate penalties
