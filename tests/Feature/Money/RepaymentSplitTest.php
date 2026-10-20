@@ -105,11 +105,29 @@ class RepaymentSplitTest extends TestCase
         $this->assertSame(0.0, $this->broker->fresh()->lentOut());
     }
 
-    public function test_an_unbrokered_house_loan_pays_nobody(): void
+    public function test_an_unbrokered_house_loan_pays_no_partner_and_ac_keeps_it_all(): void
     {
         $this->loan(704, false);
         $this->pay(704, 13200, '2026-10-11', 'QK704');
-        $this->assertSame(0, PartnerTransaction::count());
+        $house = Partner::where('is_house_account', true)->value('id');
+        $this->assertSame(0, PartnerTransaction::where('partner_id', '!=', $house)->count());
+        $this->assertSame(2000.0, $this->earned($house, 'profit_distribution'));
+        $this->assertSame(1200.0, $this->earned($house, 'penalty_share'));
+    }
+
+    public function test_broker_and_house_shares_add_up_to_what_was_collected(): void
+    {
+        $this->loan(706, true);
+        $this->pay(706, 7000, '2026-10-11', 'QK706A');        // penalty 1,200, interest 2,000, principal 3,800
+        $this->pay(706, 3333.33, '2026-10-15', 'QK706B');     // more penalty on what is left, then principal
+        $house = Partner::where('is_house_account', true)->value('id');
+        $collected = 0.0;
+        foreach (\App\Models\Repayment::where('loan_id', 706)->get() as $r) {
+            $collected += app(\App\Services\Loans\RepaymentSplit::class)->collected($r);
+        }
+        $shared = (float) PartnerTransaction::whereIn('partner_id', [$house, $this->broker->id])->sum('amount');
+        $this->assertEqualsWithDelta($collected, $shared, 0.001);
+        $this->assertSame(1200.0, $this->earned($house, 'profit_distribution'));   // 60% of 2,000
     }
 
     public function test_restatement_replaces_the_backfill_with_per_repayment_rows(): void
@@ -126,6 +144,8 @@ class RepaymentSplitTest extends TestCase
         $this->artisan('allocations:restate --apply --confirm=' . $sha)->assertSuccessful();
 
         $this->assertSame(800.0, $this->earned($this->broker->id, 'broker_fee_earned'));      // 999 backfill reversed, 800 split
+        $house = Partner::where('is_house_account', true)->value('id');
+        $this->assertSame(1200.0, $this->earned($house, 'profit_distribution'));             // AC: 60% of the interest
         $this->assertSame(1, PartnerTransaction::where('reference', 'BACKFILL-7OCT-1')->count(), 'the backfill row stays');
         $this->artisan('allocations:restate --dry-run')->assertSuccessful();
         $sha2 = hash('sha256', Storage::disk('local')->get('reports/allocations-restate-2026-10-21.csv'));

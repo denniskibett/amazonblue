@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\Storage;
  *
  * Every cash repayment gets its own split rows (SPLIT-R<id>-...). The one-off backfill of 7 Oct 2026 (earning
  * rows with no SPLIT/RESTATE reference) is reversed by one row per partner and type (RESTATE-LEGACY-...);
- * the legacy rows themselves stay. The house account is not touched (AC's own share lives in the ledger).
+ * the legacy rows themselves stay. The house account (AC) gets its share of each repayment too, so all
+ * parties together equal the interest and penalty collected.
  *
  *   --dry-run                 reports/allocations-restate-<date>.csv (per partner, then per repayment) + SHA
  *   --apply --confirm=<sha>   needs lending.split.enabled and engine v2; same day, unchanged data
@@ -43,16 +44,17 @@ class AllocationsRestate extends Command
             return self::FAILURE;
         }
 
-        $house = Partner::where('is_house_account', true)->pluck('id')->all();
         $target = [];
+        $collected = 0.0;
         $detail = [];
         foreach (Repayment::withTrashed()->orderBy('id')->lazy() as $r) {
+            $collected += $split->collected($r);
             foreach ($split->plan($r) as [$partner, $type, $wallet, $amount, $why]) {
                 $target["{$partner}|{$type}"] = ($target["{$partner}|{$type}"] ?? 0) + $amount;
                 $detail[] = ['repayment', $r->id, $r->loan_id, substr((string) $r->repayment_date, 0, 10), $partner, $type, $amount, $why];
             }
         }
-        $current = PartnerTransaction::whereIn('type', self::EARNINGS)->whereNotIn('partner_id', $house)
+        $current = PartnerTransaction::whereIn('type', self::EARNINGS)
             ->selectRaw("partner_id, type,
                 sum(case when reference like 'SPLIT-R%' then amount else 0 end) as split,
                 sum(case when reference like 'RESTATE-LEGACY-%' then amount else 0 end) as reversed,
@@ -91,7 +93,10 @@ class AllocationsRestate extends Command
             Storage::disk('local')->put($path, $csv);
             $this->table(['partner', 'type', 'earned now', 'restated', 'difference'],
                 array_map(fn ($s) => ["#{$s[1]} {$s[2]}", $s[3], number_format($s[4], 2), number_format($s[5], 2), number_format($s[6], 2)], $summary));
-            $this->line(count($detail) . ' split row(s) from ' . count(array_unique(array_column($detail, 1))) . ' repayment(s). House account not touched.');
+            $shared = round(array_sum($target), 2);
+            $this->line(count($detail) . ' split row(s) from ' . count(array_unique(array_column($detail, 1))) . ' repayment(s).');
+            $this->line(sprintf('Interest + penalty collected in cash: KES %s; shared between all parties: KES %s; difference %s.',
+                number_format($collected, 2), number_format($shared, 2), number_format($shared - $collected, 2)));
             $this->line('CSV: ' . Storage::disk('local')->path($path));
             $this->info('SHA-256: ' . $sha);
 

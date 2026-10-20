@@ -27,7 +27,8 @@ use Illuminate\Support\Facades\DB;
  *    the interest;
  *  - principal paid on a loan funded by a partner line (loan_share or fixed_rate) goes back to that line
  *    (investment_fundings.amount_returned), which frees the partner's capital ("available");
- *  - AC keeps the rest (it is already its income in the ledger). Book entries (rollover, discount, write-off)
+ *  - AC keeps the rest, recorded on the house account (owner, 21 Oct 2026) so that for every repayment
+ *    broker + partner + house = the interest and penalty it paid. Book entries (rollover, discount, write-off)
  *    earn nobody anything.
  *
  * Shares are posted to the partner journal (partner_transactions + the partner's wallet, which the partner
@@ -61,20 +62,40 @@ class RepaymentSplit
 
         [$funder, $line] = $this->funder($loan);
         $out = [];
+        $interestOut = 0.0;   // what others take of this repayment's interest / penalty; the house keeps the rest
+        $penaltyOut = 0.0;
         if ($loan->broker_status && $loan->partner_id) {
             $broker = (int) $loan->partner_id;
             $interestRate = $funder === $broker && $line?->return_type === 'loan_share'
                 ? 100 - (float) (DB::table('brokers as b')->join('partners as p', 'p.user_id', '=', 'b.user_id')->where('p.id', $broker)->value('b.interest_broker') ?? 40)
                 : (float) $loan->broker_rate;
             $penaltyRate = (float) ($loan->broker_penalty_rate ?? config('lending.split.default_broker_penalty_rate', 50));
-            $out[] = [$broker, 'broker_fee_earned', 'broker_fee', round($a['interest'] * $interestRate / 100, 2), "{$interestRate}% of interest"];
-            $out[] = [$broker, 'penalty_share', 'broker_fee', round($a['penalty'] * $penaltyRate / 100, 2), "{$penaltyRate}% of penalty"];
+            $out[] = [$broker, 'broker_fee_earned', 'broker_fee', $i = round($a['interest'] * $interestRate / 100, 2), "{$interestRate}% of interest"];
+            $out[] = [$broker, 'penalty_share', 'broker_fee', $p = round($a['penalty'] * $penaltyRate / 100, 2), "{$penaltyRate}% of penalty"];
+            $interestOut += $i;
+            $penaltyOut += $p;
         } elseif ($funder && $line?->return_type === 'loan_share') {
             $rate = (float) Partner::whereKey($funder)->value('profit_share_rate');
-            $out[] = [$funder, 'profit_distribution', 'interest', round($a['interest'] * $rate / 100, 2), "{$rate}% of interest (funder)"];
+            $out[] = [$funder, 'profit_distribution', 'interest', $i = round($a['interest'] * $rate / 100, 2), "{$rate}% of interest (funder)"];
+            $interestOut += $i;
+        }
+        if ($house = $this->house()) {
+            $out[] = [$house, 'profit_distribution', 'interest', round($a['interest'] - $interestOut, 2), 'AC: interest after partners'];
+            $out[] = [$house, 'penalty_share', 'interest', round($a['penalty'] - $penaltyOut, 2), 'AC: penalty after partners'];
         }
 
         return array_values(array_filter($out, fn ($s) => abs($s[3]) >= 0.005));
+    }
+
+    /** Interest + penalty a cash repayment paid (what its split shares out). */
+    public function collected(Repayment $r): float
+    {
+        if (CustomerWallets::isGone($r) || CustomerWallets::kindOf($r) !== 'cash' || ! $r->loan_cycle_id || ! ($cycle = LoanCycle::find($r->loan_cycle_id))) {
+            return 0.0;
+        }
+        $a = CycleBalance::at($cycle)['allocations'][$r->id] ?? null;
+
+        return $a ? round($a['interest'] + $a['penalty'], 2) : 0.0;
     }
 
     /** Brings the journal for one repayment to its plan. Returns the rows posted. */
@@ -142,6 +163,15 @@ class RepaymentSplit
         }
         $funding = InvestmentFunding::where('investment_id', $line->id)->where('partner_id', $funder)->orderBy('id')->first();
         $funding?->forceFill(['amount_returned' => round($principal, 2)])->save();
+    }
+
+    private ?int $house = null;
+
+    /** The house partner (AC) whose journal records AC's share. */
+    private function house(): ?int
+    {
+        return $this->house ??= Partner::where('is_house_account', true)
+            ->orderByRaw("account_type = 'principal' desc")->orderBy('id')->value('id');
     }
 
     /** The partner whose line funded the loan's cash, and the line: [partner_id|null, Investment|null]. */
