@@ -37,6 +37,7 @@ class InvestmentController extends Controller
                     'name' => $investment->name,
                     'type' => $investment->type,
                     'facility_type' => $investment->facility_type,
+                    'return_type' => $investment->return_type,
                     'duration_days' => $investment->duration_days,
                     'interest_rate' => $investment->interest_rate,
                     'sector' => $investment->sector,
@@ -86,6 +87,7 @@ class InvestmentController extends Controller
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:commodity,equity,bond,real_estate,startup,infrastructure,technology,agriculture,energy,other',
             'facility_type' => 'nullable|in:short_term,long_term',
+            'return_type' => 'nullable|in:house,loan_share,fixed_rate',
             'duration_days' => 'nullable|integer|min:1',
             'interest_rate' => 'nullable|numeric|min:0|max:100',
             'sector' => 'nullable|string|max:100',
@@ -199,6 +201,7 @@ class InvestmentController extends Controller
                 'name' => $request->name,
                 'type' => $request->type,
                 'facility_type' => $facilityType,
+                'return_type' => $request->input('return_type', 'house'),
                 'duration_days' => $request->duration_days,
                 'interest_rate' => $request->interest_rate,
                 'sector' => $request->sector,
@@ -334,6 +337,7 @@ class InvestmentController extends Controller
             'name' => $investment->name,
             'type' => $investment->type,
             'facility_type' => $investment->facility_type,
+                    'return_type' => $investment->return_type,
             'duration_days' => $investment->duration_days,
             'interest_rate' => $investment->interest_rate,
             'sector' => $investment->sector,
@@ -424,6 +428,7 @@ class InvestmentController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'type' => 'sometimes|required|string|in:commodity,equity,bond,real_estate,startup,infrastructure,technology,agriculture,energy,other',
             'facility_type' => 'nullable|in:short_term,long_term',
+            'return_type' => 'nullable|in:house,loan_share,fixed_rate',
             'duration_days' => 'nullable|integer|min:1',
             'interest_rate' => 'nullable|numeric|min:0|max:100',
             'country' => 'sometimes|required|string|max:100',
@@ -454,7 +459,7 @@ class InvestmentController extends Controller
 
             $investment->update(array_merge(
                 $request->only([
-                    'name', 'type', 'facility_type', 'duration_days', 'interest_rate',
+                    'name', 'type', 'facility_type', 'return_type', 'duration_days', 'interest_rate',
                     'sector', 'sub_sector', 'country', 'region', 'city',
                     'company_name', 'registration_number', 'incorporation_date', 'legal_structure',
                     'ebitda_pre_investment', 'revenue_pre_investment', 'net_profit_pre_investment',
@@ -709,6 +714,7 @@ class InvestmentController extends Controller
                     'name' => $investment->name,
                     'type' => $investment->type,
                     'facility_type' => $investment->facility_type,
+                    'return_type' => $investment->return_type,
                     'facility_type_label' => $investment->facility_type === 'short_term'
                         ? 'Short-Term'
                         : 'Long-Term',

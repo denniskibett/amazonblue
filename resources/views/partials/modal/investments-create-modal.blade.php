@@ -124,6 +124,17 @@
                                     </p>
                                 </div>
 
+                                {{-- Stage 4 Phase 5: what the line pays its partner (investments.return_type) --}}
+                                <div>
+                                    <label for="inv_return_type" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">How the partner earns</label>
+                                    <select id="inv_return_type" x-model="formData.return_type"
+                                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                        <option value="house">House: AC's own money</option>
+                                        <option value="loan_share">Loan share: a share of the interest on the loans it funds (a broker: 100 − their broker rate)</option>
+                                        <option value="fixed_rate">Fixed rate: the interest rate below is % a month on the committed amount (whole calendar months)</option>
+                                    </select>
+                                </div>
+
                                 <!-- ============ SHORT-TERM QUICK SETUP ============ -->
                                 <template x-if="formData.facility_type === 'short_term'">
                                     <div class="col-span-1 sm:col-span-2">
@@ -1039,6 +1050,7 @@ document.addEventListener('alpine:init', function() {
                 name: '',
                 type: '',
                 facility_type: 'long_term',
+                return_type: 'house',
                 duration_days: '',
                 interest_rate: '',
                 sector: '',
@@ -1409,6 +1421,7 @@ document.addEventListener('alpine:init', function() {
                     name: '',
                     type: '',
                     facility_type: 'long_term',
+                    return_type: 'house',
                     duration_days: '',
                     interest_rate: '',
                     sector: '',
@@ -1549,6 +1562,7 @@ document.addEventListener('alpine:init', function() {
                     name: investment.name || '',
                     type: investment.type || '',
                     facility_type: normalizedFacilityType,
+                    return_type: investment.return_type || 'house',
                     duration_days: investment.duration_days || '',
                     interest_rate: investment.interest_rate || '',
                     sector: investment.sector || '',

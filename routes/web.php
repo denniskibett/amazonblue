@@ -515,6 +515,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('roles')->middleware('permission:manage roles|view audit log');
         Route::post('roles/{role}/permissions', [\App\Http\Controllers\Staff\SetupController::class, 'updateRolePermission'])
             ->name('roles.permissions')->middleware('permission:manage roles');
+        Route::post('products/{loanType}', [\App\Http\Controllers\Staff\SetupController::class, 'updateProduct'])
+            ->name('products.update')->middleware('permission:manage loan types');
         Route::get('products', [\App\Http\Controllers\Staff\SetupController::class, 'products'])
             ->name('products')->middleware('permission:manage loan types|view reports');
         Route::get('wallets', [\App\Http\Controllers\Staff\FinanceController::class, 'wallets'])

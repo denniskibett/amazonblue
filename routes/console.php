@@ -49,6 +49,13 @@ Schedule::command('partners:accrue-fixed')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/partners-fixed.log'));
 
+// second sign-offs waiting more than a day (Stage 4 Phase 5)
+Schedule::command('approvals:digest')
+    ->dailyAt('08:00')
+    ->timezone('Africa/Nairobi')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/approvals-digest.log'));
+
 // audit_logs retention (decision 23, config lending.retention); deletes only rows past their limit
 Schedule::command('audit:prune')
     ->monthlyOn(1, '03:00')

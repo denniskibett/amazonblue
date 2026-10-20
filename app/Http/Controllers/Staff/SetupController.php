@@ -80,6 +80,40 @@ class SetupController extends Controller
             ->whereNotIn('status', ['repaid', 'rejected', 'written_off'])
             ->select('loan_type_id', DB::raw('count(*) as n'))->groupBy('loan_type_id')->pluck('n', 'loan_type_id');
 
-        return view('staff.desk.products', compact('products', 'openLoans'));
+        $versions = DB::table('loan_type_versions')->select('loan_type_id', DB::raw('count(*) as n'))->groupBy('loan_type_id')->pluck('n', 'loan_type_id');
+        $editable = \App\Services\LoanCalculator::v2() && auth()->user()->can('manage loan types');
+
+        return view('staff.desk.products', compact('products', 'openLoans', 'versions', 'editable'));
+    }
+
+    /**
+     * Edit a product (Stage 4 Phase 5). Only on engine v2, where each cycle keeps the terms it was created with,
+     * so running loans are not changed; the values before the edit are kept in loan_type_versions.
+     */
+    public function updateProduct(\Illuminate\Http\Request $request, LoanType $loanType)
+    {
+        if (! \App\Services\LoanCalculator::v2()) {
+            return back()->with('error', 'Products can be edited once the v2 engine is on (running loans would otherwise change).');
+        }
+        $data = $request->validate([
+            'name' => 'required|string|max:120',
+            'interest_rate' => 'required|numeric|min:0|max:500',
+            'penalty_rate' => 'required|numeric|min:0|max:100',
+            'period' => 'required|integer|min:1|max:120',
+            'unit' => 'required|in:days,weeks,months,years',
+            'grace_period_days' => 'required|integer|min:0|max:365',
+            'default_threshold_days' => 'required|integer|min:1|max:3650',
+            'reason' => 'required|string|min:5|max:500',
+        ]);
+        $fields = ['name', 'interest_rate', 'penalty_rate', 'period', 'unit', 'grace_period_days', 'default_threshold_days'];
+        DB::transaction(function () use ($loanType, $data, $fields, $request) {
+            $version = (int) DB::table('loan_type_versions')->where('loan_type_id', $loanType->id)->max('version') + 1;
+            DB::table('loan_type_versions')->insert(['loan_type_id' => $loanType->id, 'version' => $version,
+                'values' => json_encode($loanType->only($fields)), 'changed_by' => $request->user()->id, 'reason' => $data['reason'],
+                'created_at' => now(), 'updated_at' => now()]);
+            $loanType->forceFill(collect($data)->only($fields)->all())->save();
+        });
+
+        return back()->with('success', $loanType->name . ' updated. Running loans keep the terms their cycles were created with; new cycles use the new ones.');
     }
 }
