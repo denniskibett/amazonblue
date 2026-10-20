@@ -457,7 +457,11 @@ Also: partner funding details are editable on `/system`, super-admin only, with 
 
 - **Decision 2:** principal comes from `loan_cycles`. The original principal is cycle 1's principal; the current principal is the latest cycle's. `loans.amount` is not a source of truth.
 - **Decision 11:** a rollover keeps the previous cycle's rate for the first 4 cycles. After that, staff move the loan to forbearance or set a new rate.
-- **Decision 1:** the owner says 10% a day is **not** intended. The intended rate and cap are still to be confirmed.
+- **Decision 1:** 10% a day, simple, on the unpaid balance **is** intended. The cap (in-duplum) is still open: the owner's question is what happens when it applies and the borrower still doesn't pay. Legal sign-off is needed either way. The agreement must say "simple", not "compounding".
+- **Decision 2 (restatement):** yes. Past balances are corrected by adjusting entries, with a CSV the owner signs.
+- **`loans` follows `loan_cycles`:** any change to a cycle updates the loan row (`amount` = the latest cycle's principal, `original_amount` = cycle 1's).
+- **Waivers:** the current cycle only.
+- **Decision 6:** legacy ROLL OVER chains stay as separate loans, flagged, with their book entries left out of totals.
 
 Each decision has a recommended default. If the owner accepts the default, the phase proceeds on it.
 
