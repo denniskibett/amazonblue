@@ -441,9 +441,23 @@ class Loan extends Model
         $this->save();
     }
 
-    public function grantForbearance(int $days, string $reason = null): void
+    public function grantForbearance(int $days, ?string $reason = null): void
     {
         if ($this->isFinal()) {
+            return;
+        }
+
+        // v2: forbearance waives the latest cycle's penalty until the date; the due date stays the cycle's
+        if (\App\Services\LoanCalculator::v2()) {
+            $until = now()->addDays($days)->startOfDay();
+            $cycle = $this->cycles()->orderByDesc('cycle_number')->first();
+            $cycle?->update(['penalty_waived_until' => $until->toDateString()]);
+            $this->forceFill([
+                'status' => self::STATUS_FORBEARANCE,
+                'forbearance_until' => $until,
+                'recovery_notes' => ($this->recovery_notes ? $this->recovery_notes . "\n" : '') . "Forbearance granted: {$reason} until {$until->format('Y-m-d')}",
+            ])->save();
+
             return;
         }
 
@@ -468,6 +482,15 @@ class Loan extends Model
 
     public function endForbearance(): void
     {
+        if (\App\Services\LoanCalculator::v2()) {
+            $cycle = $this->cycles()->orderByDesc('cycle_number')->first();
+            $cycle?->update(['penalty_waived_until' => now()->subDay()->toDateString()]);
+            $this->forceFill(['forbearance_until' => null, 'status' => self::STATUS_DISBURSED])->save();
+            \App\Services\Loans\LoanStatus::apply($this);
+
+            return;
+        }
+
         if ($this->isInForbearance()) {
             $this->status = self::STATUS_OVERDUE;
             $this->forbearance_until = null;
@@ -475,8 +498,18 @@ class Loan extends Model
         }
     }
 
-    public function manualBalanceAdjustment(float $newBalance, string $reason = null): LoanCycle
+    public function manualBalanceAdjustment(float $newBalance, ?string $reason = null): LoanCycle
     {
+        // v2: a write-down is a plan that carries less than is owed; the difference is shown and posted as a discount
+        if (\App\Services\LoanCalculator::v2()) {
+            return app(\App\Services\Loans\Rollover::class)->execute($this, [
+                'plan' => true,
+                'interest_rate' => (float) $this->loanType->interest_rate,
+                'principal' => $newBalance,
+                'notes' => 'Manual adjustment' . ($reason ? ': ' . $reason : ''),
+            ])['created'];
+        }
+
         $activeCycle = $this->getCurrentCycle();
         if (!$activeCycle) {
             throw new \Exception('No active cycle found');
@@ -916,8 +949,18 @@ class Loan extends Model
         return $this->calculateTotalDue() + $this->calculatePenalties();
     }
 
-    public function startPaymentPlan(float $customInterestRate = null, int $periodDays = null, float $manualNewBalance = null): LoanCycle
+    public function startPaymentPlan(?float $customInterestRate = null, ?int $periodDays = null, ?float $manualNewBalance = null): LoanCycle
     {
+        // v2: one move for extensions and plans (Loans\Rollover): carries what is owed today, penalty waived on the plan cycle only
+        if (\App\Services\LoanCalculator::v2()) {
+            return app(\App\Services\Loans\Rollover::class)->execute($this, [
+                'plan' => true,
+                'interest_rate' => $customInterestRate ?? (float) $this->loanType->interest_rate,
+                'period_days' => $periodDays ?? (int) $this->loanType->period,
+                'principal' => $manualNewBalance,
+            ])['created'];
+        }
+
         $activeCycle = $this->getCurrentCycle();
         if (!$activeCycle) {
             throw new \Exception('No active cycle found');

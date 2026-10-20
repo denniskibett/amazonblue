@@ -310,6 +310,45 @@ class EngineV2Test extends TestCase
         $this->assertSame('2026-10-15', $c1->fresh()->due_date->toDateString());
     }
 
+    public function test_a_payment_plan_carries_what_is_owed_and_waives_its_own_cycle_only(): void
+    {
+        $this->loan529();
+        Carbon::setTestNow('2026-10-18 10:00');                  // 2 days late: 14,780 + 2 x 1,478
+
+        $plan = Loan::findOrFail(529)->startPaymentPlan(0, 30);
+        $this->assertMoney(17736.00, $plan->previous_balance);   // v1 dropped the penalty: 14,780
+        $this->assertSame('2026-10-18', $plan->start_date->toDateString());
+        $this->assertSame('2026-11-17', $plan->due_date->toDateString());
+        $this->assertSame('2026-11-17', $plan->penalty_waived_until->toDateString());
+        $this->assertSame('forbearance', Loan::findOrFail(529)->status);
+
+        Carbon::setTestNow('2026-11-20 10:00');                  // plan over, unpaid: penalty resumes after 11-17
+        $b = $this->balance(529, 3);
+        $this->assertMoney(3 * 1773.60, $b['penalty']);
+        $this->assertMoney(2956.00, $this->balance(529, 2)['penalty']); // cycle 2's own two days stay as they were
+    }
+
+    public function test_a_write_down_shows_what_was_forgiven(): void
+    {
+        $this->loan529();
+        Carbon::setTestNow('2026-10-17 10:00');
+        $c = Loan::findOrFail(529)->manualBalanceAdjustment(10000, 'Agreed settlement');
+        $this->assertMoney(10000.00, $c->previous_balance);
+        $this->assertMoney(6258.00, $this->balance(529, 2)['carry_difference']);
+    }
+
+    public function test_forbearance_waives_penalty_without_moving_the_due_date(): void
+    {
+        $this->loan529();
+        Carbon::setTestNow('2026-10-17 10:00');
+        Loan::findOrFail(529)->grantForbearance(5, 'Hospital');
+        $this->assertSame('2026-10-16', LoanCycle::findOrFail(606)->due_date->toDateString());
+        Carbon::setTestNow('2026-10-22 10:00');
+        $this->assertMoney(0.00, $this->balance(529, 2)['penalty']);  // waived to 10-22
+        Carbon::setTestNow('2026-10-23 10:00');
+        $this->assertMoney(1478.00, $this->balance(529, 2)['penalty']);
+    }
+
     private function balance(int $loanId, int $cycleNumber): array
     {
         $loan = Loan::findOrFail($loanId);

@@ -1209,7 +1209,7 @@ class LoanController extends Controller
                     'interest_rate' => $interestRate,
                     'due_date' => now()->addDays($periodDays),
                     'notes' => ($cycle->notes ?? '') . "\n" . "Updated: {$notes}",
-                ]);
+                ] + (\App\Services\LoanCalculator::v2() ? ['penalty_waived_until' => now()->addDays($periodDays)->toDateString()] : []));
                 
                 // Update loan
                 $loan->forbearance_until = now()->addDays($periodDays);

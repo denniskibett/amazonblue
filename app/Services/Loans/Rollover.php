@@ -19,6 +19,11 @@ use Illuminate\Support\Facades\DB;
  *    staff must set a rate (or use a payment plan).
  *  - The old cycle is closed (completed, closed_on, balance cache); it can never be rolled again.
  *  - Runs in one transaction with the loan and the cycle locked.
+ *
+ * A payment plan is the same move with 'plan' => true: staff set the rate (any cycle), it starts on the day it
+ * is made, penalty is waived on the plan cycle only, and the loan is in forbearance until the plan's due date.
+ * 'principal' sets a lower amount to carry (a write-down); the difference stays visible as the old cycle's
+ * carry_difference and is posted to the ledger as a discount.
  */
 class Rollover
 {
@@ -31,7 +36,9 @@ class Rollover
     {
         $loan->loadMissing('loanType');
         $type = $loan->loanType ?? throw new \DomainException('Loan type not found for loan #' . $loan->id);
-        if (! in_array($loan->status, self::ROLLABLE, true)) {
+        $isPlan = (bool) ($options['plan'] ?? false);
+        // a loan already on a plan (forbearance) can be moved to a new plan, not extended
+        if (! in_array($loan->status, $isPlan ? [...self::ROLLABLE, Loan::STATUS_FORBEARANCE] : self::ROLLABLE, true)) {
             throw new \DomainException('This loan is not eligible for an extension (status ' . $loan->status . ').');
         }
         if ($loan->default_triggered) {
@@ -54,7 +61,9 @@ class Rollover
         $previousRate = (float) ($cycle->interest_rate ?? $type->interest_rate);
         $askedRate = isset($options['interest_rate']) && $options['interest_rate'] !== '' ? (float) $options['interest_rate'] : null;
         $sameRateUpTo = (int) config('lending.rollover.same_rate_cycles', 4);
-        if ($number <= $sameRateUpTo) {
+        if ($isPlan) {
+            $rate = $askedRate ?? throw new \DomainException('A payment plan needs a rate (0 for none).');
+        } elseif ($number <= $sameRateUpTo) {
             if ($askedRate !== null && abs($askedRate - $previousRate) > 0.0001) {
                 throw new \DomainException("Cycles 2 to {$sameRateUpTo} keep the previous rate ({$previousRate}%).");
             }
@@ -64,7 +73,7 @@ class Rollover
         }
 
         $due = Carbon::parse($cycle->due_date)->startOfDay();
-        $start = $day->gt($due) ? $day->copy() : $due->copy();
+        $start = ($isPlan || $day->gt($due)) ? $day->copy() : $due->copy();
         if (! empty($options['due_date'])) {
             $newDue = Carbon::parse($options['due_date'])->startOfDay();
         } elseif (! empty($options['period_days'])) {
@@ -77,8 +86,15 @@ class Rollover
         }
 
         $principal = round($balance['final_outstanding'], 2);
+        if (isset($options['principal']) && $options['principal'] !== null && $options['principal'] !== '') {
+            $set = round((float) $options['principal'], 2);
+            if ($set < 0 || $set > $principal) {
+                throw new \DomainException('The new principal must be between 0 and what is owed (KES ' . number_format($principal, 2) . ').');
+            }
+            $principal = $set;
+        }
         $interest = round($principal * $rate / 100, 2);
-        $waive = (bool) ($options['waive_penalty'] ?? false);
+        $waive = $isPlan || (bool) ($options['waive_penalty'] ?? false);
 
         return [
             'loan_id' => $loan->id,
@@ -96,8 +112,11 @@ class Rollover
             'penalty_rate' => (float) $type->penalty_rate,
             'grace_days' => (int) ($type->grace_period_days ?? 0),
             'threshold_days' => (int) ($loan->npl_trigger_threshold ?: ($type->default_threshold_days ?? 30)),
-            'notes' => trim(($options['notes'] ?? '') ?: ('Extension: cycle ' . $number))
-                . ($waive ? ' - PENALTIES WAIVED (this cycle)' : ''),
+            'plan' => $isPlan,
+            'written_down' => round($balance['final_outstanding'] - $principal, 2),
+            'notes' => trim(($options['notes'] ?? '') ?: (($isPlan ? 'Payment plan' : 'Extension') . ': cycle ' . $number))
+                . ($waive ? ' - PENALTIES WAIVED (this cycle)' : '')
+                . ($balance['final_outstanding'] - $principal > 0.004 ? ' - written down by KES ' . number_format($balance['final_outstanding'] - $principal, 2) : ''),
         ];
     }
 
