@@ -14,10 +14,12 @@
         @endif
           <span class="chip {{ $claim['receipt'] ? 'sage' : 'sand' }}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ $claim['receipt'] ? 'M5 12l4 4 10-10' : 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z' }}" /></svg></span>
           <span class="t"><b>KES {{ number_format($claim['amount'], 2) }}</b><span>{{ $claim['code'] }} · told us {{ $at->format('j M, H:i') }}</span></span>
-          <x-az.status-badge type="payment" :status="$claim['receipt'] ? 'received' : 'pending'" :label="$claim['receipt'] ? 'Received' : 'Checking'" />
+          @php $st = $claim['status'] ?? ($claim['receipt'] ? 'received' : 'checking'); @endphp
+          <x-az.status-badge type="payment" :status="$st === 'received' ? 'received' : ($st === 'rejected' ? 'failed' : 'pending')"
+            :label="$st === 'received' ? 'Received' : ($st === 'rejected' ? 'Not found' . (! empty($claim['reason']) ? ': ' . $claim['reason'] : '') : 'Checking')" />
         @if ($claim['receipt'])</a>@else</div>@endif
       @endforeach
     </div>
-    <p class="muted rp-small" style="margin-top:8px">Our team checks each code against M-Pesa, then records it. This list is kept until you sign out.</p>
+    <p class="muted rp-small" style="margin-top:8px">Each code is checked against M-Pesa, then recorded.@unless (config('lending.mpesa.claims_enabled')) This list is kept until you sign out.@endunless</p>
   </section>
 @endif

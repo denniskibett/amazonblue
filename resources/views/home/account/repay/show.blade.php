@@ -159,6 +159,35 @@
                   Simulate: <button type="button" @click="finish('received')">received</button> ·
                   <button type="button" @click="finish('failed')">failed</button> ·
                   <button type="button" @click="finish('timeout')">timed out</button></p>
+              @elseif ($mpesa['stk'])
+                {{-- Stage 4 Phase 4: a real prompt; only Daraja's callback records the payment --}}
+                @if ($stkRequest)
+                  <div class="rp-stk" x-data="{ s: 'pending', msg: '', left: 90,
+                      init() { const t = setInterval(async () => {
+                        if (--this.left <= 0 && this.s === 'pending') { this.s = 'timeout'; clearInterval(t); return; }
+                        if (this.left % 3) return;
+                        try { const r = await (await fetch('{{ route('account.repay.stk.status', [$loan, $stkRequest]) }}', {headers: {Accept: 'application/json'}})).json();
+                          if (r.status !== 'pending') { this.s = r.status; this.msg = r.message || ''; clearInterval(t); } } catch (e) {}
+                      }, 1000); } }">
+                    <span class="rp-stk__ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" /></svg></span>
+                    <div x-show="s === 'pending'"><b>Check your phone</b><p>We sent an M-Pesa prompt to {{ $maskedPhone }}. Enter your PIN to pay.</p>
+                      <p class="rp-timer">Waiting… <span x-text="left + 's'"></span></p></div>
+                    <div x-show="s === 'matched'" x-cloak><b>Payment received</b><p>Thank you. It now shows under your loan's payments.</p>
+                      <a class="btn btn-primary" href="{{ route('account.loan', $loan) }}">Back to my loan</a></div>
+                    <div x-show="s === 'unmatched' || s === 'received'" x-cloak><b>Payment received</b><p>Our team is matching it to your loan; it will show shortly.</p></div>
+                    <div x-show="s === 'failed'" x-cloak><b>Payment didn't go through</b><p x-text="msg || 'Nothing was charged.'"></p>
+                      <a class="btn btn-primary" href="{{ route('account.repay', $loan) }}">Try again</a></div>
+                    <div x-show="s === 'timeout'" x-cloak><b>No answer yet</b><p>If you paid, it will show under your loan's payments in a few minutes. Nothing is charged unless you entered your PIN.</p>
+                      <a class="btn btn-ghost" href="{{ route('account.repay', $loan) }}">Refresh</a></div>
+                  </div>
+                @else
+                  <form method="POST" action="{{ route('account.repay.stk', $loan) }}">
+                    @csrf
+                    <input type="hidden" name="amount" :value="amount" value="{{ $startAmount }}">
+                    <p class="muted rp-small">We send a payment prompt to {{ $maskedPhone }}. Enter your M-Pesa PIN to pay <b x-text="fmt(amount)">{{ $kes($startAmount) }}</b>.</p>
+                    <button class="btn btn-primary btn-block" type="submit" :disabled="!valid" style="margin-top:14px">Send prompt to my phone</button>
+                  </form>
+                @endif
               @else
                 <button class="btn btn-primary btn-block rp-off" type="button" disabled>Pay with M-Pesa (STK push)</button>
                 <x-az.placeholder dependency="M-Pesa STK push" title="Pay from your phone with your PIN" style="margin-top:14px">

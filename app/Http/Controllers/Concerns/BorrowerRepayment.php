@@ -70,6 +70,7 @@ trait BorrowerRepayment
             'mpesa' => $this->mpesaInstructions($loan),
             'claims' => self::claimsFor($loan),
             'checking' => session('repay_checking'),
+            'stkRequest' => session('stk_request'),
             // design stub for the STK flow, never outside local
             'demo' => $demo,
             'demoState' => $demo && in_array($request->query('state'), self::$repayDemoStates, true) ? $request->query('state') : null,
@@ -106,6 +107,21 @@ trait BorrowerRepayment
             throw ValidationException::withMessages(['code' => 'We have already recorded this payment (receipt #' . $recorded->id . ').']);
         }
 
+        // Stage 4 Phase 4: claims are stored, visible on every device, and matched as soon as the code is known
+        if (config('lending.mpesa.claims_enabled')) {
+            $claim = \App\Models\PaymentClaim::firstOrCreate(
+                ['loan_id' => $loan->id, 'code' => $data['code']],
+                ['user_id' => $request->user()->id, 'amount' => (float) $data['amount'], 'phone' => $data['paid_from'] ?? null, 'status' => 'checking'],
+            );
+            if ($claim->wasRecentlyCreated) {
+                CustomerNotifier::paymentClaimed($loan, (float) $data['amount'], $data['code'], $data['paid_from'] ?? null);
+                AuditTrail::record('payment_claims', $claim->id, 'create', null, ['loan_id' => $loan->id, 'amount' => (float) $data['amount'], 'mpesa_code' => $data['code']]);
+            }
+            app(\App\Services\Mpesa\PaymentRecorder::class)->matchClaim($claim);
+
+            return redirect()->route('account.repay', $loan)->with('repay_checking', $data['code']);
+        }
+
         $claims = session('repay_claims', []);
         $already = collect($claims[$loan->id] ?? [])->contains('code', $data['code']);
         if (! $already) {
@@ -120,6 +136,47 @@ trait BorrowerRepayment
         }
 
         return redirect()->route('account.repay', $loan)->with('repay_checking', $data['code']);
+    }
+
+    /**
+     * "Pay with M-Pesa" (Stage 4 Phase 4, MPESA_STK_ENABLED): sends an STK push for the chosen amount to the
+     * borrower's registered phone. Only Daraja's callback records the payment; this just asks for it.
+     */
+    public function accountRepayStk(Request $request, Loan $loan, LoanProgress $progress, \App\Services\Mpesa\Daraja $daraja): RedirectResponse
+    {
+        $this->ownRepayLoan($request, $loan);
+        abort_unless(config('lending.mpesa.stk_enabled') && in_array($loan->status, self::$repayPayable, true), 404);
+        $due = $this->repayAmountDue($progress->for($loan));
+        $data = $request->validate(['amount' => ['required', 'numeric', 'min:1', 'max:' . max(1, ceil($due))]],
+            ['amount.max' => 'That is more than the amount due (KES ' . number_format($due, 2) . ').']);
+        $phone = \App\Services\Mpesa\Daraja::msisdn($request->user()->phone);
+        if (! $phone || $daraja->problem()) {
+            return redirect()->route('account.repay', $loan)->with('alert', ['type' => 'warning', 'title' => 'M-Pesa prompt not available',
+                'message' => 'Please pay by Paybill for now and tell us the code below.']);
+        }
+        try {
+            $r = $daraja->stkPush($phone, (int) ceil((float) $data['amount']), (string) $loan->id, 'Loan ' . $loan->id);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('STK push failed', ['loan' => $loan->id, 'error' => $e->getMessage()]);
+
+            return redirect()->route('account.repay', $loan)->with('alert', ['type' => 'warning', 'title' => 'We couldn\'t reach M-Pesa',
+                'message' => 'Please try again in a minute, or pay by Paybill.']);
+        }
+        $t = \App\Models\MpesaTransaction::create(['type' => 'stk', 'checkout_request_id' => $r['CheckoutRequestID'] ?? null,
+            'loan_id' => $loan->id, 'amount' => (int) ceil((float) $data['amount']), 'msisdn' => $phone, 'status' => 'pending',
+            'note' => mb_substr((string) ($r['CustomerMessage'] ?? ''), 0, 250)]);
+
+        return redirect()->route('account.repay', $loan)->with('stk_request', $t->id);
+    }
+
+    /** The STK request's state for the waiting screen: pending | matched | unmatched | failed. */
+    public function accountRepayStkStatus(Request $request, Loan $loan, int $request_id): \Illuminate\Http\JsonResponse
+    {
+        $this->ownRepayLoan($request, $loan);
+        $t = \App\Models\MpesaTransaction::where('id', $request_id)->where('loan_id', $loan->id)->where('type', 'stk')->firstOrFail();
+
+        return response()->json(['status' => $t->status, 'receipt' => $t->trans_id, 'repayment' => $t->repayment_id,
+            'message' => $t->status === 'failed' ? $t->note : null]);
     }
 
     /** Facility closed: shown once the loan's status is repaid. */
@@ -163,6 +220,11 @@ trait BorrowerRepayment
      */
     public static function claimsFor(Loan $loan): array
     {
+        if (config('lending.mpesa.claims_enabled')) {
+            return \App\Models\PaymentClaim::where('loan_id', $loan->id)->latest('id')->get()
+                ->map(fn ($c) => ['code' => $c->code, 'amount' => (float) $c->amount, 'at' => $c->created_at->toIso8601String(),
+                    'receipt' => $c->repayment_id, 'status' => $c->status, 'reason' => $c->reason])->all();
+        }
         $claims = session('repay_claims', [])[$loan->id] ?? [];
         if (! $claims) {
             return [];

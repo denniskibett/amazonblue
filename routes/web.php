@@ -93,6 +93,8 @@ Route::middleware('auth')->prefix('account')->name('account.')->group(function (
             Route::get('/repay', 'accountRepayStart')->name('repay.start');
             Route::get('/loans/{loan}/repay', 'accountRepay')->name('repay');
             Route::post('/loans/{loan}/repay/confirm', 'accountRepayConfirm')->name('repay.confirm'); // rate-limited in the controller (5 per 10 min per borrower)
+            Route::post('/loans/{loan}/repay/stk', 'accountRepayStk')->middleware('throttle:3,5')->name('repay.stk');
+            Route::get('/loans/{loan}/repay/stk/{request_id}', 'accountRepayStkStatus')->middleware('throttle:60,1')->name('repay.stk.status');
             Route::get('/loans/{loan}/closed', 'accountLoanClosed')->name('closed');
             Route::get('/loans/{loan}/receipts/{repayment}', 'accountReceipt')->name('receipt');
 
