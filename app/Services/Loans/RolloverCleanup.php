@@ -56,6 +56,15 @@ class RolloverCleanup
                 continue;
             }
             $start = $c1->start_date->toDateString();
+            // a loan that also got cash when it opened is a top-up, not a pure continuation: merging it would book
+            // that cash twice (as cash and as a carry difference); the consolidation transfer handles it instead
+            $cashAtStart = Disbursement::where('loan_id', $loanId)->get()->contains(fn ($d) => CustomerWallets::kindOf($d) === 'cash'
+                && abs($c1->start_date->diffInDays(Carbon::parse($d->disburse_date), false)) <= self::WINDOW);
+            if ($cashAtStart) {
+                $unmatched->push(['loan' => (int) $loanId, 'user' => (int) $open->loan->user_id, 'date' => $start,
+                    'why' => 'opened with a ROLL OVER plus new cash (a top-up): handled as a consolidation transfer, not merged']);
+                continue;
+            }
             $candidates = $roRepayments->filter(fn ($r) => (int) $r->loan->user_id === (int) $open->loan->user_id && (int) $r->loan_id !== (int) $loanId)
                 ->groupBy('loan_id')
                 ->map(function ($rows, $pid) use ($latest, $start, $open, $c1) {

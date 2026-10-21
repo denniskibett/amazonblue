@@ -41,7 +41,9 @@ class LoansRolloverCleanup extends Command
         $found = $svc->chains();
         $stray = $svc->strayRows();
         $never = $svc->neverSent();
-        $transfers = $svc->transfers()->where('posted', false)->values();
+        // a pair that is merged as a chain is not also a transfer
+        $linked = $found['links']->map(fn ($l) => (int) $l['repayment_id'])->flip();
+        $transfers = $svc->transfers()->where('posted', false)->reject(fn ($t) => $linked->has((int) $t['repayment_id']))->values();
 
         $fh = fopen('php://temp', 'r+');
         fputcsv($fh, ['section', 'root', 'from', 'to', 'borrower', 'from_cycle', 'from_due', 'to_start', 'days_late', 'owed_at_rollover',
@@ -105,7 +107,10 @@ class LoansRolloverCleanup extends Command
             }
         }
         $this->line('stray ROLL OVER rows removed: ' . $svc->removeStray(null, 'loans:rollover-cleanup ' . substr($sha, 0, 12)));
-        $this->line('consolidation transfers posted: ' . $svc->postTransfers($transfers));
+        // worked out again now the chains are merged (their loans and rows moved); only those signed in the dry run
+        $signedIds = $transfers->pluck('repayment_id')->map(fn ($i) => (int) $i)->flip();
+        $now = $svc->transfers()->where('posted', false)->filter(fn ($t) => $signedIds->has((int) $t['repayment_id']))->values();
+        $this->line('consolidation transfers posted: ' . $svc->postTransfers($now) . ' of ' . $transfers->count());
         $this->info('Done.' . ($failed ? ' Failed chains: #' . implode(', #', $failed) : ''));
 
         return $failed ? self::FAILURE : self::SUCCESS;

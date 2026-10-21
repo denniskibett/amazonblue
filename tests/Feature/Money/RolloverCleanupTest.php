@@ -103,6 +103,15 @@ class RolloverCleanupTest extends TestCase
         $this->assertSame('amount', $found['chains'][0]['links'][0]['matched_on']);
     }
 
+    public function test_a_top_up_loan_is_not_merged(): void
+    {
+        $this->pair();
+        $this->disburse(501, 5000, '2026-01-11', 'NEW CASH');   // like #80: carried balance plus new cash
+        $found = app(RolloverCleanup::class)->chains();
+        $this->assertCount(0, $found['chains']);
+        $this->assertStringContainsString('top-up', $found['unmatched']->firstWhere('loan', 501)['why']);
+    }
+
     public function test_a_loan_already_paid_off_is_not_a_rollover_source(): void
     {
         $this->pair();
