@@ -484,6 +484,10 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::post('sign-offs/{approval}', [\App\Http\Controllers\Staff\SignOffsController::class, 'decide'])
             ->name('sign-offs.decide')->middleware('permission:approve loans|delete repayments|write off loan|edit partners');
 
+        // portfolio on the ledger (Stage 4 Phase 7)
+        Route::get('portfolio', [\App\Http\Controllers\Staff\PortfolioController::class, 'index'])->name('portfolio')->middleware('permission:view reports');
+        Route::get('portfolio.csv', [\App\Http\Controllers\Staff\PortfolioController::class, 'csv'])->name('portfolio.csv')->middleware('permission:view reports');
+
         // borrower and partner requests (Stage 4 Phase 5)
         Route::get('requests', [\App\Http\Controllers\Staff\RequestsController::class, 'index'])
             ->name('requests')->middleware('permission:rollover loans|edit partners');

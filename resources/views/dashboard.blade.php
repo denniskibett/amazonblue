@@ -30,6 +30,20 @@
         ])
     </div>
 
+    @if (! empty($portfolio))
+      <div class="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <a href="{{ route('staff.portfolio') }}" class="rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-500 dark:border-gray-800 dark:bg-white/[0.03]">
+          <p class="text-theme-sm text-gray-500">Owed to us today</p><p class="mt-1 text-title-sm font-bold text-gray-800 dark:text-white/90">KES {{ number_format($portfolio['owed'], 2) }}</p>
+          <p class="text-theme-xs text-gray-500">{{ $portfolio['open_loans'] }} open loans · principal KES {{ number_format($portfolio['principal'], 2) }}</p></a>
+        <a href="{{ route('staff.portfolio') }}" class="rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-500 dark:border-gray-800 dark:bg-white/[0.03]">
+          <p class="text-theme-sm text-gray-500">Portfolio at risk (30+ days)</p><p class="mt-1 text-title-sm font-bold text-gray-800 dark:text-white/90">{{ $portfolio['par30'] }}%</p>
+          <p class="text-theme-xs text-gray-500">KES {{ number_format($portfolio['par30_amount'], 2) }} · PAR90 {{ $portfolio['par90'] }}%</p></a>
+        <a href="{{ route('staff.portfolio') }}" class="rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-500 dark:border-gray-800 dark:bg-white/[0.03]">
+          <p class="text-theme-sm text-gray-500">Non-performing</p><p class="mt-1 text-title-sm font-bold text-gray-800 dark:text-white/90">KES {{ number_format($portfolio['npl_owed'], 2) }}</p>
+          <p class="text-theme-xs text-gray-500">{{ $portfolio['npl_loans'] }} loans</p></a>
+      </div>
+    @endif
+
     <div class="col-span-12">
         @include('partials.chart.monthly-loans', [
             'monthlyData' => $monthlyData ?? []

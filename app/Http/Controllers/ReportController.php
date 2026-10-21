@@ -26,6 +26,25 @@ class ReportController extends Controller
         $this->loanCalculator = $loanCalculator;
     }
 
+    /** Stage 4 Phase 7: under engine v2 reports read the cycles and cash, not loans.amount. */
+    private function v2(): bool
+    {
+        return \App\Services\LoanCalculator::v2();
+    }
+
+    private ?\App\Services\LedgerReports $reports = null;
+
+    private function rep(): \App\Services\LedgerReports
+    {
+        return $this->reports ??= app(\App\Services\LedgerReports::class);
+    }
+
+    private function customerBalance($user): float
+    {
+        return $this->v2() ? (float) $user->loans->sum(fn ($l) => $this->rep()->owed($l))
+            : (float) ($user->loans->sum('amount') - $user->repayments->sum('amount'));
+    }
+
     public function index()
     {
         $reports = $this->getAvailableReports();
@@ -326,9 +345,10 @@ class ReportController extends Controller
                     'marital_status' => $user->marital_status,
                     'education' => $user->education,
                     'total_loans' => $user->loans->count(),
-                    'total_borrowed' => $user->loans->sum('amount'),
-                    'total_repaid' => $user->repayments->sum('amount'),
-                    'balance' => $user->loans->sum('amount') - $user->repayments->sum('amount'),
+                    // v2 (Stage 4 Phase 7): cash lent and repaid, and what is owed today; never loans.amount
+                    'total_borrowed' => $this->v2() ? $user->loans->sum(fn ($l) => $this->rep()->lent($l->id)) : $user->loans->sum('amount'),
+                    'total_repaid' => $this->v2() ? $user->loans->sum(fn ($l) => $this->rep()->repaid($l->id)) : $user->repayments->sum('amount'),
+                    'balance' => $this->v2() ? $user->loans->sum(fn ($l) => $this->rep()->owed($l)) : $user->loans->sum('amount') - $user->repayments->sum('amount'),
                     'completion_percentage' => $user->getBiodataCompletionPercentage()
                 ];
             })
@@ -360,8 +380,8 @@ class ReportController extends Controller
         return [
             'summary' => [
                 'total_loans' => $loans->count(),
-                'total_portfolio_value' => $loans->sum('amount'),
-                'average_loan_size' => $loans->average('amount') ?? 0,
+                'total_portfolio_value' => $this->v2() ? $loans->sum(fn ($l) => $this->rep()->owed($l)) : $loans->sum('amount'),
+                'average_loan_size' => $this->v2() ? ($loans->average(fn ($l) => (float) ($l->original_amount ?? $l->amount)) ?? 0) : ($loans->average('amount') ?? 0),
                 'average_interest_rate' => $loans->average('loanType.interest_rate') ?? 0,
                 'performing_loans' => $loans->whereIn('status', ['approved', 'disbursed'])->count(),
                 'non_performing_loans' => $loans->filter(fn ($l) => $l->is_non_performing || in_array($l->status, ['defaulted', 'recovery', 'written_off']))->count(),
@@ -413,13 +433,13 @@ class ReportController extends Controller
         return [
             'summary' => [
                 'total_active' => $loans->count(),
-                'total_portfolio' => $loans->sum('amount'),
+                'total_portfolio' => $this->v2() ? $loans->sum(fn ($l) => $this->rep()->owed($l)) : $loans->sum('amount'),
                 'overdue_loans' => $loans->filter(function ($loan) {
                     $dueDate = Carbon::parse($loan->borrow_date);
                     $dueDate->add($loan->loanType->period, $loan->loanType->unit);
                     return $dueDate->isPast();
                 })->count(),
-                'average_balance' => $loans->average('amount') ?? 0,
+                'average_balance' => $this->v2() ? ($loans->average(fn ($l) => $this->rep()->owed($l)) ?? 0) : ($loans->average('amount') ?? 0),
             ],
             'loans' => $loans->map(function ($loan) {
                 $metrics = $this->loanCalculator->calculateLoanMetrics($loan);
@@ -449,7 +469,7 @@ class ReportController extends Controller
         return [
             'summary' => [
                 'total_completed' => $loans->count(),
-                'total_amount_repaid' => $loans->sum('amount'),
+                'total_amount_repaid' => $this->v2() ? $loans->sum(fn ($l) => $this->rep()->repaid($l->id)) : $loans->sum('amount'),
                 'total_interest_earned' => $loans->sum(function($loan) {
                     return ($loan->loanType->interest_rate / 100) * $loan->amount;
                 }),
@@ -479,14 +499,15 @@ class ReportController extends Controller
 
     private function generateDefaultedLoansReport($filters)
     {
+        // v2: defaulted means defaulted, in recovery or written off (it listed rejected applications before)
         $loans = Loan::with(['user', 'loanType', 'repayments'])
-            ->where('status', 'rejected')
+            ->whereIn('status', $this->v2() ? ['defaulted', 'recovery', 'written_off'] : ['rejected'])
             ->get();
         
         return [
             'summary' => [
                 'total_defaulted' => $loans->count(),
-                'total_defaulted_amount' => $loans->sum('amount'),
+                'total_defaulted_amount' => $this->v2() ? $loans->sum(fn ($l) => $this->rep()->owed($l) + $this->rep()->repaid($l->id)) : $loans->sum('amount'),
                 'recovered_amount' => $loans->sum(function($loan) {
                     return $loan->repayments->sum('amount');
                 }),
@@ -501,7 +522,7 @@ class ReportController extends Controller
                     'amount' => $loan->amount,
                     'default_date' => $loan->updated_at->format('Y-m-d'),
                     'total_recovered' => $loan->repayments->sum('amount'),
-                    'remaining_balance' => $loan->amount - $loan->repayments->sum('amount'),
+                    'remaining_balance' => $this->v2() ? $this->rep()->owed($loan) : $loan->amount - $loan->repayments->sum('amount'),
                     'default_reason' => $loan->admin_notes ?? 'Unknown',
                     'recovery_status' => $loan->repayments->sum('amount') > 0 ? 'Partial Recovery' : 'No Recovery'
                 ];
@@ -565,9 +586,9 @@ class ReportController extends Controller
         return [
             'summary' => [
                 'total_defaults' => $defaultedLoans->count(),
-                'total_default_amount' => $defaultedLoans->sum('amount'),
+                'total_default_amount' => $this->v2() ? $defaultedLoans->sum(fn ($l) => $this->rep()->owed($l)) : $defaultedLoans->sum('amount'),
                 'total_cleared' => $repaidLoans->count(),
-                'total_cleared_amount' => $repaidLoans->sum('amount'),
+                'total_cleared_amount' => $this->v2() ? $repaidLoans->sum(fn ($l) => $this->rep()->repaid($l->id)) : $repaidLoans->sum('amount'),
                 'pending_review' => Loan::where('status', 'pending')->count(),
             ],
             'defaults' => $defaultedLoans->map(function ($loan) {
@@ -741,24 +762,18 @@ class ReportController extends Controller
         
         return [
             'summary' => [
-                'total_outstanding' => $users->sum(function($user) {
-                    return $user->loans->sum('amount') - $user->repayments->sum('amount');
-                }),
-                'customers_with_balance' => $users->filter(function($user) {
-                    return $user->loans->sum('amount') - $user->repayments->sum('amount') > 0;
-                })->count(),
-                'customers_zero_balance' => $users->filter(function($user) {
-                    return $user->loans->sum('amount') - $user->repayments->sum('amount') <= 0;
-                })->count(),
+                'total_outstanding' => $users->sum(fn ($user) => $this->customerBalance($user)),
+                'customers_with_balance' => $users->filter(fn ($user) => $this->customerBalance($user) > 0)->count(),
+                'customers_zero_balance' => $users->filter(fn ($user) => $this->customerBalance($user) <= 0)->count(),
                 // recorded repayments include rollovers, discounts and write-offs; real cash does not
                 'recorded_repayments' => (float) Repayment::sum('amount'),
                 'real_cash_repaid' => (float) CustomerWallets::whereCash(Repayment::query())->sum('amount'),
                 'real_cash_disbursed' => (float) CustomerWallets::whereCash(Disbursement::query())->sum(DB::raw(CustomerWallets::DISBURSED_CASH_SQL)),
             ],
             'customers' => $users->map(function ($user) {
-                $totalLoans = $user->loans->sum('amount');
-                $totalRepaid = $user->repayments->sum('amount');
-                $balance = $totalLoans - $totalRepaid;
+                $totalLoans = $this->v2() ? $user->loans->sum(fn ($l) => $this->rep()->lent($l->id)) : $user->loans->sum('amount');
+                $totalRepaid = $this->v2() ? $user->loans->sum(fn ($l) => $this->rep()->repaid($l->id)) : $user->repayments->sum('amount');
+                $balance = $this->customerBalance($user);
                 
                 return [
                     'id' => $user->id,

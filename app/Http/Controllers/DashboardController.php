@@ -105,6 +105,9 @@ class DashboardController extends Controller
             'cashRepaid' => $this->cashRepaid(),
             'cashRepaidThisMonth' => $this->cashRepaid(fn ($q) => $q->where('created_at', '>=', $currentMonthStart)),
 
+            // Stage 4 Phase 7: what is owed and how late, from the cycles (engine v2)
+            'portfolio' => \App\Services\LoanCalculator::v2() ? rescue(fn () => app(\App\Services\LedgerReports::class)->portfolio(), null, false) : null,
+
             // User Metrics
             'borrowerCount' => User::role('borrower')->count(),
             'newBorrowersThisMonth' => User::role('borrower')
