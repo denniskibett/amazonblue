@@ -39,7 +39,7 @@ class OperationsReviewController extends Controller
         $rollover = $canViewLedger && $section === 'rollovers' ? (function () {
             $svc = app(\App\Services\Loans\RolloverCleanup::class);
 
-            return $svc->chains() + ['stray' => $svc->strayRows(), 'never' => $svc->neverSent()];
+            return $svc->chains() + ['stray' => $svc->strayRows(), 'never' => $svc->neverSent(), 'transfers' => $svc->transfers()];
         })() : null;
 
         return view('staff.operations-review.index', compact('canViewLogs', 'canViewLedger', 'logs', 'issues', 'section', 'filters', 'grace', 'graceAction', 'rollover'));
@@ -321,7 +321,8 @@ class OperationsReviewController extends Controller
         $svc = app(\App\Services\Loans\RolloverCleanup::class);
         $postings = $svc->clearNeverSent();
         $rows = $svc->removeStray(null, 'operations review, ' . $request->user()->name);
+        $moved = $svc->postTransfers($svc->transfers()->where('posted', false)->values());
 
-        return back()->with('success', "{$rows} ROLL OVER row(s) removed; {$postings} ledger posting(s) reversed on never-sent loans.");
+        return back()->with('success', "{$rows} ROLL OVER row(s) removed; {$postings} ledger posting(s) reversed on never-sent loans; {$moved} consolidation transfer(s) posted.");
     }
 }

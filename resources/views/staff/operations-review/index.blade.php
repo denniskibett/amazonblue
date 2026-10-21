@@ -270,8 +270,15 @@
     <section class="mb-5 rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
       <h2 class="font-semibold text-gray-900 dark:text-white">ROLL OVER rows the cycles already hold, and loans never sent money</h2>
       <p class="mt-1 text-sm text-gray-500">{{ $rollover['stray']->count() }} ROLL OVER row(s) ({{ $rollover['stray']->where('table', 'repayments')->count() }} repayments, {{ $rollover['stray']->where('table', 'disbursements')->count() }} disbursements) on loans whose cycles already show the carry. They were never money, so removing them changes no balance. {{ $rollover['never']->count() }} loan(s) never sent money still carry interest/penalty charges: #{{ $rollover['never']->pluck('loan_id')->implode(', #') }}.</p>
-      @if ($canFix && ($rollover['stray']->isNotEmpty() || $rollover['never']->isNotEmpty()))
-        <form method="POST" action="{{ route('staff.operations-review.rollovers-clean') }}" class="mt-3">@csrf<button class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-gray-900">Remove the rows and clear the charges</button></form>
+      @php $pending = $rollover['transfers']->where('posted', false); @endphp
+      @if ($rollover['transfers']->isNotEmpty())
+        <p class="mt-3 text-sm text-gray-500">Rollovers into a loan that already existed: the receivable moves in the ledger from the old loan to the loan that took it; both loans' rows stay. {{ $pending->count() }} to post, {{ $rollover['transfers']->count() - $pending->count() }} posted.</p>
+        <div class="mt-2 overflow-x-auto"><table class="min-w-full text-left text-xs"><thead class="text-gray-500"><tr><th class="py-1 pr-3">From</th><th class="py-1 pr-3">To</th><th class="py-1 pr-3">Borrower</th><th class="py-1 pr-3">Closed → opened</th><th class="py-1 pr-3 text-right">KES</th><th class="py-1 pr-3">Match</th><th class="py-1"></th></tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          @foreach ($rollover['transfers'] as $t)<tr><td class="py-1 pr-3"><a href="{{ route('loans.show', $t['from']) }}" class="text-brand-600 hover:underline">#{{ $t['from'] }}</a></td><td class="py-1 pr-3"><a href="{{ route('loans.show', $t['to']) }}" class="text-brand-600 hover:underline">#{{ $t['to'] }}</a></td><td class="py-1 pr-3">{{ $t['borrower'] }}</td><td class="py-1 pr-3">{{ $t['closed'] }} → {{ $t['opened'] }}</td><td class="py-1 pr-3 text-right tabular-nums">{{ number_format($t['amount'], 2) }}</td><td class="py-1 pr-3">{{ $t['how'] }} · cycle {{ $t['into_cycle'] }}{{ $t['target'] === 'adjustment' ? ' (already booked there)' : '' }}</td><td class="py-1">{{ $t['posted'] ? 'posted' : '' }}</td></tr>@endforeach
+        </tbody></table></div>
+      @endif
+      @if ($canFix && ($rollover['stray']->isNotEmpty() || $rollover['never']->isNotEmpty() || $pending->isNotEmpty()))
+        <form method="POST" action="{{ route('staff.operations-review.rollovers-clean') }}" class="mt-3">@csrf<button class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-gray-900">Remove the rows, clear the charges, post the transfers</button></form>
       @endif
     </section>
     <section class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">

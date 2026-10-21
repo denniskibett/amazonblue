@@ -416,9 +416,9 @@ class DashboardController extends Controller
 
     private function getDueLoans($user)
     {
-        // owner, 21 Oct 2026: due loans include overdue and forbearance, not only on-time ones
+        // owner, 21 Oct 2026: due loans include overdue, forbearance and defaulted, not only on-time ones
         $baseQuery = Loan::with(['user', 'loanType', 'cycles'])
-            ->whereIn('loans.status', ['disbursed', 'approved', 'active', 'overdue', 'forbearance'])
+            ->whereIn('loans.status', ['disbursed', 'approved', 'active', 'overdue', 'forbearance', 'defaulted'])
             ->join('loan_types', 'loans.loan_type_id', '=', 'loan_types.id')
             ->select('loans.*');
 

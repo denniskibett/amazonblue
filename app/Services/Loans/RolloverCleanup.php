@@ -249,4 +249,124 @@ class RolloverCleanup
 
         return $n;
     }
+
+    /** How far apart a ROLL OVER repayment and the loan that took it may be for a consolidation transfer. */
+    public const TRANSFER_WINDOW = 15;
+
+    /** The visible loan a (possibly merged) loan now lives in. */
+    private function root(int $loanId): ?Loan
+    {
+        $seen = [];
+        $loan = Loan::withTrashed()->find($loanId);
+        while ($loan && $loan->merged_into_loan_id && ! isset($seen[$loan->id])) {
+            $seen[$loan->id] = true;
+            $loan = Loan::withTrashed()->find($loan->merged_into_loan_id);
+        }
+
+        return $loan && ! $loan->trashed() ? $loan : null;
+    }
+
+    /**
+     * Rollovers into a loan that already existed (consolidations and top-ups). The old loan's ROLL OVER repayment
+     * closed it, and the other loan's cycle took the balance, but the ledger posts neither ROLL OVER row (decision 6),
+     * so the receivable stayed on the old loan. The fix takes it off the old loan in the ledger: to the other loan's
+     * receivable when it went into that loan's first cycle, or against gl-rollover-adjustments when it went into a later
+     * cycle (that cycle's carry leg already booked it on the other loan). Both loans' rows stay as they are. Only exact amounts, same borrower, within TRANSFER_WINDOW days:
+     *   exact:  a ROLL OVER disbursement for the same amount on the other loan
+     *   no row: the other loan has no disbursement at all and its first cycle lent exactly that amount
+     *   top-up: the other loan's first cycle lent exactly that amount plus the cash it was sent
+     */
+    public function transfers(): Collection
+    {
+        $usedDisb = [];
+        $out = collect();
+        $repayments = Repayment::orderBy('repayment_date')->orderBy('id')->get()->filter(fn ($r) => CustomerWallets::kindOf($r) === 'rollover');
+        foreach ($repayments as $r) {
+            $from = $this->root((int) $r->loan_id);
+            if (! $from) {
+                continue;
+            }
+            $day = Carbon::parse($r->repayment_date);
+            $amount = round((float) $r->amount, 2);
+            $userLoans = Loan::where('user_id', $from->user_id)->where('id', '!=', $from->id)->pluck('id');
+            $match = null;
+
+            // soft-deleted ROLL OVER disbursements count too: 2a removed the ones a cycle start already shows, but they
+            // are still the record of which loan took the balance
+            foreach (Disbursement::withTrashed()->whereIn('loan_id', Loan::withTrashed()->where('user_id', $from->user_id)->pluck('id'))->get() as $d) {
+                $to = $this->root((int) $d->loan_id);
+                if ($to && $to->id !== $from->id && ! isset($usedDisb[$d->id]) && CustomerWallets::kindOf($d) === 'rollover'
+                    && abs((float) $d->amount - $amount) < 0.01 && abs(Carbon::parse($d->disburse_date)->diffInDays($day, false)) <= self::TRANSFER_WINDOW) {
+                    $match = ['to' => $to, 'how' => 'exact', 'disbursement_id' => $d->id, 'date' => Carbon::parse($d->disburse_date)->toDateString()];
+                    break;
+                }
+            }
+            if (! $match) {
+                foreach ($userLoans as $lid) {
+                    $c1 = LoanCycle::where('loan_id', $lid)->orderBy('cycle_number')->first();
+                    if (! $c1 || abs($c1->start_date->diffInDays($day, false)) > self::TRANSFER_WINDOW) {
+                        continue;
+                    }
+                    $disb = Disbursement::where('loan_id', $lid)->get();
+                    $cash = $disb->filter(fn ($d) => CustomerWallets::kindOf($d) === 'cash')->sum('amount');
+                    if ($disb->isEmpty() && abs($c1->lentPrincipal() - $amount) < 0.01) {
+                        $match = ['to' => Loan::find($lid), 'how' => 'no disbursement row', 'disbursement_id' => null, 'date' => $c1->start_date->toDateString()];
+                    } elseif ($cash > 0 && abs($c1->lentPrincipal() - $amount - $cash) < 0.01) {
+                        $match = ['to' => Loan::find($lid), 'how' => 'top-up (+' . number_format($cash, 2) . ' cash)', 'disbursement_id' => null, 'date' => $c1->start_date->toDateString()];
+                    }
+                    if ($match) {
+                        break;
+                    }
+                }
+            }
+            if (! $match) {
+                continue;
+            }
+            if ($match['disbursement_id']) {
+                $usedDisb[$match['disbursement_id']] = true;
+            }
+            // which cycle of the other loan took it: its first (principal the ledger never saw: move the receivable
+            // across) or a later one (the ledger already booked it there as a rollover adjustment: only the old
+            // loan's receivable comes off, against that adjustment account)
+            $into = LoanCycle::where('loan_id', $match['to']->id)->get()
+                ->sortBy(fn ($c) => abs($c->start_date->diffInDays(Carbon::parse($match['date']), false)))->first();
+            $target = $into && (int) $into->cycle_number > 1 ? 'adjustment' : 'receivable';
+            $out->push(['repayment_id' => $r->id, 'from' => $from->id, 'to' => $match['to']->id, 'user' => $from->user_id,
+                'borrower' => DB::table('users')->where('id', $from->user_id)->value('name'), 'amount' => $amount,
+                'closed' => $day->toDateString(), 'opened' => $match['date'], 'how' => $match['how'],
+                'into_cycle' => $into?->cycle_number, 'target' => $target,
+                'posted' => $this->transferPosted($r->id)]);
+        }
+
+        return $out;
+    }
+
+    private function transferPosted(int $repaymentId): bool
+    {
+        return \App\Services\Ledger::enabled() && app(\App\Services\Ledger::class)->posted('rollover_transfer:' . $repaymentId)->filter()->isNotEmpty();
+    }
+
+    /** Posts (or re-posts to the same plan) each consolidation transfer. Returns how many were posted. */
+    public function postTransfers(?Collection $rows = null): int
+    {
+        if (! \App\Services\Ledger::enabled()) {
+            return 0;
+        }
+        $ledger = app(\App\Services\Ledger::class);
+        $n = 0;
+        foreach ($rows ?? $this->transfers() as $t) {
+            $from = Loan::findOrFail($t['from']);
+            $to = Loan::findOrFail($t['to']);
+            $into = $t['target'] === 'adjustment' ? $ledger->houseAccount('gl-rollover-adjustments') : $ledger->account($to, 'gl-receivable');
+            $steps = $ledger->sync('rollover_transfer', (int) $t['repayment_id'], [[
+                'leg' => 'rollover_transfer', 'from' => $ledger->account($from, 'gl-receivable'), 'to' => $into, 'amount' => $t['amount'],
+            ]], ['loan_id' => $to->id, 'date' => $t['opened'], 'source' => 'ledger', 'reference' => "ROLL OVER #{$from->id} -> #{$to->id}"]);
+            if ($steps) {
+                $n++;
+                AuditTrail::record('loans', $to->id, 'update', null, ['rollover_transfer' => $t]);
+            }
+        }
+
+        return $n;
+    }
 }

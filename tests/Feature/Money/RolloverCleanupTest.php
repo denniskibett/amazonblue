@@ -122,6 +122,24 @@ class RolloverCleanupTest extends TestCase
         $this->assertSame([950], $ids, 'the carry on cycle 1 goes; the one on the latest cycle may still carry somewhere');
     }
 
+    public function test_a_rollover_into_an_existing_loan_becomes_a_transfer(): void
+    {
+        // like 158 -> 162: the old loan's ROLL OVER closes it; the other loan has no disbursement row, just the carried amount
+        $this->loanRow(700, 1, 1600, 1600, '2026-01-01', '2026-01-11', 'repaid', 1, 0);
+        $user = DB::table('loans')->where('id', 700)->value('user_id');
+        $this->cycleRow(700, 700, 1, 0, 320, 1920, 20, '2026-01-01', '2026-01-11', 'completed', 'Initial');
+        $this->disburse(700, 1600, '2026-01-01', 'CASH');
+        $this->repay(700, 700, 1920, '2026-01-11', 'ROLL OVER', 970, 'other');
+        $this->loanRow(701, 1, 1920, 1920, '2026-01-12', '2026-01-22', 'repaid', 1, 0);
+        DB::table('loans')->where('id', 701)->update(['user_id' => $user]);
+        $this->cycleRow(701, 701, 1, 0, 384, 2304, 20, '2026-01-12', '2026-01-22', 'completed', 'Initial');
+
+        $t = app(RolloverCleanup::class)->transfers();
+        $this->assertCount(1, $t);
+        $this->assertSame([700, 701, 'no disbursement row'], [$t[0]['from'], $t[0]['to'], $t[0]['how']]);
+        $this->assertMoney(1920, $t[0]['amount']);
+    }
+
     public function test_a_loan_never_sent_money_charges_nothing(): void
     {
         $this->loanRow(132, 1, 50000, 50000, '2025-07-29', '2025-08-08', 'rejected', 1, 0);

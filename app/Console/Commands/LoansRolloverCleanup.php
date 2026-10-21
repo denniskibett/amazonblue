@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Storage;
  * Feature 2a: rollovers live in loan_cycles only (App\Services\Loans\RolloverCleanup).
  *
  *   --dry-run                                  reports/rollover-cleanup-<date>.csv + SHA-256
- *   --apply --confirm=<sha> [--only=root ids]  never-sent charges off, chains merged, stray ROLL OVER rows removed
+ *   --apply --confirm=<sha> [--only=root ids]  never-sent charges off, chains merged, stray ROLL OVER rows removed,
+ *                                              consolidation transfers posted in the ledger
  */
 class LoansRolloverCleanup extends Command
 {
@@ -40,6 +41,7 @@ class LoansRolloverCleanup extends Command
         $found = $svc->chains();
         $stray = $svc->strayRows();
         $never = $svc->neverSent();
+        $transfers = $svc->transfers()->where('posted', false)->values();
 
         $fh = fopen('php://temp', 'r+');
         fputcsv($fh, ['section', 'root', 'from', 'to', 'borrower', 'from_cycle', 'from_due', 'to_start', 'days_late', 'owed_at_rollover',
@@ -57,6 +59,9 @@ class LoansRolloverCleanup extends Command
         foreach ($stray as $r) {
             fputcsv($fh, ['stray_' . $r['table'], '', '', $r['loan_id'], '', '', '', $r['date'], '', '', '', '', $r['id'] . ':' . $r['amount'], '', $r['why']]);
         }
+        foreach ($transfers as $t) {
+            fputcsv($fh, ['transfer', '', $t['from'], $t['to'], $t['borrower'], '', $t['closed'], $t['opened'], '', $t['amount'], '', '', $t['repayment_id'], '', $t['how'] . '; into cycle ' . $t['into_cycle'] . ' (' . $t['target'] . ')']);
+        }
         foreach ($never as $n) {
             fputcsv($fh, ['never_sent', '', '', $n['loan_id'], $n['borrower'], '', '', '', '', '', '', '', '', '', $n['status']]);
         }
@@ -66,9 +71,9 @@ class LoansRolloverCleanup extends Command
         $sha = hash('sha256', $csv);
         $path = 'reports/rollover-cleanup-' . now()->format('Y-m-d') . '.csv';
 
-        $this->line(sprintf('chains %d (%d loans folded in; carry difference KES %s); unmatched %d; stray ROLL OVER rows %d (%d repayments, %d disbursements); never-sent loans %d',
+        $this->line(sprintf('chains %d (%d loans folded in; carry difference KES %s); unmatched %d; stray ROLL OVER rows %d (%d repayments, %d disbursements); never-sent loans %d; consolidation transfers %d (KES %s)',
             $found['chains']->count(), $found['links']->count(), number_format($found['chains']->sum('carry_difference'), 2), $found['unmatched']->count(),
-            $stray->count(), $stray->where('table', 'repayments')->count(), $stray->where('table', 'disbursements')->count(), $never->count()));
+            $stray->count(), $stray->where('table', 'repayments')->count(), $stray->where('table', 'disbursements')->count(), $never->count(), $transfers->count(), number_format($transfers->sum('amount'), 2)));
 
         if ($dry) {
             Storage::disk('local')->put($path, $csv);
@@ -100,6 +105,7 @@ class LoansRolloverCleanup extends Command
             }
         }
         $this->line('stray ROLL OVER rows removed: ' . $svc->removeStray(null, 'loans:rollover-cleanup ' . substr($sha, 0, 12)));
+        $this->line('consolidation transfers posted: ' . $svc->postTransfers($transfers));
         $this->info('Done.' . ($failed ? ' Failed chains: #' . implode(', #', $failed) : ''));
 
         return $failed ? self::FAILURE : self::SUCCESS;
