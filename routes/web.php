@@ -531,6 +531,10 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('operations-review.forbearance')->middleware('permission:grant forbearance');
         Route::post('operations-review/loans/{loan}/due-date', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'correctDueDate'])
             ->name('operations-review.due-date')->middleware('permission:edit loans|manage loan cycles');
+        Route::post('operations-review/repairs', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'repairBatch'])
+            ->name('operations-review.repair-batch')->middleware('permission:edit loans|manage loan cycles');
+        Route::post('operations-review/repairs/{loan}', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'repair'])
+            ->name('operations-review.repair')->middleware('permission:edit loans|manage loan cycles');
         Route::post('operations-review/rollovers/clean', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'cleanRollovers'])
             ->name('operations-review.rollovers-clean')->middleware('permission:edit loans|manage loan cycles');
         Route::post('operations-review/rollovers/{loan}', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'applyChain'])

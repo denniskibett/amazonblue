@@ -42,7 +42,13 @@ class OperationsReviewController extends Controller
             return $svc->chains() + ['stray' => $svc->strayRows(), 'never' => $svc->neverSent(), 'transfers' => $svc->transfers()];
         })() : null;
 
-        return view('staff.operations-review.index', compact('canViewLogs', 'canViewLedger', 'logs', 'issues', 'section', 'filters', 'grace', 'graceAction', 'rollover'));
+        $repairs = $canViewLedger && $section === 'repairs' ? app(\App\Services\Loans\LoanRepair::class)->findings() : collect();
+        $repairGroup = $request->query('group');
+        if ($repairGroup) {
+            $repairs = $repairs->where('group', $repairGroup)->values();
+        }
+
+        return view('staff.operations-review.index', compact('canViewLogs', 'canViewLedger', 'logs', 'issues', 'section', 'filters', 'grace', 'graceAction', 'rollover', 'repairs', 'repairGroup'));
     }
 
     public function grantForbearance(Request $request, Loan $loan)
@@ -324,5 +330,60 @@ class OperationsReviewController extends Controller
         $moved = $svc->postTransfers($svc->transfers()->where('posted', false)->values());
 
         return back()->with('success', "{$rows} ROLL OVER row(s) removed; {$postings} ledger posting(s) reversed on never-sent loans; {$moved} consolidation transfer(s) posted.");
+    }
+
+    /**
+     * One 2b repair on one loan (LoanRepair). With preview=1 it runs inside a transaction that is rolled back, so the
+     * owner sees what the loan would owe before saving anything.
+     */
+    public function repair(Request $request, Loan $loan)
+    {
+        $data = $request->validate([
+            'action' => ['required', 'in:book_discount,book_bad_debt,book_remove,book_cut,broker_kept,add_disbursement,remove_disbursement,rebuild,move'],
+            'row' => ['nullable', 'integer'], 'to' => ['nullable', 'integer'], 'amount' => ['nullable', 'numeric', 'min:0.01'],
+            'preview' => ['nullable', 'boolean'], 'note' => ['nullable', 'string', 'max:500'],
+        ]);
+        $svc = app(\App\Services\Loans\LoanRepair::class);
+        $note = ($data['note'] ?? null) ?: 'operations review 2b, ' . $request->user()->name;
+        $run = fn () => match ($data['action']) {
+            'book_discount' => $svc->bookAs((int) $data['row'], 'discount', $note),
+            'book_bad_debt' => $svc->bookAs((int) $data['row'], 'bad_debt', $note),
+            'book_remove' => $svc->bookRemove((int) $data['row'], $note),
+            'book_cut' => $svc->bookCut((int) $data['row'], $note),
+            'broker_kept' => $svc->brokerKept((int) $data['row'], $note),
+            'add_disbursement' => $svc->addMissingDisbursement($loan->id, $note),
+            'remove_disbursement' => $svc->removeDisbursement((int) $data['row'], $note),
+            'rebuild' => $svc->rebuildFromCash($loan->id, $note),
+            'move' => $svc->moveReceivable($loan->id, (int) $data['to'], (float) $data['amount'], $note),
+        };
+        $before = $svc->owedFor($loan->id);
+        try {
+            if (! empty($data['preview'])) {
+                DB::beginTransaction();
+                try {
+                    $msg = $run();
+                    $after = $svc->owedFor($loan->id);
+                } finally {
+                    DB::rollBack();
+                }
+
+                return back()->with('success', 'Preview, nothing saved. ' . $msg . ' Owed: KES ' . number_format($before, 2) . ' -> ' . number_format($after, 2) . '.')->withFragment('loan-' . $loan->id);
+            }
+            $msg = $run();
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return back()->withErrors(['repair' => "Loan #{$loan->id}: " . $e->getMessage()])->withFragment('loan-' . $loan->id);
+        }
+        $d = $svc->detail($loan->id);
+
+        return back()->with('success', $msg . ' Owed now KES ' . number_format($svc->owedFor($loan->id), 2) . '; ledger difference ' . number_format((float) ($d['difference'] ?? 0), 2) . '.')->withFragment('loan-' . $loan->id);
+    }
+
+    /** The suggested fix of every ticked loan, worked out again on the server. */
+    public function repairBatch(Request $request)
+    {
+        $ids = $request->validate(['loan_ids' => ['required', 'array', 'max:100'], 'loan_ids.*' => ['integer']])['loan_ids'];
+        [$done, $skipped] = app(\App\Services\Loans\LoanRepair::class)->applySuggestions($ids, 'operations review 2b batch, ' . $request->user()->name);
+
+        return back()->with('success', count($done) . ' loan(s) repaired.' . ($skipped ? ' Skipped: ' . implode('; ', $skipped) . '.' : ''));
     }
 }

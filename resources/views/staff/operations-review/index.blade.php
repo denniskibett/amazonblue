@@ -16,6 +16,9 @@
     @if ($canViewLedger)
       <a href="{{ route('staff.operations-review', ['section' => 'rollovers']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'rollovers' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Rollover chains</a>
     @endif
+    @if ($canViewLedger)
+      <a href="{{ route('staff.operations-review', ['section' => 'repairs']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'repairs' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Per-loan repairs</a>
+    @endif
     @if ($canViewLogs)
       <a href="{{ route('staff.operations-review', ['section' => 'errors']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'errors' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Application errors <span class="ml-1 text-xs">{{ $logs->total() }}</span></a>
     @endif
@@ -287,6 +290,8 @@
         @foreach ($rollover['unmatched'] as $u)<tr><td class="px-5 py-2"><a href="{{ route('loans.show', $u['loan']) }}" class="text-brand-600 hover:underline">#{{ $u['loan'] }}</a></td><td class="px-3 py-2 text-gray-500">{{ $u['date'] }}</td><td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ $u['why'] }}</td></tr>@endforeach
       </tbody></table></div>
     </section>
+  @elseif ($section === 'repairs' && $canViewLedger)
+    @include('staff.operations-review._repairs')
   @else
     <x-staff.alert type="warn" title="Review section unavailable">You do not have permission to view this section.</x-staff.alert>
   @endif
