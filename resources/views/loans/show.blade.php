@@ -179,6 +179,14 @@
                             </div>
                         </div>
                         @endif
+                        @if(($splitShares ?? collect())->isNotEmpty())
+                        <div class="border-t border-gray-100 px-5 py-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                            <p class="mb-1 font-medium text-gray-600 dark:text-gray-300">Shared out from this loan's cash repayments</p>
+                            @foreach($splitShares as $share)
+                                <div class="flex justify-between"><span>{{ $share->name }} · {{ ['broker_fee_earned' => 'interest share', 'penalty_share' => 'penalty share', 'profit_distribution' => 'interest share'][$share->type] ?? str_replace('_', ' ', $share->type) }}</span><span class="tabular-nums">KES {{ number_format($share->total, 2) }}</span></div>
+                            @endforeach
+                        </div>
+                        @endif
 
                         <!-- Total Repayments (Current Cycle Only) -->
                         <div class="grid grid-cols-11 border-t border-gray-100 px-5 py-3.5 dark:border-gray-800">

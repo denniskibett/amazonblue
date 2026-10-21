@@ -525,6 +525,16 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('products')->middleware('permission:manage loan types|view reports');
         Route::get('wallets', [\App\Http\Controllers\Staff\FinanceController::class, 'wallets'])
             ->name('wallets')->middleware('permission:reconcile wallets|view house reconciliation');
+        Route::get('operations-review', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'index'])
+            ->name('operations-review')->middleware('permission:view logs|view ledger');
+        Route::post('operations-review/loans/{loan}/forbearance', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'grantForbearance'])
+            ->name('operations-review.forbearance')->middleware('permission:grant forbearance');
+        Route::post('operations-review/loans/{loan}/due-date', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'correctDueDate'])
+            ->name('operations-review.due-date')->middleware('permission:edit loans|manage loan cycles');
+        Route::post('operations-review/grace', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'applyGraceBatch'])
+            ->name('operations-review.grace-batch')->middleware('permission:edit loans|manage loan cycles');
+        Route::post('operations-review/grace/{loan}', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'applyGrace'])
+            ->name('operations-review.grace')->middleware('permission:edit loans|manage loan cycles|grant forbearance');
         Route::get('partner-payouts', [\App\Http\Controllers\Staff\FinanceController::class, 'partnerPayouts'])
             ->name('partner-payouts')->middleware('permission:view partner statements');
     });

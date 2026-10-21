@@ -696,6 +696,22 @@ class LoanController extends Controller
                 $metrics['total_broker_fees'] ?? 0;
         }
 
+        // Phase 3 (lending.split.enabled): what this loan's cash repayments actually shared out, from the partner
+        // journal, not the old brokers-table estimate. Rates are the loan's own (loans.broker_rate / broker_penalty_rate).
+        $splitShares = collect();
+        if (\App\Services\Loans\RepaymentSplit::enabled()) {
+            $is_brokered = (bool) $loan->broker_status;
+            $brokerRate = (float) $loan->broker_rate;
+            $penalty_rate = (float) ($loan->broker_penalty_rate ?? config('lending.split.default_broker_penalty_rate', 50));
+            $splitShares = \App\Models\PartnerTransaction::where('loan_id', $loan->id)
+                ->where('reference', 'like', \App\Services\Loans\RepaymentSplit::PREFIX . '%')
+                ->join('partners', 'partners.id', '=', 'partner_transactions.partner_id')
+                ->selectRaw('partners.name, partners.is_house_account, partner_transactions.type, round(sum(partner_transactions.amount), 2) as total')
+                ->groupBy('partners.name', 'partners.is_house_account', 'partner_transactions.type')->get()
+                ->filter(fn ($r) => abs((float) $r->total) >= 0.005)->values();
+            $total_broker_fees = (float) $splitShares->where('is_house_account', false)->sum('total');
+        }
+
         // ============================================================
         // SIGNATURE STATUS
         // ============================================================
@@ -884,6 +900,7 @@ class LoanController extends Controller
             'brokerRate',
             'penalty_rate',
             'total_broker_fees',
+            'splitShares',
 
             // Default
             'is_defaulted',

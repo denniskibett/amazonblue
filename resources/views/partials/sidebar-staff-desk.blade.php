@@ -18,6 +18,7 @@
       ['staff.roles', 'Roles & permissions', $u->canAny(['manage roles', 'view audit log']), 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z'],
       ['staff.products', 'Loan products', $u->canAny(['manage loan types', 'view reports']), 'M7 3h7l5 5v13H7zM14 3v5h5'],
       ['staff.wallets', 'Wallets & reconciliation', $u->canAny(['reconcile wallets', 'view house reconciliation']), 'M4 20V10M10 20V4M16 20v-7M22 20H2'],
+      ['staff.operations-review', 'Operations review', $u->canAny(['view logs', 'view ledger']), 'M4 4h16v16H4zM8 9h8M8 13h8M8 17h4'],
       ['staff.partner-payouts', 'Partner payouts', $u->can('view partner statements'), 'M17 20h5v-2a4 4 0 0 0-5-3.9M9 20H2v-2a4 4 0 0 1 7-2.6M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z'],
     ],
   ];

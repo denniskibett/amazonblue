@@ -195,6 +195,11 @@ class DebtRecoveryCase extends Model
         return max(0, $this->total_debt_amount - $this->getTotalRecovered());
     }
 
+    public function getRemainingBalance()
+    {
+        return max(0, $this->total_debt_amount - $this->getTotalRecovered());
+    }
+
     // ============ PHASE ACCESSORS ============
 
     public function getCurrentPhaseAttribute()
