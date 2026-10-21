@@ -166,6 +166,16 @@ class Ledger
     }
 
     /**
+     * A loan that was never sent money (pending, approved or rejected, and no disbursement row of any kind) has no
+     * receivable: its cycles exist for the schedule only and charge nothing (owner, 21 Oct 2026).
+     */
+    public static function neverSent(Loan $loan): bool
+    {
+        return in_array($loan->status, [Loan::STATUS_PENDING, Loan::STATUS_APPROVED, Loan::STATUS_REJECTED], true)
+            && ! \App\Models\Disbursement::where('loan_id', $loan->id)->exists();
+    }
+
+    /**
      * What a cycle charges (engine v2 only): its interest, the penalty run so far (or up to the day it was
      * carried), and, for a carried cycle, the difference between what it owed and what the next cycle took
      * over. With these and the payments, a loan's gl-receivable equals what the borrower owes.
@@ -178,6 +188,9 @@ class Ledger
         $loan = Loan::withTrashed()->find($cycle->loan_id);
         if (! $loan) {
             return ['legs' => [], 'note' => 'loan not found'];
+        }
+        if (self::neverSent($loan)) {
+            return ['legs' => [], 'note' => 'never disbursed: no charges (owner, 21 Oct 2026)'];
         }
         $b = \App\Services\Loans\CycleBalance::at($cycle);
         $receivable = $this->account($loan, 'gl-receivable');
@@ -387,9 +400,10 @@ class Ledger
             ->pluck('total', 'holder_id');
         foreach (\App\Models\LoanCycle::query()->selectRaw('loan_id, max(cycle_number) as n')->groupBy('loan_id')->get() as $row) {
             $cycle = \App\Models\LoanCycle::where('loan_id', $row->loan_id)->where('cycle_number', $row->n)->first();
+            $loan = Loan::withTrashed()->find($row->loan_id);
             $b = \App\Services\Loans\CycleBalance::at($cycle);
             // an overpayment leaves the borrower in credit: the receivable goes below 0 by that much
-            $owed = round($b['final_outstanding'] - $b['overpaid'], 2);
+            $owed = $loan && self::neverSent($loan) ? 0.0 : round($b['final_outstanding'] - $b['overpaid'], 2);
             $ledger = round((float) ($balances[$row->loan_id] ?? 0) / (10 ** self::dp()), 2);
             $checked++;
             if (abs($owed - $ledger) >= 0.01) {

@@ -13,6 +13,9 @@
     @if ($canViewLedger)
       <a href="{{ route('staff.operations-review', ['section' => 'grace']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'grace' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Late payers &amp; forbearance</a>
     @endif
+    @if ($canViewLedger)
+      <a href="{{ route('staff.operations-review', ['section' => 'rollovers']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'rollovers' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Rollover chains</a>
+    @endif
     @if ($canViewLogs)
       <a href="{{ route('staff.operations-review', ['section' => 'errors']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'errors' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Application errors <span class="ml-1 text-xs">{{ $logs->total() }}</span></a>
     @endif
@@ -231,6 +234,51 @@
           </div>
         @endif
       @endif
+    </section>
+  @elseif ($section === 'rollovers' && $canViewLedger && $rollover)
+    @php $canFix = auth()->user()->canAny(['edit loans', 'manage loan cycles']); $kes = fn ($v) => number_format((float) $v, 2); @endphp
+    <section class="mb-5 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
+        <h2 class="font-semibold text-gray-900 dark:text-white">ROLL OVER chains to merge</h2>
+        <p class="mt-1 text-sm text-gray-500">A later loan of the same borrower that opened with a ROLL OVER within {{ \App\Services\Loans\RolloverCleanup::WINDOW }} days of the earlier loan's due date becomes its next cycle(s); the ROLL OVER rows then go, because the cycles hold the carry. A carry difference is what the old rollover charged above (+) or below (−) what was owed that day; the ledger books it as a rollover adjustment.</p>
+      </div>
+      @if ($rollover['chains']->isEmpty())
+        <p class="p-5 text-sm text-gray-500">No chains left to merge.</p>
+      @else
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 text-left text-sm dark:divide-gray-800">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/[0.02]"><tr><th class="px-3 py-3">Main loan</th><th class="px-3 py-3">Links (old due → new start)</th><th class="px-3 py-3 text-right">Owed at rollover → carried</th><th class="px-3 py-3 text-right">Carry difference</th><th class="px-3 py-3"></th></tr></thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+              @foreach ($rollover['chains'] as $ch)
+                <tr class="align-top">
+                  <td class="px-3 py-3"><a href="{{ route('loans.show', $ch['root']) }}" class="font-medium text-brand-600 hover:underline">#{{ $ch['root'] }}</a><div class="text-xs text-gray-500">{{ $ch['borrower'] }}</div></td>
+                  <td class="px-3 py-3 text-xs">
+                    @foreach ($ch['links'] as $l)
+                      <div>#{{ $l['from'] }} c{{ $l['from_cycle'] }} due {{ $l['from_due'] }} → <a href="{{ route('loans.show', $l['to']) }}" class="text-brand-600 hover:underline">#{{ $l['to'] }}</a> from {{ $l['to_start'] }}@if ($l['days_late'])<span class="text-amber-600"> ({{ $l['days_late'] > 0 ? $l['days_late'] . ' day(s) late' : abs($l['days_late']) . ' day(s) early' }})</span>@endif <span class="rounded bg-gray-100 px-1 text-gray-600 dark:bg-white/10 dark:text-gray-300">{{ $l['matched_on'] }}</span>@if ($l['overlap'])<span class="text-amber-600"> · same start day</span>@endif</div>
+                    @endforeach
+                  </td>
+                  <td class="whitespace-nowrap px-3 py-3 text-right text-xs tabular-nums">@foreach ($ch['links'] as $l)<div>{{ $kes($l['owed_at_rollover']) }} → {{ $kes($l['continuation_principal']) }}</div>@endforeach</td>
+                  <td class="whitespace-nowrap px-3 py-3 text-right tabular-nums {{ abs($ch['carry_difference']) >= 0.01 ? 'text-amber-600' : 'text-gray-500' }}">{{ $kes($ch['carry_difference']) }}</td>
+                  <td class="px-3 py-3">@if ($canFix)<form method="POST" action="{{ route('staff.operations-review.chain', $ch['root']) }}">@csrf<button class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">Merge</button></form>@endif</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
+      @endif
+    </section>
+    <section class="mb-5 rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+      <h2 class="font-semibold text-gray-900 dark:text-white">ROLL OVER rows the cycles already hold, and loans never sent money</h2>
+      <p class="mt-1 text-sm text-gray-500">{{ $rollover['stray']->count() }} ROLL OVER row(s) ({{ $rollover['stray']->where('table', 'repayments')->count() }} repayments, {{ $rollover['stray']->where('table', 'disbursements')->count() }} disbursements) on loans whose cycles already show the carry. They were never money, so removing them changes no balance. {{ $rollover['never']->count() }} loan(s) never sent money still carry interest/penalty charges: #{{ $rollover['never']->pluck('loan_id')->implode(', #') }}.</p>
+      @if ($canFix && ($rollover['stray']->isNotEmpty() || $rollover['never']->isNotEmpty()))
+        <form method="POST" action="{{ route('staff.operations-review.rollovers-clean') }}" class="mt-3">@csrf<button class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-gray-900">Remove the rows and clear the charges</button></form>
+      @endif
+    </section>
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800"><h2 class="font-semibold text-gray-900 dark:text-white">Not linked ({{ $rollover['unmatched']->count() }})</h2><p class="mt-1 text-sm text-gray-500">Left as separate loans. Their differences go to the per-loan decisions (Feature 2b).</p></div>
+      <div class="max-h-96 overflow-y-auto"><table class="min-w-full text-left text-xs"><tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+        @foreach ($rollover['unmatched'] as $u)<tr><td class="px-5 py-2"><a href="{{ route('loans.show', $u['loan']) }}" class="text-brand-600 hover:underline">#{{ $u['loan'] }}</a></td><td class="px-3 py-2 text-gray-500">{{ $u['date'] }}</td><td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ $u['why'] }}</td></tr>@endforeach
+      </tbody></table></div>
     </section>
   @else
     <x-staff.alert type="warn" title="Review section unavailable">You do not have permission to view this section.</x-staff.alert>

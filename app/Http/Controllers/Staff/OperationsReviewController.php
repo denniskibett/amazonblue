@@ -36,7 +36,13 @@ class OperationsReviewController extends Controller
             $grace = $grace->where('action', $graceAction)->values();
         }
 
-        return view('staff.operations-review.index', compact('canViewLogs', 'canViewLedger', 'logs', 'issues', 'section', 'filters', 'grace', 'graceAction'));
+        $rollover = $canViewLedger && $section === 'rollovers' ? (function () {
+            $svc = app(\App\Services\Loans\RolloverCleanup::class);
+
+            return $svc->chains() + ['stray' => $svc->strayRows(), 'never' => $svc->neverSent()];
+        })() : null;
+
+        return view('staff.operations-review.index', compact('canViewLogs', 'canViewLedger', 'logs', 'issues', 'section', 'filters', 'grace', 'graceAction', 'rollover'));
     }
 
     public function grantForbearance(Request $request, Loan $loan)
@@ -295,5 +301,27 @@ class OperationsReviewController extends Controller
         }
 
         return back()->with('success', count($done) . ' loan(s) fixed.' . ($skipped ? ' Skipped: ' . implode(', ', $skipped) . '.' : ''));
+    }
+
+    /** Merge one ROLL OVER chain (re-detected now) and remove the ROLL OVER rows its cycles hold. */
+    public function applyChain(Request $request, Loan $loan)
+    {
+        try {
+            $done = app(\App\Services\Loans\RolloverCleanup::class)->applyChain($loan->id, 'operations review, ' . $request->user()->name);
+        } catch (\Throwable $e) {
+            return back()->withErrors(['chain' => "Loan #{$loan->id}: " . strtok($e->getMessage(), "\n")]);
+        }
+
+        return back()->with('success', "Loan #{$loan->id}: merged #" . implode(', #', array_slice($done['loans'], 1)) . "; {$done['rows_removed']} ROLL OVER row(s) removed.");
+    }
+
+    /** Stray ROLL OVER rows (all loans) and never-sent charges. */
+    public function cleanRollovers(Request $request)
+    {
+        $svc = app(\App\Services\Loans\RolloverCleanup::class);
+        $postings = $svc->clearNeverSent();
+        $rows = $svc->removeStray(null, 'operations review, ' . $request->user()->name);
+
+        return back()->with('success', "{$rows} ROLL OVER row(s) removed; {$postings} ledger posting(s) reversed on never-sent loans.");
     }
 }
