@@ -291,7 +291,8 @@ class UpdateLoanStatuses extends Command
         if (! $d) {
             return ['updated' => false, 'skipped' => true, 'old_status' => $old, 'new_status' => $old, 'reason' => 'Left alone'];
         }
-        $defaults = $d['status'] !== Loan::STATUS_REPAID && $d['balance']['is_defaulted'] && ! $loan->default_triggered;
+        // a loan in forbearance (penalty waived today) is never defaulted by the nightly run
+        $defaults = ! in_array($d['status'], [Loan::STATUS_REPAID, Loan::STATUS_FORBEARANCE], true) && $d['balance']['is_defaulted'] && ! $loan->default_triggered;
         $new = $defaults ? Loan::STATUS_DEFAULTED : $d['status'];
         $reason = $defaults
             ? "Default triggered: {$d['balance']['days_overdue']} days overdue (threshold: {$d['balance']['default_threshold_days']} days)"
