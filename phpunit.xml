@@ -27,6 +27,11 @@
         <env name="DB_DATABASE" value="loans_testing"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
+        <!-- lending switches at their defaults, whatever the local .env says (it mirrors live); tests turn them on themselves -->
+        <env name="LENDING_ENGINE" value="v1"/>
+        <env name="LENDING_LEDGER_ENABLED" value="false"/>
+        <env name="LENDING_SPLIT_ENABLED" value="false"/>
+        <env name="LENDING_REVERSALS_ENABLED" value="false"/>
         <env name="MPESA_ENV" value="sandbox"/>
         <env name="MPESA_SHORTCODE" value="174379"/>
         <env name="MPESA_ENABLED" value="false"/>
