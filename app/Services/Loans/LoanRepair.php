@@ -177,15 +177,16 @@ class LoanRepair
     }
 
     /** The loan is right: the money that went out was never recorded. Adds it on the first cycle's start. */
-    public function addMissingDisbursement(int $loanId, ?string $note = null): string
+    public function addMissingDisbursement(int $loanId, ?string $note = null, ?float $amount = null, ?string $date = null): string
     {
-        return $this->onLoan($loanId, function (Loan $loan) {
+        return $this->onLoan($loanId, function (Loan $loan) use ($amount, $date) {
             $c1 = LoanCycle::where('loan_id', $loan->id)->orderBy('cycle_number')->firstOrFail();
             $cash = Disbursement::where('loan_id', $loan->id)->get()->filter(fn ($d) => CustomerWallets::kindOf($d) === 'cash')->sum('amount');
-            $missing = round($c1->lentPrincipal() - $cash, 2);
+            $missing = $amount !== null ? round($amount, 2) : round($c1->lentPrincipal() - $cash, 2);
             abort_if($missing < 0.01, 422, 'Nothing is missing: the cash recorded already covers cycle 1.');
-            $day = $c1->start_date->toDateString();
-            Disbursement::create(['loan_id' => $loan->id, 'loan_cycle_id' => $c1->id, 'amount' => $missing, 'net_amount' => $missing,
+            $day = $date ? Carbon::parse($date)->toDateString() : $c1->start_date->toDateString();
+            $cycle = LoanCycle::where('loan_id', $loan->id)->where('start_date', '<=', $day)->orderByDesc('cycle_number')->first() ?? $c1;
+            Disbursement::create(['loan_id' => $loan->id, 'loan_cycle_id' => $cycle->id, 'amount' => $missing, 'net_amount' => $missing,
                 'transaction' => 'BACKFILL: not recorded at the time', 'mode' => 'other', 'disburse_date' => $day, 'payment_date' => $day,
                 'kind' => 'cash', 'notes' => 'Owner decision 21 Oct 2026 (2b): the loan was right; the disbursement was never recorded']);
 
@@ -203,6 +204,308 @@ class LoanRepair
 
             return 'disbursement #' . $d->id . ' (KES ' . number_format((float) $d->amount, 2) . ') removed';
         }, $note);
+    }
+
+    /**
+     * A book row (not cash) set to the amount staff typed, e.g. a write-off cut to an agreed figure. Cash rows are never
+     * changed here (onRepayment refuses them); 0 removes the row.
+     */
+    public function bookSet(int $repaymentId, float $amount, ?string $note = null): string
+    {
+        abort_if($amount < 0, 422, 'The amount cannot be below 0.');
+
+        return $this->onRepayment($repaymentId, function (Repayment $r) use ($amount) {
+            $was = (float) $r->amount;
+            if ($amount < 0.005) {
+                $r->delete();
+
+                return 'book row #' . $r->id . ' (KES ' . number_format($was, 2) . ') removed';
+            }
+            $r->forceFill(['amount' => round($amount, 2), 'notes' => trim($r->notes . ' | set from ' . number_format($was, 2) . ' to ' . number_format($amount, 2) . ' (2b)')])->save();
+
+            return 'book row #' . $r->id . ' set from KES ' . number_format($was, 2) . ' to ' . number_format($amount, 2);
+        }, $note);
+    }
+
+    /**
+     * One cycle's principal (and optionally its rate) set by hand. Only that cycle changes: later cycles keep the
+     * principal they were booked with, so nothing is re-carried (the automatic rebuild re-carries; see the 22 Oct plan,
+     * group B). Agreed loans (forbearance, waiver, payment plan) are refused.
+     */
+    public function cycleSet(int $cycleId, float $principal, ?float $rate = null, ?string $note = null): string
+    {
+        abort_if($principal <= 0, 422, 'The principal must be above 0.');
+        $cycle = LoanCycle::findOrFail($cycleId);
+
+        return $this->onLoan((int) $cycle->loan_id, function (Loan $loan) use ($cycle, $principal, $rate) {
+            abort_if($this->agreed($loan), 422, 'This loan is in forbearance or on a payment plan the owner agreed; change it from the loan page.');
+            $c = LoanCycle::whereKey($cycle->id)->lockForUpdate()->firstOrFail();
+            $was = [$c->lentPrincipal(), (float) $c->interest_rate];
+            $r = $rate ?? (float) $c->interest_rate;
+            $p = round($principal, 2);
+            $interest = round($p * $r / 100, 2);
+            $c->forceFill(['principal' => $p, 'previous_balance' => $c->cycle_number > 1 ? $p : 0, 'interest_rate' => $r,
+                'interest_capitalized' => $interest, 'new_balance' => round($p + $interest, 2)])->save();
+
+            return 'cycle ' . $c->cycle_number . ' principal ' . number_format($was[0], 2) . ' -> ' . number_format($p, 2)
+                . ($rate !== null && abs($rate - $was[1]) > 0.0001 ? ', rate ' . $was[1] . '% -> ' . $r . '%' : '');
+        }, $note);
+    }
+
+    /**
+     * Owner, 22 Oct 2026: a loan that started in the last 3 months was handled by the current system from day one, so its
+     * rollovers are right. No rollover is created, rewritten or moved for it here.
+     */
+    public function recent(Loan $loan): bool
+    {
+        $start = LoanCycle::where('loan_id', $loan->id)->orderBy('cycle_number')->value('start_date') ?? $loan->borrow_date;
+
+        return $start !== null && Carbon::parse($start)->gte(now()->subMonthsNoOverflow(3)->startOfDay());
+    }
+
+    /**
+     * A disbursement recorded on the wrong loan of the same borrower moves to the right one (e.g. cash on a repaid loan
+     * that the borrower's other loan is missing). It joins the target's cycle running on its date; the ledger and the
+     * wallet re-book through the observers. Nothing is created or deleted.
+     */
+    public function moveDisbursement(int $disbursementId, int $toLoanId, ?string $note = null): string
+    {
+        $d = Disbursement::findOrFail($disbursementId);
+        $from = Loan::withTrashed()->findOrFail($d->loan_id);
+        $to = Loan::findOrFail($toLoanId);
+        abort_if($from->id === $to->id, 422, 'Choose another loan.');
+        abort_unless((int) $from->user_id === (int) $to->user_id, 422, 'Both loans must be the same borrower\'s.');
+        $day = Carbon::parse($d->disburse_date)->toDateString();
+        $cycle = LoanCycle::where('loan_id', $to->id)->where('start_date', '<=', $day)->orderByDesc('cycle_number')->first()
+            ?? LoanCycle::where('loan_id', $to->id)->orderBy('cycle_number')->firstOrFail();
+
+        $msg = $this->onLoan($to->id, function () use ($d, $to, $cycle) {
+            $d->forceFill(['loan_id' => $to->id, 'loan_cycle_id' => $cycle->id])->save();
+
+            return 'disbursement #' . $d->id . ' (KES ' . number_format((float) $d->amount, 2) . ') moved here into cycle ' . $cycle->cycle_number;
+        }, $note, ['disbursement' => $d->id, 'from_loan' => $from->id]);
+        if (! in_array($from->fresh()->status, LoanStatus::LEAVE, true)) {
+            LoanStatus::apply($from->fresh());
+        }
+        AuditTrail::record('loans', $from->id, 'update', ['disbursement' => $d->id], ['repair' => 'disbursement moved to loan #' . $to->id, 'note' => $note]);
+
+        return $msg;
+    }
+
+    /**
+     * Owner, 22 Oct 2026: a closed loan the borrower paid more on than it owed, with no late days to charge, gives the
+     * extra to another loan of the same borrower. The latest cash repayment is split (same date and reference; the
+     * cash in total does not change) and the part moves to the other loan, into its cycle running that day.
+     */
+    public function moveOverpayment(int $fromLoanId, int $toLoanId, float $amount, ?string $note = null): string
+    {
+        abort_if($fromLoanId === $toLoanId || $amount <= 0, 422, 'Choose another loan and an amount above 0.');
+        $from = Loan::findOrFail($fromLoanId);
+        $to = Loan::findOrFail($toLoanId);
+        abort_unless((int) $from->user_id === (int) $to->user_id, 422, 'Both loans must be the same borrower\'s.');
+        $over = -$this->owedFor($fromLoanId);
+        abort_if($amount > $over + 0.01, 422, 'Loan #' . $fromLoanId . ' is only overpaid by ' . number_format(max(0, $over), 2) . '.');
+
+        return $this->onLoan($fromLoanId, function () use ($from, $to, $amount) {
+            $row = Repayment::where('loan_id', $from->id)->orderByDesc('repayment_date')->orderByDesc('id')->get()
+                ->first(fn ($r) => CustomerWallets::kindOf($r) === 'cash' && (float) $r->amount >= $amount - 0.005);
+            abort_unless($row, 422, 'No single cash repayment on #' . $from->id . ' is as large as ' . number_format($amount, 2) . '.');
+            $day = Carbon::parse($row->repayment_date)->toDateString();
+            $cycle = LoanCycle::where('loan_id', $to->id)->where('start_date', '<', $day)->orderByDesc('cycle_number')->first()
+                ?? LoanCycle::where('loan_id', $to->id)->orderBy('cycle_number')->firstOrFail();
+            if (abs((float) $row->amount - $amount) < 0.005) {
+                $row->forceFill(['loan_id' => $to->id, 'loan_cycle_id' => $cycle->id, 'notes' => trim($row->notes . ' | moved from loan #' . $from->id . ' (overpaid there)')])->save();
+
+                return 'repayment #' . $row->id . ' (KES ' . number_format($amount, 2) . ') moved to loan #' . $to->id;
+            }
+            $row->forceFill(['amount' => round((float) $row->amount - $amount, 2), 'notes' => trim($row->notes . ' | ' . number_format($amount, 2) . ' of it moved to loan #' . $to->id)])->save();
+            $part = $row->replicate(['id']);
+            $part->forceFill(['loan_id' => $to->id, 'loan_cycle_id' => $cycle->id, 'amount' => round($amount, 2),
+                'notes' => 'Part of repayment #' . $row->id . ' on loan #' . $from->id . ' (overpaid there), owner 22 Oct 2026'])->save();
+
+            return 'KES ' . number_format($amount, 2) . ' of repayment #' . $row->id . ' moved to loan #' . $to->id . ' (new row #' . $part->id . ')';
+        }, $note);
+    }
+
+    /** The loan was really what was sent: cycle 1 lends the cash booked to it (the cycles after it carry from there). */
+    public function lendWhatWasSent(int $loanId, ?string $note = null): string
+    {
+        $c1 = LoanCycle::where('loan_id', $loanId)->orderBy('cycle_number')->firstOrFail();
+        $cash = round(Disbursement::where('loan_cycle_id', $c1->id)->get()->filter(fn ($d) => CustomerWallets::kindOf($d) === 'cash')->sum('amount'), 2);
+        abort_if($cash < 0.01 || abs($cash - $c1->lentPrincipal()) < 0.01, 422, 'Cycle 1 already lends what was sent.');
+
+        return $this->cycleSet($c1->id, $cash, null, $note ?: 'the loan was what was sent (owner, 22 Oct 2026)');
+    }
+
+    /** A cash row typed wrong (e.g. principal + interest, or a digit off): the amount sent is corrected. */
+    public function disbursementSet(int $disbursementId, float $amount, ?string $note = null): string
+    {
+        abort_if($amount <= 0, 422, 'The amount must be above 0. To remove a row recorded by mistake, use "Recorded by mistake".');
+        $d = Disbursement::findOrFail($disbursementId);
+
+        return $this->onLoan((int) $d->loan_id, function () use ($d, $amount) {
+            $was = (float) $d->amount;
+            $d->forceFill(['amount' => round($amount, 2), 'net_amount' => round($amount - (float) $d->processing_fee, 2),
+                'notes' => trim($d->notes . ' | amount corrected from ' . number_format($was, 2) . ' (owner, 22 Oct 2026)')])->save();
+
+            return 'disbursement #' . $d->id . ' corrected from KES ' . number_format($was, 2) . ' to ' . number_format($amount, 2);
+        }, $note, ['disbursement' => $d->id, 'was' => $d->only(['amount'])]);
+    }
+
+    /**
+     * What the owner can decide for a loan the balancer cannot close on its own (from its flags): duplicate or wrongly
+     * typed money sent, a top-up, cash that belongs to another loan, an overpayment to give to another loan.
+     */
+    public function options(int $loanId, array $balance): array
+    {
+        $loan = Loan::withTrashed()->find($loanId);
+        $c1 = LoanCycle::where('loan_id', $loanId)->orderBy('cycle_number')->first();
+        if (! $loan || ! $c1) {
+            return [];
+        }
+        $kes = fn ($v) => 'KES ' . number_format((float) $v, 2);
+        $out = [];
+        $others = Loan::where('user_id', $loan->user_id)->where('id', '!=', $loanId)->whereNotIn('status', ['rejected'])->orderByDesc('id')->get(['id', 'status', 'amount']);
+        $cashRows = Disbursement::where('loan_cycle_id', $c1->id)->get()->filter(fn ($d) => CustomerWallets::kindOf($d) === 'cash')->values();
+        $sent = round($cashRows->sum('amount'), 2);
+        $p1 = $c1->lentPrincipal();
+        if ($sent - $p1 >= 0.01) {
+            $extra = round($sent - $p1, 2);
+            foreach ($cashRows as $d) {
+                $twin = $cashRows->first(fn ($x) => $x->id !== $d->id && abs((float) $x->amount - (float) $d->amount) < 0.005
+                    && Carbon::parse($x->disburse_date)->isSameDay(Carbon::parse($d->disburse_date)) && strtoupper(trim((string) $x->transaction)) === strtoupper(trim((string) $d->transaction)));
+                if ($twin && $d->id > $twin->id) {
+                    $out[] = ['action' => 'remove_disbursement', 'row' => $d->id, 'best' => true,
+                        'label' => 'D' . $d->id . ' is a duplicate of D' . $twin->id . ' (same day, amount and reference): remove it',
+                        'why' => 'The same M-Pesa reference was entered twice.'];
+                }
+                $plusInterest = round($p1 * (1 + (float) $c1->interest_rate / 100), 2);
+                if (abs((float) $d->amount - $plusInterest) < 0.01 && $cashRows->count() === 1) {
+                    $out[] = ['action' => 'disbursement_set', 'row' => $d->id, 'amount' => $p1, 'best' => true,
+                        'label' => 'D' . $d->id . ' was typed as principal + interest (' . $kes($d->amount) . '): correct it to ' . $kes($p1),
+                        'why' => 'The amount sent equals what the borrower had to repay.'];
+                }
+            }
+            $out[] = ['action' => 'lend_sent', 'label' => 'The loan was ' . $kes($sent) . ' (what was sent): cycle 1 lends that',
+                'why' => 'Cycle 1 lends ' . $kes($p1) . ' but ' . $kes($sent) . ' went out. The cycles after it carry from there; no penalty days.'];
+            foreach ($others as $o) {
+                foreach ($cashRows->filter(fn ($d) => (float) $d->amount <= $extra + 0.005) as $d) {
+                    $out[] = ['action' => 'move_disbursement', 'row' => $d->id, 'to' => $o->id,
+                        'label' => 'D' . $d->id . ' (' . $kes($d->amount) . ') belongs to loan #' . $o->id . ' (' . $o->status . '): move it',
+                        'why' => 'It was recorded on the wrong loan of the same borrower.'];
+                }
+            }
+        }
+        $owed = (float) ($balance['owed_after'] ?? $this->owedFor($loanId));
+        if ($owed < -0.01) {
+            $open = $others->filter(fn ($o) => ! in_array($o->status, ['repaid', 'written_off', 'pending', 'approved'], true));
+            foreach ($open as $o) {
+                $out[] = ['action' => 'move_overpayment', 'to' => $o->id, 'amount' => round(-$owed, 2), 'best' => $open->count() === 1,
+                    'label' => 'Give the ' . $kes(-$owed) . ' overpaid to loan #' . $o->id . ' (' . $o->status . ')',
+                    'why' => 'The borrower paid more than this loan owed and was never late: the extra pays their other loan.'];
+            }
+            $out[] = ['action' => null, 'label' => 'Or refund the ' . $kes(-$owed) . ' to the borrower (record the refund as a disbursement when paid)', 'why' => ''];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Everything the loan detail modal shows: the 22 Oct plan for the loan, the system's finding and suggestion, the
+     * loan, every cycle with its balance, every money row (deleted ones flagged) and the fields that can be changed.
+     */
+    public function dossier(int $loanId): ?array
+    {
+        $loan = Loan::withTrashed()->with(['user:id,name,phone', 'loanType:id,name,period,unit'])->find($loanId);
+        if (! $loan) {
+            return null;
+        }
+        $all = $this->findings();
+        $finding = $all->firstWhere('loan_id', $loanId) ?? (($d = $this->detail($loanId)) ? $d + ['suggestion' => $this->suggest($d, $all)] : null);
+        $plans = config('repairs.loans', []);
+        $plan = $plans[$loanId] ?? (($finding['group'] ?? null) === 'broker_fee' ? config('repairs.broker_fee_default') : null);
+        if ($plan) {
+            $plan += ['group_label' => config('repairs.groups.' . $plan['group'] . '.label'), 'group_meaning' => config('repairs.groups.' . $plan['group'] . '.meaning'),
+                'tone' => config('repairs.groups.' . $plan['group'] . '.tone'), 'plan_date' => config('repairs.plan_date')];
+        }
+
+        $balance = null;
+        try {
+            $balance = app(LoanBalancer::class)->preview($loanId);
+        } catch (\Throwable $e) {
+            $balance = ['action' => 'error', 'reason' => strtok($e->getMessage(), "\n")];
+        }
+        $options = $this->options($loanId, $balance ?? []);
+
+        $cycles = LoanCycle::where('loan_id', $loanId)->orderBy('cycle_number')->get();
+        $agreed = $this->agreed($loan, $cycles);
+        $cycleRows = $cycles->map(function (LoanCycle $c) {
+            $b = CycleBalance::at($c);
+
+            return ['id' => $c->id, 'n' => $c->cycle_number, 'start' => $c->start_date?->toDateString(), 'due' => $c->due_date?->toDateString(),
+                'closed_on' => $c->closed_on?->toDateString(), 'status' => $c->status, 'principal' => $c->lentPrincipal(), 'rate' => (float) $c->interest_rate,
+                'interest' => (float) $c->interest_capitalized, 'grace_days' => (int) $c->grace_days, 'waived_until' => $c->penalty_waived_until?->toDateString(),
+                'penalty' => round((float) ($b['penalty'] ?? 0), 2), 'paid' => round((float) ($b['total_repayments'] ?? 0), 2),
+                'owed_on_close' => isset($b['owed_on_close']) ? round((float) $b['owed_on_close'], 2) : null,
+                'carried' => $b['carried_forward'] ?? null, 'carry_difference' => $b['carry_difference'] ?? null,
+                'owed' => round((float) ($b['final_outstanding'] ?? 0) - (float) ($b['overpaid'] ?? 0), 2), 'notes' => $c->notes];
+        })->values();
+
+        $disb = Disbursement::withTrashed()->where('loan_id', $loanId)->orderBy('disburse_date')->orderBy('id')->get()
+            ->map(fn ($d) => ['id' => $d->id, 'date' => Carbon::parse($d->disburse_date)->toDateString(), 'amount' => (float) $d->amount,
+                'kind' => CustomerWallets::kindOf($d), 'transaction' => $d->transaction, 'cycle_id' => $d->loan_cycle_id, 'deleted' => $d->deleted_at?->toDateTimeString()])->values();
+        $reps = Repayment::withTrashed()->where('loan_id', $loanId)->orderBy('repayment_date')->orderBy('id')->get()
+            ->map(fn ($r) => ['id' => $r->id, 'date' => Carbon::parse($r->repayment_date)->toDateString(), 'amount' => (float) $r->amount,
+                'kind' => CustomerWallets::kindOf($r), 'transaction' => $r->transaction, 'cycle_id' => $r->loan_cycle_id, 'notes' => $r->notes,
+                'deleted' => $r->deleted_at?->toDateTimeString()])->values();
+
+        // the fields that can be changed, most likely first
+        $sg = $finding['suggestion'] ?? null;
+        $owed = $this->owedFor($loanId);
+        $edits = [];
+        foreach ($reps->where('deleted', null)->where('kind', '!=', 'cash') as $r) {
+            $suggested = $owed < -0.01 && ($sg['row'] ?? null) === $r['id'] ? max(0, round($r['amount'] + $owed, 2)) : $r['amount'];
+            $edits[] = ['type' => 'book', 'id' => $r['id'], 'label' => 'Book row #' . $r['id'] . ' ' . $r['date'] . ' (' . str_replace('_', ' ', $r['kind']) . ', ' . ($r['transaction'] ?? '') . ')',
+                'amount' => $r['amount'], 'suggested' => $suggested, 'kind' => $r['kind'], 'highlight' => ($sg['row'] ?? null) === $r['id']];
+        }
+        if (! $agreed) {
+            foreach ($cycleRows as $c) {
+                $edits[] = ['type' => 'cycle', 'id' => $c['id'], 'label' => 'Cycle ' . $c['n'] . ' ' . $c['start'] . ' → ' . $c['due'],
+                    'principal' => $c['principal'], 'rate' => $c['rate'], 'highlight' => false];
+            }
+        }
+
+        $byLoan = $all->keyBy('loan_id');
+        $siblings = Loan::withTrashed()->where('user_id', $loan->user_id)->orderBy('id')->get(['id', 'status', 'borrow_date', 'amount'])
+            ->map(fn ($l) => ['id' => $l->id, 'status' => $l->status, 'borrow_date' => $l->borrow_date ? Carbon::parse($l->borrow_date)->toDateString() : null,
+                'difference' => (float) ($byLoan[$l->id]['difference'] ?? 0), 'group' => $byLoan[$l->id]['group'] ?? null,
+                'cash_sent' => $byLoan[$l->id]['cash_sent'] ?? null, 'first_principal' => $byLoan[$l->id]['first_principal'] ?? null,
+                'recent' => $this->recent($l)])->values();
+
+        return [
+            'recent' => $this->recent($loan),
+            'borrower_loans' => $siblings,
+            'borrower_net' => round($siblings->sum('difference'), 2),
+            'plan' => $plan,
+            'finding' => $finding ? ['group' => $finding['group'], 'group_label' => self::GROUPS[$finding['group']] ?? $finding['group'],
+                'owed' => $finding['owed'], 'ledger' => $finding['ledger'], 'difference' => $finding['difference'],
+                'cash_sent' => $finding['cash_sent'], 'first_principal' => $finding['first_principal'], 'cash_repaid' => $finding['cash_repaid']] : null,
+            'suggestion' => $sg,
+            'balance' => $balance,
+            'options' => $options,
+            'agreed' => $agreed,
+            'owed_now' => $owed,
+            'loan' => ['id' => $loan->id, 'borrower' => $loan->user?->name, 'user_id' => (int) $loan->user_id, 'status' => $loan->status,
+                'product' => $loan->loanType?->name, 'amount' => (float) $loan->amount, 'original_amount' => (float) $loan->original_amount,
+                'borrow_date' => $loan->borrow_date ? Carbon::parse($loan->borrow_date)->toDateString() : null,
+                'due_date' => $loan->due_date ? Carbon::parse($loan->due_date)->toDateString() : null,
+                'forbearance_until' => $loan->forbearance_until?->toDateString(), 'broker' => $loan->broker_status && $loan->partner_id ? Partner::whereKey($loan->partner_id)->value('name') : null,
+                'deleted' => $loan->deleted_at?->toDateTimeString()],
+            'cycles' => $cycleRows,
+            'disbursements' => $disb,
+            'repayments' => $reps,
+            'edits' => $edits,
+        ];
     }
 
     /**
@@ -260,6 +563,7 @@ class LoanRepair
         $from = Loan::findOrFail($fromLoanId);
         $to = Loan::findOrFail($toLoanId);
         abort_unless((int) $from->user_id === (int) $to->user_id, 422, 'Both loans must be the same borrower\'s.');
+        abort_if($this->recent($from) || $this->recent($to), 422, 'A loan from the last 3 months keeps its rollovers (owner, 22 Oct): no receivable is moved.');
         $ledger = app(Ledger::class);
         $ledger->sync('repair_transfer', $fromLoanId * 100000 + $toLoanId, [[
             'leg' => 'rollover_transfer', 'from' => $ledger->account($from, 'gl-receivable'), 'to' => $ledger->account($to, 'gl-receivable'), 'amount' => round($amount, 2),
@@ -276,6 +580,22 @@ class LoanRepair
      * @param  Collection|null  $all  every finding, to look for the matching loan of the same borrower
      */
     public function suggest(array $r, ?Collection $all = null): ?array
+    {
+        $sg = $this->suggestion($r, $all);
+        if ($sg && in_array($sg['action'], ['move', 'book_bad_debt', 'book_remove'], true)) {
+            $touch = array_filter([$sg['loan'] ?? null, $sg['to'] ?? null, $r['loan_id']]);
+            foreach ($touch as $id) {
+                $l = Loan::withTrashed()->find($id);
+                if ($l && $this->recent($l)) {
+                    return null;   // owner: loans from the last 3 months keep their rollovers
+                }
+            }
+        }
+
+        return $sg;
+    }
+
+    private function suggestion(array $r, ?Collection $all = null): ?array
     {
         $kes = fn ($v) => 'KES ' . number_format(abs((float) $v), 2);
         $book = collect($r['book']);
@@ -336,14 +656,16 @@ class LoanRepair
                 $repaid = $r['status'] === Loan::STATUS_REPAID;
                 $contract = $r['first_principal'] * (1 + (float) ($r['cycles'][0]['rate'] ?? 0) / 100);
                 if ($r['cash_sent'] > $r['first_principal'] + 0.5) {
+                    // owner, 22 Oct 2026: never "add the extra" for now; loans stay as lent (balance the cycles instead)
+                    if (! config('repairs.allow_add_extra', false)) {
+                        return null;
+                    }
                     // a closed loan only takes the extra if its repayments show it was lent (it is in credit as it stands)
                     if ($repaid && $owed > -1) {
                         return null;
                     }
 
-                    return $s('rebuild', 'Add the extra ' . $kes($r['cash_sent'] - $r['first_principal']) . ' to the loan',
-                        $repaid ? 'The repayments only add up if the larger amount was lent: rebuilding removes the credit.'
-                            : 'More cash went out than cycle 1 lent; the extra goes into the cycle running the day it was sent.');
+                    return null;   // owner, 22 Oct 2026: never "add the extra"; the loan is balanced instead (LoanBalancer)
                 }
                 if ($r['first_principal'] - $r['cash_sent'] >= 0.01) {
                     return $r['cash_repaid'] >= $contract - 1
@@ -410,7 +732,13 @@ class LoanRepair
             'book_remove' => $this->bookRemove($row, $note),
             'book_cut' => $this->bookCut($row, $note),
             'broker_kept' => $this->brokerKept($row, $note),
-            'add_disbursement' => $this->addMissingDisbursement((int) $p['loan'], $note),
+            'add_disbursement' => $this->addMissingDisbursement((int) $p['loan'], $note, isset($p['amount']) ? (float) $p['amount'] : null, $p['date'] ?? null),
+            'book_set' => $this->bookSet($row, (float) $p['amount'], $note),
+            'move_disbursement' => $this->moveDisbursement($row, (int) $p['to'], $note),
+            'move_overpayment' => $this->moveOverpayment((int) $p['loan'], (int) $p['to'], (float) $p['amount'], $note),
+            'lend_sent' => $this->lendWhatWasSent((int) $p['loan'], $note),
+            'disbursement_set' => $this->disbursementSet($row, (float) $p['amount'], $note),
+            'cycle_set' => $this->cycleSet((int) $p['cycle'], (float) $p['principal'], isset($p['rate']) && $p['rate'] !== '' ? (float) $p['rate'] : null, $note),
             'remove_disbursement' => $this->removeDisbursement($row, $note),
             'rebuild' => $this->rebuildFromCash((int) $p['loan'], $note),
             'move' => $this->moveReceivable((int) $p['loan'], (int) $p['to'], (float) $p['amount'], $note),
@@ -454,6 +782,8 @@ class LoanRepair
     {
         $r = Repayment::findOrFail($repaymentId);
         abort_if(CustomerWallets::kindOf($r) === 'cash', 422, 'Cash repayments are not changed here.');
+        abort_if(CustomerWallets::kindOf($r) === 'rollover' && $this->recent(Loan::withTrashed()->findOrFail($r->loan_id)), 422,
+            'A loan from the last 3 months keeps its rollovers (owner, 22 Oct): this ROLL OVER row is left as it is.');
 
         return $this->onLoan((int) $r->loan_id, fn () => $do($r), $note, ['repayment' => $repaymentId, 'was' => $r->only(['amount', 'kind', 'transaction'])]);
     }

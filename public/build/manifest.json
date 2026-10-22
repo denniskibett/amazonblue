@@ -4,7 +4,7 @@
     "name": "apexcharts.esm"
   },
   "resources/css/app.css": {
-    "file": "assets/app-BUnlNhUy.css",
+    "file": "assets/app-DEZzgZPC.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -69,7 +69,7 @@
     "isEntry": true
   },
   "resources/js/index.js": {
-    "file": "assets/index-C33hwgSm.js",
+    "file": "assets/index-Be4GhFdV.js",
     "name": "index",
     "src": "resources/js/index.js",
     "isEntry": true,
@@ -84,7 +84,7 @@
     ],
     "css": [
       "assets/index-DKo5c4-a.css",
-      "assets/app-BUnlNhUy.css"
+      "assets/app-DEZzgZPC.css"
     ]
   }
 }

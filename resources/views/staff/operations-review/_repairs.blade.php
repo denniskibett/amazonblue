@@ -41,8 +41,8 @@
   </div>
 
     <div x-show="canFix && ticked.length" x-cloak class="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
-    <span><strong x-text="ticked.length"></strong> loan(s) ticked. Each one's suggested fix is worked out again on the server before it is saved.</span>
-    <button type="button" @click="sendBatch()" class="rounded-md bg-emerald-600 px-3 py-1.5 text-theme-xs font-medium text-white hover:bg-emerald-700">Apply suggestions for ticked</button>
+    <span><strong x-text="ticked.length"></strong> loan(s) ticked. Each one is balanced on the server (payments to their cycles, no penalty days, closed loans end at 0).</span>
+    <button type="button" @click="sendBatch()" class="rounded-md bg-emerald-600 px-3 py-1.5 text-theme-xs font-medium text-white hover:bg-emerald-700">Balance ticked loans</button>
     <button type="button" @click="ticked = []" class="text-theme-xs underline">Clear</button>
   </div>
   <div class="w-full overflow-x-auto">
@@ -50,7 +50,7 @@
       <thead>
         <tr class="border-y border-gray-100 text-theme-xs font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400">
           <th class="px-2 py-3" x-show="canFix"><input id="repairs-tick-page" type="checkbox" class="rounded border-gray-300" title="Tick every row on this page that has a suggested fix"
-              @change="const ids = pageRows.filter(r => r.suggestion).map(r => r.loan_id); ticked = $event.target.checked ? [...new Set([...ticked, ...ids])] : ticked.filter(i => ! ids.includes(i))"></th>
+              @change="const ids = pageRows.map(r => r.loan_id); ticked = $event.target.checked ? [...new Set([...ticked, ...ids])] : ticked.filter(i => ! ids.includes(i))"></th>
           <template x-for="c in columns" :key="c.key">
             <th class="cursor-pointer whitespace-nowrap px-2 py-3" :class="c.num ? 'text-right' : ''" @click="sortBy(c.key)">
               <span x-text="c.label"></span><span class="ml-1 text-gray-400" x-text="sort === c.key ? (dir > 0 ? '▲' : '▼') : '↕'"></span>
@@ -63,7 +63,7 @@
       <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
         <template x-for="r in pageRows" :key="r.loan_id">
           <tr class="align-top text-theme-sm text-gray-700 dark:text-gray-300" :id="'loan-' + r.loan_id">
-            <td class="px-2 py-3" x-show="canFix"><template x-if="r.suggestion"><input type="checkbox" class="rounded border-gray-300" :value="r.loan_id" x-model.number="ticked" :aria-label="'Tick loan ' + r.loan_id"></template></td>
+            <td class="px-2 py-3" x-show="canFix"> <template x-if="true"><input type="checkbox" class="rounded border-gray-300" :value="r.loan_id" x-model.number="ticked" :aria-label="'Tick loan ' + r.loan_id"></template></td>
             <td class="px-2 py-3"><a :href="'/loans/' + r.loan_id" class="font-medium text-brand-600 hover:underline" x-text="r.borrower"></a><div class="text-theme-xs text-gray-500" x-text="'Loan #' + r.loan_id"></div></td>
             <td class="px-2 py-3"><span class="rounded-full bg-amber-50 px-2 py-0.5 text-theme-xs text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" x-text="r.group_label"></span></td>
             <td class="px-2 py-3"><span class="rounded-full px-2 py-0.5 text-theme-xs font-medium" :class="statusClass(r.status)" x-text="r.status"></span></td>
@@ -83,7 +83,7 @@
               </template>
               <template x-if="! r.suggestion"><span class="text-theme-xs text-gray-500">No safe guess: open the details and choose.</span></template>
             </td>
-            <td class="px-2 py-3"><button type="button" @click="open = open === r.loan_id ? null : r.loan_id" class="text-theme-xs font-medium text-brand-600 hover:underline" x-text="open === r.loan_id ? 'Hide' : 'Details & options'"></button></td>
+            <td class="px-2 py-3"><button type="button" @click="$dispatch('open-loan', {id: r.loan_id})" class="block whitespace-nowrap rounded-md bg-brand-600 px-2.5 py-1 text-theme-xs font-semibold text-white hover:bg-brand-700">Details &amp; fix</button><button type="button" @click="open = open === r.loan_id ? null : r.loan_id" class="mt-1 text-theme-xs font-medium text-brand-600 hover:underline" x-text="open === r.loan_id ? 'Hide' : 'Quick options'"></button></td>
           </tr>
         </template>
       </tbody>
@@ -111,7 +111,7 @@
             <tr x-show="openRow.book.length === 0"><td class="text-gray-500">none</td></tr></table></div></div>
       </div>
       <div class="mt-4 flex flex-wrap items-center gap-3 border-t border-gray-200 pt-3 dark:border-gray-800" x-show="canFix">
-        <button type="button" x-show="openRow.cash_sent > 0 && Math.abs(openRow.cash_sent - openRow.first_principal) >= 1" @click="choose({action: 'rebuild'}, openRow.cash_sent > openRow.first_principal ? 'Add the extra cash to the loan' : 'Lend only what was sent')" class="rounded-md border border-gray-300 px-2.5 py-1 font-medium dark:border-gray-700" x-text="openRow.cash_sent > openRow.first_principal ? 'Add the extra cash to the loan' : 'Lend only what was sent'"></button>
+        <button type="button" x-show="@js((bool) config('repairs.allow_add_extra', false)) && openRow.cash_sent > 0 && Math.abs(openRow.cash_sent - openRow.first_principal) >= 1" @click="choose({action: 'rebuild'}, openRow.cash_sent > openRow.first_principal ? 'Add the extra cash to the loan' : 'Lend only what was sent')" class="rounded-md border border-gray-300 px-2.5 py-1 font-medium dark:border-gray-700" x-text="openRow.cash_sent > openRow.first_principal ? 'Add the extra cash to the loan' : 'Lend only what was sent'"></button>
         <button type="button" x-show="openRow.first_principal - openRow.cash_sent >= 0.01" @click="choose({action: 'add_disbursement'}, 'Record the missing disbursement')" class="rounded-md border border-gray-300 px-2.5 py-1 font-medium dark:border-gray-700">Record the missing disbursement</button>
         <span class="ml-auto inline-flex flex-wrap items-center gap-1">
           <label for="repairs-move-to">Move receivable to loan #</label><input id="repairs-move-to" type="number" min="1" x-model.number="moveTo" class="w-20 rounded-md border-gray-300 py-1 text-theme-xs dark:border-gray-700 dark:bg-gray-900">

@@ -533,6 +533,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('operations-review.due-date')->middleware('permission:edit loans|manage loan cycles');
         Route::post('operations-review/repairs', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'repairBatch'])
             ->name('operations-review.repair-batch')->middleware('permission:edit loans|manage loan cycles');
+        Route::get('operations-review/loans/{loan}/detail', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'repairDetail'])
+            ->name('operations-review.detail')->middleware('permission:view ledger');
         Route::post('operations-review/repairs/{loan}', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'repair'])
             ->name('operations-review.repair')->middleware('permission:edit loans|manage loan cycles');
         Route::post('operations-review/rollovers/clean', [\App\Http\Controllers\Staff\OperationsReviewController::class, 'cleanRollovers'])

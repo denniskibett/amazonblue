@@ -336,26 +336,62 @@ class OperationsReviewController extends Controller
      * One 2b repair on one loan (LoanRepair). With preview=1 it runs inside a transaction that is rolled back, so the
      * owner sees what the loan would owe before saving anything.
      */
+    /** The loan detail modal: the 22 Oct plan, the loan, its cycles, its money rows and the fields to change (JSON). */
+    public function repairDetail(Loan $loan)
+    {
+        $d = app(\App\Services\Loans\LoanRepair::class)->dossier($loan->id);
+        abort_unless($d, 404);
+
+        return response()->json($d);
+    }
+
     public function repair(Request $request, Loan $loan)
     {
         $data = $request->validate([
-            'action' => ['required', 'in:book_discount,book_bad_debt,book_remove,book_cut,broker_kept,add_disbursement,remove_disbursement,rebuild,move'],
-            'row' => ['nullable', 'integer'], 'to' => ['nullable', 'integer'], 'amount' => ['nullable', 'numeric', 'min:0.01'],
+            'action' => ['required', 'in:balance,book_discount,book_bad_debt,book_remove,book_cut,book_set,broker_kept,add_disbursement,remove_disbursement,move_disbursement,disbursement_set,move_overpayment,lend_sent,rebuild,move,cycle_set'],
+            'row' => ['nullable', 'integer'], 'to' => ['nullable', 'integer'], 'amount' => ['nullable', 'numeric', 'min:0'],
+            'cycle' => ['nullable', 'integer', 'required_if:action,cycle_set'], 'principal' => ['nullable', 'numeric', 'min:0.01', 'required_if:action,cycle_set'],
+            'rate' => ['nullable', 'numeric', 'min:0', 'max:100'], 'date' => ['nullable', 'date'],
             'preview' => ['nullable', 'boolean'], 'note' => ['nullable', 'string', 'max:500'],
         ]);
+        abort_if($data['action'] === 'book_set' && ! isset($data['amount']), 422, 'Type the new amount.');
+        abort_if($data['action'] === 'move' && (($data['amount'] ?? 0) <= 0 || empty($data['to'])), 422, 'Choose the loan and an amount above 0.');
+        abort_if($data['action'] === 'move_disbursement' && (empty($data['to']) || empty($data['row'])), 422, 'Choose the disbursement and the loan to move it to.');
+        abort_if($data['action'] === 'move_overpayment' && (empty($data['to']) || ($data['amount'] ?? 0) <= 0), 422, 'Choose the loan and the amount to give it.');
+        abort_if($data['action'] === 'disbursement_set' && (empty($data['row']) || ($data['amount'] ?? 0) <= 0), 422, 'Choose the disbursement and type the right amount.');
+        abort_if($data['action'] === 'disbursement_set' && ! $request->user()->can('edit disbursements'), 403, 'Correcting money sent needs the edit disbursements permission.');
+        if (isset($data['cycle'])) {
+            abort_unless(\App\Models\LoanCycle::whereKey($data['cycle'])->where('loan_id', $loan->id)->exists(), 422, 'That cycle is not on this loan.');
+        }
         $svc = app(\App\Services\Loans\LoanRepair::class);
         $note = ($data['note'] ?? null) ?: 'operations review 2b, ' . $request->user()->name;
-        $run = fn () => match ($data['action']) {
-            'book_discount' => $svc->bookAs((int) $data['row'], 'discount', $note),
-            'book_bad_debt' => $svc->bookAs((int) $data['row'], 'bad_debt', $note),
-            'book_remove' => $svc->bookRemove((int) $data['row'], $note),
-            'book_cut' => $svc->bookCut((int) $data['row'], $note),
-            'broker_kept' => $svc->brokerKept((int) $data['row'], $note),
-            'add_disbursement' => $svc->addMissingDisbursement($loan->id, $note),
-            'remove_disbursement' => $svc->removeDisbursement((int) $data['row'], $note),
-            'rebuild' => $svc->rebuildFromCash($loan->id, $note),
-            'move' => $svc->moveReceivable($loan->id, (int) $data['to'], (float) $data['amount'], $note),
+        $balancer = app(\App\Services\Loans\LoanBalancer::class);
+        // after any change the loan (and the other loan it touched) is balanced again, so it ends where it should
+        $settle = function (int $id) use ($balancer, $note) {
+            $r = $balancer->apply($id, $note);
+
+            return in_array($r['action'], ['balance', 'rebook'], true) ? ' Balanced #' . $id . ($r['flags'] ? ' (' . $r['flags'] . ')' : '') . '.' : '';
         };
+        $run = $data['action'] === 'balance'
+            ? function () use ($loan, $balancer, $note) {
+                $r = $balancer->apply($loan->id, $note);
+                abort_if($r['action'] === 'skip', 422, $r['reason']);
+
+                return "Loan #{$loan->id}: " . ($r['action'] === 'nothing' ? 'already balanced; nothing to change' : 'balanced'
+                    . ($r['steps'] ? ': ' . $r['steps'] : '') . ($r['flags'] ? '. Still to decide: ' . $r['flags'] : '')) . '.';
+            }
+            : function () use ($svc, $loan, $data, $note, $settle) {
+                $msg = $svc->run(['loan' => $loan->id] + $data, $note);
+                if (in_array($data['action'], ['move_overpayment', 'lend_sent', 'move_disbursement', 'disbursement_set', 'remove_disbursement', 'add_disbursement', 'move', 'cycle_set'], true)) {
+                    $msg .= $settle($loan->id);
+                    if (! empty($data['to'])) {
+                        $msg .= $settle((int) $data['to']);
+                    }
+                }
+
+                return $msg;
+            };
+        $json = $request->wantsJson();
         $before = $svc->owedFor($loan->id);
         try {
             if (! empty($data['preview'])) {
@@ -363,27 +399,44 @@ class OperationsReviewController extends Controller
                 try {
                     $msg = $run();
                     $after = $svc->owedFor($loan->id);
+                    $cycles = $json ? $svc->dossier($loan->id)['cycles'] : null;
+                    $diff = $json ? (float) ($svc->detail($loan->id)['difference'] ?? 0) : null;
+                    $other = $json && ! empty($data['to']) ? ['loan' => (int) $data['to'], 'difference' => (float) ($svc->detail((int) $data['to'])['difference'] ?? 0)] : null;
                 } finally {
                     DB::rollBack();
                 }
+                $text = 'Preview, nothing saved. ' . $msg . ' Owed: KES ' . number_format($before, 2) . ' -> ' . number_format($after, 2) . '.';
 
-                return back()->with('success', 'Preview, nothing saved. ' . $msg . ' Owed: KES ' . number_format($before, 2) . ' -> ' . number_format($after, 2) . '.')->withFragment('loan-' . $loan->id);
+                return $json ? response()->json(['ok' => true, 'preview' => true, 'message' => $text, 'before' => $before, 'after' => $after, 'difference_after' => $diff, 'other_after' => $other ?? null, 'cycles' => $cycles])
+                    : back()->with('success', $text)->withFragment('loan-' . $loan->id);
             }
             $msg = $run();
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
-            return back()->withErrors(['repair' => "Loan #{$loan->id}: " . $e->getMessage()])->withFragment('loan-' . $loan->id);
+            return $json ? response()->json(['ok' => false, 'message' => "Loan #{$loan->id}: " . $e->getMessage()], 422)
+                : back()->withErrors(['repair' => "Loan #{$loan->id}: " . $e->getMessage()])->withFragment('loan-' . $loan->id);
         }
         $d = $svc->detail($loan->id);
+        $text = $msg . ' Owed now KES ' . number_format($svc->owedFor($loan->id), 2) . '; ledger difference ' . number_format((float) ($d['difference'] ?? 0), 2) . '.';
 
-        return back()->with('success', $msg . ' Owed now KES ' . number_format($svc->owedFor($loan->id), 2) . '; ledger difference ' . number_format((float) ($d['difference'] ?? 0), 2) . '.')->withFragment('loan-' . $loan->id);
+        return $json ? response()->json(['ok' => true, 'preview' => false, 'message' => $text]) : back()->with('success', $text)->withFragment('loan-' . $loan->id);
     }
 
     /** The suggested fix of every ticked loan, worked out again on the server. */
     public function repairBatch(Request $request)
     {
         $ids = $request->validate(['loan_ids' => ['required', 'array', 'max:100'], 'loan_ids.*' => ['integer']])['loan_ids'];
-        [$done, $skipped] = app(\App\Services\Loans\LoanRepair::class)->applySuggestions($ids, 'operations review 2b batch, ' . $request->user()->name);
+        $balancer = app(\App\Services\Loans\LoanBalancer::class);
+        $done = [];
+        $skipped = [];
+        foreach ($ids as $id) {
+            try {
+                $r = $balancer->apply((int) $id, 'operations review: balance ticked, ' . $request->user()->name);
+                in_array($r['action'], ['balance', 'rebook'], true) ? $done[] = $id : $skipped[] = "#{$id} (" . ($r['reason'] ?: 'nothing to change') . ')';
+            } catch (\Throwable $e) {
+                $skipped[] = "#{$id} (" . strtok($e->getMessage(), "\n") . ')';
+            }
+        }
 
-        return back()->with('success', count($done) . ' loan(s) repaired.' . ($skipped ? ' Skipped: ' . implode('; ', $skipped) . '.' : ''));
+        return back()->with('success', count($done) . ' loan(s) balanced.' . ($skipped ? ' Skipped: ' . implode('; ', $skipped) . '.' : ''));
     }
 }

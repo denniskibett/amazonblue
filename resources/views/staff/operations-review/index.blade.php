@@ -95,7 +95,9 @@
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
               @foreach ($issues as $issue)
                 <tr class="align-top">
-                  <td class="px-4 py-3"><a class="font-medium text-brand-600 hover:underline" href="{{ route('loans.show', $issue['loan']) }}">{{ $issue['borrower_name'] }}</a><span class="mt-1 block text-xs text-gray-500">Loan #{{ $issue['loan'] }}</span></td>
+                  <td class="px-4 py-3"><a class="font-medium text-brand-600 hover:underline" href="{{ route('loans.show', $issue['loan']) }}">{{ $issue['borrower_name'] }}</a><span class="mt-1 block text-xs text-gray-500">Loan #{{ $issue['loan'] }}</span>
+                    @if ($plan = config('repairs.loans.' . $issue['loan']))<span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold {{ ['A' => 'bg-emerald-100 text-emerald-800', 'B' => 'bg-amber-100 text-amber-800', 'C' => 'bg-blue-100 text-blue-800'][$plan['group']] ?? '' }}">Plan {{ $plan['group'] }}</span>@endif
+                    <button type="button" x-data @click="$dispatch('open-loan', {id: {{ (int) $issue['loan'] }}})" class="mt-2 block rounded-md bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-700">Details &amp; fix</button></td>
                   <td class="px-4 py-3">{{ str_replace('_', ' ', ucfirst($issue['status'])) }}</td>
                   <td class="min-w-44 px-4 py-3">
                     @if (isset($issue['cycles'][0]))
@@ -294,5 +296,8 @@
     @include('staff.operations-review._repairs')
   @else
     <x-staff.alert type="warn" title="Review section unavailable">You do not have permission to view this section.</x-staff.alert>
+  @endif
+  @if ($canViewLedger && in_array($section, ['receivables', 'repairs'], true))
+    @include('staff.operations-review._loan-modal')
   @endif
 @endsection

@@ -199,9 +199,13 @@ class Ledger
             ['leg' => 'penalty', 'from' => $this->houseAccount('gl-penalty-income'), 'to' => $receivable, 'amount' => $b['penalty']],
         ];
         if ($b['carried_forward'] !== null) {
-            // carried + more than owed: the borrower was charged the extra; less: it was forgiven
+            // carried + more than owed: the borrower was charged the extra; less: it was forgiven. New money sent while
+            // the next cycle ran is part of what it lends but is already in the receivable through its disbursement,
+            // so it is not charged again here (owner, 22 Oct 2026: a top-up belongs to the cycle running that day)
+            $next = \App\Models\LoanCycle::where('loan_id', $cycle->loan_id)->where('cycle_number', '>', $cycle->cycle_number)->orderBy('cycle_number')->first();
+            $new = $next ? \App\Services\Loans\LoanBalancer::newMoney($next) : 0.0;
             $legs[] = ['leg' => 'carry', 'from' => $this->houseAccount('gl-rollover-adjustments'), 'to' => $receivable,
-                'amount' => round($b['carried_forward'] - $b['owed_on_close'], 2)];
+                'amount' => round($b['carried_forward'] - $b['owed_on_close'] - $new, 2)];
         }
 
         return ['legs' => array_values(array_filter($legs, fn ($l) => abs($l['amount']) >= 0.005)), 'note' => null];

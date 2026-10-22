@@ -127,4 +127,103 @@ class LoanRepairTest extends TestCase
         $this->assertMoney(4000, app(LoanRepair::class)->owedFor(413));
         $this->assertMoney(2000, CycleBalance::at(LoanCycle::findOrFail(413))['penalty']);
     }
+
+    public function test_a_book_row_can_be_set_to_a_typed_amount_but_cash_never(): void
+    {
+        $this->loanRow(347, 1, 10000, 10000, '2025-10-24', '2025-11-03', 'repaid', 1, 0);
+        $this->cycleRow(347, 347, 1, 0, 2000, 12000, 20, '2025-10-24', '2025-11-03', 'completed', 'Initial');
+        $this->repay(347, 347, 2000, '2025-11-03', 'CASH', 3471, 'mpesa');
+        DB::table('repayments')->insert(['id' => 3472, 'loan_id' => 347, 'loan_cycle_id' => 347, 'amount' => 578000, 'repayment_date' => '2025-11-03',
+            'transaction' => 'BAD DEBT', 'kind' => 'bad_debt', 'mode' => 'book', 'created_at' => now(), 'updated_at' => now()]);
+
+        app(LoanRepair::class)->bookSet(3472, 10000);
+        $this->assertMoney(10000, DB::table('repayments')->where('id', 3472)->value('amount'));
+        $this->assertMoney(0, app(LoanRepair::class)->owedFor(347));
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        app(LoanRepair::class)->bookSet(3471, 1);
+    }
+
+    public function test_setting_one_cycle_by_hand_does_not_re_carry_later_cycles(): void
+    {
+        $this->loanRow(513, 1, 40000, 40000, '2026-01-01', '2026-01-21', 'disbursed', 2, 0);
+        $this->cycleRow(5131, 513, 1, 0, 8000, 48000, 20, '2026-01-01', '2026-01-11', 'completed', 'Initial');
+        $this->cycleRow(5132, 513, 2, 48000, 9600, 57600, 20, '2026-01-11', '2026-01-21', 'active', 'Rollover');
+
+        $msg = app(LoanRepair::class)->cycleSet(5131, 50000);
+
+        $this->assertStringContainsString('50,000.00', $msg);
+        $this->assertMoney(50000, LoanCycle::findOrFail(5131)->lentPrincipal());
+        $this->assertMoney(10000, LoanCycle::findOrFail(5131)->interest_capitalized);
+        $this->assertMoney(48000, LoanCycle::findOrFail(5132)->lentPrincipal(), 'cycle 2 keeps what it was booked with');
+    }
+
+    public function test_the_detail_modal_shows_the_plan_loan_cycles_and_fields_and_a_json_preview_saves_nothing(): void
+    {
+        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $admin = \App\Models\User::factory()->create();
+        $admin->assignRole('admin');
+        $this->loanRow(347, 1, 10000, 10000, '2025-10-24', '2025-11-03', 'repaid', 1, 0);
+        $this->cycleRow(347, 347, 1, 0, 2000, 12000, 20, '2025-10-24', '2025-11-03', 'completed', 'Initial');
+        $this->repay(347, 347, 2000, '2025-11-03', 'CASH', 3471, 'mpesa');
+        DB::table('repayments')->insert(['id' => 3472, 'loan_id' => 347, 'loan_cycle_id' => 347, 'amount' => 578000, 'repayment_date' => '2025-11-03',
+            'transaction' => 'BAD DEBT', 'kind' => 'bad_debt', 'mode' => 'book', 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->actingAs($admin)->getJson(route('staff.operations-review.detail', 347))->assertOk()
+            ->assertJsonPath('plan.group', 'A')
+            ->assertJsonPath('loan.id', 347)
+            ->assertJsonPath('cycles.0.n', 1)
+            ->assertJsonPath('edits.0.type', 'book')
+            ->assertJsonPath('edits.0.suggested', fn ($v) => abs($v - 10000) < 0.01);
+
+        $this->actingAs($admin)->postJson(route('staff.operations-review.repair', 347), ['action' => 'book_set', 'row' => 3472, 'amount' => 10000, 'preview' => 1])
+            ->assertOk()->assertJsonPath('preview', true)->assertJsonPath('after', fn ($v) => abs($v) < 0.01);
+        $this->assertMoney(578000, DB::table('repayments')->where('id', 3472)->value('amount'), 'a preview saves nothing');
+    }
+
+    public function test_a_disbursement_on_the_wrong_loan_moves_to_the_borrowers_other_loan(): void
+    {
+        // like Leon: cash on a repaid loan (#315) that his other loan (#220) is missing
+        $this->loanRow(315, 1, 10000, 10000, '2025-03-01', '2025-03-11', 'repaid', 1, 0);
+        $this->cycleRow(315, 315, 1, 0, 2000, 12000, 20, '2025-03-01', '2025-03-11', 'completed', 'Initial');
+        $this->repay(315, 315, 12000, '2025-03-11', 'CASH', 3151, 'mpesa');
+        $this->loanRow(220, 1, 10000, 10000, '2025-10-24', '2025-11-03', 'repaid', 1, 0);
+        $this->cycleRow(220, 220, 1, 0, 2000, 12000, 20, '2025-10-24', '2025-11-03', 'completed', 'Initial');
+        $this->repay(220, 220, 12000, '2025-11-03', 'CASH', 2201, 'mpesa');
+        DB::table('loans')->where('id', 220)->update(['user_id' => DB::table('loans')->where('id', 315)->value('user_id')]);
+        $this->disburse(315, 10000, '2025-03-01');
+        $this->disburse(315, 10000, '2025-10-24', 'SENT FOR 220');
+        $id = (int) DB::table('disbursements')->where('transaction', 'SENT FOR 220')->value('id');
+
+        $msg = app(LoanRepair::class)->moveDisbursement($id, 220);
+
+        $this->assertStringContainsString('moved here', $msg);
+        $this->assertSame(220, (int) DB::table('disbursements')->where('id', $id)->value('loan_id'));
+        $this->assertSame(220, (int) DB::table('disbursements')->where('id', $id)->value('loan_cycle_id'));
+        $this->assertSame(1, DB::table('disbursements')->where('loan_id', 315)->count());
+    }
+
+    public function test_a_loan_from_the_last_three_months_keeps_its_rollovers(): void
+    {
+        $this->loanRow(536, 1, 4000, 4000, '2026-09-01', '2026-09-11', 'repaid', 1, 0);
+        $this->cycleRow(536, 536, 1, 0, 800, 4800, 20, '2026-09-01', '2026-09-11', 'completed', 'Initial');
+        $this->loanRow(505, 1, 4000, 4000, '2026-08-01', '2026-08-11', 'repaid', 1, 0);
+        $this->cycleRow(505, 505, 1, 0, 800, 4800, 20, '2026-08-01', '2026-08-11', 'completed', 'Initial');
+        DB::table('loans')->whereIn('id', [536, 505])->update(['user_id' => DB::table('loans')->where('id', 536)->value('user_id')]);
+        DB::table('repayments')->insert(['id' => 5361, 'loan_id' => 536, 'loan_cycle_id' => 536, 'amount' => 4800, 'repayment_date' => '2026-09-11',
+            'transaction' => 'ROLL OVER', 'kind' => 'rollover', 'created_at' => now(), 'updated_at' => now()]);
+
+        $svc = app(LoanRepair::class);
+        $this->assertTrue($svc->recent(\App\Models\Loan::findOrFail(536)));
+        try {
+            $svc->bookAs(5361, 'bad_debt');
+            $this->fail('a rollover row on a recent loan must not change');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            $this->assertStringContainsString('3 months', $e->getMessage());
+        }
+        $this->assertSame('rollover', DB::table('repayments')->where('id', 5361)->value('kind'));
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $svc->moveReceivable(505, 536, 4000);
+    }
 }
