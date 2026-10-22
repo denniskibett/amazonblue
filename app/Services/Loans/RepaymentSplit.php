@@ -60,6 +60,12 @@ class RepaymentSplit
             return [];
         }
 
+        return $this->shares($loan, $a);
+    }
+
+    /** The shares of one allocation [penalty, interest, principal] on a loan: [ [partner_id, type, wallet, amount, why], ... ]. */
+    public function shares(Loan $loan, array $a): array
+    {
         [$funder, $line] = $this->funder($loan);
         $out = [];
         $interestOut = 0.0;   // what others take of this repayment's interest / penalty; the house keeps the rest
@@ -85,6 +91,38 @@ class RepaymentSplit
         }
 
         return array_values(array_filter($out, fn ($s) => abs($s[3]) >= 0.005));
+    }
+
+    /**
+     * What a payment of $amount on $date would do, without saving anything (owner, 23 Oct 2026: split preview
+     * on Receive payment). Same waterfall and share rules as a real repayment. Returns the allocation (penalty,
+     * interest, principal, overpaid), the cycle balance before and after, and the shares with partner names.
+     */
+    public function preview(LoanCycle $cycle, float $amount, ?string $date = null): array
+    {
+        $date ??= now()->toDateString();
+        $before = CycleBalance::at($cycle, $date);
+        $fake = PHP_INT_MAX;
+        $payments = CycleBalance::paymentsFor($cycle);
+        $payments[] = ['id' => $fake, 'date' => $date, 'amount' => $amount, 'kind' => 'cash'];
+        $terms = CycleBalance::termsFor($cycle);
+        if ($before['closed_on'] ?? null) {
+            $terms['penalty_until'] = $before['closed_on'];
+        }
+        $after = CycleBalance::compute($terms, $payments, $date);
+        $a = $after['allocations'][$fake] ?? ['penalty' => 0.0, 'interest' => 0.0, 'principal' => 0.0, 'overpaid' => 0.0];
+        $loan = Loan::withTrashed()->find($cycle->loan_id);
+        $shares = $loan ? $this->shares($loan, $a) : [];
+        $names = Partner::whereIn('id', array_column($shares, 0))->pluck('name', 'id');
+
+        return [
+            'allocation' => $a,
+            'owed_before' => (float) ($before['owed_on_close'] ?? $before['final_outstanding'] ?? 0),
+            'owed_after' => (float) ($after['final_outstanding'] ?? 0),
+            'shares' => array_map(fn ($sh) => ['partner' => $names[$sh[0]] ?? '#' . $sh[0], 'house' => $sh[0] === $this->house(),
+                'type' => $sh[1], 'amount' => $sh[3], 'why' => $sh[4]], $shares),
+            'split_on' => self::enabled(),
+        ];
     }
 
     /** Interest + penalty a cash repayment paid (what its split shares out). */

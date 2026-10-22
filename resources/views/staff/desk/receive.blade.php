@@ -67,7 +67,33 @@
   </section>
 
   @if ($loan)
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+    <script>
+        window.splitPreview = window.splitPreview || function (url) {
+          return {
+            r: null, error: null, busy: false, seq: 0,
+            kes(v) { return 'KES ' + Number(v || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+            pct(v) { const t = this.r ? ['penalty', 'interest', 'principal', 'overpaid'].reduce((s, k) => s + Number(this.r.allocation[k] || 0), 0) : 0; return t ? (Number(v || 0) / t * 100).toFixed(2) : 0; },
+            async update(e) {
+              const form = this.$root.querySelector('form[data-ajax-form]');
+              if (!form || (e && e.target && !form.contains(e.target))) return;
+              const cycle = form.querySelector('input[name=loan_cycle_id]:checked')?.value;
+              const amount = parseFloat(form.querySelector('[name=amount]')?.value || '');
+              const date = form.querySelector('[name=repayment_date]')?.value || '';
+              if (!cycle || !(amount > 0)) { this.r = null; this.error = null; return; }
+              const my = ++this.seq; this.busy = true;
+              try {
+                const res = await fetch(url + '?' + new URLSearchParams({ loan_cycle_id: cycle, amount, date }), { headers: { Accept: 'application/json' } });
+                const body = await res.json();
+                if (my !== this.seq) return;
+                if (!res.ok) { this.r = null; this.error = Object.values(body.errors || {})[0]?.[0] || 'Could not work out the split.'; return; }
+                this.r = body; this.error = null;
+              } catch (_) { if (my === this.seq) { this.r = null; this.error = 'Could not work out the split.'; } }
+              finally { if (my === this.seq) this.busy = false; }
+            },
+          };
+        };
+      </script>
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-5" x-data="splitPreview(@js(route('staff.repayments.split-preview')))" @input.debounce.400ms="update($event)" @change="update($event)">
       <section class="{{ $card }} min-w-0 lg:col-span-3">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">Loan #{{ $loan->id }} · {{ $loan->user->name ?? '' }}</h2>
@@ -114,12 +140,56 @@
       </section>
 
       <aside class="min-w-0 space-y-6 lg:col-span-2">
-        <x-staff.placeholder dependency="six-account split" title="Split preview">
-          How this payment divides between principal, interest, penalty, fees and the partner and house accounts. The split rules are Stage 4; today the payment is recorded against the cycle as one amount.
-        </x-staff.placeholder>
-        <x-staff.placeholder dependency="payment confirmations inbox" title="Payment confirmations from borrowers">
-          Borrowers' payment confirmations arrive by email and are not stored in the system. Check the inbox, then record the payment here. Storing them with an approval step is Stage 4.
-        </x-staff.placeholder>
+        {{-- split preview (owner, 23 Oct 2026): the same waterfall and share rules as a real repayment, nothing saved --}}
+        <section class="{{ $card }}" aria-live="polite">
+          <div class="mb-1 flex items-center justify-between gap-2">
+            <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">How this payment splits</h2>
+            <span x-show="busy" x-cloak class="text-theme-xs text-gray-400">Working it out…</span>
+          </div>
+          <p class="mb-4 text-theme-xs text-gray-500 dark:text-gray-400">Preview only. Pick the cycle and type the amount.</p>
+          <template x-if="!r && !error">
+            <div class="rounded-xl border border-dashed border-gray-200 p-4 text-center text-theme-sm text-gray-400 dark:border-gray-800">Enter an amount to see the split.</div>
+          </template>
+          <template x-if="error"><p class="text-theme-sm text-error-600" x-text="error"></p></template>
+          <template x-if="r">
+            <div class="space-y-4">
+              <dl class="divide-y divide-gray-100 text-theme-sm dark:divide-gray-800">
+                <template x-for="row in [['Penalty', r.allocation.penalty, 'bg-error-500'], ['Interest', r.allocation.interest, 'bg-amber-500'], ['Principal', r.allocation.principal, 'bg-brand-500'], ['Overpaid (not owed)', r.allocation.overpaid, 'bg-gray-400']]" :key="row[0]">
+                  <div class="flex items-center justify-between gap-3 py-2" x-show="row[0] !== 'Overpaid (not owed)' || row[1] > 0">
+                    <dt class="flex items-center gap-2 text-gray-600 dark:text-gray-400"><span class="size-2 rounded-full" :class="row[2]"></span><span x-text="row[0]"></span></dt>
+                    <dd class="font-outfit font-medium tabular-nums text-gray-800 dark:text-white/90" x-text="kes(row[1])"></dd>
+                  </div>
+                </template>
+              </dl>
+              <div class="flex h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800" aria-hidden="true">
+                <div class="bg-error-500" :style="`width:${pct(r.allocation.penalty)}%`"></div>
+                <div class="bg-amber-500" :style="`width:${pct(r.allocation.interest)}%`"></div>
+                <div class="bg-brand-500" :style="`width:${pct(r.allocation.principal)}%`"></div>
+                <div class="bg-gray-400" :style="`width:${pct(r.allocation.overpaid)}%`"></div>
+              </div>
+              <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-theme-sm dark:bg-white/[0.03]">
+                <span class="text-gray-500 dark:text-gray-400" title="Includes penalty charged up to the date received">Cycle owes today</span>
+                <span class="font-outfit tabular-nums"><span x-text="kes(r.owed_before)"></span> <span class="text-gray-400">→</span> <b class="text-gray-800 dark:text-white/90" x-text="kes(r.owed_after)"></b></span>
+              </div>
+              <div x-show="r.shares.length">
+                <p class="mb-2 text-theme-xs font-medium text-gray-500 dark:text-gray-400">Interest and penalty shared</p>
+                <ul class="space-y-2">
+                  <template x-for="sh in r.shares" :key="sh.partner + sh.type">
+                    <li class="flex items-start justify-between gap-3 text-theme-sm">
+                      <span><span class="text-gray-800 dark:text-white/90" x-text="sh.house ? sh.partner + ' (house)' : sh.partner"></span><span class="block text-theme-xs text-gray-500 dark:text-gray-400" x-text="sh.why"></span></span>
+                      <span class="font-outfit tabular-nums text-gray-800 dark:text-white/90" x-text="kes(sh.amount)"></span>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+              <p class="text-theme-xs text-gray-500 dark:text-gray-400" x-show="!r.split_on">Splitting is off on this system, so the shares are not posted to partners yet. The penalty, interest and principal figures still apply.</p>
+            </div>
+          </template>
+        </section>
+        <section class="{{ $card }}">
+          <h2 class="mb-1 text-base font-semibold text-gray-800 dark:text-white/90">Borrower says they paid?</h2>
+          <p class="text-theme-sm text-gray-500 dark:text-gray-400">“I've paid” claims and M-Pesa payments that didn't match a loan wait on <a class="font-medium text-brand-500 hover:underline" href="{{ route('staff.payments') }}">M-Pesa payments</a>. Check there before recording the same money here.</p>
+        </section>
       </aside>
     </div>
 

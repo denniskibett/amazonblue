@@ -174,4 +174,40 @@ class RepaymentSplitTest extends TestCase
         $this->artisan('partners:accrue-fixed')->assertSuccessful();
         $this->assertSame(21000.0, $this->earned($p->id, 'profit_distribution'));
     }
+    public function test_the_preview_matches_what_a_real_payment_posts_and_saves_nothing(): void
+    {
+        $cycle = $this->loan(710, true);
+        $before = PartnerTransaction::count();
+        $p = app(\App\Services\Loans\RepaymentSplit::class)->preview($cycle, 13200, '2026-10-11');
+
+        $this->assertSame($before, PartnerTransaction::count(), 'a preview posts nothing');
+        $this->assertSame(0, Repayment::where('loan_id', 710)->count());
+        $this->assertEqualsWithDelta(1200, $p['allocation']['penalty'], 0.001);
+        $this->assertEqualsWithDelta(2000, $p['allocation']['interest'], 0.001);
+        $this->assertEqualsWithDelta(10000, $p['allocation']['principal'], 0.001);
+        $this->assertEqualsWithDelta(13200, $p['owed_before'], 0.001);
+        $this->assertEqualsWithDelta(0, $p['owed_after'], 0.001);
+        $byWhy = collect($p['shares'])->pluck('amount', 'why');
+        $this->assertEqualsWithDelta(800, $byWhy['40% of interest'], 0.001);
+        $this->assertEqualsWithDelta(600, $byWhy['50% of penalty'], 0.001);
+
+        // the real payment posts the same broker shares
+        $this->pay(710, 13200, '2026-10-11', 'QK710');
+        $this->assertSame(800.0, $this->earned($this->broker->id, 'broker_fee_earned'));
+        $this->assertSame(600.0, $this->earned($this->broker->id, 'penalty_share'));
+    }
+
+    public function test_the_preview_endpoint_is_for_cash_desk_staff_only(): void
+    {
+        $cycle = $this->loan(711, false);
+        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $teller = User::factory()->create();
+        $teller->assignRole('teller');
+        $borrower = User::factory()->create();
+        $borrower->assignRole('borrower');
+
+        $this->actingAs($borrower)->getJson(route('staff.repayments.split-preview', ['loan_cycle_id' => $cycle->id, 'amount' => 500]))->assertForbidden();
+        $this->actingAs($teller)->getJson(route('staff.repayments.split-preview', ['loan_cycle_id' => $cycle->id, 'amount' => 500, 'date' => '2026-10-11']))
+            ->assertOk()->assertJsonPath('allocation.penalty', 500);
+    }
 }

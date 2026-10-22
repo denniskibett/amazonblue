@@ -487,6 +487,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('disbursements.disburse')->middleware('permission:create disbursements');
         Route::get('repayments/receive', [\App\Http\Controllers\Staff\CashDeskController::class, 'receive'])
             ->name('repayments.receive')->middleware('permission:create repayments|delete repayments');
+        Route::get('repayments/split-preview', \App\Http\Controllers\Staff\SplitPreviewController::class)
+            ->name('repayments.split-preview')->middleware('permission:create repayments|delete repayments');
         // second sign-offs (Stage 4 Phase 5); each decision checks the action's own permission
         Route::get('sign-offs', [\App\Http\Controllers\Staff\SignOffsController::class, 'index'])
             ->name('sign-offs')->middleware('permission:approve loans|delete repayments|write off loan|edit partners');

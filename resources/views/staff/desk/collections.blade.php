@@ -80,8 +80,55 @@
     @endforelse
   </x-staff.table>
 
-  <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-    <x-staff.placeholder dependency="restructure flow" title="Restructure">Restructuring needs the Stage 4 loan engine (new schedule, approvals). Use the loan page's payment plan or forbearance for now.</x-staff.placeholder>
-    <x-staff.placeholder dependency="collector performance" title="Performance">Collected per officer per month needs collections to post through one ledger (Stage 4).</x-staff.placeholder>
+  {{-- collected per officer per month (owner, 23 Oct 2026), read-only --}}
+  @php
+    $perfMonth = rescue(fn () => \Illuminate\Support\Carbon::createFromFormat('Y-m', (string) request('month', now()->format('Y-m')))->startOfMonth(), now()->startOfMonth(), false);
+    $perf = \App\Support\CollectorPerformance::forMonth($perfMonth);
+    $months = collect(range(0, 11))->mapWithKeys(fn ($i) => [now()->startOfMonth()->subMonthsNoOverflow($i)->format('Y-m') => now()->startOfMonth()->subMonthsNoOverflow($i)->format('F Y')]);
+  @endphp
+  <div class="mt-6">
+    <div id="perf-tools" class="hidden">
+      <form method="GET" action="{{ route('staff.collections') }}" class="flex items-center gap-2">
+        <input type="hidden" name="view" value="{{ $view }}">
+        <label for="perf-month" class="sr-only">Month</label>
+        <select id="perf-month" name="month" onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()"
+          class="h-11 rounded-lg border border-gray-300 bg-transparent px-3 text-theme-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+          @foreach ($months as $k => $label)<option value="{{ $k }}" @selected($k === $perfMonth->format('Y-m'))>{{ $label }}</option>@endforeach
+        </select>
+      </form>
+    </div>
+    <x-staff.table :title="'Collected per officer · ' . $perfMonth->format('F Y')" caption="Collected per officer" data-table-buttons="#perf-tools > *"
+      :headers="['Officer', ['Open cases', 'num'], ['Contacts · actions', 'num'], ['Promises', 'num'], 'Promises kept', ['Collected', 'num']]">
+      @forelse ($perf as $o)
+        <tr>
+          <td data-sort-value="{{ $o->name }}">
+            @if ($o->id)
+              <x-staff.person :name="$o->name" :id="$o->id" :sub="$o->payments . ' ' . \Illuminate\Support\Str::plural('payment', $o->payments) . ' in the month'" />
+            @else
+              <x-staff.person name="Not assigned" sub="cases with no officer" />
+            @endif
+          </td>
+          <td class="num">{{ $o->open_cases }}</td>
+          <td class="num" data-sort-value="{{ $o->actions }}">{{ $o->contacts }} <span class="text-gray-400">·</span> {{ $o->actions }}</td>
+          <td class="num" data-sort-value="{{ $o->promised }}">{{ $o->promises }}<span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ number_format($o->promised, 2) }}</span></td>
+          <td data-sort-value="{{ $o->kept_rate ?? -1 }}">
+            @if ($o->kept_rate === null)
+              <span class="text-theme-xs text-gray-400">none due yet</span>
+            @else
+              <div class="flex items-center gap-2">
+                <div class="h-1.5 w-20 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"><div class="h-full rounded-full {{ $o->kept_rate >= 70 ? 'bg-success-500' : ($o->kept_rate >= 40 ? 'bg-amber-500' : 'bg-error-500') }}" style="width: {{ $o->kept_rate }}%"></div></div>
+                <span class="text-theme-xs text-gray-600 dark:text-gray-400">{{ $o->kept }} of {{ $o->due_promises }} · {{ $o->kept_rate }}%</span>
+              </div>
+            @endif
+          </td>
+          <td class="num" data-sort-value="{{ $o->collected }}"><x-staff.money :amount="$o->collected" class="font-semibold text-gray-800 dark:text-white/90" /></td>
+        </tr>
+      @empty
+        <tr data-table-skip><td colspan="6"><x-staff.empty title="No collections work in {{ $perfMonth->format('F Y') }}" message="Assign cases to officers and log contacts on the case pages; their figures show here." /></td></tr>
+      @endforelse
+    </x-staff.table>
+    <p class="mt-2 text-theme-xs text-gray-500 dark:text-gray-400">Collected = cash repayments in the month on loans with a recovery case, credited to the officer the case is assigned to now. Rollovers, discounts and write-offs are not counted. A promise is kept when the cash paid by the promised date covers it.</p>
   </div>
+
+  <x-staff.placeholder class="mt-6" dependency="restructure flow" title="Restructure">Restructuring needs the Stage 4 loan engine (new schedule, approvals). Use the loan page's payment plan or forbearance for now.</x-staff.placeholder>
 @endsection
