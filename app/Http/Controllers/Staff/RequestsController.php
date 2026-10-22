@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
 use App\Services\Requests;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,14 +26,42 @@ class RequestsController extends Controller
 
     public function borrower(Request $request, int $id, Requests $requests): RedirectResponse
     {
-        $data = $request->validate(['decision' => 'required|in:approve,decline', 'note' => 'required_if:decision,decline|nullable|string|max:500']);
+        $data = $request->validate(['decision' => 'required|in:approve,decline', 'note' => 'required_if:decision,decline|nullable|string|max:500',
+            'date' => 'nullable|date|before_or_equal:today', 'interest_rate' => 'nullable|numeric|min:0|max:100']);
         try {
-            $requests->decideBorrower($id, $request->user(), $data['decision'] === 'approve', $data['note'] ?? null);
+            $requests->decideBorrower($id, $request->user(), $data['decision'] === 'approve', $data['note'] ?? null,
+                array_intersect_key($data, array_flip(['date', 'interest_rate'])));
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }
 
         return back()->with('success', $data['decision'] === 'approve' ? 'Extension booked. The borrower sees it on their account.' : 'Declined. The borrower sees your note.');
+    }
+
+    /** What approving an extension would book, from the day chosen (default: the cycle's due date). JSON for the modal. */
+    public function preview(Request $request, int $id, Requests $requests): JsonResponse
+    {
+        $data = $request->validate(['date' => 'nullable|date', 'interest_rate' => 'nullable|numeric|min:0|max:100']);
+        $r = DB::table('borrower_requests')->where('id', $id)->first();
+        abort_unless($r && $r->type === 'extension' && $r->loan_id, 404);
+        $loan = \App\Models\Loan::with('loanType', 'user:id,name')->findOrFail($r->loan_id);
+        $cycle = $loan->cycles()->orderByDesc('cycle_number')->first();
+        $base = ['loan' => $loan->id, 'borrower' => $loan->user?->name, 'product' => $loan->loanType?->name, 'status' => $loan->status,
+            'cycle' => $cycle ? ['n' => $cycle->cycle_number, 'start' => $cycle->start_date->toDateString(), 'due' => $cycle->due_date->toDateString(),
+                'rate' => (float) $cycle->interest_rate,
+                'owed_today' => round(\App\Services\Loans\CycleBalance::at($cycle)['final_outstanding'], 2),
+                'owed_on_due' => round(\App\Services\Loans\CycleBalance::at($cycle, $cycle->due_date->toDateString())['final_outstanding'], 2)] : null,
+            'rate_from_cycle' => (int) config('lending.rollover.same_rate_cycles', 4) + 1, 'today' => now()->toDateString()];
+        try {
+            $plan = app(\App\Services\Loans\Rollover::class)->preview($loan, $requests->extensionOptions($loan, $data));
+        } catch (\DomainException $e) {
+            return response()->json($base + ['ok' => false, 'message' => $e->getMessage(),
+                'needs_rate' => $cycle && $cycle->cycle_number + 1 >= $base['rate_from_cycle']]);
+        }
+
+        return response()->json($base + ['ok' => true, 'needs_rate' => $plan['new_cycle'] >= $base['rate_from_cycle'],
+            'plan' => array_intersect_key($plan, array_flip(['rollover_date', 'new_cycle', 'principal', 'interest_rate', 'interest', 'new_balance', 'start_date', 'due_date']))
+                + ['penalty' => round((float) ($plan['balance']['penalty'] ?? 0), 2)]]);
     }
 
     public function partner(Request $request, int $id, Requests $requests): RedirectResponse

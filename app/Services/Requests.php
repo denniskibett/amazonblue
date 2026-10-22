@@ -62,9 +62,14 @@ class Requests
     }
 
     /** Staff decide a borrower request. Approving an extension books the rollover. */
-    public function decideBorrower(int $id, User $by, bool $approve, ?string $note): void
+    /**
+     * @param  array{date?: ?string, interest_rate?: ?float}  $options  the day the extension is booked from (default: the
+     *         cycle's due date, so the new cycle starts where the old one ended; a later day for a late loan) and,
+     *         from cycle 5, the rate staff set
+     */
+    public function decideBorrower(int $id, User $by, bool $approve, ?string $note, array $options = []): void
     {
-        DB::transaction(function () use ($id, $by, $approve, $note) {
+        DB::transaction(function () use ($id, $by, $approve, $note, $options) {
             $r = DB::table('borrower_requests')->where('id', $id)->lockForUpdate()->first();
             if (! $r || $r->status !== 'open') {
                 throw new \DomainException('This request is no longer open.');
@@ -73,7 +78,10 @@ class Requests
                 if (! $by->can('rollover loans')) {
                     throw new \DomainException('You need the "rollover loans" permission to extend a loan.');
                 }
-                app(LoanCalculator::class)->executeRollover(Loan::findOrFail($r->loan_id), ['notes' => 'Extension requested by the borrower (request #' . $id . ')']);
+                $loan = Loan::findOrFail($r->loan_id);
+                $opts = $this->extensionOptions($loan, $options);
+                app(LoanCalculator::class)->executeRollover($loan, $opts + ['notes' => 'Extension requested by the borrower (request #' . $id . ')'
+                    . ' from ' . \Illuminate\Support\Carbon::parse($opts['date'])->format('j M Y')]);
             }
             DB::table('borrower_requests')->where('id', $id)->update(['status' => $approve ? 'approved' : 'declined',
                 'decision_note' => $note, 'decided_by' => $by->id, 'decided_at' => now(), 'updated_at' => now()]);
@@ -84,6 +92,29 @@ class Requests
                 DB::afterCommit(fn () => app(CustomerEvents::class)->loan('request_decided', $loan, ['approved' => $approve, 'text' => $text]));
             }
         });
+    }
+
+
+    /**
+     * The options an extension is booked with: from the cycle's due date unless another day is chosen. A day before
+     * the borrower's last payment on the cycle is refused (that payment would not count towards what is carried).
+     */
+    public function extensionOptions(Loan $loan, array $options = []): array
+    {
+        $cycle = $loan->cycles()->orderByDesc('cycle_number')->firstOrFail();
+        $default = \Illuminate\Support\Carbon::parse($cycle->due_date)->min(now());   // not due yet: today (the new cycle still starts on the due date)
+        $day = \Illuminate\Support\Carbon::parse(! empty($options['date']) ? $options['date'] : $default)->startOfDay();
+        if ($day->lt(\Illuminate\Support\Carbon::parse($cycle->start_date)->addDay()) || $day->gt(now()->startOfDay())) {
+            throw new \DomainException('Pick a day after cycle ' . $cycle->cycle_number . ' started (' . $cycle->start_date->format('j M Y') . ') and no later than today.');
+        }
+        $lastPaid = \App\Models\Repayment::where('loan_cycle_id', $cycle->id)->max('repayment_date');
+        if ($lastPaid && \Illuminate\Support\Carbon::parse($lastPaid)->startOfDay()->gt($day)) {
+            throw new \DomainException('The borrower paid on ' . \Illuminate\Support\Carbon::parse($lastPaid)->format('j M Y')
+                . ', after that day. Pick ' . \Illuminate\Support\Carbon::parse($lastPaid)->format('j M Y') . ' or later so the payment counts.');
+        }
+
+        return array_filter(['date' => $day->toDateString(),
+            'interest_rate' => isset($options['interest_rate']) && $options['interest_rate'] !== '' ? (float) $options['interest_rate'] : null], fn ($v) => $v !== null);
     }
 
     /** Funding: confirm the money arrived (adds the capital) or decline. */

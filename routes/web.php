@@ -491,6 +491,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         // borrower and partner requests (Stage 4 Phase 5)
         Route::get('requests', [\App\Http\Controllers\Staff\RequestsController::class, 'index'])
             ->name('requests')->middleware('permission:rollover loans|edit partners');
+        Route::get('requests/borrower/{id}/preview', [\App\Http\Controllers\Staff\RequestsController::class, 'preview'])
+            ->name('requests.preview')->middleware('permission:rollover loans');
         Route::post('requests/borrower/{id}', [\App\Http\Controllers\Staff\RequestsController::class, 'borrower'])
             ->name('requests.borrower')->middleware('permission:rollover loans');
         Route::post('requests/partner/{id}', [\App\Http\Controllers\Staff\RequestsController::class, 'partner'])

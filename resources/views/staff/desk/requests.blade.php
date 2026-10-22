@@ -20,8 +20,9 @@
           <td>
             <div class="flex flex-wrap items-center gap-2">
               @if ($r->type === 'extension')
-                <form method="POST" action="{{ route('staff.requests.borrower', $r->id) }}">@csrf<input type="hidden" name="decision" value="approve">
-                  <button class="rounded-lg bg-brand-500 px-3 py-1.5 text-theme-xs font-medium text-white hover:bg-brand-600" title="Books the rollover exactly as the loan page previews it">Approve and extend</button></form>
+                @can('rollover loans')
+                  <button type="button" x-data @click="$dispatch('extend-request', {id: {{ (int) $r->id }}})" class="rounded-lg bg-brand-500 px-3 py-1.5 text-theme-xs font-medium text-white hover:bg-brand-600">Approve and extend…</button>
+                @endcan
               @endif
               <form method="POST" action="{{ route('staff.requests.borrower', $r->id) }}" class="flex items-center gap-2">@csrf<input type="hidden" name="decision" value="decline">
                 <input name="note" required maxlength="500" placeholder="Note for the borrower" class="h-9 w-48 rounded-lg border border-gray-300 px-2 text-theme-sm dark:border-gray-700 dark:bg-gray-900" aria-label="Note">
@@ -65,4 +66,5 @@
       @endforelse
     </x-staff.table>
   </section>
+  @include('staff.desk._extend-modal')
 @endsection
