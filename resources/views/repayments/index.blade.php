@@ -53,7 +53,7 @@
                         @endif
                         
                         @if(auth()->user()->hasRole('admin'))
-                            <form action="{{ route('repayments.destroy', $repayment->id) }}" method="POST" onsubmit="return confirm('Are you sure?');">
+                            <form action="{{ route('repayments.destroy', $repayment->id) }}" method="POST" data-confirm="Delete this repayment? It is reversed in the books and kept in the audit log." data-confirm-danger>
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="text-red-600 hover:underline">Delete</button>

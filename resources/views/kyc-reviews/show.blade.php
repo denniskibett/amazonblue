@@ -158,8 +158,8 @@
                         <div><dt class="{{ $label }}">Reviewed by</dt><dd class="{{ $value }}">{{ $reviewer?->name ?? '—' }}, {{ optional($user->kyc_reviewed_at)->format('j M Y, H:i') }}</dd></div>
                         <div><dt class="{{ $label }}">Calls made</dt>
                             <dd class="{{ $value }}">
-                                Next of kin {{ ($user->kyc_checks['next_of_kin'] ?? false) ? '✓' : '✗' }} ·
-                                Guarantor {{ ($user->kyc_checks['guarantor'] ?? false) ? '✓' : '✗' }}
+                                Next of kin <x-ui.icon :name="($user->kyc_checks['next_of_kin'] ?? false) ? 'check' : 'x'" class="inline-block size-4 align-[-3px]" /> ·
+                                Guarantor <x-ui.icon :name="($user->kyc_checks['guarantor'] ?? false) ? 'check' : 'x'" class="inline-block size-4 align-[-3px]" />
                             </dd></div>
                         <div><dt class="{{ $label }}">Notes</dt><dd class="{{ $value }}">{{ $user->kyc_review_notes ?: '—' }}</dd></div>
                     </dl>

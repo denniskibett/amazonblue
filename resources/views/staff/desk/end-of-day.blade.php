@@ -24,20 +24,16 @@
     <button class="h-11 rounded-lg bg-brand-500 px-5 text-theme-sm font-medium text-white hover:bg-brand-600">Show</button>
   </form>
 
-  <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-    <div class="{{ $card }}"><p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">Cash received</p><p class="mt-1 text-xl"><x-staff.money :amount="$totals['received_cash']" tone="in" /></p><p class="text-theme-xs text-gray-500">of <x-staff.money :amount="$totals['received_all']" tone="muted" /> recorded</p></div>
-    <div class="{{ $card }}"><p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">Cash paid out</p><p class="mt-1 text-xl"><x-staff.money :amount="-$totals['disbursed_cash']" tone="out" /></p><p class="text-theme-xs text-gray-500">of <x-staff.money :amount="$totals['disbursed_all']" tone="muted" /> recorded (net of fees)</p></div>
-    <div class="{{ $card }}"><p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">Net cash</p><p class="mt-1 text-xl"><x-staff.money :amount="$net" tone="auto" sign /></p><p class="text-theme-xs text-gray-500">received − paid out</p></div>
-    <div class="{{ $card }}"><p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">Cash in by mode</p>
-      <dl class="mt-1 space-y-0.5 text-theme-sm">
-        @forelse ($byMode as $mode => $sum)
-          <div class="flex justify-between gap-2"><dt class="capitalize text-gray-500">{{ str_replace('_', ' ', $mode) }}</dt><dd><x-staff.money :amount="$sum" :currency="false" /></dd></div>
-        @empty
-          <p class="text-gray-500">—</p>
-        @endforelse
-      </dl>
-    </div>
-  </div>
+  @php
+    $K = fn ($v) => \App\Support\PageMetrics::kes((float) $v);
+    $modes = collect($byMode)->map(fn ($v, $m) => ucfirst(str_replace('_', ' ', $m)) . ' ' . number_format((float) $v, 2))->implode(' · ');
+  @endphp
+  <x-ui.metrics :cols="4" :items="[
+    ['label' => 'Cash received', 'value' => $K($totals['received_cash']), 'icon' => 'hand-coins', 'hint' => 'of ' . number_format((float) $totals['received_all'], 2) . ' recorded'],
+    ['label' => 'Cash paid out', 'value' => $K($totals['disbursed_cash']), 'icon' => 'send', 'hint' => 'of ' . number_format((float) $totals['disbursed_all'], 2) . ' recorded'],
+    ['label' => 'Net cash', 'value' => $K($net), 'icon' => 'scale', 'hint' => 'received less paid out', 'tone' => $net < 0 ? 'down' : 'neutral'],
+    ['label' => 'Cash in by mode', 'value' => (string) count($byMode) . (count($byMode) === 1 ? ' mode' : ' modes'), 'icon' => 'phone', 'hint' => $modes ?: 'none today'],
+  ]" />
 
   <h2 class="mb-3 text-base font-semibold text-gray-800 dark:text-white/90">Payments received ({{ $repayments->count() }})</h2>
   @if ($repayments->isEmpty())

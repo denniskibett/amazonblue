@@ -47,7 +47,8 @@
     <!-- Main Script -->
     <script src="{{ asset('frontend/js/script.js') }}"></script>
     
-    @stack('scripts')
+    @include('partials.modal.dialog')
+@stack('scripts')
 </body>
 
 </html>

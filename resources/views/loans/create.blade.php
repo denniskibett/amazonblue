@@ -418,7 +418,7 @@
                                         {{ $signatureUser->name }}
                                     </h4>
                                     <p class="text-green-700 dark:text-green-400 text-sm mb-2">
-                                        ✅ Existing Signature Found
+                                        <x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Existing Signature Found
                                     </p>
                                     <p class="text-gray-600 dark:text-gray-400 text-sm mb-3">
                                         This user already has a signature on file at:<br>
@@ -911,8 +911,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Validate signature if consent is given and not using existing signature
             if (consentChecked && !useExistingSignature && (!signatureData || signatureData.trim() === '') && 
                 (!signaturePad || signaturePad.isEmpty())) {
-                if (!confirm('You have given consent but no signature is provided. Do you want to continue without a signature?')) {
+                if (! window.__noSignatureOk) {
                     e.preventDefault();
+                    window.uiConfirm('You have given consent but no signature is provided. Continue without a signature?').then(ok => {
+                        if (ok) { window.__noSignatureOk = true; e.target.requestSubmit ? e.target.requestSubmit() : e.target.submit(); }
+                    });
                     updateSignatureStatus('Signature is required when giving consent', 'text-red-500');
                     document.getElementById('signature-section').scrollIntoView({ 
                         behavior: 'smooth',

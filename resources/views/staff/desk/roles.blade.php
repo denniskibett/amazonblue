@@ -31,7 +31,7 @@
       <p class="mb-4 text-theme-sm text-gray-500">Takes effect at once for everyone in the role and is written to the audit log. The super-admin role cannot be changed here.</p>
       <form method="POST" id="role-perm-form" action="{{ route('staff.roles.permissions', $editable->first() ?? 0) }}"
         data-base="{{ url('staff/roles') }}" class="grid grid-cols-1 items-end gap-4 md:grid-cols-4"
-        onsubmit="return confirm('Change this permission for everyone in the role?')">
+        data-confirm="Change this permission for everyone in the role?">
         @csrf
         <x-staff.field name="role_id" label="Role" type="select" :options="$editable->pluck('name', 'id')->all()" id="f-role"
           onchange="const f=this.form; f.action=f.dataset.base + '/' + this.value + '/permissions'" />

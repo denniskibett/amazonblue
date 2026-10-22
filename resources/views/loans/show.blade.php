@@ -27,7 +27,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
                 </svg>
                 <div>
-                    <h4 class="font-bold text-red-800 dark:text-red-300">⚠️ LOAN DEFAULTED</h4>
+                    <h4 class="font-bold text-red-800 dark:text-red-300"><x-ui.icon name="alert" class="inline-block size-4 align-[-3px]" /> LOAN DEFAULTED</h4>
                     <p class="text-sm text-red-700 dark:text-red-400">
                         This loan has been defaulted due to {{ $metrics['days_overdue'] ?? 0 }} days of non-payment.
                         Penalties have been capped at KES {{ number_format($metrics['penalty_amount'] ?? 0, 2) }}.
@@ -249,7 +249,7 @@
                 @if($isFullyPaid)
                 <div class="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                     <p class="text-sm text-green-600 dark:text-green-400 font-medium text-center">
-                        ✅ This cycle is fully paid
+                        <x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> This cycle is fully paid
                     </p>
                 </div>
                 @endif
@@ -384,7 +384,7 @@
                                             <form action="{{ route('disbursements.destroy', $disbursement->id) }}" method="POST" class="inline">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="text-red-600 text-xs hover:underline ml-1" onclick="return confirm('Are you sure?');">Delete</button>
+                                                <button type="submit" class="text-red-600 text-xs hover:underline ml-1" data-confirm="Delete this row? It is kept in the audit log." data-confirm-danger>Delete</button>
                                             </form>
                                         </div>
                                         @endif
@@ -444,7 +444,7 @@
                                             <form action="{{ route('repayments.destroy', $repayment->id) }}" method="POST" class="inline">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="text-red-600 text-xs hover:underline ml-1" onclick="return confirm('Are you sure?');">Delete</button>
+                                                <button type="submit" class="text-red-600 text-xs hover:underline ml-1" data-confirm="Delete this row? It is kept in the audit log." data-confirm-danger>Delete</button>
                                             </form>
                                         </div>
                                         @endif

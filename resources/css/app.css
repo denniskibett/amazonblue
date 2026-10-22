@@ -547,3 +547,20 @@ span.flatpickr-weekday,
   opacity: 0.8;
   cursor: grabbing; /* Changes the cursor to indicate dragging */
 }
+
+/* ------------------------------------------------------------------------------------------------------------
+   Dark mode safety net (owner, 22 Oct 2026): older pages set light colours without a dark: twin. In dark mode
+   these fall back to TailAdmin's dark palette; anything that sets its own dark: colour keeps it.
+   ------------------------------------------------------------------------------------------------------------ */
+.dark { color: #e4e7ec; }
+.dark .bg-white:not([class*="dark:bg-"]) { background-color: #171f2e; }
+.dark :is(.bg-gray-50, .bg-gray-25):not([class*="dark:bg-"]) { background-color: rgb(255 255 255 / 0.03); }
+.dark .bg-gray-100:not([class*="dark:bg-"]) { background-color: rgb(255 255 255 / 0.06); }
+.dark :is(.text-black, .text-gray-900, .text-gray-800):not([class*="dark:text-"]) { color: rgb(255 255 255 / 0.9); }
+.dark :is(.text-gray-700, .text-gray-600):not([class*="dark:text-"]) { color: #98a2b3; }
+.dark :is(.border-gray-100, .border-gray-200, .border-gray-300):not([class*="dark:border-"]) { border-color: #1d2939; }
+.dark :is(.divide-gray-100, .divide-gray-200):not([class*="dark:divide-"]) > :not([hidden]) ~ :not([hidden]) { border-color: #1d2939; }
+.dark :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([class*="dark:bg-"]) { background-color: #101828; color: #e4e7ec; border-color: #344054; }
+.dark :is(.hover\:bg-gray-50, .hover\:bg-gray-100):not([class*="dark:hover:bg-"]):hover { background-color: rgb(255 255 255 / 0.05); }
+.dark thead:not([class*="dark:bg-"]) { background-color: rgb(255 255 255 / 0.02); }
+.dark .shadow-theme-xs, .dark .shadow-sm { box-shadow: none; }

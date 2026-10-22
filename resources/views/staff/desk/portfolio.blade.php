@@ -8,13 +8,6 @@
   @include('staff.desk._header', ['title' => 'Portfolio', 'sub' => 'From the loan cycles and the ledger, as of today. Not from loan amounts.',
     'actions' => '<a class="rounded-lg border border-gray-300 px-3 py-2 text-theme-sm font-medium dark:border-gray-700" href="' . route('staff.portfolio.csv') . '">Download CSV</a>'])
 
-  <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <div class="{{ $card }}"><p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">Owed to us</p><p class="mt-1 text-xl"><x-staff.money :amount="$p['owed']" /></p><p class="text-theme-xs text-gray-500">{{ $p['open_loans'] }} open loans · principal <x-staff.money :amount="$p['principal']" :currency="false" /></p></div>
-    <div class="{{ $card }}"><p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">Portfolio at risk</p><p class="mt-1 text-xl">{{ $p['par30'] }}% <span class="text-theme-sm text-gray-500">PAR30</span></p><p class="text-theme-xs text-gray-500">PAR1 {{ $p['par1'] }}% · PAR90 {{ $p['par90'] }}%</p></div>
-    <div class="{{ $card }}"><p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">Non-performing</p><p class="mt-1 text-xl"><x-staff.money :amount="$p['npl_owed']" /></p><p class="text-theme-xs text-gray-500">{{ $p['npl_loans'] }} loans past their default threshold</p></div>
-    <div class="{{ $card }}"><p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">Cash</p><p class="mt-1 text-theme-sm">Lent <x-staff.money :amount="$p['cash_lent']" /></p><p class="text-theme-sm">Repaid <x-staff.money :amount="$p['cash_repaid']" /></p></div>
-  </div>
-
   <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
     <section class="{{ $card }}">
       <h2 class="mb-2 text-base font-semibold text-gray-800 dark:text-white/90">Income booked (ledger)</h2>

@@ -1,228 +1,232 @@
+{{-- Reports & Analytics (owner, 22 Oct 2026): TailAdmin analytics layout. Charts on top (cash in and out,
+     PAR aging, book by product), then the report library grouped the way a lender files its reports. --}}
 @extends('layouts.app')
 
+@php
+  // Standard lender reporting: each report sits in one section and has the cadence it is usually run at.
+  $library = [
+    'Portfolio quality' => ['icon' => 'pie', 'note' => 'How healthy the book is: what is owed, how late, and what to expect in.', 'ids' => [
+      'loan_portfolio' => 'Weekly', 'active_loans' => 'Daily', 'defaulted_loans' => 'Weekly', 'expected_repayments' => 'Daily']],
+    'Lending activity' => ['icon' => 'send', 'note' => 'Money out and loans closed.', 'ids' => [
+      'loan_disbursement' => 'Daily', 'completed_loans' => 'Monthly']],
+    'Customers' => ['icon' => 'users', 'note' => 'Who borrows, what they owe and hold.', 'ids' => [
+      'customer_reports' => 'Monthly', 'customer_balance_summary' => 'Monthly', 'customer_statistics' => 'Monthly', 'customer_savings' => 'Monthly']],
+    'Finance and accounting' => ['icon' => 'scale', 'note' => 'Cash, the journal and the overall position.', 'ids' => [
+      'cashflow' => 'Monthly', 'journal_entries' => 'Monthly', 'group_summary' => 'Monthly']],
+    'Regulatory' => ['icon' => 'shield', 'note' => 'Credit bureau and compliance returns.', 'ids' => [
+      'crb_report' => 'Monthly', 'cic_reports' => 'Quarterly']],
+  ];
+  $icons = ['loan_portfolio' => 'briefcase', 'active_loans' => 'trending-up', 'defaulted_loans' => 'alert', 'expected_repayments' => 'calendar',
+            'loan_disbursement' => 'send', 'completed_loans' => 'check-circle', 'customer_reports' => 'users', 'customer_balance_summary' => 'wallet',
+            'customer_statistics' => 'chart', 'customer_savings' => 'coins', 'cashflow' => 'banknote', 'journal_entries' => 'file', 'group_summary' => 'layers',
+            'crb_report' => 'shield', 'cic_reports' => 'file'];
+  $byId = collect($reports)->keyBy('id');
+  $listed = collect($library)->flatMap(fn ($s) => array_keys($s['ids']))->all();
+  $other = $byId->except($listed);
+  if ($other->isNotEmpty()) {
+    $library['Other'] = ['icon' => 'list', 'note' => '', 'ids' => $other->map(fn () => 'On demand')->all()];
+  }
+  $u = auth()->user();
+  $pages = array_filter([
+    ['Portfolio', 'Owed today, PAR and income from the ledger', 'staff.portfolio', 'pie', $u->can('view reports')],
+    ['Disbursements register', 'Every disbursement, filterable and exportable', 'disbursements.index', 'send', $u->can('view disbursements')],
+    ['End of day', 'Today\'s cash in and out by till', 'staff.end-of-day', 'clock', $u->canAny(['create repayments', 'create disbursements', 'view reports'])],
+    ['Wallets and reconciliation', 'Ledger against wallets and M-Pesa', 'staff.wallets', 'scale', $u->canAny(['reconcile wallets', 'view house reconciliation'])],
+  ], fn ($p) => $p[4] && \Illuminate\Support\Facades\Route::has($p[2]));
+  $freqTone = ['Daily' => 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400', 'Weekly' => 'bg-blue-light-50 text-blue-light-600 dark:bg-blue-light-500/15 dark:text-blue-light-400',
+               'Monthly' => 'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-gray-300', 'Quarterly' => 'bg-orange-50 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400',
+               'On demand' => 'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-gray-300'];
+  $card = 'rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]';
+@endphp
+
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div>
-            <h1 class="text-2xl font-semibold text-gray-800 dark:text-white flex items-center gap-2 font-outfit">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                </svg>
-                Reports & Analytics Dashboard
-            </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 font-outfit">Comprehensive reporting for all business operations</p>
-        </div>
-        <div class="flex items-center gap-2">
-            <button onclick="window.location.reload()" 
-                    class="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-outfit">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
-            </button>
-        </div>
-    </div>
+  @include('staff.desk._header', ['title' => 'Reports & Analytics', 'sub' => 'Cash, portfolio quality and the standard reports, as of ' . now()->format('j M Y') . '.', 'metrics' => 'reports'])
 
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-outfit">Total Reports</p>
-                    <p class="text-2xl font-semibold text-gray-900 dark:text-white font-outfit">{{ count($reports) }}</p>
-                </div>
-                <div class="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                    </svg>
-                </div>
-            </div>
+  @if ($analytics)
+    <div class="mb-6 grid grid-cols-12 gap-4 md:gap-6">
+      {{-- Cash out vs cash in --}}
+      <div class="col-span-12 {{ $card }} px-5 pt-5 sm:px-6 sm:pt-6 xl:col-span-8">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Cash out and cash in</h3>
+            <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">Money sent to borrowers and money received, last 12 months. Rollovers and discounts are not cash.</p>
+          </div>
+          <div class="flex gap-4 text-theme-sm">
+            <span class="flex items-center gap-2 text-gray-600 dark:text-gray-400"><span class="size-2.5 rounded-full bg-brand-500"></span>Disbursed <b class="text-gray-800 dark:text-white/90">{{ number_format(array_sum($analytics['monthly']['disbursed'])) }}</b></span>
+            <span class="flex items-center gap-2 text-gray-600 dark:text-gray-400"><span class="size-2.5 rounded-full bg-brand-200"></span>Collected <b class="text-gray-800 dark:text-white/90">{{ number_format(array_sum($analytics['monthly']['collected'])) }}</b></span>
+          </div>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-outfit">Lending Reports</p>
-                    <p class="text-2xl font-semibold text-gray-900 dark:text-white font-outfit">{{ collect($reports)->where('category', 'lending')->count() }}</p>
-                </div>
-                <div class="p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-outfit">Customer Reports</p>
-                    <p class="text-2xl font-semibold text-gray-900 dark:text-white font-outfit">{{ collect($reports)->where('category', 'customer')->count() }}</p>
-                </div>
-                <div class="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-outfit">Categories</p>
-                    <p class="text-2xl font-semibold text-gray-900 dark:text-white font-outfit">{{ collect($reports)->groupBy('category')->count() }}</p>
-                </div>
-                <div class="p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                </div>
-            </div>
-        </div>
-    </div>
+        <div class="-ml-4 mt-2 min-h-[310px]" id="chartCash"></div>
+      </div>
 
-    <!-- Category Filters -->
-    <div class="flex flex-wrap gap-2 mb-6">
-        <button onclick="filterReports('all')" 
-                class="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors category-filter active font-outfit" 
-                data-category="all">
-            All Reports
-        </button>
-        @php
-            $categories = collect($reports)->groupBy('category')->keys();
-        @endphp
-        @foreach($categories as $category)
-        <button onclick="filterReports('{{ $category }}')" 
-                class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors category-filter font-outfit" 
-                data-category="{{ $category }}">
-            {{ ucfirst($category) }}
-        </button>
-        @endforeach
-    </div>
+      {{-- PAR aging donut --}}
+      <div class="col-span-12 {{ $card }} p-5 sm:p-6 xl:col-span-4">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Portfolio at risk</h3>
+        <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">What open loans owe, by days late.</p>
+        <div class="mx-auto mt-2 flex min-h-[230px] justify-center" id="chartAging"></div>
+        <ul class="mt-2 space-y-2">
+          @foreach ($analytics['aging'] as $i => $a)
+            <li class="flex items-center justify-between text-theme-sm">
+              <span class="flex items-center gap-2 text-gray-600 dark:text-gray-400"><span class="size-2.5 rounded-full" style="background: {{ ['#12B76A', '#36BFFA', '#FDB022', '#F97316', '#F04438'][$i] }}"></span>{{ $a['bucket'] }} <span class="text-gray-400">({{ $a['loans'] }})</span></span>
+              <span class="font-medium text-gray-800 dark:text-white/90">{{ number_format($a['owed']) }} <span class="ml-1 text-theme-xs text-gray-400">{{ $a['share'] }}%</span></span>
+            </li>
+          @endforeach
+        </ul>
+      </div>
 
-    <!-- Reports Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="reportsGrid">
-        @foreach($reports as $report)
-        <a href="{{ route('reports.show', $report['id']) }}" 
-           class="report-card group block p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-200"
-           data-category="{{ $report['category'] }}">
-            <div class="flex items-start gap-4">
-                <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
-                    @php
-                        $icons = [
-                            'users' => 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-                            'file-text' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-                            'briefcase' => 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-                            'calendar-check' => 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-                            'credit-card' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
-                            'activity' => 'M13 10V3L4 14h7v7l9-11h-7z',
-                            'check-circle' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-                            'alert-triangle' => 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
-                            'pie-chart' => 'M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.001 9.001 0 0120.488 9z',
-                            'book' => 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-                            'dollar-sign' => 'M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 12h4M4 12h4m8 0h4M4 12h4m12 0h4m-20 0h4',
-                            'balance' => 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4',
-                            'piggy-bank' => 'M16 7a1 1 0 00-1-1H9a1 1 0 00-1 1m6 4a1 1 0 01-1 1h-2a1 1 0 01-1-1m6-2h.01M12 7h.01M7 7h.01M4 7h.01M3 12h.01M21 12h.01M9 12h.01M15 12h.01M12 17h.01M15 17h.01M9 17h.01M12 14h.01M15 14h.01M9 14h.01',
-                            'trending-up' => 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
-                            'bar-chart-2' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
-                        ];
-                    @endphp
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $icons[$report['icon']] ?? $icons['file-text'] }}" />
-                    </svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <h3 class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors font-outfit">
-                        {{ $report['name'] }}
-                    </h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 font-outfit">
-                        {{ $report['description'] }}
-                    </p>
-                    <div class="mt-2">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-outfit">
-                            {{ ucfirst($report['category']) }}
-                        </span>
-                    </div>
-                </div>
-                <div class="flex-shrink-0 text-gray-300 dark:text-gray-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </div>
-            </div>
+      {{-- Book by product --}}
+      <div class="col-span-12 {{ $card }} px-5 pt-5 sm:px-6 sm:pt-6 xl:col-span-7">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Owed by loan product</h3>
+        <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">Open balance per product, largest first.</p>
+        <div class="-ml-2 min-h-[280px]" id="chartProducts"></div>
+      </div>
+
+      {{-- Loans by status --}}
+      <div class="col-span-12 {{ $card }} p-5 sm:p-6 xl:col-span-5">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Loans by status</h3>
+        <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">Every loan on file.</p>
+        @php $stTotal = max(1, array_sum($analytics['status'])); arsort($analytics['status']); @endphp
+        <ul class="mt-5 space-y-4">
+          @foreach ($analytics['status'] as $st => $n)
+            <li>
+              <div class="mb-1.5 flex justify-between text-theme-sm"><span class="capitalize text-gray-600 dark:text-gray-400">{{ str_replace('_', ' ', $st) }}</span><span class="font-medium text-gray-800 dark:text-white/90">{{ number_format($n) }}</span></div>
+              <div class="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800"><div class="h-2 rounded-full bg-brand-500" style="width: {{ round($n / $stTotal * 100, 1) }}%"></div></div>
+            </li>
+          @endforeach
+        </ul>
+      </div>
+    </div>
+  @endif
+
+  {{-- Live pages --}}
+  @if ($pages)
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      @foreach ($pages as [$label, $hint, $route, $icon])
+        <a href="{{ route($route) }}" class="group flex items-center gap-4 {{ $card }} p-4 hover:border-brand-300 dark:hover:border-brand-800">
+          <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon :name="$icon" class="size-5" /></span>
+          <span class="min-w-0">
+            <span class="block text-theme-sm font-medium text-gray-800 group-hover:text-brand-500 dark:text-white/90">{{ $label }}</span>
+            <span class="block truncate text-theme-xs text-gray-500 dark:text-gray-400">{{ $hint }}</span>
+          </span>
         </a>
-        @endforeach
+      @endforeach
+    </div>
+  @endif
+
+  {{-- Report library --}}
+  <div class="{{ $card }}" x-data="{ q: '', section: 'all' }">
+    <div class="flex flex-col gap-4 border-b border-gray-200 px-5 py-4 dark:border-gray-800 sm:px-6 2xl:flex-row 2xl:items-center 2xl:justify-between">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Report library</h3>
+        <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">Open a report to filter by date, see its chart and export to CSV, Excel or PDF.</p>
+      </div>
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="no-scrollbar flex gap-0.5 overflow-x-auto rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900">
+          @foreach (array_merge(['all' => 'All'], array_combine(array_keys($library), array_keys($library))) as $k => $label)
+            <button type="button" @click="section = @js($k)"
+                    :class="section === @js($k) ? 'bg-white text-gray-900 shadow-theme-xs dark:bg-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
+                    class="whitespace-nowrap rounded-md px-3 py-2 text-theme-sm font-medium hover:text-gray-900 dark:hover:text-white">{{ $label }}</button>
+          @endforeach
+        </div>
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><x-ui.icon name="search" class="size-4" /></span>
+          <input type="search" x-model="q" placeholder="Find a report"
+                 class="h-10 w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-9 pr-3 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 sm:w-56" />
+        </div>
+      </div>
     </div>
 
-    <!-- Empty State (hidden by default) -->
-    <div id="emptyState" class="hidden text-center py-12">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-        </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white font-outfit">No reports found</h3>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 font-outfit">Try selecting a different category</p>
+    <div class="divide-y divide-gray-100 dark:divide-gray-800">
+      @foreach ($library as $section => $s)
+        <section class="px-5 py-5 sm:px-6" x-show="section === 'all' || section === @js($section)">
+          <div class="mb-4 flex items-center gap-3">
+            <span class="flex size-9 items-center justify-center rounded-lg bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400"><x-ui.icon :name="$s['icon']" class="size-5" /></span>
+            <div>
+              <h4 class="text-theme-sm font-semibold text-gray-800 dark:text-white/90">{{ $section }}</h4>
+              @if ($s['note'])<p class="text-theme-xs text-gray-500 dark:text-gray-400">{{ $s['note'] }}</p>@endif
+            </div>
+          </div>
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
+            @foreach ($s['ids'] as $id => $freq)
+              @continue(! $byId->has($id))
+              @php $r = $byId[$id]; $name = $id === 'loan_disbursement' ? 'Disbursement register' : $r['name']; @endphp
+              <a href="{{ route('reports.show', $id) }}"
+                 x-show="! q || @js(mb_strtolower($name . ' ' . $r['description'])).includes(q.toLowerCase())"
+                 class="group flex items-start gap-3 rounded-xl border border-gray-200 p-4 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-800 dark:hover:border-brand-800 dark:hover:bg-white/[0.02]">
+                <x-ui.icon :name="$icons[$id] ?? 'file'" class="mt-0.5 size-5 shrink-0 text-gray-500 group-hover:text-brand-500 dark:text-gray-400" />
+                <span class="min-w-0 flex-1">
+                  <span class="block text-theme-sm font-medium text-gray-800 group-hover:text-brand-500 dark:text-white/90">{{ $name }}</span>
+                  <span class="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">{{ $r['description'] }}</span>
+                </span>
+                <span class="shrink-0 rounded-full px-2 py-0.5 text-theme-xs font-medium {{ $freqTone[$freq] ?? $freqTone['Monthly'] }}">{{ $freq }}</span>
+              </a>
+            @endforeach
+          </div>
+        </section>
+      @endforeach
     </div>
-</div>
+  </div>
+@endsection
 
+@if ($analytics)
 @push('scripts')
 <script>
-function filterReports(category) {
-    // Update active button
-    document.querySelectorAll('.category-filter').forEach(btn => {
-        btn.classList.remove('active', 'bg-blue-600', 'text-white');
-        btn.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
-    });
-    
-    const activeBtn = document.querySelector(`.category-filter[data-category="${category}"]`);
-    if (activeBtn) {
-        activeBtn.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
-        activeBtn.classList.add('bg-blue-600', 'text-white');
-    }
-    
-    // Filter reports
-    const cards = document.querySelectorAll('.report-card');
-    let visibleCount = 0;
-    
-    cards.forEach(card => {
-        if (category === 'all' || card.dataset.category === category) {
-            card.style.display = 'block';
-            visibleCount++;
-        } else {
-            card.style.display = 'none';
-        }
-    });
-    
-    // Show/hide empty state
-    const emptyState = document.getElementById('emptyState');
-    if (visibleCount === 0) {
-        emptyState.classList.remove('hidden');
-    } else {
-        emptyState.classList.add('hidden');
-    }
-}
+(function () {
+  const data = @json($analytics);
+  const charts = [];
+  const kes = v => 'KES ' + Math.round(v).toLocaleString();
+  const short = v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? Math.round(v / 1e3) + 'k' : v;
+
+  function render() {
+    if (typeof ApexCharts === 'undefined') return;
+    charts.splice(0).forEach(c => c.destroy());
+    const dark = document.body.classList.contains('dark');
+    const fg = dark ? '#98A2B3' : '#667085';
+    const grid = dark ? '#1D2939' : '#E4E7EC';
+    const base = { fontFamily: 'Outfit, sans-serif', foreColor: fg, toolbar: { show: false }, background: 'transparent' };
+    const tooltip = { theme: dark ? 'dark' : 'light', y: { formatter: kes } };
+
+    charts.push(new ApexCharts(document.querySelector('#chartCash'), {
+      chart: { ...base, type: 'bar', height: 310 },
+      series: [{ name: 'Disbursed', data: data.monthly.disbursed }, { name: 'Collected', data: data.monthly.collected }],
+      colors: ['#2B4FD8', '#A9BCF4'],
+      plotOptions: { bar: { columnWidth: '45%', borderRadius: 5, borderRadiusApplication: 'end' } },
+      dataLabels: { enabled: false }, legend: { show: false },
+      stroke: { show: true, width: 3, colors: ['transparent'] },
+      xaxis: { categories: data.monthly.labels, axisBorder: { show: false }, axisTicks: { show: false } },
+      yaxis: { labels: { formatter: short } },
+      grid: { borderColor: grid, strokeDashArray: 4, yaxis: { lines: { show: true } } },
+      tooltip,
+    }));
+
+    charts.push(new ApexCharts(document.querySelector('#chartAging'), {
+      chart: { ...base, type: 'donut', height: 240 },
+      series: data.aging.map(a => a.owed), labels: data.aging.map(a => a.bucket),
+      colors: ['#12B76A', '#36BFFA', '#FDB022', '#F97316', '#F04438'],
+      legend: { show: false }, dataLabels: { enabled: false }, stroke: { width: 0 },
+      plotOptions: { pie: { donut: { size: '72%', labels: { show: true,
+        value: { color: dark ? '#FFFFFF' : '#1D2939', fontSize: '20px', fontWeight: 600, formatter: v => short(+v) },
+        total: { show: true, label: 'Owed', color: fg, formatter: w => short(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) } } } } },
+      tooltip,
+    }));
+
+    charts.push(new ApexCharts(document.querySelector('#chartProducts'), {
+      chart: { ...base, type: 'bar', height: 280 },
+      series: [{ name: 'Owed', data: data.products.map(p => p.owed) }],
+      colors: ['#2B4FD8'],
+      plotOptions: { bar: { horizontal: true, barHeight: '55%', borderRadius: 4, borderRadiusApplication: 'end' } },
+      dataLabels: { enabled: false },
+      xaxis: { categories: data.products.map(p => p.product), labels: { formatter: short }, axisBorder: { show: false }, axisTicks: { show: false } },
+      grid: { borderColor: grid, strokeDashArray: 4, xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
+      tooltip,
+    }));
+    charts.forEach(c => c.render());
+  }
+
+  document.addEventListener('DOMContentLoaded', render);
+  let was = null;
+  new MutationObserver(() => { const d = document.body.classList.contains('dark'); if (was !== null && d !== was) render(); was = d; }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+})();
 </script>
 @endpush
-
-@push('styles')
-<style>
-.category-filter.active {
-    background-color: #2563eb !important;
-    color: white !important;
-}
-
-.report-card {
-    transition: all 0.2s ease-in-out;
-}
-
-.report-card:hover {
-    transform: translateY(-2px);
-}
-
-.line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-</style>
-@endpush
-@endsection
+@endif

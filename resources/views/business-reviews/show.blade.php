@@ -163,7 +163,7 @@
                         <div><dt class="{{ $label }}">Checks</dt>
                             <dd class="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                                 @foreach (\App\Models\Business::CHECKS as $key => $text)
-                                    <p>{{ ($business->checks[$key] ?? false) ? '✓' : '✗' }} {{ $text }}</p>
+                                    <p><x-ui.icon :name="($business->checks[$key] ?? false) ? 'check' : 'x'" class="inline-block size-4 align-[-3px]" /> {{ $text }}</p>
                                 @endforeach
                             </dd></div>
                         <div><dt class="{{ $label }}">Notes</dt><dd class="{{ $value }}">{{ $business->review_notes ?: '—' }}</dd></div>

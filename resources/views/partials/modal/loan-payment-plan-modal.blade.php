@@ -34,8 +34,8 @@
             <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 p-4 sticky top-0 bg-white dark:bg-gray-900 z-10">
                 <div>
                     <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                        <span x-show="!editMode">📋 Payment Plan / Forbearance</span>
-                        <span x-show="editMode">✏️ Edit Payment Plan</span>
+                        <span x-show="!editMode"><x-ui.icon name="list" class="inline-block size-4 align-[-3px]" /> Payment Plan / Forbearance</span>
+                        <span x-show="editMode"><x-ui.icon name="edit" class="inline-block size-4 align-[-3px]" /> Edit Payment Plan</span>
                     </h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
                         <span x-show="!editMode">Create a payment plan with waived penalties</span>
@@ -56,7 +56,7 @@
                 <!-- ============ SECTION 1: CURRENT CYCLE FIGURES (READ-ONLY) ============ -->
                 <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                     <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                        <span class="text-gray-500">📊</span> Current Cycle #<span x-text="currentCycle"></span> Figures
+                        <span class="text-gray-500"><x-ui.icon name="chart" class="inline-block size-4 align-[-3px]" /></span> Current Cycle #<span x-text="currentCycle"></span> Figures
                         <span class="ml-auto text-xs text-gray-400">(Read-Only)</span>
                     </h4>
                     
@@ -107,7 +107,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
                         </svg>
                         <div class="text-sm">
-                            <p class="font-semibold text-red-800 dark:text-red-300">⚠️ Current Penalties: <span x-text="formatCurrency(currentPenalty)"></span></p>
+                            <p class="font-semibold text-red-800 dark:text-red-300"><x-ui.icon name="alert" class="inline-block size-4 align-[-3px]" /> Current Penalties: <span x-text="formatCurrency(currentPenalty)"></span></p>
                             <p class="text-xs text-red-600 dark:text-red-400 mt-1">
                                 These penalties will be <strong>WAIVED</strong> when you create this payment plan.
                             </p>
@@ -117,7 +117,7 @@
 
                 <!-- ============ SECTION 3: PAYMENT PLAN TYPE ============ -->
                 <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3">📋 Payment Plan Type</h4>
+                    <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3"><x-ui.icon name="list" class="inline-block size-4 align-[-3px]" /> Payment Plan Type</h4>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <label class="flex items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg border-2 cursor-pointer transition-all"
@@ -144,7 +144,7 @@
 
                 <!-- ============ SECTION 4: STANDARD PAYMENT PLAN PREVIEW ============ -->
                 <div x-show="planType === 'standard'" class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                    <h4 class="text-sm font-semibold text-green-800 dark:text-green-300 mb-3">✅ Standard Payment Plan Preview</h4>
+                    <h4 class="text-sm font-semibold text-green-800 dark:text-green-300 mb-3"><x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Standard Payment Plan Preview</h4>
                     
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
@@ -168,7 +168,7 @@
 
                 <!-- ============ SECTION 5: MANUAL ADJUSTMENT ============ -->
                 <div x-show="planType === 'manual'" class="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                    <h4 class="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-3">✏️ Manual Balance Adjustment</h4>
+                    <h4 class="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-3"><x-ui.icon name="edit" class="inline-block size-4 align-[-3px]" /> Manual Balance Adjustment</h4>
                     
                     <div class="space-y-4">
                         <!-- Current vs New Comparison -->
@@ -213,9 +213,9 @@
                             </div>
                             <div class="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                                 <p class="text-xs text-yellow-700 dark:text-yellow-300">
-                                    ⚠️ This will reduce the balance from <span x-text="formatCurrency(outstanding)"></span> to <span x-text="formatCurrency(manualNewBalance || 0)"></span>
+                                    <x-ui.icon name="alert" class="inline-block size-4 align-[-3px]" /> This will reduce the balance from <span x-text="formatCurrency(outstanding)"></span> to <span x-text="formatCurrency(manualNewBalance || 0)"></span>
                                     <span class="block text-green-600 dark:text-green-400 mt-1" x-show="outstanding - (manualNewBalance || 0) > 0">
-                                        ✅ Reduction: <span x-text="formatCurrency(outstanding - (manualNewBalance || 0))"></span>
+                                        <x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Reduction: <span x-text="formatCurrency(outstanding - (manualNewBalance || 0))"></span>
                                     </span>
                                 </p>
                             </div>
@@ -225,7 +225,7 @@
 
                 <!-- ============ SECTION 6: COMMON SETTINGS ============ -->
                 <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">⚙️ Payment Plan Settings</h4>
+                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3"><x-ui.icon name="settings" class="inline-block size-4 align-[-3px]" /> Payment Plan Settings</h4>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -254,7 +254,7 @@
 
                 <!-- ============ SECTION 7: FINAL PREVIEW ============ -->
                 <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                    <h4 class="text-sm font-semibold text-green-800 dark:text-green-300 mb-3">✅ Final Payment Plan Summary</h4>
+                    <h4 class="text-sm font-semibold text-green-800 dark:text-green-300 mb-3"><x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Final Payment Plan Summary</h4>
                     
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
@@ -297,7 +297,7 @@
                     
                     <div class="mt-3 p-2 bg-yellow-100 dark:bg-yellow-800/30 rounded-lg">
                         <p class="text-xs text-yellow-700 dark:text-yellow-300 font-medium">
-                            🟢 Penalties will be <strong>WAIVED</strong> | 
+                            <span class="mr-1 inline-block size-2 rounded-full bg-success-500 align-middle"></span> Penalties will be <strong>WAIVED</strong> | 
                             <span x-show="planType === 'standard'">Standard calculation</span>
                             <span x-show="planType === 'manual'">Manual adjustment applied</span>
                         </p>

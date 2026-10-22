@@ -17,16 +17,6 @@
     'actions' => auth()->user()->can('view recovery cases') ? '<a href="' . route('cases.index') . '" class="text-theme-sm font-medium text-brand-500 hover:underline">All recovery cases →</a>' : null,
   ])
 
-  <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-    @foreach ($buckets as $label => $set)
-      <div class="{{ $card }}">
-        <p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">{{ $label }}</p>
-        <p class="mt-1 font-outfit text-2xl font-semibold {{ $tones[$loop->index] }}">{{ $set->count() }}</p>
-        <p class="text-theme-sm text-gray-500"><x-staff.money :amount="$set->sum(fn ($r) => (float) $r->loan->amount)" tone="muted" /></p>
-      </div>
-    @endforeach
-  </div>
-
   <div class="mb-4 inline-flex gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-900" role="tablist">
     @foreach (['all' => 'All', 'mine' => 'Assigned to me', 'unassigned' => 'Unassigned'] as $key => $label)
       <a href="{{ route('staff.collections', ['view' => $key]) }}" role="tab" aria-selected="{{ $view === $key ? 'true' : 'false' }}" class="{{ $tab }} {{ $view === $key ? $on : $off }}">{{ $label }}</a>

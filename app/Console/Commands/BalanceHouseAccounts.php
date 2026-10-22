@@ -78,7 +78,7 @@ class BalanceHouseAccounts extends Command
             if ($skipLoan) {
                 $loansSkippedByRollover++;
                 if ($verbose) {
-                    $this->line("  ⏭ Skipping loan #{$loan->id} — has rollover transaction");
+                    $this->line("  [skip] Skipping loan #{$loan->id} — has rollover transaction");
                 }
                 continue;
             }
@@ -127,7 +127,7 @@ class BalanceHouseAccounts extends Command
 
             if ($verbose) {
                 $this->line(sprintf(
-                    "  ✓ Loan #%d [%s] amount=%.2f rate=%.2f%% → principal+=%.2f, interest+=%.2f",
+                    "  [ok] Loan #%d [%s] amount=%.2f rate=%.2f%% → principal+=%.2f, interest+=%.2f",
                     $loan->id,
                     $loan->status,
                     $loan->amount,
@@ -146,8 +146,8 @@ class BalanceHouseAccounts extends Command
         $this->line("Loans contributing interest:      {$loansIncludedInterest} (status = repaid)");
         $this->line("Repayments excluded (discount/bad debt): KES " . number_format($repaymentsExcludedAmount, 2));
         $this->newLine();
-        $this->line("🏦 House Principal Account should hold: KES " . number_format($principalTotal, 2));
-        $this->line("💹 House Interest Account should hold:  KES " . number_format($interestTotal, 2));
+        $this->line("House Principal Account should hold: KES " . number_format($principalTotal, 2));
+        $this->line("House Interest Account should hold:  KES " . number_format($interestTotal, 2));
         $this->newLine();
 
         // ============ 4. COMPARE WITH CURRENT ============
@@ -200,7 +200,7 @@ class BalanceHouseAccounts extends Command
             ]);
         });
 
-        $this->info('✅ House account balances updated.');
+        $this->info('[ok] House account balances updated.');
         $this->line("   House Principal → KES " . number_format($principalTotal, 2));
         $this->line("   House Interest  → KES " . number_format($interestTotal, 2));
 

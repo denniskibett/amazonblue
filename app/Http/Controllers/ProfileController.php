@@ -73,16 +73,16 @@ class ProfileController extends Controller
         // Get countries for nationality dropdown
         $countries = Countries::all()
             ->map(function ($country) {
-                $flag = '🏳️';
+                $flag = '';   // no emoji anywhere (owner, 22 Oct 2026)
                 if (isset($country->flag)) {
                     try {
                         if (is_object($country->flag) && property_exists($country->flag, 'emoji')) {
-                            $flag = $country->flag->emoji;
+                            $flag = '';
                         } elseif (is_array($country->flag) && isset($country->flag['emoji'])) {
-                            $flag = $country->flag['emoji'];
+                            $flag = '';
                         }
                     } catch (\Throwable $e) {
-                        $flag = '🏳️';
+                        $flag = '';   // no emoji anywhere (owner, 22 Oct 2026)
                     }
                 }
                 return [

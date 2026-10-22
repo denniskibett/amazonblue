@@ -1385,7 +1385,7 @@ function userTable() {
                 window.location.reload();
                 
             } catch (error) {
-                alert('Error deleting user: ' + error.message);
+                uiAlert('Error deleting user: ' + error.message);
                 this.closeDeleteModal();
             } finally {
                 this.isDeleteSubmitting = false;

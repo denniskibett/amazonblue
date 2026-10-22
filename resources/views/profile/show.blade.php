@@ -42,7 +42,7 @@
             </div>
             <div>
                 <p class="text-sm font-medium text-red-800 dark:text-red-300">
-                    🔒 Profile Locked
+                    <x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Profile Locked
                 </p>
                 <p class="text-xs text-red-700 dark:text-red-400">
                     {{ $loanStatusMessage ?? 'You have an active loan. Profile changes are restricted.' }}
@@ -121,7 +121,7 @@
                                     @endphp
                                     @if($country)
                                         <span class="flex items-center gap-1">
-                                            <span>{{ $country->flag->emoji ?? '🏳️' }}</span>
+                                            
                                             <span>{{ $country->name->common ?? $user->nationality }}</span>
                                         </span>
                                     @else
@@ -195,7 +195,7 @@
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-xl">👤</span>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="user" class="size-5" /></span>
                         <h4 class="text-lg font-semibold">Personal Information</h4>
                     </div>
                     @if(!$isProfileLocked)
@@ -240,7 +240,7 @@
                                 @endphp
                                 @if($country)
                                     <span class="flex items-center gap-1">
-                                        <span>{{ $country->flag->emoji ?? '🏳️' }}</span>
+                                        
                                         <span>{{ $country->name->common ?? $user->nationality }}</span>
                                     </span>
                                 @else
@@ -274,7 +274,7 @@
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-xl">🪪</span>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="user-check" class="size-5" /></span>
                         <h4 class="text-lg font-semibold">Identification</h4>
                     </div>
                     @if(!$isProfileLocked)
@@ -321,7 +321,7 @@
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-xl">👨‍👩‍👧‍👦</span>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="users" class="size-5" /></span>
                         <h4 class="text-lg font-semibold">Next of Kin</h4>
                     </div>
                     @if(!$isProfileLocked)
@@ -369,7 +369,7 @@
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-xl">💼</span>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="briefcase" class="size-5" /></span>
                         <h4 class="text-lg font-semibold">Employment Information</h4>
                     </div>
                     @if(!$isProfileLocked)
@@ -430,7 +430,7 @@
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-xl">🤝</span>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="users" class="size-5" /></span>
                         <h4 class="text-lg font-semibold">Broker Information</h4>
                     </div>
                     @if(!$isProfileLocked)
@@ -471,7 +471,7 @@
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-xl">🏧</span>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="banknote" class="size-5" /></span>
                         <h4 class="text-lg font-semibold">Teller Information</h4>
                     </div>
                     @if(!$isProfileLocked)
@@ -495,7 +495,7 @@
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-xl">✍️</span>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="edit" class="size-5" /></span>
                         <h4 class="text-lg font-semibold">Digital Signature</h4>
                     </div>
                     @if(!$isProfileLocked)
@@ -523,7 +523,7 @@
                                         {{ $user->name }}
                                     </p>
                                     <p class="text-xs text-green-600 dark:text-green-400">
-                                        ✅ Signature on file
+                                        <x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Signature on file
                                     </p>
                                 </div>
                             </div>
@@ -548,7 +548,7 @@
             <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-700 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-xl">📊</span>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="chart" class="size-5" /></span>
                         <h4 class="text-lg font-semibold">Account Statistics</h4>
                     </div>
                 </div>
@@ -719,7 +719,7 @@ function profileData() {
             
             if (file) {
                 if (file.size > 2 * 1024 * 1024) {
-                    alert('File size must be less than 2MB');
+                    uiAlert('File size must be less than 2MB');
                     event.target.value = '';
                     fileNameElement.textContent = 'No file chosen';
                     return;
@@ -742,7 +742,7 @@ function profileData() {
             const fileInput = document.getElementById('avatarInput');
             
             if (!fileInput.files[0]) {
-                alert('Please select a file');
+                uiAlert('Please select a file');
                 this.loading = false;
                 return;
             }
@@ -778,7 +778,7 @@ function profileData() {
                 }
             } catch (error) {
                 console.error('Avatar update error:', error);
-                alert('Error updating avatar: ' + error.message);
+                uiAlert('Error updating avatar: ' + error.message);
             } finally {
                 this.loading = false;
             }

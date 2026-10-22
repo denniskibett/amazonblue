@@ -16,7 +16,7 @@
         </div>
         <div class="flex items-center gap-3">
           <a :href="'/loans/' + id" target="_blank" class="text-theme-xs font-medium text-brand-600 hover:underline">Open loan page ↗</a>
-          <button type="button" @click="close()" class="rounded-full p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10" aria-label="Close">✕</button>
+          <button type="button" @click="close()" class="rounded-full p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10" aria-label="Close"><x-ui.icon name="x" class="inline-block size-4 align-[-3px]" /></button>
         </div>
       </div>
 
@@ -286,7 +286,7 @@
       },
       close() { this.id = null; this.d = null; },
       async send(p, preview) {
-        if (! preview && ! confirm('Save this change to loan #' + this.id + '? It is audited and re-books the ledger, wallet and split.')) return;
+        if (! preview && ! await window.uiConfirm('Save this change to loan #' + this.id + '? It is audited and re-books the ledger, wallet and split.')) return;
         const body = new FormData();
         body.append('_token', token);
         Object.entries(Object.assign({}, p, {note: this.form.note || ''})).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '' && k !== 'loan' && k !== 'label' && k !== 'why' && k !== 'best') body.append(k, v); });

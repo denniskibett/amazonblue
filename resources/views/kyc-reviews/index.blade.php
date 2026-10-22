@@ -1,13 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
-    <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-gray-800 dark:text-white">KYC Reviews</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Borrowers verify themselves; approve them after calling their next of kin and guarantor.
-        </p>
-    </div>
+<div>
+    <x-ui.page-header title="KYC Reviews" sub="Borrowers verify themselves; approve them after calling their next of kin and guarantor." />
+    <x-ui.page-metrics page="kyc-reviews" />
 
     {{-- status tabs --}}
     <div class="mb-5 flex flex-wrap gap-2">

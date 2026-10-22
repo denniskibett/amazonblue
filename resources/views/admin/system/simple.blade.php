@@ -967,8 +967,8 @@
     }
 
     // Toggle maintenance mode
-    function toggleMaintenance() {
-        if (confirm('Are you sure you want to toggle maintenance mode?')) {
+    async function toggleMaintenance() {
+        if (await window.uiConfirm('Turn maintenance mode on or off? Borrowers cannot use the site while it is on.', {danger: true})) {
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '{{ route("system.toggle-maintenance") }}';

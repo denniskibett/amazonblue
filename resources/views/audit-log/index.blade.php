@@ -17,10 +17,9 @@
         'restore' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
     ];
 @endphp
-<div class="container mx-auto px-4 py-6">
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Audit Log</h2>
-    </div>
+<div>
+    <x-ui.page-header title="Audit Log" sub="Every change to loans, payments, people and settings: who, when, and the values before and after." />
+    <x-ui.page-metrics page="audit-log" />
 
     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
         <form method="GET" action="{{ route('audit-log.index') }}" class="flex flex-wrap items-end gap-3 mb-4">

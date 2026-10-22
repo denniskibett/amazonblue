@@ -30,7 +30,7 @@
           <div class="a-sec-h"><h2>Verification</h2><span class="badge-s {{ $verification[1] }}">{{ $verification[0] }}</span></div>
           <dl class="a-dl">
             @foreach ($kycSteps as $step)
-              <div><dt>{{ $step['title'] }}</dt><dd>{{ $step['complete'] ? '✓' : 'To do' }}</dd></div>
+              <div><dt>{{ $step['title'] }}</dt><dd>{{ $step['complete'] ? 'Done' : 'To do' }}</dd></div>
             @endforeach
           </dl>
           @if (in_array($user->kyc_status, [null, 'rejected'], true))

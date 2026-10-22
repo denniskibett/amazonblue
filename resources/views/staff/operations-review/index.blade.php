@@ -139,7 +139,7 @@
                           <label class="block text-xs text-gray-600 dark:text-gray-300">Reason
                             <textarea required minlength="5" maxlength="500" name="reason" rows="2" class="mt-1 block w-full rounded border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">{{ old('reason') }}</textarea>
                           </label>
-                          <button type="submit" class="rounded bg-brand-600 px-3 py-2 text-xs font-semibold text-white" onclick="return confirm('Record forbearance for loan #{{ $issue['loan'] }} through the selected date?')">Record forbearance</button>
+                          <button type="submit" class="rounded bg-brand-600 px-3 py-2 text-xs font-semibold text-white" data-confirm="Record forbearance for loan #{{ $issue['loan'] }} through the selected date?">Record forbearance</button>
                         </form>
                       </details>
                     @endif
@@ -152,7 +152,7 @@
                           <label class="block text-xs text-gray-600 dark:text-gray-300">Reason
                             <textarea required minlength="5" maxlength="500" name="reason" rows="2" class="mt-1 block w-full rounded border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">{{ old('reason') }}</textarea>
                           </label>
-                          <button type="submit" class="rounded border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-800 dark:border-gray-700 dark:text-gray-200" onclick="return confirm('Align the loan and active cycle due dates to the loan product period? Existing repayment amounts and dates will not be changed.')">Align due date</button>
+                          <button type="submit" class="rounded border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-800 dark:border-gray-700 dark:text-gray-200" data-confirm="Align the loan and active cycle due dates to the loan product period? Existing repayment amounts and dates will not be changed.">Align due date</button>
                         </form>
                       </details>
                     @endif

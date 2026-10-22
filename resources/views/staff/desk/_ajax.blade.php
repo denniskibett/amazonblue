@@ -34,7 +34,7 @@ document.addEventListener('submit', async (event) => {
       list.forEach((m) => { const p = document.createElement('p'); p.textContent = m; box.appendChild(p); });
       box.hidden = false;
     } else {
-      alert(list.join('\n'));
+      uiAlert(list.join('\n'));
     }
   } catch (e) {
     if (box) { box.textContent = 'Could not reach the server. Nothing was saved.'; box.hidden = false; }

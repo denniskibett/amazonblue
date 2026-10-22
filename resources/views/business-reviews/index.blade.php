@@ -1,13 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
-    <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-gray-800 dark:text-white">Business reviews</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Verified borrowers add their businesses; check the documents, directors and shareholders, then approve or send back.
-        </p>
-    </div>
+<div>
+    <x-ui.page-header title="Business Reviews" sub="Verified borrowers add their businesses; check the documents, directors and shareholders, then approve or send back." />
+    <x-ui.page-metrics page="business-reviews" />
 
     <div class="mb-5 flex flex-wrap gap-2">
         @foreach ($statuses as $key => $label)

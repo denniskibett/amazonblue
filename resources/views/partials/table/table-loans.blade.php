@@ -726,7 +726,7 @@ function loanTable() {
                     if (typeof window.showAlert === 'function') {
                         window.showAlert('success', 'Deleted!', data.message);
                     } else {
-                        alert(data.message);
+                        uiAlert(data.message);
                     }
                     this.closeDeleteModal();
                     setTimeout(() => window.location.reload(), 1500);
@@ -738,7 +738,7 @@ function loanTable() {
                 if (typeof window.showAlert === 'function') {
                     window.showAlert('error', 'Error!', error.message || 'Failed to delete loan');
                 } else {
-                    alert('Error: ' + error.message);
+                    uiAlert('Error: ' + error.message);
                 }
             } finally {
                 this.isDeleteSubmitting = false;

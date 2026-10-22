@@ -1,11 +1,17 @@
-{{-- Page title row for the staff desk pages. @include('staff.desk._header', ['title' => ..., 'sub' => ..., 'actions' => html]) --}}
-<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
-  <div class="min-w-0">
-    <h1 class="font-sora text-title-sm font-semibold text-gray-800 dark:text-white/90">{{ $title }}</h1>
-    @isset($sub)<p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">{{ $sub }}</p>@endisset
-  </div>
+{{-- Page title row for the staff desk pages, TailAdmin style, followed by the page's cards (App\Support\PageMetrics).
+     @include('staff.desk._header', ['title' => ..., 'sub' => ..., 'actions' => html, 'metrics' => page key | false]) --}}
+@php
+  $metricsKey = $metrics ?? ([
+    'staff.partner-payouts' => 'partner-payouts', 'staff.inbox' => 'inbox', 'staff.wallets' => 'wallets', 'staff.roles' => 'roles',
+    'staff.end-of-day' => 'end-of-day', 'staff.products' => 'products', 'staff.approvals' => 'approvals', 'staff.portfolio' => 'portfolio',
+    'staff.disbursements.queue' => 'disbursements-queue', 'staff.sign-offs' => 'sign-offs', 'staff.payments' => 'payments',
+    'staff.repayments.receive' => 'receive-payment', 'staff.requests' => 'requests', 'staff.collections' => 'collections',
+  ][\Illuminate\Support\Facades\Route::currentRouteName()] ?? null);
+@endphp
+<x-ui.page-header :title="$title" :sub="$sub ?? null">
   @isset($actions)<div class="flex flex-wrap gap-2 print:hidden">{!! $actions !!}</div>@endisset
-</div>
+</x-ui.page-header>
+@if ($metricsKey)<x-ui.page-metrics :page="$metricsKey" />@endif
 @php
   $done = [
     'approved' => 'Loan approved through the existing loan update. It is now in the disbursement queue.',

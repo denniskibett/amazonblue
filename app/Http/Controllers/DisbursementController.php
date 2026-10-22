@@ -19,15 +19,70 @@ class DisbursementController extends Controller
         $this->disbursementService = $disbursementService;
     }
 
-    public function index()
+    /**
+     * Disbursements register (owner, 22 Oct 2026): every disbursement row, newest first, with date, search and
+     * kind filters, totals for the filter, and a CSV download. Staff see all; anyone else only their own loans'.
+     */
+    public function index(Request $request)
     {
-        if (auth()->user()->hasAnyRole([...\App\Models\User::BACK_OFFICE_ROLES, 'teller'])) {
-            $disbursements = Disbursement::with(['loan.user', 'loanCycle'])->get();
-            return view('disbursements.index', compact('disbursements'));
-        } else {
-            $loans = auth()->user()->loans()->with('disbursements')->get();
-            return view('disbursements.index', compact('loans'));
+        $user = $request->user();
+        $f = $request->validate([
+            'from' => 'nullable|date', 'to' => 'nullable|date', 'q' => 'nullable|string|max:100',
+            'kind' => 'nullable|in:cash,non_cash', 'mode' => 'nullable|string|max:20',
+        ]);
+
+        $q = Disbursement::query()->with(['loan:id,user_id,loan_type_id,status', 'loan.user:id,name,phone', 'loan.loanType:id,name']);
+        if (! $user->hasAnyRole([...\App\Models\User::BACK_OFFICE_ROLES, 'teller'])) {
+            $ids = [$user->id];
+            if ($user->hasRole('broker') && ($broker = $user->broker()->first())) {
+                $ids = array_merge($ids, \App\Models\Borrower::where('broker_id', $broker->id)->pluck('user_id')->all());
+            }
+            $q->whereHas('loan', fn ($l) => $l->whereIn('user_id', $ids));
         }
+        if (! empty($f['from'])) {
+            $q->where('disburse_date', '>=', $f['from']);
+        }
+        if (! empty($f['to'])) {
+            $q->where('disburse_date', '<=', $f['to'] . ' 23:59:59');
+        }
+        if (! empty($f['mode'])) {
+            $q->where('mode', $f['mode']);
+        }
+        if (($f['kind'] ?? null) === 'cash') {
+            \App\Services\CustomerWallets::whereCash($q);
+        } elseif (($f['kind'] ?? null) === 'non_cash') {
+            $q->whereNotIn('id', \App\Services\CustomerWallets::whereCash(\Illuminate\Support\Facades\DB::table('disbursements')->whereNull('deleted_at'))->select('id'));
+        }
+        if (! empty($f['q'])) {
+            $term = '%' . $f['q'] . '%';
+            $q->where(fn ($w) => $w->where('transaction', 'like', $term)->orWhere('loan_id', ltrim($f['q'], '#'))
+                ->orWhereHas('loan.user', fn ($u) => $u->where('name', 'like', $term)->orWhere('phone', 'like', $term)));
+        }
+
+        $totals = (clone $q)->toBase()->selectRaw('count(*) as n, sum(amount) as amount, sum(coalesce(processing_fee,0)) as fees')->first();
+        $q->orderByDesc('disburse_date')->orderByDesc('id');
+
+        if ($request->query('export') === 'csv') {
+            $name = 'disbursements-' . now()->format('Ymd-His') . '.csv';
+
+            return response()->streamDownload(function () use ($q) {
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ['ID', 'Date', 'Loan', 'Borrower', 'Product', 'Amount', 'Fee', 'Net sent', 'Mode', 'Kind', 'Reference']);
+                $q->chunk(500, function ($rows) use ($out) {
+                    foreach ($rows as $d) {
+                        fputcsv($out, [$d->id, optional($d->disburse_date)->format('Y-m-d') ?? $d->disburse_date, $d->loan_id, $d->loan->user->name ?? '',
+                            $d->loan->loanType->name ?? '', $d->amount, $d->processing_fee, $d->net_amount, $d->mode,
+                            \App\Services\CustomerWallets::kindOf($d), $d->transaction]);
+                    }
+                });
+                fclose($out);
+            }, $name, ['Content-Type' => 'text/csv']);
+        }
+
+        $disbursements = $q->paginate(25)->withQueryString();
+        $modes = Disbursement::query()->whereNotNull('mode')->distinct()->pluck('mode')->filter()->values();
+
+        return view('disbursements.index', compact('disbursements', 'totals', 'f', 'modes'));
     }
 
     public function show($id)

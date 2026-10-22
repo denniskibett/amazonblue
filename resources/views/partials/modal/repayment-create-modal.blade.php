@@ -136,7 +136,7 @@
 
                 <!-- Parsed Data Preview -->
                 <div x-show="Object.keys(parsedData).length > 0 && !editId" class="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-900/20">
-                    <h4 class="text-sm font-semibold text-green-800 dark:text-green-300">✓ Parsed from message</h4>
+                    <h4 class="text-sm font-semibold text-green-800 dark:text-green-300"><x-ui.icon name="check" class="inline-block size-4 align-[-3px]" /> Parsed from message</h4>
                     <div class="mt-1 text-xs text-green-700 dark:text-green-400">
                         <ul class="list-disc pl-4 space-y-1">
                             <template x-for="(value, key) in parsedData" :key="key">

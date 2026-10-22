@@ -1,4 +1,4 @@
-<div class="space-y-4" x-data="actionTimeline(@json($actions ?? []))">
+<div class="space-y-4" x-data="actionTimeline({{ \Illuminate\Support\Js::from($actions ?? []) }})">
     <template x-for="action in actions" :key="action.id">
         <div class="flex gap-3 border-b border-gray-100 dark:border-gray-700 pb-4 last:border-0 last:pb-0">
             <div class="flex-shrink-0">

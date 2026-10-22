@@ -56,27 +56,13 @@
         </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Initial Amount</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">KES {{ number_format($investment->initial_amount, 2) }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current Value</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">KES {{ number_format($investment->current_value, 2) }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Expected Return</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format($investment->expected_return ?? 0, 2) }}%</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Return</p>
-            <p class="text-2xl font-semibold {{ ($investment->return_percentage ?? 0) >= 15 ? 'text-green-600 dark:text-green-400' : (($investment->return_percentage ?? 0) >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400') }}">
-                {{ number_format($investment->return_percentage ?? 0, 2) }}%
-            </p>
-        </div>
-    </div>
+    <!-- Stats as the standard cards -->
+    <x-ui.metrics :items="[
+      ['label' => 'Initial amount', 'value' => 'KES ' . number_format((float) $investment->initial_amount, 2), 'icon' => 'banknote'],
+      ['label' => 'Current value', 'value' => 'KES ' . number_format((float) $investment->current_value, 2), 'icon' => 'wallet'],
+      ['label' => 'Expected return', 'value' => number_format((float) ($investment->expected_return ?? 0), 2) . '%', 'icon' => 'percent'],
+      ['label' => 'Return', 'value' => number_format((float) ($investment->return_percentage ?? 0), 2) . '%', 'icon' => 'trending-up'],
+    ]" />
 
     <!-- Investment Details -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -39,27 +39,27 @@
                         <svg class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
                         </svg>
-                        <span class="font-semibold text-red-800 dark:text-red-300">🚨 Defaulted / NPL</span>
+                        <span class="font-semibold text-red-800 dark:text-red-300"><x-ui.icon name="alert" class="inline-block size-4 align-[-3px]" /> Defaulted / NPL</span>
                     @elseif($loan->isOverdue() || $loan->status === 'overdue')
                         <svg class="h-5 w-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        <span class="font-semibold text-yellow-800 dark:text-yellow-300">⚠️ Overdue</span>
+                        <span class="font-semibold text-yellow-800 dark:text-yellow-300"><x-ui.icon name="alert" class="inline-block size-4 align-[-3px]" /> Overdue</span>
                     @elseif($loan->status === 'forbearance')
                         <svg class="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
                         </svg>
-                        <span class="font-semibold text-gray-800 dark:text-gray-300">⏸️ Forbearance</span>
+                        <span class="font-semibold text-gray-800 dark:text-gray-300"><x-ui.icon name="clock" class="inline-block size-4 align-[-3px]" /> Forbearance</span>
                     @elseif($loan->status === 'recovery')
                         <svg class="h-5 w-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                         </svg>
-                        <span class="font-semibold text-purple-800 dark:text-purple-300">🔄 In Recovery</span>
+                        <span class="font-semibold text-purple-800 dark:text-purple-300"><x-ui.icon name="refresh" class="inline-block size-4 align-[-3px]" /> In Recovery</span>
                     @else
                         <svg class="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        <span class="font-semibold text-green-800 dark:text-green-300">✅ Performing</span>
+                        <span class="font-semibold text-green-800 dark:text-green-300"><x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Performing</span>
                     @endif
                 </div>
                 @if($loan->is_non_performing || $loan->status === 'defaulted')
@@ -72,11 +72,11 @@
             @if($loan->is_non_performing || $loan->status === 'defaulted')
             <div class="mt-2 flex flex-wrap gap-2">
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300">
-                    🔴 Defaulted
+                    <span class="mr-1 inline-block size-2 rounded-full bg-error-500 align-middle"></span> Defaulted
                 </span>
                 @if($loan->default_date)
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                    📅 Default Date: {{ \Carbon\Carbon::parse($loan->default_date)->format('M d, Y') }}
+                    <x-ui.icon name="calendar" class="inline-block size-4 align-[-3px]" /> Default Date: {{ \Carbon\Carbon::parse($loan->default_date)->format('M d, Y') }}
                 </span>
                 @endif
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium 
@@ -84,51 +84,51 @@
                     @elseif(($metrics['days_overdue'] ?? 0) > 60) bg-orange-100 text-orange-800 dark:bg-orange-800/30 dark:text-orange-300
                     @elseif(($metrics['days_overdue'] ?? 0) > 30) bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300
                     @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 @endif">
-                    📊 {{ $metrics['days_overdue'] ?? 0 }} days in default
+                    <x-ui.icon name="chart" class="inline-block size-4 align-[-3px]" /> {{ $metrics['days_overdue'] ?? 0 }} days in default
                 </span>
                 @if(isset($recoveryCase))
                 <a href="{{ route('cases.show', $recoveryCase) }}" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-300 hover:bg-blue-200 transition-colors">
-                    📋 View Recovery Case
+                    <x-ui.icon name="list" class="inline-block size-4 align-[-3px]" /> View Recovery Case
                 </a>
                 @endif
             </div>
             @elseif($loan->isOverdue() || $loan->status === 'overdue')
             <div class="mt-2 flex flex-wrap gap-2">
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300">
-                    🟡 Overdue: {{ $metrics['days_overdue'] ?? 0 }} days
+                    <span class="mr-1 inline-block size-2 rounded-full bg-amber-400 align-middle"></span> Overdue: {{ $metrics['days_overdue'] ?? 0 }} days
                 </span>
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                    ⏳ Threshold: {{ $metrics['default_threshold_days'] ?? 30 }} days until default
+                    <x-ui.icon name="clock" class="inline-block size-4 align-[-3px]" /> Threshold: {{ $metrics['default_threshold_days'] ?? 30 }} days until default
                 </span>
             </div>
             @elseif($loan->status === 'forbearance')
             <div class="mt-2 flex flex-wrap gap-2">
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                    ⏸️ Forbearance until: {{ $loan->forbearance_until ? \Carbon\Carbon::parse($loan->forbearance_until)->format('M d, Y') : 'N/A' }}
+                    <x-ui.icon name="clock" class="inline-block size-4 align-[-3px]" /> Forbearance until: {{ $loan->forbearance_until ? \Carbon\Carbon::parse($loan->forbearance_until)->format('M d, Y') : 'N/A' }}
                 </span>
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                    📅 Days remaining: {{ $loan->forbearance_until ? \Carbon\Carbon::now()->diffInDays($loan->forbearance_until, false) : 0 }}
+                    <x-ui.icon name="calendar" class="inline-block size-4 align-[-3px]" /> Days remaining: {{ $loan->forbearance_until ? \Carbon\Carbon::now()->diffInDays($loan->forbearance_until, false) : 0 }}
                 </span>
             </div>
             @elseif($loan->status === 'recovery')
             <div class="mt-2 flex flex-wrap gap-2">
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-300">
-                    🔄 Recovery started: {{ $loan->recovery_started_at ? \Carbon\Carbon::parse($loan->recovery_started_at)->format('M d, Y') : 'N/A' }}
+                    <x-ui.icon name="refresh" class="inline-block size-4 align-[-3px]" /> Recovery started: {{ $loan->recovery_started_at ? \Carbon\Carbon::parse($loan->recovery_started_at)->format('M d, Y') : 'N/A' }}
                 </span>
                 @if($loan->recovery_notes)
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                    📝 Notes available
+                    <x-ui.icon name="file" class="inline-block size-4 align-[-3px]" /> Notes available
                 </span>
                 @endif
             </div>
             @else
             <div class="mt-2 flex flex-wrap gap-2">
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300">
-                    ✅ Loan is performing
+                    <x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Loan is performing
                 </span>
                 @if($metrics['due_date'] ?? false)
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                    📅 Due: {{ $metrics['due_date']->format('M d, Y') }}
+                    <x-ui.icon name="calendar" class="inline-block size-4 align-[-3px]" /> Due: {{ $metrics['due_date']->format('M d, Y') }}
                 </span>
                 @endif
             </div>
@@ -142,15 +142,15 @@
             @else border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50 @endif">
             <div class="flex items-center gap-2">
                 @if($loan->isWithinGracePeriod())
-                    <span class="text-green-600 dark:text-green-400">🟢</span>
+                    <span class="text-green-600 dark:text-green-400"><span class="mr-1 inline-block size-2 rounded-full bg-success-500 align-middle"></span></span>
                     <span class="font-medium text-green-800 dark:text-green-300">In Grace Period</span>
                     <span class="ml-auto text-xs text-green-600 dark:text-green-400">{{ $loan->getRemainingGraceDays() }} days remaining</span>
                 @elseif($loan->grace_days_balance > 0)
-                    <span class="text-blue-600 dark:text-blue-400">📋</span>
+                    <span class="text-blue-600 dark:text-blue-400"><x-ui.icon name="list" class="inline-block size-4 align-[-3px]" /></span>
                     <span class="font-medium text-blue-800 dark:text-blue-300">{{ $loan->grace_days_balance }} Grace Days</span>
                     <span class="ml-auto text-xs text-blue-600 dark:text-blue-400">Earned: {{ $loan->grace_days_earned }} | Used: {{ $loan->grace_days_used }}</span>
                 @else
-                    <span class="text-gray-500 dark:text-gray-400">📅</span>
+                    <span class="text-gray-500 dark:text-gray-400"><x-ui.icon name="calendar" class="inline-block size-4 align-[-3px]" /></span>
                     <span class="font-medium text-gray-600 dark:text-gray-300">No Grace Days</span>
                     @if(($metrics['days_overdue'] ?? 0) > 0)
                         <span class="ml-auto text-xs text-red-600 dark:text-red-400">{{ $metrics['days_overdue'] }} days overdue</span>
@@ -162,7 +162,7 @@
         <!-- ============ CYCLE / ROLLOVER STATUS ============ -->
         <div class="mt-3 p-3 rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
             <div class="flex items-center gap-2">
-                <span class="text-purple-600 dark:text-purple-400">🔄</span>
+                <span class="text-purple-600 dark:text-purple-400"><x-ui.icon name="refresh" class="inline-block size-4 align-[-3px]" /></span>
                 <span class="font-medium text-gray-700 dark:text-gray-300">{{ $loan->cycle_display }}</span>
                 @if($loan->cycle > 1)
                     <span class="ml-auto text-xs text-purple-600 dark:text-purple-400">
@@ -208,7 +208,7 @@
 
             <!-- End Forbearance -->
             @if($loan->isInForbearance())
-            <button onclick="if(confirm('End forbearance for this loan?')) { document.getElementById('end-forbearance-form').submit(); }" 
+            <button type="button" data-confirm="End forbearance for this loan?" data-confirm-submit="end-forbearance-form" 
                     class="w-full flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -224,7 +224,7 @@
 
             <!-- Start Recovery -->
             @if($loan->isDefaulted() && !$loan->isInRecovery())
-            <button onclick="if(confirm('Start recovery process for this loan?')) { document.getElementById('start-recovery-form').submit(); }" 
+            <button type="button" data-confirm="Start the recovery process for this loan?" data-confirm-submit="start-recovery-form" 
                     class="w-full flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -376,7 +376,7 @@
                 @if($loan->consent)
                 <div class="mb-3">
                     <p class="text-sm font-medium text-gray-600">Consent Given</p>
-                    <p class="text-sm text-green-600">✓ Agreed on {{ $loan->consent_date->format('M d, Y') }}</p>
+                    <p class="text-sm text-green-600"><x-ui.icon name="check" class="inline-block size-4 align-[-3px]" /> Agreed on {{ $loan->consent_date->format('M d, Y') }}</p>
                 </div>
                 @endif
                 
@@ -448,7 +448,7 @@
             @if($isFullyPaid)
             <div class="mt-1 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                 <p class="text-xs text-green-600 dark:text-green-400 font-medium text-center">
-                    ✅ This cycle is fully paid
+                    <x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> This cycle is fully paid
                 </p>
             </div>
             @endif

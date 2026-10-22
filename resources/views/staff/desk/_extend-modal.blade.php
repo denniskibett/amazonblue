@@ -13,7 +13,7 @@
         <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Approve extension</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400" x-text="d ? d.borrower + ' · loan #' + d.loan + (d.product ? ' · ' + d.product : '') : 'Loading…'"></p>
       </div>
-      <button type="button" @click="close()" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800" aria-label="Close">✕</button>
+      <button type="button" @click="close()" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800" aria-label="Close"><x-ui.icon name="x" class="size-5" /></button>
     </div>
 
     <form method="POST" :action="submitUrl" class="space-y-5 p-6 text-sm" @submit="if (! (d && d.ok)) { $event.preventDefault(); }">

@@ -94,7 +94,7 @@ class FixLoanCycles extends Command
                     $this->line("  No cycles found - creating initial cycle...");
                     $this->calculator->createInitialCycle($loan);
                     $fixedCount++;
-                    $this->line("  ✅ Created initial cycle");
+                    $this->line("  [ok] Created initial cycle");
                     $this->info('');
                     continue;
                 }
@@ -162,12 +162,12 @@ class FixLoanCycles extends Command
                 }
 
                 $fixedCount++;
-                $this->line("  ✅ Fixed successfully");
+                $this->line("  [ok] Fixed successfully");
                 $this->info('');
 
             } catch (\Exception $e) {
                 $errorCount++;
-                $this->error("  ❌ Error: " . $e->getMessage());
+                $this->error("  [error] Error: " . $e->getMessage());
                 $this->info('');
             }
         }
@@ -175,8 +175,8 @@ class FixLoanCycles extends Command
         $this->info('========================================');
         $this->info('SUMMARY');
         $this->info('========================================');
-        $this->info("✅ Fixed: {$fixedCount} loans");
-        $this->info("❌ Errors: {$errorCount} loans");
+        $this->info("[ok] Fixed: {$fixedCount} loans");
+        $this->info("[error] Errors: {$errorCount} loans");
         $this->info('');
         $this->info('Done!');
     }

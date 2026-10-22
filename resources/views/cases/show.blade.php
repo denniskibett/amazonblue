@@ -51,7 +51,7 @@
     ];
 @endphp
 <div class="container mx-auto px-4 py-6"
-     x-data='caseShow(@js($caseJs))'>
+     x-data="caseShow({{ \Illuminate\Support\Js::from($caseJs) }})">
     
     <!-- Breadcrumb -->
     <nav class="flex mb-6" aria-label="Breadcrumb">
@@ -77,7 +77,7 @@
                     <svg class="w-3 h-3 mx-1 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
                     </svg>
-                    <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400" x-text="case.case_number"></span>
+                    <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400" x-text="rc.case_number"></span>
                 </div>
             </li>
         </ol>
@@ -88,7 +88,7 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <div class="flex items-center gap-3 flex-wrap">
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="case.case_number"></h1>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="rc.case_number"></h1>
                     
                     <!-- Status Badge -->
                     @php
@@ -130,8 +130,8 @@
                     @endif
                 </div>
                 <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    Created <span x-text="case.created_at_diff"></span> • 
-                    Last updated <span x-text="case.updated_at_diff"></span>
+                    Created <span x-text="rc.created_at_diff"></span> • 
+                    Last updated <span x-text="rc.updated_at_diff"></span>
                 </p>
             </div>
             <div class="flex items-center gap-2">
@@ -155,27 +155,14 @@
         </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Total Debt</p>
-            <p class="text-xl font-bold text-red-600" x-text="formatCurrency(case.total_debt_amount)"></p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Recovered</p>
-            <p class="text-xl font-bold text-green-600" x-text="formatCurrency(case.total_recovered)"></p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Remaining</p>
-            <p class="text-xl font-bold text-orange-600" x-text="formatCurrency(case.remaining_balance)"></p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Days in Default</p>
-            <p class="text-xl font-bold" x-text="case.days_in_default" 
-               :class="case.days_in_default > 90 ? 'text-red-600' : (case.days_in_default > 30 ? 'text-orange-600' : 'text-gray-600')">
-            </p>
-        </div>
-    </div>
+    <!-- Stats as the standard cards -->
+    @php $cj = (array) $caseJs; @endphp
+    <x-ui.metrics :items="[
+      ['label' => 'Total debt', 'value' => 'KES ' . number_format((float) ($cj['total_debt_amount'] ?? 0), 2), 'icon' => 'wallet'],
+      ['label' => 'Recovered', 'value' => 'KES ' . number_format((float) ($cj['total_recovered'] ?? 0), 2), 'icon' => 'hand-coins', 'tone' => 'up'],
+      ['label' => 'Remaining', 'value' => 'KES ' . number_format((float) ($cj['remaining_balance'] ?? 0), 2), 'icon' => 'scale'],
+      ['label' => 'Days in default', 'value' => number_format((int) ($cj['days_in_default'] ?? 0)), 'icon' => 'clock', 'tone' => ($cj['days_in_default'] ?? 0) > 90 ? 'down' : 'neutral'],
+    ]" />
 
     <!-- Main Content Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -186,49 +173,49 @@
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Debtor Information</h3>
                 <div class="flex items-start gap-4">
                     <div class="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg font-semibold text-gray-700 dark:text-gray-300" 
-                         x-text="case.user_initials || 'U'">
+                         x-text="rc.user_initials || 'U'">
                     </div>
                     <div>
-                        <p class="text-base font-medium text-gray-900 dark:text-white" x-text="case.user_name"></p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="case.user_email"></p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="case.user_phone || 'No phone'"></p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="case.client_type ? 'Client Type: ' + case.client_type : 'N/A'"></p>
-                        <a :href="'/users/' + case.user_id" class="mt-2 inline-block text-sm text-blue-600 hover:underline">View Full Profile →</a>
+                        <p class="text-base font-medium text-gray-900 dark:text-white" x-text="rc.user_name"></p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="rc.user_email"></p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="rc.user_phone || 'No phone'"></p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="rc.client_type ? 'Client Type: ' + rc.client_type : 'N/A'"></p>
+                        <a :href="'/users/' + rc.user_id" class="mt-2 inline-block text-sm text-blue-600 hover:underline">View Full Profile →</a>
                     </div>
                 </div>
             </div>
 
             <!-- Loan Information -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="case.loan_id">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="rc.loan_id">
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Associated Loan</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Loan ID</p>
-                        <p class="text-base font-medium" x-text="'#' + String(case.loan_id).padStart(5, '0')"></p>
+                        <p class="text-base font-medium" x-text="'#' + String(rc.loan_id).padStart(5, '0')"></p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Loan Type</p>
-                        <p class="text-base font-medium" x-text="case.loan_type || 'N/A'"></p>
+                        <p class="text-base font-medium" x-text="rc.loan_type || 'N/A'"></p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Amount</p>
-                        <p class="text-base font-medium" x-text="formatCurrency(case.loan_amount)"></p>
+                        <p class="text-base font-medium" x-text="formatCurrency(rc.loan_amount)"></p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Status</p>
                         <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
                               :class="{
-                                'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300': case.loan_status === 'disbursed',
-                                'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': case.loan_status === 'repaid',
-                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300': case.loan_status === 'defaulted',
-                                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300': case.loan_status === 'overdue',
-                                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': !case.loan_status || !['disbursed','repaid','defaulted','overdue'].includes(case.loan_status)
+                                'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300': rc.loan_status === 'disbursed',
+                                'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': rc.loan_status === 'repaid',
+                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300': rc.loan_status === 'defaulted',
+                                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300': rc.loan_status === 'overdue',
+                                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': !rc.loan_status || !['disbursed','repaid','defaulted','overdue'].includes(rc.loan_status)
                               }"
-                              x-text="case.loan_status ? case.loan_status.charAt(0).toUpperCase() + case.loan_status.slice(1) : 'N/A'">
+                              x-text="rc.loan_status ? rc.loan_status.charAt(0).toUpperCase() + rc.loan_status.slice(1) : 'N/A'">
                         </span>
                     </div>
                 </div>
-                <div class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg" x-show="case.is_non_performing">
+                <div class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg" x-show="rc.is_non_performing">
                     <div class="flex items-center gap-2">
                         <svg class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
@@ -236,29 +223,29 @@
                         <span class="text-sm font-medium text-red-800 dark:text-red-300">This loan is Non-Performing (NPL)</span>
                     </div>
                     <div class="mt-1 text-sm text-red-700 dark:text-red-400">
-                        <span x-text="case.days_overdue || 0"></span> days overdue • Defaulted on <span x-text="case.default_date_formatted || 'N/A'"></span>
+                        <span x-text="rc.days_overdue || 0"></span> days overdue • Defaulted on <span x-text="rc.default_date_formatted || 'N/A'"></span>
                     </div>
                 </div>
-                <a :href="'/users/' + case.user_id + '/loans/' + case.loan_id" class="mt-4 inline-block text-sm text-blue-600 hover:underline">View Loan Details →</a>
+                <a :href="'/users/' + rc.user_id + '/loans/' + rc.loan_id" class="mt-4 inline-block text-sm text-blue-600 hover:underline">View Loan Details →</a>
             </div>
 
             <!-- Recovery Strategy -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="case.recovery_strategy">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="rc.recovery_strategy">
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Recovery Strategy</h3>
-                <p class="text-gray-700 dark:text-gray-300" x-text="case.recovery_strategy"></p>
+                <p class="text-gray-700 dark:text-gray-300" x-text="rc.recovery_strategy"></p>
             </div>
 
             <!-- Notes -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="case.notes">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="rc.notes">
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Notes</h3>
-                <p class="text-gray-700 dark:text-gray-300" x-text="case.notes"></p>
+                <p class="text-gray-700 dark:text-gray-300" x-text="rc.notes"></p>
             </div>
 
             <!-- Activity Timeline -->
             <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Activity Timeline</h3>
-                    <span class="text-sm text-gray-500 dark:text-gray-400" x-text="case.actions_count + ' actions'"></span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400" x-text="rc.actions_count + ' actions'"></span>
                 </div>
                 
                 <!-- Action Timeline - Inline -->
@@ -396,27 +383,27 @@
                 <div class="space-y-3">
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-500 dark:text-gray-400">Assigned To</span>
-                        <span class="text-sm font-medium" x-text="case.assigned_to_name || 'Unassigned'"></span>
+                        <span class="text-sm font-medium" x-text="rc.assigned_to_name || 'Unassigned'"></span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-500 dark:text-gray-400">Recovery Officer</span>
-                        <span class="text-sm font-medium" x-text="case.recovery_officer || 'N/A'"></span>
+                        <span class="text-sm font-medium" x-text="rc.recovery_officer || 'N/A'"></span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-500 dark:text-gray-400">Default Date</span>
-                        <span class="text-sm font-medium" x-text="case.default_date_formatted || 'N/A'"></span>
+                        <span class="text-sm font-medium" x-text="rc.default_date_formatted || 'N/A'"></span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-500 dark:text-gray-400">Last Contact</span>
-                        <span class="text-sm font-medium" x-text="case.last_contact_date_formatted || 'Never'"></span>
+                        <span class="text-sm font-medium" x-text="rc.last_contact_date_formatted || 'Never'"></span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-500 dark:text-gray-400">Next Action</span>
-                        <span class="text-sm font-medium" x-text="case.next_action_date_formatted || 'Not set'"></span>
+                        <span class="text-sm font-medium" x-text="rc.next_action_date_formatted || 'Not set'"></span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-500 dark:text-gray-400">Recovery Progress</span>
-                        <span class="text-sm font-medium" x-text="case.recovery_progress + '%'"></span>
+                        <span class="text-sm font-medium" x-text="rc.recovery_progress + '%'"></span>
                     </div>
                 </div>
             </div>
@@ -456,9 +443,9 @@
             @endif
 
             <!-- Payment Plans -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="case.payment_plans && case.payment_plans.length > 0">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="rc.payment_plans && rc.payment_plans.length > 0">
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Payment Plans</h3>
-                <template x-for="plan in case.payment_plans" :key="plan.id">
+                <template x-for="plan in rc.payment_plans" :key="plan.id">
                     <div class="border-b border-gray-100 dark:border-gray-700 last:border-0 py-3 last:pb-0">
                         <div class="flex justify-between items-center">
                             <span class="text-sm font-medium" x-text="plan.installment_frequency + ' Plan'"></span>
@@ -499,10 +486,11 @@
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.data('caseShow', (caseData) => ({
-        case: caseData || {},
+        // the case lives in rc: `case` is a reserved word in an Alpine expression
+        rc: caseData || {},
         
         init() {
-            console.log('Case data initialized:', this.case);
+            console.log('Case data initialized:', this.rc);
         },
         
         formatCurrency(amount) {
@@ -512,21 +500,21 @@ document.addEventListener('alpine:init', () => {
         
         openEditCase() {
             window.dispatchEvent(new CustomEvent('edit-case', {
-                detail: { case: this.case }
+                detail: { case: this.rc }
             }));
         },
         
         openAddActionModal() {
             window.dispatchEvent(new CustomEvent('open-add-action', {
-                detail: { caseId: this.case.id }
+                detail: { caseId: this.rc.id }
             }));
         },
         
-        markAsRecovered() {
-            if (confirm('Mark this case as recovered?')) {
+        async markAsRecovered() {
+            if (await window.uiConfirm('Mark this case as recovered?')) {
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '/cases/' + this.case.id + '/recover';
+                form.action = '/cases/' + this.rc.id + '/recover';
                 form.style.display = 'none';
                 
                 const csrfInput = document.createElement('input');
@@ -548,7 +536,7 @@ document.addEventListener('alpine:init', () => {
         
         openWriteOffModal() {
             window.dispatchEvent(new CustomEvent('open-write-off', {
-                detail: { caseId: this.case.id }
+                detail: { caseId: this.rc.id }
             }));
         }
     }));

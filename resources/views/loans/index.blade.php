@@ -2,7 +2,8 @@
 
 @section('content')
 
-    @include('partials.metric-group.metric-group-02', ['stats' => $stats])
+    <x-ui.page-header title="Loan Portfolio" sub="Every loan you can see, with what is owed today." />
+    <x-ui.page-metrics page="loans" />
 
     {{-- @include('partials.chart.chart-03') --}}
 

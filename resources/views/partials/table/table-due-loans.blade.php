@@ -152,7 +152,7 @@
       </thead>
 
       <tbody class="divide-y divide-gray-100 dark:divide-gray-800" id="loansTableBody">
-        @if(Auth::user()->hasRole('admin'))
+        @if(Auth::user()->hasAnyRole([...\App\Models\User::BACK_OFFICE_ROLES, 'teller']))
           @foreach($dueLoans as $loan)
           <tr class="loan-row">
             <!-- Desktop cells -->

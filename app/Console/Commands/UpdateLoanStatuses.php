@@ -37,7 +37,7 @@ class UpdateLoanStatuses extends Command
         $statusFilter = $this->option('status');
         $force = $this->option('force');
 
-        $this->info('🚀 Starting loan status update...');
+        $this->info('Starting loan status update...');
         $this->newLine();
 
         // Build query
@@ -46,13 +46,13 @@ class UpdateLoanStatuses extends Command
         // Filter by specific loan
         if ($specificLoan) {
             $query->where('id', $specificLoan);
-            $this->line("🔍 Processing specific loan #{$specificLoan}");
+            $this->line("Processing specific loan #{$specificLoan}");
         }
 
         // Filter by status
         if ($statusFilter) {
             $query->where('status', $statusFilter);
-            $this->line("🔍 Filtering by status: {$statusFilter}");
+            $this->line("Filtering by status: {$statusFilter}");
         }
 
         // Only loans that have been disbursed can become overdue: never touch
@@ -80,11 +80,11 @@ class UpdateLoanStatuses extends Command
         $total = $loans->count();
 
         if ($total === 0) {
-            $this->warn('⚠️ No loans found to process.');
+            $this->warn('[!] No loans found to process.');
             return 0;
         }
 
-        $this->info("📊 Processing {$total} loans...");
+        $this->info("Processing {$total} loans...");
         $this->newLine();
 
         $stats = [
@@ -114,7 +114,7 @@ class UpdateLoanStatuses extends Command
                         $stats['recovered']++;
                     }
                     
-                    $this->line("\n  📝 Loan #{$loan->id}: {$result['old_status']} → {$result['new_status']}");
+                    $this->line("\n  - Loan #{$loan->id}: {$result['old_status']} → {$result['new_status']}");
                     if ($result['reason']) {
                         $this->line("     Reason: {$result['reason']}");
                     }
@@ -126,7 +126,7 @@ class UpdateLoanStatuses extends Command
 
             } catch (\Exception $e) {
                 $stats['errors']++;
-                $this->error("\n  ❌ Error processing loan #{$loan->id}: " . $e->getMessage());
+                $this->error("\n  [error] Error processing loan #{$loan->id}: " . $e->getMessage());
                 Log::error('Loan status update error', [
                     'loan_id' => $loan->id,
                     'error' => $e->getMessage(),
@@ -155,7 +155,7 @@ class UpdateLoanStatuses extends Command
 
         if ($dryRun) {
             $this->newLine();
-            $this->warn('⚠️  DRY RUN completed - no changes were saved to the database.');
+            $this->warn('[!]  DRY RUN completed - no changes were saved to the database.');
             $this->warn('   Remove --dry-run to apply changes.');
         }
 

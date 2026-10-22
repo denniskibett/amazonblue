@@ -303,7 +303,7 @@
                                 </div>
                                 <div class="flex-1">
                                     <h4 class="font-semibold text-green-800 dark:text-green-300" x-text="selectedUserName || borrowerName || 'User'"></h4>
-                                    <p class="text-green-700 dark:text-green-400 text-sm mb-2">✅ Existing Signature Found</p>
+                                    <p class="text-green-700 dark:text-green-400 text-sm mb-2"><x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Existing Signature Found</p>
                                     <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                                         <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
@@ -311,7 +311,7 @@
                                         Signature Verified
                                     </div>
                                     <p class="text-sm text-green-600 dark:text-green-400 mt-2">
-                                        <span x-text="useExistingSignature ? '✅ Will use existing signature' : '⚠️ Will create new signature'"></span>
+                                        <span x-text="useExistingSignature ? 'Will use existing signature' : 'Will create new signature'"></span>
                                     </p>
                                 </div>
                             </div>
@@ -362,7 +362,7 @@
                             </div>
                         </div>
                         <div id="signature-status-modal" class="mt-2 text-sm text-center" 
-                             :class="signatureStatus.includes('⚠️') ? 'text-red-500' : (signatureStatus.includes('✅') ? 'text-green-500' : 'text-gray-500')"
+                             :class="/^(Please|No )/.test(signatureStatus) ? 'text-red-500' : (/^(New signature|Existing signature found|Using)/.test(signatureStatus) ? 'text-green-500' : 'text-gray-500')"
                              x-text="signatureStatus"></div>
 
                         <div x-show="showSignaturePreview" class="mt-4">
@@ -562,7 +562,7 @@ function loansCreateModal() {
                     this.signatureData = this.getFullSignature();
                     this.form.signature_data = this.signatureData;
                     this.useExistingSignature = false;
-                    this.signatureStatus = '✅ New signature captured successfully!';
+                    this.signatureStatus = 'New signature captured successfully!';
                     this.showSignaturePreview = true;
                     this.updateSignatureFilename();
                 }
@@ -578,7 +578,7 @@ function loansCreateModal() {
                 this.hasExistingSignature = false;
                 this.existingSignatureUrl = '';
                 this.useExistingSignature = false;
-                this.signatureStatus = '⚠️ No user selected - please draw your signature';
+                this.signatureStatus = 'No user selected - please draw your signature';
                 return;
             }
 
@@ -588,8 +588,8 @@ function loansCreateModal() {
                 this.useExistingSignature = this.hasExistingSignature;
                 this._signatureDataFromParent = null;
                 this.signatureStatus = this.hasExistingSignature
-                    ? '✅ Existing signature found - using it for this loan'
-                    : '⚠️ No signature found - please draw your signature';
+                    ? 'Existing signature found - using it for this loan'
+                    : 'No signature found - please draw your signature';
                 return;
             }
 
@@ -602,8 +602,8 @@ function loansCreateModal() {
                         this.existingSignatureUrl = userData.signatureUrl || '';
                         this.useExistingSignature = this.hasExistingSignature;
                         this.signatureStatus = this.hasExistingSignature
-                            ? '✅ Existing signature found - using it for this loan'
-                            : '⚠️ No signature found - please draw your signature';
+                            ? 'Existing signature found - using it for this loan'
+                            : 'No signature found - please draw your signature';
                         return;
                     }
                 }
@@ -626,8 +626,8 @@ function loansCreateModal() {
                 this.existingSignatureUrl = data.signatureUrl || '';
                 this.useExistingSignature = data.hasSignature || false;
                 this.signatureStatus = this.hasExistingSignature
-                    ? '✅ Existing signature found - using it for this loan'
-                    : '⚠️ No signature found - please draw your signature';
+                    ? 'Existing signature found - using it for this loan'
+                    : 'No signature found - please draw your signature';
             })
             .catch((error) => {
                 console.error('Error checking signature:', error);
@@ -635,7 +635,7 @@ function loansCreateModal() {
                     this.hasExistingSignature = false;
                     this.existingSignatureUrl = '';
                     this.useExistingSignature = false;
-                    this.signatureStatus = '⚠️ Please draw your signature to proceed';
+                    this.signatureStatus = 'Please draw your signature to proceed';
                 }
             });
         },
@@ -783,8 +783,8 @@ function loansCreateModal() {
                         this.useExistingSignature = data.hasSignature;
                         this._signatureDataFromParent = null;
                         this.signatureStatus = data.hasSignature
-                            ? '✅ Existing signature found - using it for this loan'
-                            : '⚠️ No signature found - please draw your signature';
+                            ? 'Existing signature found - using it for this loan'
+                            : 'No signature found - please draw your signature';
                     }
                 } else if (data && data.user) {
                     this.selectedUserId = data.user.id;
@@ -902,16 +902,16 @@ function loansCreateModal() {
 
                 if (this.hasExistingSignature) {
                     this.useExistingSignature = true;
-                    this.signatureStatus = '✅ Using existing signature';
+                    this.signatureStatus = 'Using existing signature';
                 } else {
-                    this.signatureStatus = '⚠️ Please draw your signature';
+                    this.signatureStatus = 'Please draw your signature';
                 }
             }
         },
 
         saveSignature() {
             if (!this.signaturePad || this.signaturePad.isEmpty()) {
-                this.signatureStatus = '⚠️ Please provide a signature first';
+                this.signatureStatus = 'Please provide a signature first';
                 return;
             }
 
@@ -920,7 +920,7 @@ function loansCreateModal() {
             this.useExistingSignature = false;
             this.showSignaturePreview = true;
             this.updateSignatureFilename();
-            this.signatureStatus = '✅ New signature captured successfully!';
+            this.signatureStatus = 'New signature captured successfully!';
         },
 
         onUseExistingSignatureChange() {
@@ -928,16 +928,16 @@ function loansCreateModal() {
                 this.signatureData = '';
                 this.form.signature_data = '';
                 this.showSignaturePreview = false;
-                this.signatureStatus = '✅ Using existing signature';
+                this.signatureStatus = 'Using existing signature';
                 if (this.signaturePad) this.signaturePad.clear();
             } else {
-                this.signatureStatus = '⚠️ Please draw a new signature';
+                this.signatureStatus = 'Please draw a new signature';
                 if (this.signaturePad && !this.signaturePad.isEmpty()) {
                     this.signatureData = this.getFullSignature();
                     this.form.signature_data = this.signatureData;
                     this.showSignaturePreview = true;
                     this.updateSignatureFilename();
-                    this.signatureStatus = '✅ New signature captured successfully!';
+                    this.signatureStatus = 'New signature captured successfully!';
                 }
             }
         },
@@ -959,21 +959,21 @@ function loansCreateModal() {
                 if (typeof window.showAlert === 'function') {
                     window.showAlert('error', 'Validation Error', 'Please select a partner for brokered loans.');
                 } else {
-                    alert('Please select a partner for brokered loans.');
+                    uiAlert('Please select a partner for brokered loans.');
                 }
                 return;
             }
 
             if (this.useExistingSignature && this.hasExistingSignature) {
-                this.signatureStatus = '✅ Using existing signature';
+                this.signatureStatus = 'Using existing signature';
             } else if (!this.useExistingSignature) {
                 if (!this.signatureData || this.signatureData === '') {
-                    this.signatureStatus = '⚠️ Please draw your signature first';
+                    this.signatureStatus = 'Please draw your signature first';
                     return;
                 }
-                this.signatureStatus = '✅ New signature captured';
+                this.signatureStatus = 'New signature captured';
             } else if (!this.hasExistingSignature && !this.signatureData) {
-                this.signatureStatus = '⚠️ Please provide a signature';
+                this.signatureStatus = 'Please provide a signature';
                 return;
             }
 
@@ -1021,7 +1021,7 @@ function loansCreateModal() {
                     if (typeof window.showAlert === 'function') {
                         window.showAlert('success', 'Success!', data.message || (this.editId ? 'Loan updated successfully!' : 'Loan created successfully!'));
                     } else {
-                        alert(data.message || (this.editId ? 'Loan updated successfully!' : 'Loan created successfully!'));
+                        uiAlert(data.message || (this.editId ? 'Loan updated successfully!' : 'Loan created successfully!'));
                     }
                     this.close();
                     setTimeout(() => window.location.reload(), 1500);
@@ -1031,14 +1031,14 @@ function loansCreateModal() {
                         if (typeof window.showAlert === 'function') {
                             window.showAlert('error', 'Validation Error', errorMsg);
                         } else {
-                            alert('Validation Error: ' + errorMsg);
+                            uiAlert('Validation Error: ' + errorMsg);
                         }
                     } else if (data.duplicate && data.active_loans) {
                         let loanList = data.active_loans.map(l =>
                             `• ${l.borrower_name}: KES ${l.amount.toLocaleString()} (${l.status_display})`
                         ).join('\n');
 
-                        if (confirm(`This borrower has ${data.active_loans.length} active loan(s):\n\n${loanList}\n\nDo you want to create another loan anyway?`)) {
+                        if (await window.uiConfirm(`This borrower has ${data.active_loans.length} active loan(s):\n\n${loanList}\n\nDo you want to create another loan anyway?`, {title: 'Borrower already has a loan'})) {
                             formData.append('X-Force-Create', 'true');
                             const retryResponse = await fetch(action, {
                                 method: 'POST',
@@ -1056,7 +1056,7 @@ function loansCreateModal() {
                                 if (typeof window.showAlert === 'function') {
                                     window.showAlert('success', 'Success!', 'Loan created successfully!');
                                 } else {
-                                    alert('Loan created successfully!');
+                                    uiAlert('Loan created successfully!');
                                 }
                                 this.close();
                                 setTimeout(() => window.location.reload(), 1500);
@@ -1073,7 +1073,7 @@ function loansCreateModal() {
                 if (typeof window.showAlert === 'function') {
                     window.showAlert('error', 'Error!', error.message || 'Network error. Please try again.');
                 } else {
-                    alert('Error: ' + error.message);
+                    uiAlert('Error: ' + error.message);
                 }
             } finally {
                 this.isSubmitting = false;

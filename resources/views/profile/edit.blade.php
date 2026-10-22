@@ -53,7 +53,7 @@
                 </div>
                 <div class="flex-1">
                     <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-300">
-                        🔒 Profile Locked
+                        <x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Profile Locked
                     </h3>
                     <p class="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
                         You have previously taken a loan. Your KYC information is locked for security and compliance.
@@ -62,7 +62,7 @@
                     <div class="mt-2 flex flex-wrap gap-2">
                         @foreach($lockedFields as $field)
                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300">
-                            🔒 {{ ucfirst(str_replace('_', ' ', $field)) }}
+                            <x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> {{ ucfirst(str_replace('_', ' ', $field)) }}
                         </span>
                         @endforeach
                     </div>
@@ -148,7 +148,7 @@
                 <h3 class="text-lg font-semibold">Edit Profile</h3>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
                     @if($isProfileLocked)
-                        <span class="text-yellow-600 dark:text-yellow-400">🔒 Some fields are locked</span>
+                        <span class="text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Some fields are locked</span>
                     @endif
                     <span class="ml-2">Press <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Ctrl + S</kbd> to save</span>
                 </div>
@@ -164,11 +164,11 @@
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="basic">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
-                            <span class="text-2xl">👤</span>
+                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="user" class="size-5" /></span>
                             <h5 class="text-lg font-medium">Personal Information</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
                             @if($isProfileLocked)
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Partially Locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Partially Locked</span>
                             @endif
                         </div>
                         <div class="flex items-center gap-2">
@@ -188,7 +188,7 @@
                             <label class="block mb-2 text-sm font-medium">
                                 Full Name <span class="text-red-500">*</span>
                                 @if(in_array('name', $lockedFields))
-                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                                 @endif
                             </label>
                             <input type="text" name="name" value="{{ old('name', $user->name) }}" 
@@ -209,7 +209,7 @@
                             <label class="block mb-2 text-sm font-medium">
                                 Email Address <span class="text-red-500">*</span>
                                 @if(in_array('email', $lockedFields))
-                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                                 @endif
                             </label>
                             <input type="email" name="email" value="{{ old('email', $user->email) }}" 
@@ -230,7 +230,7 @@
                             <label class="block mb-2 text-sm font-medium">
                                 Phone Number <span class="text-red-500">*</span>
                                 @if(in_array('phone', $lockedFields))
-                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                                 @endif
                             </label>
                             <input type="tel" name="phone" value="{{ old('phone', $user->phone) }}" 
@@ -251,7 +251,7 @@
                             <label class="block mb-2 text-sm font-medium">
                                 Gender <span class="text-red-500">*</span>
                                 @if(in_array('gender', $lockedFields))
-                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                                 @endif
                             </label>
                             <select name="gender" 
@@ -280,7 +280,7 @@
                             <label class="block mb-2 text-sm font-medium">
                                 Date of Birth <span class="text-red-500">*</span>
                                 @if(in_array('dob', $lockedFields))
-                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                                 @endif
                             </label>
                             <div class="relative">
@@ -311,7 +311,7 @@
                             <label class="block mb-2 text-sm font-medium">
                                 Nationality <span class="text-red-500">*</span>
                                 @if(in_array('nationality', $lockedFields))
-                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                                 @endif
                             </label>
                             <select name="nationality" 
@@ -424,11 +424,11 @@
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="identification">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
-                            <span class="text-2xl">🪪</span>
+                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="user-check" class="size-5" /></span>
                             <h5 class="text-lg font-medium">Identification Documents</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
                             @if($isProfileLocked)
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 All fields locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> All fields locked</span>
                             @endif
                         </div>
                         <div class="flex items-center gap-2">
@@ -446,7 +446,7 @@
                         <div>
                             <label class="block mb-2 text-sm font-medium">
                                 ID Type <span class="text-red-500">*</span>
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                             </label>
                             <select name="id_type" 
                                     class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -465,7 +465,7 @@
                         <div>
                             <label class="block mb-2 text-sm font-medium">
                                 ID Number <span class="text-red-500">*</span>
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                             </label>
                             <input type="text" name="id_number" value="{{ old('id_number', $user->id_number) }}" 
                                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -479,7 +479,7 @@
                         <div>
                             <label class="block mb-2 text-sm font-medium">
                                 ID Front Photo <span class="text-red-500">*</span>
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                             </label>
                             <input type="file" name="id_front_path" accept="image/*" 
                                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -498,7 +498,7 @@
                         <div>
                             <label class="block mb-2 text-sm font-medium">
                                 ID Back Photo <span class="text-red-500">*</span>
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                             </label>
                             <input type="file" name="id_back_path" accept="image/*" 
                                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -523,11 +523,11 @@
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="next-of-kin">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
-                            <span class="text-2xl">👨‍👩‍👧‍👦</span>
+                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="users" class="size-5" /></span>
                             <h5 class="text-lg font-medium">Family & Next of Kin</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
                             @if($isProfileLocked)
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 All fields locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> All fields locked</span>
                             @endif
                         </div>
                         <div class="flex items-center gap-2">
@@ -546,7 +546,7 @@
                         <div>
                             <label class="block mb-2 text-sm font-medium">
                                 {{ ucfirst(str_replace('_', ' ', str_replace('kin_', '', $field))) }} <span class="text-red-500">*</span>
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                             </label>
                             @if(str_contains($field, 'kin_id_type'))
                             <select name="{{ $field }}" 
@@ -589,10 +589,10 @@
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="employment">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
-                            <span class="text-2xl">💼</span>
+                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="briefcase" class="size-5" /></span>
                             <h5 class="text-lg font-medium">Employment & Financial Information</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
-                            <span class="text-xs text-green-600 dark:text-green-400">✅ Editable</span>
+                            <span class="text-xs text-green-600 dark:text-green-400"><x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Editable</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['employment']['filled'] }}/{{ $sectionCounts['employment']['total'] }}</span>
@@ -694,10 +694,10 @@
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="borrower-info">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
-                            <span class="text-2xl">🏦</span>
+                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="building" class="size-5" /></span>
                             <h5 class="text-lg font-medium">Borrower Account</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
-                            <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                            <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['borrower-info']['filled'] }}/{{ $sectionCounts['borrower-info']['total'] }}</span>
@@ -714,7 +714,7 @@
                         <div>
                             <label class="block mb-2 text-sm font-medium">
                                 Client Type <span class="text-red-500">*</span>
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                             </label>
                             <select name="client_type" 
                                     class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -731,7 +731,7 @@
                         <div>
                             <label class="block mb-2 text-sm font-medium">
                                 Account Status <span class="text-red-500">*</span>
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                             </label>
                             <select name="status" 
                                     class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -756,13 +756,13 @@
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="broker-info">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
-                            <span class="text-2xl">🤝</span>
+                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="users" class="size-5" /></span>
                             <h5 class="text-lg font-medium">Broker Information</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
                             @if($isProfileLocked)
-                                <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Certificate locked</span>
+                                <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Certificate locked</span>
                             @endif
-                            <span class="text-xs text-green-600 dark:text-green-400">✅ Rates editable</span>
+                            <span class="text-xs text-green-600 dark:text-green-400"><x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Rates editable</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['broker-info']['filled'] ?? 0 }}/{{ $sectionCounts['broker-info']['total'] ?? 5 }}</span>
@@ -776,7 +776,7 @@
                             <label class="block mb-2 text-sm font-medium">
                                 Certificate Number <span class="text-red-500">*</span>
                                 @if(in_array('cert_no', $lockedFields))
-                                    <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                                    <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                                 @endif
                             </label>
                             <input type="text" name="cert_no" value="{{ old('cert_no', $user->broker->cert_no ?? '') }}" 
@@ -853,10 +853,10 @@
                 <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6" id="teller-info">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3">
-                            <span class="text-2xl">🏧</span>
+                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="banknote" class="size-5" /></span>
                             <h5 class="text-lg font-medium">Teller Information</h5>
                             <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full">Required</span>
-                            <span class="text-xs text-green-600 dark:text-green-400">✅ Editable</span>
+                            <span class="text-xs text-green-600 dark:text-green-400"><x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Editable</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">{{ $sectionCounts['teller-info']['filled'] ?? 0 }}/{{ $sectionCounts['teller-info']['total'] ?? 1 }}</span>
@@ -898,10 +898,10 @@
         <div class="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center gap-3">
-                    <span class="text-2xl">✍️</span>
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="edit" class="size-5" /></span>
                     <h3 class="text-lg font-semibold">Digital Signature</h3>
                     @if($isProfileLocked)
-                        <span class="text-xs text-yellow-600 dark:text-yellow-400">🔒 Locked</span>
+                        <span class="text-xs text-yellow-600 dark:text-yellow-400"><x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Locked</span>
                     @endif
                 </div>
                 <div class="flex items-center gap-2">
@@ -938,7 +938,7 @@
                             {{ $user->name }}
                         </h4>
                         <p class="text-yellow-700 dark:text-yellow-400 text-sm">
-                            🔒 Signature is locked. Contact support to update it.
+                            <x-ui.icon name="lock" class="inline-block size-4 align-[-3px]" /> Signature is locked. Contact support to update it.
                         </p>
                     </div>
                 </div>
@@ -964,7 +964,7 @@
                                     {{ $user->name }}
                                 </h4>
                                 <p class="text-green-700 dark:text-green-400 text-sm mb-2">
-                                    ✅ Signature Found
+                                    <x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Signature Found
                                 </p>
                                 <button type="button" @click="showSignaturePad = true" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 transition-colors">
                                     <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1071,7 +1071,7 @@
         <div class="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center gap-3">
-                    <span class="text-2xl">🔒</span>
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><x-ui.icon name="lock" class="size-5" /></span>
                     <h3 class="text-lg font-semibold">Password Settings</h3>
                 </div>
                 <button @click="showPasswordModal = true" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
@@ -1212,13 +1212,13 @@ function profileData() {
                 const ageInfo = document.getElementById('age-info');
                 if (ageInfo) {
                     if (age < 18) {
-                        ageInfo.textContent = `⚠️ Age: ${age} years (Must be at least 18)`;
+                        ageInfo.textContent = `Age: ${age} years (Must be at least 18)`;
                         ageInfo.className = 'mt-1 text-sm text-red-600';
                     } else if (age > 100) {
-                        ageInfo.textContent = `⚠️ Age: ${age} years (Please verify)`;
+                        ageInfo.textContent = `Age: ${age} years (Please verify)`;
                         ageInfo.className = 'mt-1 text-sm text-yellow-600';
                     } else {
-                        ageInfo.textContent = `✅ Age: ${age} years`;
+                        ageInfo.textContent = `Age: ${age} years`;
                         ageInfo.className = 'mt-1 text-sm text-green-600';
                     }
                 }

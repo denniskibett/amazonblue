@@ -423,8 +423,8 @@ class DashboardController extends Controller
             ->select('loans.*');
 
         // Role-based filtering
-        if ($user->hasRole('admin') || $user->hasRole('teller')) {
-            // Show all loans
+        if ($user->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller'])) {
+            // every back-office role and tellers see every due loan (owner, 22 Oct 2026)
         } elseif ($user->hasRole('borrower')) {
             $baseQuery->where('loans.user_id', $user->id);
         } elseif ($user->hasRole('broker')) {

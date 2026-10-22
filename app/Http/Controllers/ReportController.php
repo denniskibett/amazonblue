@@ -48,7 +48,14 @@ class ReportController extends Controller
     public function index()
     {
         $reports = $this->getAvailableReports();
-        return view('reports.index', compact('reports'));
+        try {
+            $analytics = \App\Support\ReportAnalytics::get();
+        } catch (\Throwable $e) {
+            report($e);
+            $analytics = null;
+        }
+
+        return view('reports.index', compact('reports', 'analytics'));
     }
 
     public function show($reportType)

@@ -69,7 +69,7 @@
 
                 <!-- Potential Cycles Warning -->
                 <div x-show="missedCycles > 0" class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                    <h4 class="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-2">⚠️ Overdue Analysis</h4>
+                    <h4 class="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-2"><x-ui.icon name="alert" class="inline-block size-4 align-[-3px]" /> Overdue Analysis</h4>
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                         <div>
                             <span class="text-gray-500 dark:text-gray-400">Days Overdue</span>
@@ -154,14 +154,14 @@
                             <div class="text-xs text-gray-600 dark:text-gray-300">
                                 <template x-if="interestType === 'simple'">
                                     <div>
-                                        <p class="font-medium text-blue-700 dark:text-blue-300">💡 Simple Interest</p>
+                                        <p class="font-medium text-blue-700 dark:text-blue-300"><x-ui.icon name="info" class="inline-block size-4 align-[-3px]" /> Simple Interest</p>
                                         <p>Interest is calculated on the original principal only. The interest amount stays the same each cycle.</p>
                                         <p class="mt-1 text-blue-600 dark:text-blue-400">Example: 20% of KES 10,000 = KES 2,000 each cycle</p>
                                     </div>
                                 </template>
                                 <template x-if="interestType === 'compound'">
                                     <div>
-                                        <p class="font-medium text-purple-700 dark:text-purple-300">💡 Compound Interest</p>
+                                        <p class="font-medium text-purple-700 dark:text-purple-300"><x-ui.icon name="info" class="inline-block size-4 align-[-3px]" /> Compound Interest</p>
                                         <p>Interest is calculated on the current balance (principal + accumulated interest). The interest grows each cycle.</p>
                                         <p class="mt-1 text-purple-600 dark:text-purple-400">Example: Cycle 1: 20% of 10,000 = 2,000 | Cycle 2: 20% of 12,000 = 2,400</p>
                                     </div>
@@ -178,7 +178,7 @@
         <input type="checkbox" x-model="waivePenalty" class="mt-1 w-4 h-4 text-yellow-600 focus:ring-yellow-500">
         <div>
             <div class="flex items-center gap-2">
-                <p class="font-medium text-gray-900 dark:text-white">📋 Payment Plan (Waive Penalties)</p>
+                <p class="font-medium text-gray-900 dark:text-white"><x-ui.icon name="list" class="inline-block size-4 align-[-3px]" /> Payment Plan (Waive Penalties)</p>
                 <span x-show="waivePenalty" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
                     Selected
                 </span>
@@ -187,7 +187,7 @@
                 Create a payment plan with waived penalties. New cycle will be in forbearance.
             </p>
             <div x-show="waivePenalty" class="mt-2 p-2 bg-green-100 dark:bg-green-800/30 rounded-lg">
-                <p class="text-xs text-green-700 dark:text-green-300 font-medium">✅ Penalties will be WAIVED for this cycle</p>
+                <p class="text-xs text-green-700 dark:text-green-300 font-medium"><x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Penalties will be WAIVED for this cycle</p>
             </div>
         </div>
     </label>
@@ -231,7 +231,7 @@
 
                 <!-- Future Rollover Projections -->
                 <div x-show="projections && projections.length > 0" class="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📈 Future Rollover Projections</h4>
+                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3"><x-ui.icon name="trending-up" class="inline-block size-4 align-[-3px]" /> Future Rollover Projections</h4>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-100 dark:bg-gray-700/50">
@@ -267,7 +267,7 @@
                 <!-- Previous Due Date -->
                 <div class="mb-6 p-3 rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
                     <div class="flex items-center gap-2">
-                        <span class="text-gray-500 dark:text-gray-400">📅</span>
+                        <span class="text-gray-500 dark:text-gray-400"><x-ui.icon name="calendar" class="inline-block size-4 align-[-3px]" /></span>
                         <span class="font-medium text-gray-700 dark:text-gray-300">Previous Due Date</span>
                         <span class="ml-auto text-sm text-gray-600 dark:text-gray-400" x-text="previousDueDate"></span>
                     </div>
@@ -276,8 +276,8 @@
                 <!-- Grace Days -->
                 <div class="mb-6 p-3 rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
                     <div class="flex items-center gap-2">
-                        <span x-show="graceDaysBalance > 0" class="text-blue-600 dark:text-blue-400">📋</span>
-                        <span x-show="graceDaysBalance <= 0" class="text-gray-500 dark:text-gray-400">📅</span>
+                        <span x-show="graceDaysBalance > 0" class="text-blue-600 dark:text-blue-400"><x-ui.icon name="list" class="inline-block size-4 align-[-3px]" /></span>
+                        <span x-show="graceDaysBalance <= 0" class="text-gray-500 dark:text-gray-400"><x-ui.icon name="calendar" class="inline-block size-4 align-[-3px]" /></span>
                         <span class="font-medium text-gray-700 dark:text-gray-300" x-text="graceDaysBalance > 0 ? graceDaysBalance + ' Grace Days Available' : 'No Grace Days'"></span>
                     </div>
                     <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">

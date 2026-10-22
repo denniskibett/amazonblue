@@ -63,33 +63,13 @@
         </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Principal Wallet</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">
-                KES {{ number_format($data['principal_balance'] ?? 0, 2) }}
-            </p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Interest Wallet</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">
-                KES {{ number_format($data['interest_balance'] ?? 0, 2) }}
-            </p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Broker Fee Wallet</p>
-            <p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-                KES {{ number_format($data['broker_fee_balance'] ?? 0, 2) }}
-            </p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Investment Tracker</p>
-            <p class="text-2xl font-semibold text-blue-600 dark:text-blue-400">
-                KES {{ number_format($data['tracker_balance'] ?? 0, 2) }}
-            </p>
-        </div>
-    </div>
+    <!-- Wallets as the standard cards -->
+    <x-ui.metrics :items="[
+      ['label' => 'Principal wallet', 'value' => 'KES ' . number_format($data['principal_balance'] ?? 0, 2), 'icon' => 'wallet'],
+      ['label' => 'Interest wallet', 'value' => 'KES ' . number_format($data['interest_balance'] ?? 0, 2), 'icon' => 'percent'],
+      ['label' => 'Broker fee wallet', 'value' => 'KES ' . number_format($data['broker_fee_balance'] ?? 0, 2), 'icon' => 'coins'],
+      ['label' => 'Investment tracker', 'value' => 'KES ' . number_format($data['tracker_balance'] ?? 0, 2), 'icon' => 'layers'],
+    ]" />
 
     <!-- Main Content -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -257,7 +237,7 @@
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Journal Entries</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Every wallet posting for this partner, in order</p>
             </div>
-            <div class="overflow-x-auto" x-data="partnerTransactionsTable()" x-init="init(@json($data['transactions'] ?? []))">
+            <div class="overflow-x-auto" x-data="partnerTransactionsTable()" x-init="init({{ \Illuminate\Support\Js::from($data['transactions'] ?? []) }})">
                 <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div class="relative flex-1 min-w-[150px]">

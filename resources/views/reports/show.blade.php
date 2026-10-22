@@ -2,97 +2,48 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('reports.index') }}" class="text-blue-600 dark:text-blue-400 hover:underline text-sm">
-                    ← Back to Reports
-                </a>
-                <span class="text-gray-300 dark:text-gray-600">|</span>
-                <h1 class="text-2xl font-semibold text-gray-800 dark:text-white">{{ $reportTitle }}</h1>
-            </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Generated on {{ now()->format('F j, Y g:i A') }}</p>
-        </div>
-        <div class="flex items-center gap-2">
-            <button @click="exportReport('csv')" class="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Export CSV
-            </button>
-            <button @click="exportReport('excel')" class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export Excel
-            </button>
-            <button @click="exportReport('pdf')" class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                Export PDF
-            </button>
-        </div>
-    </div>
+@php
+  $chartBlocks = \App\Support\ReportCharts::blocks((array) $reportData);
+  $chartNow = collect($chartBlocks)->firstWhere('key', request('chart')) ?? ($chartBlocks[0] ?? null);
+  $from = request('start_date', now()->startOfMonth()->toDateString());
+  $to = request('end_date', now()->toDateString());
+  $exp = fn ($fmt) => route('reports.export', ['report_type' => $reportType, 'format' => $fmt, 'filters' => ['start_date' => request('start_date'), 'end_date' => request('end_date')]]);
+  $btn = 'inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]';
+  $input = 'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-theme-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
+  $exportActions = auth()->user()->can('export reports')
+    ? '<a href="' . e($exp('csv')) . '" class="' . $btn . '">CSV</a><a href="' . e($exp('excel')) . '" class="' . $btn . '">Excel</a><a href="' . e($exp('pdf')) . '" class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white hover:bg-brand-600">Download PDF</a>'
+    : null;
+@endphp
+<div>
+    @include('staff.desk._header', ['title' => $reportTitle, 'sub' => 'Generated ' . now()->format('j M Y, H:i') . '. Reports & Analytics', 'metrics' => false, 'actions' => $exportActions])
 
-    <!-- Filters -->
-    <div class="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <div class="flex flex-wrap items-end gap-4" x-data="reportFilters()" x-init="init()">
-            @foreach($filters as $filter)
-                @if($filter['type'] === 'date')
-                <div class="flex-1 min-w-[150px]">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ $filter['label'] }}</label>
-                    <input type="date" x-model="filters['{{ $filter['id'] }}']" @change="applyFilters()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500">
-                </div>
-                @elseif($filter['type'] === 'select')
-                <div class="flex-1 min-w-[150px]">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ $filter['label'] }}</label>
-                    <select x-model="filters['{{ $filter['id'] }}']" @change="applyFilters()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500">
-                        @foreach($filter['options'] as $value => $label)
-                        <option value="{{ $value }}">{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                @endif
-            @endforeach
-            <div class="flex items-center gap-2">
-                <button @click="resetFilters()" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Reset</button>
-            </div>
+    <!-- Filters: the report reads the date range from the address, so the form reloads the page -->
+    <form method="GET" class="mb-6 flex flex-wrap items-end gap-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+        <label class="min-w-[160px] flex-1"><span class="mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400">From</span><input type="date" name="start_date" value="{{ $from }}" class="{{ $input }}"></label>
+        <label class="min-w-[160px] flex-1"><span class="mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400">To</span><input type="date" name="end_date" value="{{ $to }}" class="{{ $input }}"></label>
+        <div class="flex gap-2">
+            <button class="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-5 text-theme-sm font-medium text-white hover:bg-brand-600"><x-ui.icon name="filter" class="size-4" /> Apply</button>
+            <a href="{{ route('reports.show', $reportType) }}" class="inline-flex h-11 items-center rounded-lg border border-gray-300 px-5 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Reset</a>
         </div>
-    </div>
+    </form>
+
+    @php
+      // the report's headline figures as standard cards above the report (owner, 22 Oct 2026)
+      $summaryCards = collect($reportData['summary'] ?? [])->filter(fn ($v) => is_scalar($v))->map(function ($v, $k) {
+          $money = preg_match('/amount|value|balance|size|inflow|outflow|cashflow|repaid|disbursed|repayments|disbursements|interest|debit|credit|outstanding|savings|earned/', $k)
+              && ! preg_match('/^total_(loans|disbursements|entries|customers|submissions)$|count|days|period/', $k);
+          $value = ! is_numeric($v) ? e($v) : (preg_match('/rate|percent|yield/', $k) ? number_format((float) $v, 2) . '%'
+              : ($money ? 'KES ' . number_format((float) $v, 2) : number_format((float) $v, floor((float) $v) == (float) $v ? 0 : 2)));
+          $icon = preg_match('/rate|percent|yield/', $k) ? 'percent' : ($money ? 'wallet' : (preg_match('/customer|borrower|user/', $k) ? 'users' : 'list'));
+          return ['label' => ucfirst(str_replace('_', ' ', $k)), 'value' => $value, 'icon' => $icon];
+      })->values()->take(6)->all();
+    @endphp
+    <x-ui.metrics :items="$summaryCards" />
 
     <!-- Report Content -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div class="p-4">
-            <div x-data="reportDisplay()" x-init="initReport(@json($reportData))">
-                <!-- Summary Cards -->
-                @if(isset($reportData['summary']))
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    @foreach($reportData['summary'] as $key => $value)
-                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ str_replace('_', ' ', $key) }}</p>
-                        <p class="text-xl font-semibold text-gray-900 dark:text-white mt-1">
-                            @if(is_numeric($value) && strpos($key, 'rate') === false && strpos($key, 'percentage') === false && strpos($key, 'yield') === false)
-                                @if($value > 1000)
-                                    KES {{ is_numeric($value) ? number_format($value, 2) : (is_array($value) ? json_encode($value) : $value) }}
-                                @else
-                                    {{ number_format($value) }}
-                                @endif
-                            @else
-                                @if(is_numeric($value))
-                                    {{ number_format($value, 2) }}%
-                                @else
-                                    {{ is_array($value) ? json_encode($value) : $value }}
-                                @endif
-                            @endif
-                        </p>
-                    </div>
-                    @endforeach
-                </div>
-                @endif
-
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="p-5 sm:p-6">
+            <div x-data="reportDisplay()" x-init="initReport({{ \Illuminate\Support\Js::from($reportData) }})">
                 @if(!empty($reportData['not_available']))
                 <div class="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
                     <p class="font-medium">Not available yet (no data recorded in the system):</p>
@@ -102,47 +53,30 @@
                 </div>
                 @endif
 
-                <!-- Chart Section -->
-                <div class="mb-6 rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6">
-                    <div class="flex flex-col gap-5 mb-6 sm:flex-row sm:justify-between">
-                        <div class="w-full">
-                            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90 font-outfit">
-                                {{ $reportTitle }} - Charts
-                            </h3>
-                            <p class="mt-1 text-gray-500 text-theme-sm dark:text-gray-400 font-outfit">
-                                Visual representation of {{ strtolower($reportTitle) }}
-                            </p>
+                <!-- Charts: drawn from this report's own figures (App\Support\ReportCharts) -->
+                @if ($chartBlocks)
+                <div class="mb-6 rounded-2xl border border-gray-200 px-5 pb-3 pt-5 dark:border-gray-800 sm:px-6 sm:pt-6">
+                    <div class="mb-2 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ $chartNow['label'] }}</h3>
+                            <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">{{ $reportTitle }}{{ request('start_date') ? ', ' . request('start_date') . ' to ' . request('end_date', now()->toDateString()) : '' }}</p>
                         </div>
-                        <div class="flex items-start w-full gap-3 sm:justify-end">
-                            @if(count($availableCharts) > 0)
-                            <div class="inline-flex w-fit items-center gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900">
-                                @foreach($availableCharts as $chart)
-                                <button 
-                                    @click="loadChart('{{ $chart['value'] }}')" 
-                                    :class="selectedChart === '{{ $chart['value'] }}' ? 'shadow-theme-xs text-gray-900 dark:text-white bg-white dark:bg-gray-800' : 'text-gray-500 dark:text-gray-400'" 
-                                    class="px-3 py-2 font-medium rounded-md text-theme-sm hover:text-gray-900 dark:hover:text-white font-outfit">
-                                    {{ $chart['label'] }}
-                                </button>
-                                @endforeach
-                            </div>
-                            @endif
+                        @if (count($chartBlocks) > 1)
+                        <div class="no-scrollbar flex max-w-full gap-0.5 overflow-x-auto rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900">
+                            @foreach ($chartBlocks as $blk)
+                            <a href="{{ request()->fullUrlWithQuery(['chart' => $blk['key']]) }}"
+                               class="whitespace-nowrap rounded-md px-3 py-2 text-theme-sm font-medium {{ $chartNow['key'] === $blk['key'] ? 'bg-white text-gray-900 shadow-theme-xs dark:bg-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}">{{ $blk['label'] }}</a>
+                            @endforeach
                         </div>
+                        @endif
                     </div>
-                    <div class="max-w-full overflow-x-auto custom-scrollbar">
-                        <div id="chartContainer" class="-ml-4 min-w-[700px] pl-2">
-                            <!-- Dynamic chart loading -->
-                            @if(isset($activeChart) && view()->exists('partials.chart.' . $activeChart))
-                                @include('partials.chart.' . $activeChart, ['reportData' => $reportData])
-                            @else
-                                @include('partials.chart.' . ($availableCharts[0]['value'] ?? 'customer-balance'), ['reportData' => $reportData])
-                            @endif
-                        </div>
-                    </div>
+                    <div id="reportChart" class="-ml-3 min-h-[320px]"></div>
                 </div>
+                @endif
 
                 <!-- Table Section -->
                 <div>
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Data Table</h3>
+                    <h3 class="mb-4 text-lg font-semibold text-gray-800 dark:text-white/90">Data</h3>
                     @php
                         $tableName = str_replace('_', '-', $reportType);
                     @endphp
@@ -199,9 +133,7 @@ function reportDisplay() {
         initReport(data) {
             this.reportData = data;
             console.log('Report data loaded:', data);
-            this.$nextTick(() => {
-                this.loadChart(this.selectedChart);
-            });
+            // the chart is drawn by the server-side partial; the tabs are links (?chart=...)
         },
         
         loadChart(chartType) {
@@ -326,6 +258,44 @@ function reportDisplay() {
         }
     }
 }
+
+(function () {
+  const blk = @json($chartNow);
+  if (!blk) return;
+  let chart = null, was = null;
+  const short = v => Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : Math.abs(v) >= 1e3 ? Math.round(v / 1e3) + 'k' : Math.round(v * 100) / 100;
+  const full = v => Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  function draw() {
+    if (typeof ApexCharts === 'undefined') return;
+    const dark = document.body.classList.contains('dark');
+    const fg = dark ? '#98A2B3' : '#667085', grid = dark ? '#1D2939' : '#E4E7EC';
+    const palette = ['#2B4FD8', '#A9BCF4', '#12B76A', '#FDB022', '#F04438', '#36BFFA', '#7A5AF8', '#F97316'];
+    const base = { fontFamily: 'Outfit, sans-serif', foreColor: fg, toolbar: { show: false }, background: 'transparent', height: 320 };
+    let o;
+    if (blk.type === 'donut') {
+      o = { chart: { ...base, type: 'donut' }, series: blk.series[0].data, labels: blk.labels, colors: palette,
+            legend: { position: 'right', labels: { colors: fg } }, stroke: { width: 0 }, dataLabels: { enabled: false },
+            plotOptions: { pie: { donut: { size: '68%', labels: { show: true, value: { color: dark ? '#fff' : '#1D2939', formatter: v => full(v) },
+              total: { show: true, label: 'Total', color: fg, formatter: w => full(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) } } } } },
+            tooltip: { theme: dark ? 'dark' : 'light', y: { formatter: full } } };
+    } else {
+      const horizontal = blk.type === 'bar' && blk.labels.length > 6;
+      o = { chart: { ...base, type: blk.type === 'area' ? 'area' : 'bar' }, series: blk.series, colors: palette,
+            xaxis: { categories: blk.labels, axisBorder: { show: false }, axisTicks: { show: false }, labels: horizontal ? { formatter: short } : { rotate: -30, hideOverlappingLabels: true }, tickAmount: blk.type === 'area' ? 10 : undefined },
+            yaxis: { labels: { formatter: horizontal ? (v => String(v).slice(0, 28)) : short } },
+            plotOptions: { bar: { horizontal, columnWidth: '45%', barHeight: '60%', borderRadius: 4, borderRadiusApplication: 'end' } },
+            stroke: blk.type === 'area' ? { curve: 'smooth', width: 2 } : { show: true, width: 2, colors: ['transparent'] },
+            fill: blk.type === 'area' ? { type: 'gradient', gradient: { opacityFrom: 0.45, opacityTo: 0 } } : {},
+            dataLabels: { enabled: false }, legend: { show: blk.series.length > 1, position: 'top', horizontalAlign: 'left', labels: { colors: fg } },
+            grid: { borderColor: grid, strokeDashArray: 4 }, tooltip: { theme: dark ? 'dark' : 'light', y: { formatter: full } } };
+    }
+    if (chart) chart.destroy();
+    chart = new ApexCharts(document.querySelector('#reportChart'), o); chart.render();
+  }
+  document.addEventListener('DOMContentLoaded', draw);
+  new MutationObserver(() => { const d = document.body.classList.contains('dark'); if (was !== null && d !== was) draw(); was = d; })
+    .observe(document.body, { attributes: true, attributeFilter: ['class'] });
+})();
 </script>
 @endpush
 @endsection

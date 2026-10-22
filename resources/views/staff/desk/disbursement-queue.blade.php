@@ -4,26 +4,12 @@
 @php $card = 'rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]'; @endphp
 
 @section('content')
-  @include('staff.desk._header', ['title' => 'Disbursement queue', 'sub' => 'Approved loans waiting for money to go out, oldest approval first.'])
-
-  <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-    <div class="{{ $card }}">
-      <p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">Waiting</p>
-      <p class="mt-1 font-outfit text-2xl font-semibold text-az-ink-blue dark:text-white/90">{{ $loans->total() }}</p>
-      <p class="text-theme-sm text-gray-500"><x-staff.money :amount="$waitingTotal" tone="muted" /></p>
-    </div>
-    <div class="{{ $card }}">
-      <p class="text-theme-xs font-semibold uppercase tracking-wide text-gray-500">Disbursed today</p>
-      <p class="mt-1 font-outfit text-2xl font-semibold text-az-ink-blue dark:text-white/90">{{ $todayCount }}</p>
-      <p class="text-theme-sm text-gray-500"><x-staff.money :amount="$todayTotal" tone="muted" /></p>
-    </div>
-    <div class="{{ $card }} flex flex-col justify-center gap-2">
-      @can('create disbursements')
-        <a href="{{ route('staff.end-of-day') }}" class="text-theme-sm font-medium text-brand-500 hover:underline">My end of day →</a>
-      @endcan
-      <a href="{{ route('disbursements.index') }}" class="text-theme-sm font-medium text-brand-500 hover:underline">All disbursements →</a>
-    </div>
-  </div>
+  @php
+    $btn = 'inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300';
+    $links = (auth()->user()->can('create disbursements') ? '<a href="' . route('staff.end-of-day') . '" class="' . $btn . '">My end of day</a>' : '')
+      . '<a href="' . route('disbursements.index') . '" class="' . $btn . '">Disbursements register</a>';
+  @endphp
+  @include('staff.desk._header', ['title' => 'Disbursement queue', 'sub' => 'Approved loans waiting for money to go out, oldest approval first.', 'actions' => $links])
 
   @cannot('create disbursements')
     <x-staff.alert type="info" class="mb-6" title="Read-only">You can see the queue but not disburse (needs the “create disbursements” permission).</x-staff.alert>
