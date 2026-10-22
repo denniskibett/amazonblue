@@ -2,105 +2,123 @@
 
 @section('content')
 @php
-    $fmt = function ($values) {
-        if (!is_array($values) || !$values) return '';
-        return collect($values)->map(function ($v, $k) {
-            $v = is_array($v) ? json_encode($v) : (is_bool($v) ? ($v ? 'true' : 'false') : ($v ?? 'null'));
-            return $k . ': ' . \Illuminate\Support\Str::limit((string) $v, 80);
-        })->implode("\n");
+    // one line per changed field: old → new (owner, 22 Oct 2026: Loans Due look)
+    $show = fn ($v) => \Illuminate\Support\Str::limit(is_array($v) ? json_encode($v) : (is_bool($v) ? ($v ? 'true' : 'false') : (string) ($v ?? '—')), 60);
+    $diff = function ($old, $new) use ($show) {
+        $old = is_array($old) ? $old : [];
+        $new = is_array($new) ? $new : [];
+        return collect(array_unique(array_merge(array_keys($new), array_keys($old))))
+            ->reject(fn ($k) => in_array($k, ['updated_at', 'created_at', 'event'], true))
+            ->map(fn ($k) => ['key' => str_replace('_', ' ', $k), 'old' => array_key_exists($k, $old) ? $show($old[$k]) : null, 'new' => array_key_exists($k, $new) ? $show($new[$k]) : null]);
     };
-    $badge = [
-        'create' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-        'update' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-        'delete' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-        'force_delete' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-        'restore' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-    ];
+    $tone = ['create' => 'green', 'update' => 'blue', 'delete' => 'red', 'force_delete' => 'red', 'restore' => 'amber'];
+    $field = 'h-10 rounded-lg border border-gray-300 bg-transparent px-3 text-theme-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300';
 @endphp
 <div>
     <x-ui.page-header title="Audit Log" sub="Every change to loans, payments, people and settings: who, when, and the values before and after." />
     <x-ui.page-metrics page="audit-log" />
 
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
-        <form method="GET" action="{{ route('audit-log.index') }}" class="flex flex-wrap items-end gap-3 mb-4">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="flex flex-col gap-4 px-4 pt-4 sm:px-6 xl:flex-row xl:items-end xl:justify-between">
             <div>
-                <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Record type</label>
-                <select name="table" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    <option value="">All</option>
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Changes</h3>
+                <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">Showing {{ number_format($logs->firstItem() ?? 0) }} to {{ number_format($logs->lastItem() ?? 0) }} of {{ number_format($logs->total()) }} entries</p>
+            </div>
+            <form method="GET" action="{{ route('audit-log.index') }}" class="flex flex-wrap items-end gap-2">
+                <label class="sr-only" for="al-table">Record type</label>
+                <select id="al-table" name="table" class="{{ $field }}">
+                    <option value="">All records</option>
                     @foreach($tables as $table)
                         <option value="{{ $table }}" @selected(request('table') === $table)>{{ str_replace('_', ' ', $table) }}</option>
                     @endforeach
                 </select>
-            </div>
-            <div>
-                <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Record #</label>
-                <input type="number" name="record" value="{{ request('record') }}" class="w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-            </div>
-            <div>
-                <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">User</label>
-                <select name="user" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    <option value="">All</option>
+                <label class="sr-only" for="al-record">Record #</label>
+                <input id="al-record" type="number" name="record" value="{{ request('record') }}" placeholder="Record #" class="{{ $field }} w-28">
+                <label class="sr-only" for="al-user">User</label>
+                <select id="al-user" name="user" class="{{ $field }}">
+                    <option value="">Anyone</option>
                     @foreach($users as $u)
                         <option value="{{ $u->id }}" @selected((string) request('user') === (string) $u->id)>{{ $u->name }}</option>
                     @endforeach
                 </select>
-            </div>
-            <div>
-                <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Action</label>
-                <select name="action" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    <option value="">All</option>
+                <label class="sr-only" for="al-action">Action</label>
+                <select id="al-action" name="action" class="{{ $field }}">
+                    <option value="">Any action</option>
                     @foreach(['create', 'update', 'delete', 'restore', 'force_delete'] as $a)
                         <option value="{{ $a }}" @selected(request('action') === $a)>{{ ucfirst(str_replace('_', ' ', $a)) }}</option>
                     @endforeach
                 </select>
-            </div>
-            <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Filter</button>
-            @if(request()->hasAny(['table', 'record', 'user', 'action']))
-                <a href="{{ route('audit-log.index') }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]">Clear</a>
-            @endif
-        </form>
+                <button type="submit" class="h-10 rounded-lg bg-brand-500 px-4 text-theme-sm font-medium text-white hover:bg-brand-600">Filter</button>
+                @if(request()->hasAny(['table', 'record', 'user', 'action']))
+                    <a href="{{ route('audit-log.index') }}" class="inline-flex h-10 items-center rounded-lg border border-gray-300 px-4 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]">Clear</a>
+                @endif
+            </form>
+        </div>
 
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">{{ number_format($logs->total()) }} entries</p>
-
-        <div class="w-full overflow-x-auto">
-            <table class="min-w-full">
-                <thead>
-                    <tr class="border-gray-100 border-y dark:border-gray-800">
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">When</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Who</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Before</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">After</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP</th>
+        <div class="max-w-full overflow-x-auto px-4 pb-3 pt-4 sm:px-6">
+            <table class="w-full min-w-[760px] text-left text-theme-sm text-gray-700 dark:text-gray-300">
+                <caption class="sr-only">Audit log</caption>
+                <thead class="border-y border-gray-100 dark:border-gray-800">
+                    <tr>
+                        @foreach (['Who', 'Action', 'Record', 'What changed', 'When'] as $h)
+                            <th scope="col" class="whitespace-nowrap py-3 pr-4 text-theme-xs font-medium text-gray-500 dark:text-gray-400">{{ $h }}</th>
+                        @endforeach
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     @forelse($logs as $log)
+                        @php $changes = $diff($log->old_values, $log->new_values); @endphp
                         <tr class="align-top">
-                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ optional($log->created_at)->format('d M Y H:i') }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $log->user->name ?? 'System' }}</td>
-                            <td class="px-4 py-3 text-sm whitespace-nowrap">
-                                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium {{ $badge[$log->action] ?? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">{{ $log->formatted_action }}</span>
-                                @if(!empty($log->new_values['event']))
-                                    <span class="block mt-1 text-xs text-gray-500 dark:text-gray-400">{{ str_replace('_', ' ', $log->new_values['event']) }}</span>
+                            <td class="whitespace-nowrap py-3 pr-4">
+                                @if ($log->user)
+                                    <x-staff.person :user="$log->user" :sub="'User #' . $log->user->id" />
+                                @else
+                                    <x-staff.person name="System" sub="scheduled or automatic" />
                                 @endif
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                <a class="hover:text-blue-600" href="{{ route('audit-log.index', ['table' => $log->table_name, 'record' => $log->record_id]) }}">{{ str_replace('_', ' ', $log->table_name) }} #{{ $log->record_id }}</a>
+                            <td class="whitespace-nowrap py-3 pr-4">
+                                <x-staff.pill :tone="$tone[$log->action] ?? 'gray'" dot>{{ $log->formatted_action }}</x-staff.pill>
+                                @if(!empty($log->new_values['event']))
+                                    <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">{{ str_replace('_', ' ', $log->new_values['event']) }}</span>
+                                @endif
                             </td>
-                            <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400"><pre class="whitespace-pre-wrap font-mono max-w-xs">{{ $fmt($log->old_values) }}</pre></td>
-                            <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-300"><pre class="whitespace-pre-wrap font-mono max-w-xs">{{ $fmt($log->new_values) }}</pre></td>
-                            <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ $log->ip_address ?? '-' }}</td>
+                            <td class="whitespace-nowrap py-3 pr-4">
+                                <a class="font-medium text-gray-800 hover:text-brand-500 dark:text-white/90" href="{{ route('audit-log.index', ['table' => $log->table_name, 'record' => $log->record_id]) }}">{{ ucfirst(str_replace('_', ' ', $log->table_name)) }} #{{ $log->record_id }}</a>
+                                <span class="block text-theme-xs text-gray-500 dark:text-gray-400">all changes to this record</span>
+                            </td>
+                            <td class="py-3 pr-4">
+                                @if ($changes->isEmpty())
+                                    <span class="text-theme-xs text-gray-400">—</span>
+                                @else
+                                    <div class="max-w-xl space-y-0.5 text-theme-xs" x-data="{ all: false }">
+                                        @foreach ($changes as $i => $c)
+                                            <div class="flex flex-wrap gap-x-1.5" @if ($i >= 4) x-show="all" x-cloak @endif>
+                                                <span class="text-gray-500 dark:text-gray-400">{{ $c['key'] }}</span>
+                                                @if ($c['old'] !== null)<span class="text-error-600 line-through decoration-error-300 dark:text-error-400">{{ $c['old'] }}</span><span class="text-gray-400">→</span>@endif
+                                                <span class="text-gray-800 dark:text-white/90">{{ $c['new'] ?? 'removed' }}</span>
+                                            </div>
+                                        @endforeach
+                                        @if ($changes->count() > 4)
+                                            <button type="button" class="font-medium text-brand-500 hover:underline" @click="all = !all" x-text="all ? 'Show less' : 'Show {{ $changes->count() - 4 }} more'"></button>
+                                        @endif
+                                    </div>
+                                @endif
+                            </td>
+                            <td class="whitespace-nowrap py-3 pr-4">
+                                <span>{{ optional($log->created_at)->format('j M Y, H:i') }}</span>
+                                <span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ optional($log->created_at)->diffForHumans(short: true) }}{{ $log->ip_address ? ' · ' . $log->ip_address : '' }}</span>
+                            </td>
                         </tr>
                     @empty
-                        <tr data-table-skip><td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No audit entries yet.</td></tr>
+                        <tr><td colspan="5"><x-staff.empty title="No audit entries yet" /></td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
 
-        <div class="mt-4">{{ $logs->links() }}</div>
+        @if ($logs->hasPages())
+            <div class="border-t border-gray-100 px-4 py-4 dark:border-gray-800 sm:px-6">{{ $logs->onEachSide(1)->links() }}</div>
+        @endif
     </div>
 </div>
 @endsection

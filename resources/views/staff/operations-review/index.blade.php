@@ -5,36 +5,36 @@
 
   @if ($errors->any())<x-staff.alert type="err" class="mb-5">{{ $errors->first() }}</x-staff.alert>@endif
 
-  <div class="mb-5 flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-800">
+  <div class="mb-5 flex gap-1 overflow-x-auto rounded-2xl border border-gray-200 bg-white px-4 pt-2 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6" role="tablist">
     @if ($canViewLedger)
-      <a href="{{ route('staff.operations-review', ['section' => 'receivables']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'receivables' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Loan discrepancies <span class="ml-1 text-xs">{{ $issues->total() }}</span></a>
+      <a href="{{ route('staff.operations-review', ['section' => 'receivables']) }}" class="-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-theme-sm font-medium {{ $section === 'receivables' ? 'border-brand-500 text-brand-500 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400' }}">Loan discrepancies <span class="rounded-full bg-gray-100 px-2 text-theme-xs dark:bg-gray-800">{{ $issues->total() }}</span></a>
     @endif
     @if ($canViewLedger)
-      <a href="{{ route('staff.operations-review', ['section' => 'grace']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'grace' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Late payers &amp; forbearance</a>
+      <a href="{{ route('staff.operations-review', ['section' => 'grace']) }}" class="-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-theme-sm font-medium {{ $section === 'grace' ? 'border-brand-500 text-brand-500 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400' }}">Late payers &amp; forbearance</a>
     @endif
     @if ($canViewLedger)
-      <a href="{{ route('staff.operations-review', ['section' => 'rollovers']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'rollovers' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Rollover chains</a>
+      <a href="{{ route('staff.operations-review', ['section' => 'rollovers']) }}" class="-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-theme-sm font-medium {{ $section === 'rollovers' ? 'border-brand-500 text-brand-500 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400' }}">Rollover chains</a>
     @endif
     @if ($canViewLedger)
-      <a href="{{ route('staff.operations-review', ['section' => 'repairs']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'repairs' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Per-loan repairs</a>
+      <a href="{{ route('staff.operations-review', ['section' => 'repairs']) }}" class="-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-theme-sm font-medium {{ $section === 'repairs' ? 'border-brand-500 text-brand-500 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400' }}">Per-loan repairs</a>
     @endif
     @if ($canViewLogs)
-      <a href="{{ route('staff.operations-review', ['section' => 'errors']) }}" class="border-b-2 px-3 py-2 text-sm font-medium {{ $section === 'errors' ? 'border-brand-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500' }}">Application errors <span class="ml-1 text-xs">{{ $logs->total() }}</span></a>
+      <a href="{{ route('staff.operations-review', ['section' => 'errors']) }}" class="-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-theme-sm font-medium {{ $section === 'errors' ? 'border-brand-500 text-brand-500 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400' }}">Application errors <span class="rounded-full bg-gray-100 px-2 text-theme-xs dark:bg-gray-800">{{ $logs->total() }}</span></a>
     @endif
   </div>
 
   @if ($section === 'errors' && $canViewLogs)
-    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-        <h2 class="font-semibold text-gray-900 dark:text-white">Recent error entries</h2>
+    <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="px-4 pt-4 pb-3 sm:px-6">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">Recent error entries</h2>
         <p class="mt-1 text-sm text-gray-500">ERROR and higher, from the latest seven daily log files. Personal contact details and common secret values are redacted; stack traces are not shown.</p>
       </div>
       @if ($logs->isEmpty())
         <p class="p-5 text-sm text-gray-500">No error-level entries found in the available daily logs.</p>
       @else
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200 text-left text-sm dark:divide-gray-800">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/[0.02]"><tr><th class="px-5 py-3">Time</th><th class="px-5 py-3">Level</th><th class="px-5 py-3">Message</th></tr></thead>
+          <table class="min-w-full text-left text-theme-sm text-gray-700 dark:text-gray-300 [&>thead]:border-y [&>thead]:border-gray-100 dark:[&>thead]:border-gray-800">
+            <thead class="text-theme-xs font-medium text-gray-500 dark:text-gray-400"><tr><th class="px-5 py-3">Time</th><th class="px-5 py-3">Level</th><th class="px-5 py-3">Message</th></tr></thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
               @foreach ($logs as $entry)
                 <tr><td class="whitespace-nowrap px-5 py-3 text-gray-600 dark:text-gray-300">{{ $entry['time'] }}</td>
@@ -48,12 +48,12 @@
       @endif
     </section>
   @elseif ($section === 'receivables' && $canViewLedger)
-    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-        <h2 class="font-semibold text-gray-900 dark:text-white">Ledger receivable vs latest cycle</h2>
+    <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="px-4 pt-4 pb-3 sm:px-6">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">Ledger receivable vs latest cycle</h2>
         <p class="mt-1 text-sm text-gray-500">A difference is a review finding, not an instruction to adjust the balance. Check the cycle and repayment history before changing loan status.</p>
       </div>
-      <form method="GET" action="{{ route('staff.operations-review') }}" class="grid gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-800 sm:grid-cols-2 xl:grid-cols-6">
+      <form method="GET" action="{{ route('staff.operations-review') }}" class="grid gap-3 px-4 pt-4 pb-3 sm:px-6 sm:grid-cols-2 xl:grid-cols-6">
         <input type="hidden" name="section" value="receivables">
         <label class="text-xs font-medium text-gray-600 dark:text-gray-300 xl:col-span-2">Borrower or loan number
           <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Search name or loan #" class="mt-1 block w-full rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
@@ -89,13 +89,13 @@
         <p class="p-5 text-sm text-gray-500">No receivable differences match these filters.</p>
       @else
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200 text-left text-sm dark:divide-gray-800">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/[0.02]"><tr><th class="px-4 py-3">Borrower / loan</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Latest cycle due</th><th class="px-4 py-3">Previous cycle due</th><th class="px-4 py-3 text-right">Cycle owes</th><th class="px-4 py-3 text-right">Ledger</th><th class="px-4 py-3 text-right">Difference</th><th class="px-4 py-3">Review finding</th><th class="px-4 py-3">Actions</th></tr></thead>
+          <table class="min-w-full text-left text-theme-sm text-gray-700 dark:text-gray-300 [&>thead]:border-y [&>thead]:border-gray-100 dark:[&>thead]:border-gray-800">
+            <thead class="text-theme-xs font-medium text-gray-500 dark:text-gray-400"><tr><th class="px-4 py-3">Borrower / loan</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Latest cycle due</th><th class="px-4 py-3">Previous cycle due</th><th class="px-4 py-3 text-right">Cycle owes</th><th class="px-4 py-3 text-right">Ledger</th><th class="px-4 py-3 text-right">Difference</th><th class="px-4 py-3">Review finding</th><th class="px-4 py-3">Actions</th></tr></thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
               @foreach ($issues as $issue)
                 <tr class="align-top">
                   <td class="px-4 py-3"><a class="font-medium text-brand-600 hover:underline" href="{{ route('loans.show', $issue['loan']) }}">{{ $issue['borrower_name'] }}</a><span class="mt-1 block text-xs text-gray-500">Loan #{{ $issue['loan'] }}</span>
-                    @if ($plan = config('repairs.loans.' . $issue['loan']))<span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold {{ ['A' => 'bg-emerald-100 text-emerald-800', 'B' => 'bg-amber-100 text-amber-800', 'C' => 'bg-blue-100 text-blue-800'][$plan['group']] ?? '' }}">Plan {{ $plan['group'] }}</span>@endif
+                    @if ($plan = config('repairs.loans.' . $issue['loan']))<span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold {{ ['A' => 'bg-success-50 text-success-700', 'B' => 'bg-amber-50 text-amber-700', 'C' => 'bg-blue-light-50 text-blue-light-700'][$plan['group']] ?? '' }}">Plan {{ $plan['group'] }}</span>@endif
                     <button type="button" x-data @click="$dispatch('open-loan', {id: {{ (int) $issue['loan'] }}})" class="mt-2 block rounded-md bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-700">Details &amp; fix</button></td>
                   <td class="px-4 py-3">{{ str_replace('_', ' ', ucfirst($issue['status'])) }}</td>
                   <td class="min-w-44 px-4 py-3">
@@ -177,9 +177,9 @@
       $canFix = auth()->user()->canAny(['edit loans', 'manage loan cycles']);
       $kes = fn ($v) => $v === null ? '—' : number_format((float) $v, 2);
     @endphp
-    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-        <h2 class="font-semibold text-gray-900 dark:text-white">Paid in full but late, and forbearance to restore</h2>
+    <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="px-4 pt-4 pb-3 sm:px-6">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">Paid in full but late, and forbearance to restore</h2>
         <p class="mt-1 text-sm text-gray-500">Old-model loans whose borrower paid principal + interest a few days late. Grace days for exactly the days late remove penalty nobody collected, and the "kept repaid" write-off goes. The due date is not changed. Forbearance rows are the loans that were in forbearance before Phase 2. "Owner decides" rows are never changed here.</p>
       </div>
       <div class="flex flex-wrap gap-2 border-b border-gray-200 px-5 py-3 text-sm dark:border-gray-800">
@@ -193,8 +193,8 @@
       @else
         <form method="POST" action="{{ route('staff.operations-review.grace-batch') }}" id="grace-batch">@csrf</form>
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200 text-left text-sm dark:divide-gray-800">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/[0.02]">
+          <table class="min-w-full text-left text-theme-sm text-gray-700 dark:text-gray-300 [&>thead]:border-y [&>thead]:border-gray-100 dark:[&>thead]:border-gray-800">
+            <thead class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">
               <tr>
                 <th class="px-3 py-3"><input type="checkbox" onclick="document.querySelectorAll('.grace-pick').forEach(c => c.checked = this.checked)" aria-label="Tick all"></th>
                 <th class="px-3 py-3">Loan</th><th class="px-3 py-3">Proposal</th><th class="px-3 py-3">Cycle</th>
@@ -241,17 +241,17 @@
     </section>
   @elseif ($section === 'rollovers' && $canViewLedger && $rollover)
     @php $canFix = auth()->user()->canAny(['edit loans', 'manage loan cycles']); $kes = fn ($v) => number_format((float) $v, 2); @endphp
-    <section class="mb-5 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-        <h2 class="font-semibold text-gray-900 dark:text-white">ROLL OVER chains to merge</h2>
+    <section class="mb-5 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="px-4 pt-4 pb-3 sm:px-6">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">ROLL OVER chains to merge</h2>
         <p class="mt-1 text-sm text-gray-500">A later loan of the same borrower that opened with a ROLL OVER within {{ \App\Services\Loans\RolloverCleanup::WINDOW }} days of the earlier loan's due date becomes its next cycle(s); the ROLL OVER rows then go, because the cycles hold the carry. A carry difference is what the old rollover charged above (+) or below (−) what was owed that day; the ledger books it as a rollover adjustment.</p>
       </div>
       @if ($rollover['chains']->isEmpty())
         <p class="p-5 text-sm text-gray-500">No chains left to merge.</p>
       @else
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200 text-left text-sm dark:divide-gray-800">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/[0.02]"><tr><th class="px-3 py-3">Main loan</th><th class="px-3 py-3">Links (old due → new start)</th><th class="px-3 py-3 text-right">Owed at rollover → carried</th><th class="px-3 py-3 text-right">Carry difference</th><th class="px-3 py-3"></th></tr></thead>
+          <table class="min-w-full text-left text-theme-sm text-gray-700 dark:text-gray-300 [&>thead]:border-y [&>thead]:border-gray-100 dark:[&>thead]:border-gray-800">
+            <thead class="text-theme-xs font-medium text-gray-500 dark:text-gray-400"><tr><th class="px-3 py-3">Main loan</th><th class="px-3 py-3">Links (old due → new start)</th><th class="px-3 py-3 text-right">Owed at rollover → carried</th><th class="px-3 py-3 text-right">Carry difference</th><th class="px-3 py-3"></th></tr></thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
               @foreach ($rollover['chains'] as $ch)
                 <tr class="align-top">
@@ -271,8 +271,8 @@
         </div>
       @endif
     </section>
-    <section class="mb-5 rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-      <h2 class="font-semibold text-gray-900 dark:text-white">ROLL OVER rows the cycles already hold, and loans never sent money</h2>
+    <section class="mb-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">ROLL OVER rows the cycles already hold, and loans never sent money</h2>
       <p class="mt-1 text-sm text-gray-500">{{ $rollover['stray']->count() }} ROLL OVER row(s) ({{ $rollover['stray']->where('table', 'repayments')->count() }} repayments, {{ $rollover['stray']->where('table', 'disbursements')->count() }} disbursements) on loans whose cycles already show the carry. They were never money, so removing them changes no balance. {{ $rollover['never']->count() }} loan(s) never sent money still carry interest/penalty charges: #{{ $rollover['never']->pluck('loan_id')->implode(', #') }}.</p>
       @php $pending = $rollover['transfers']->where('posted', false); @endphp
       @if ($rollover['transfers']->isNotEmpty())
@@ -285,8 +285,8 @@
         <form method="POST" action="{{ route('staff.operations-review.rollovers-clean') }}" class="mt-3">@csrf<button class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-gray-900">Remove the rows, clear the charges, post the transfers</button></form>
       @endif
     </section>
-    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800"><h2 class="font-semibold text-gray-900 dark:text-white">Not linked ({{ $rollover['unmatched']->count() }})</h2><p class="mt-1 text-sm text-gray-500">Left as separate loans. Their differences go to the per-loan decisions (Feature 2b).</p></div>
+    <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="px-4 pt-4 pb-3 sm:px-6"><h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">Not linked ({{ $rollover['unmatched']->count() }})</h2><p class="mt-1 text-sm text-gray-500">Left as separate loans. Their differences go to the per-loan decisions (Feature 2b).</p></div>
       <div class="max-h-96 overflow-y-auto"><table class="min-w-full text-left text-xs"><tbody class="divide-y divide-gray-100 dark:divide-gray-800">
         @foreach ($rollover['unmatched'] as $u)<tr><td class="px-5 py-2"><a href="{{ route('loans.show', $u['loan']) }}" class="text-brand-600 hover:underline">#{{ $u['loan'] }}</a></td><td class="px-3 py-2 text-gray-500">{{ $u['date'] }}</td><td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ $u['why'] }}</td></tr>@endforeach
       </tbody></table></div>

@@ -16,7 +16,7 @@
     'actions' => '<button type="button" onclick="window.print()" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">Print</button>',
   ])
 
-  <form method="GET" class="mb-6 flex flex-wrap items-end gap-3 print:hidden">
+  <form method="GET" class="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-4 print:hidden dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
     <x-staff.field name="date" label="Day" type="date" :value="$date->toDateString()" />
     @if ($tellers->isNotEmpty())
       <x-staff.field name="teller" label="Staff member" type="select" :options="$tellers->pluck('name', 'id')->all()" :value="$teller->id ?? null" />
@@ -35,52 +35,51 @@
     ['label' => 'Cash in by mode', 'value' => (string) count($byMode) . (count($byMode) === 1 ? ' mode' : ' modes'), 'icon' => 'phone', 'hint' => $modes ?: 'none today'],
   ]" />
 
-  <h2 class="mb-3 text-base font-semibold text-gray-800 dark:text-white/90">Payments received ({{ $repayments->count() }})</h2>
-  @if ($repayments->isEmpty())
-    <div class="mb-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"><x-staff.empty title="No payments entered" message="Nothing recorded by this person on this day." /></div>
-  @else
-    <div class="mb-6"><x-staff.table caption="Payments received" :headers="['#', 'Borrower', 'Loan', 'Mode', 'Reference', 'Kind', ['Amount', 'num']]">
-      @foreach ($repayments as $p)
+  @php
+    $modeName = fn ($m) => ['mpesa' => 'M-Pesa', 'cash' => 'Cash', 'bank' => 'Bank', 'cheque' => 'Cheque'][$m] ?? ($m ? ucfirst(str_replace('_', ' ', $m)) : '—');
+  @endphp
+  <div class="mb-6 space-y-6">
+    <x-staff.table title="Payments received" caption="Payments received" :headers="['Borrower', 'Payment', 'Mode · reference', 'Kind', ['Amount', 'num']]">
+      @forelse ($repayments as $p)
         @php $k = $kind($p); @endphp
-        <tr @class(['opacity-60 line-through' => $p->deleted_at])>
-          <td>{{ $p->id }}</td>
-          <td><span class="cursor-pointer hover:text-brand-500" data-user-peek="{{ $p->loan->user_id ?? '' }}">{{ $p->loan->user->name ?? '—' }}</span></td>
-          <td>#{{ $p->loan_id }}</td>
-          <td>{{ $p->mode ?: '—' }}</td>
-          <td>{{ $p->transaction ?: '—' }}</td>
-          <td>{{ $p->deleted_at ? 'Reversed' : ($k === 'cash' ? 'Cash' : 'Book (' . str_replace('_', ' ', $k) . ')') }}</td>
-          <td class="num"><x-staff.money :amount="$p->amount" :tone="$k === 'cash' && ! $p->deleted_at ? 'in' : 'muted'" /></td>
+        <tr @class(['opacity-60' => $p->deleted_at])>
+          <td data-sort-value="{{ $p->loan->user->name ?? '' }}"><x-staff.person :user="$p->loan->user ?? null" :sub="'Loan #' . $p->loan_id" /></td>
+          <td><span class="font-medium text-gray-800 dark:text-white/90">#{{ $p->id }}</span><span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ optional($p->created_at)->format('H:i') }}</span></td>
+          <td data-filter-value="{{ $modeName($p->mode) }}">{{ $modeName($p->mode) }}<span class="block font-mono text-theme-xs text-gray-500 dark:text-gray-400">{{ $p->transaction ?: '—' }}</span></td>
+          <td data-filter-value="{{ $p->deleted_at ? 'Reversed' : ($k === 'cash' ? 'Cash' : 'Book') }}">
+            @if ($p->deleted_at)<x-staff.pill tone="red">Reversed</x-staff.pill>
+            @elseif ($k === 'cash')<x-staff.pill tone="green" dot>Cash</x-staff.pill>
+            @else<x-staff.pill tone="gray">Book · {{ str_replace('_', ' ', $k) }}</x-staff.pill>@endif
+          </td>
+          <td class="num" data-sort-value="{{ (float) $p->amount }}"><x-staff.money :amount="$p->amount" :tone="$k === 'cash' && ! $p->deleted_at ? 'in' : 'muted'" :class="$p->deleted_at ? 'line-through' : ''" /></td>
         </tr>
-      @endforeach
-    </x-staff.table></div>
-  @endif
+      @empty
+        <tr data-table-skip><td colspan="5"><x-staff.empty title="No payments entered" message="Nothing recorded by this person on this day." /></td></tr>
+      @endforelse
+    </x-staff.table>
 
-  <h2 class="mb-3 text-base font-semibold text-gray-800 dark:text-white/90">Disbursements ({{ $disbursements->count() }})</h2>
-  @if ($disbursements->isEmpty())
-    <div class="mb-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"><x-staff.empty title="No disbursements entered" /></div>
-  @else
-    <div class="mb-6"><x-staff.table caption="Disbursements" :headers="['#', 'Borrower', 'Loan', 'Mode', 'Reference', 'Kind', ['Amount', 'num'], ['Sent (net)', 'num']]">
-      @foreach ($disbursements as $d)
+    <x-staff.table title="Disbursements" caption="Disbursements" :headers="['Borrower', 'Disbursement', 'Mode · reference', 'Kind', ['Amount', 'num'], ['Sent (net)', 'num']]">
+      @forelse ($disbursements as $d)
         @php $k = $kind($d); @endphp
         <tr>
-          <td>{{ $d->id }}</td>
-          <td><span class="cursor-pointer hover:text-brand-500" data-user-peek="{{ $d->loan->user_id ?? '' }}">{{ $d->loan->user->name ?? '—' }}</span></td>
-          <td>#{{ $d->loan_id }}</td>
-          <td>{{ $d->mode ?: '—' }}</td>
-          <td>{{ $d->transaction ?: '—' }}</td>
-          <td>{{ $k === 'cash' ? 'Cash' : 'Book (' . str_replace('_', ' ', $k) . ')' }}</td>
-          <td class="num"><x-staff.money :amount="$d->amount" tone="muted" /></td>
+          <td data-sort-value="{{ $d->loan->user->name ?? '' }}"><x-staff.person :user="$d->loan->user ?? null" :sub="'Loan #' . $d->loan_id" /></td>
+          <td><span class="font-medium text-gray-800 dark:text-white/90">#{{ $d->id }}</span><span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ optional($d->created_at)->format('H:i') }}</span></td>
+          <td data-filter-value="{{ $modeName($d->mode) }}">{{ $modeName($d->mode) }}<span class="block font-mono text-theme-xs text-gray-500 dark:text-gray-400">{{ $d->transaction ?: '—' }}</span></td>
+          <td data-filter-value="{{ $k === 'cash' ? 'Cash' : 'Book' }}">@if ($k === 'cash')<x-staff.pill tone="blue" dot>Cash</x-staff.pill>@else<x-staff.pill tone="gray">Book · {{ str_replace('_', ' ', $k) }}</x-staff.pill>@endif</td>
+          <td class="num" data-sort-value="{{ (float) $d->amount }}"><x-staff.money :amount="$d->amount" tone="muted" /></td>
           <td class="num"><x-staff.money :amount="(float) $d->net_amount ?: $d->amount" :tone="$k === 'cash' ? 'out' : 'muted'" /></td>
         </tr>
-      @endforeach
-    </x-staff.table></div>
-  @endif
+      @empty
+        <tr data-table-skip><td colspan="6"><x-staff.empty title="No disbursements entered" /></td></tr>
+      @endforelse
+    </x-staff.table>
+  </div>
 
   <p class="mb-6 text-theme-xs text-gray-500">“Entered by” is the person who recorded each row (older rows: the audit log’s create entry). Book entries (rollover, discount, write-off, broker fee …) are recorded but are not money.</p>
 
   {{-- Close the day (Stage 4 Phase 5): count, record the variance, a manager approves --}}
-  <section class="rounded-2xl border border-gray-200 bg-white p-5 print:hidden dark:border-gray-800 dark:bg-white/[0.03]">
-    <h2 class="mb-2 text-base font-semibold text-gray-800 dark:text-white/90">Close the day</h2>
+  <section class="rounded-2xl border border-gray-200 bg-white px-4 py-5 print:hidden dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
+    <h2 class="mb-2 text-lg font-semibold text-gray-800 dark:text-white/90">Close the day</h2>
     @if ($close)
       @php $exp = json_decode($close->expected, true) ?: []; $cnt = json_decode($close->counted, true) ?: []; @endphp
       <dl class="grid grid-cols-2 gap-2 text-theme-sm sm:grid-cols-4">

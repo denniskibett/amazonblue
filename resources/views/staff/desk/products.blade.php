@@ -7,18 +7,23 @@
   @if ($products->isEmpty())
     <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"><x-staff.empty title="No loan products" /></div>
   @else
-    <x-staff.table caption="Loan products" :headers="['Product', ['Interest', 'num'], ['Penalty', 'num'], 'Period', ['Grace (days)', 'num'], ['Default after (days)', 'num'], ['Open loans', 'num'], 'Description']">
+    <x-staff.table title="Products on offer" caption="Loan products" :headers="['Product', ['Interest', 'num'], ['Penalty', 'num'], 'Period', ['Grace', 'num'], ['Default after', 'num'], ['Open loans', 'num'], 'Description']">
       @foreach ($products as $p)
         <tr>
-          <td class="font-medium text-gray-800 dark:text-white/90">{{ $p->name }}</td>
-          <td class="num">{{ rtrim(rtrim(number_format($p->interest_rate, 2), '0'), '.') }}%</td>
-          <td class="num">{{ rtrim(rtrim(number_format($p->penalty_rate, 2), '0'), '.') }}%</td>
+          <td data-sort-value="{{ $p->name }}">
+            <div class="flex items-center gap-3">
+              <span class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400"><x-ui.icon name="layers" class="size-5" /></span>
+              <div><span class="block font-medium text-gray-800 dark:text-white/90">{{ $p->name }}</span>
+                @if (($versions[$p->id] ?? 0) > 0)<span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ $versions[$p->id] }} earlier {{ \Illuminate\Support\Str::plural('version', $versions[$p->id]) }} kept</span>@endif</div>
+            </div>
+          </td>
+          <td class="num" data-sort-value="{{ (float) $p->interest_rate }}"><x-staff.pill tone="brand">{{ rtrim(rtrim(number_format($p->interest_rate, 2), '0'), '.') }}%</x-staff.pill></td>
+          <td class="num" data-sort-value="{{ (float) $p->penalty_rate }}"><x-staff.pill tone="amber">{{ rtrim(rtrim(number_format($p->penalty_rate, 2), '0'), '.') }}%</x-staff.pill></td>
           <td>{{ $p->period }} {{ $p->unit }}</td>
-          <td class="num">{{ $p->grace_period_days }}</td>
-          <td class="num">{{ $p->default_threshold_days }}</td>
+          <td class="num">{{ $p->grace_period_days }} days</td>
+          <td class="num">{{ $p->default_threshold_days }} days</td>
           <td class="num">{{ $openLoans[$p->id] ?? 0 }}</td>
-          <td class="max-w-[320px] !whitespace-normal text-theme-xs text-gray-500">{{ $p->description ?: '—' }}
-            @if (($versions[$p->id] ?? 0) > 0)<span class="block">{{ $versions[$p->id] }} earlier version(s) kept</span>@endif
+          <td class="max-w-[320px] !whitespace-normal text-theme-xs text-gray-500"><span class="line-clamp-2" title="{{ $p->description }}">{{ $p->description ?: '—' }}</span>
             @if ($editable)
               <details class="mt-2"><summary class="cursor-pointer font-medium text-brand-500">Edit</summary>
                 <form method="POST" action="{{ route('staff.products.update', $p) }}" class="mt-2 grid grid-cols-2 gap-2">

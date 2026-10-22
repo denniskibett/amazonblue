@@ -23,7 +23,7 @@
     <table class="min-w-full" id="partnersTable" data-table data-table-search="Search partners" data-table-buttons="#partners-tools > *">
       <thead class="hidden sm:table-header-group">
         <tr class="border-gray-100 border-y dark:border-gray-800">
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Partner</span>
               <span class="sort-icon text-gray-400">
@@ -33,7 +33,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Type</span>
               <span class="sort-icon text-gray-400">
@@ -43,7 +43,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Status</span>
               <span class="sort-icon text-gray-400">
@@ -53,7 +53,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Principal</span>
               <span class="sort-icon text-gray-400">
@@ -63,7 +63,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Interest</span>
               <span class="sort-icon text-gray-400">
@@ -73,7 +73,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Broker Fee</span>
               <span class="sort-icon text-gray-400">
@@ -83,7 +83,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Tracker</span>
               <span class="sort-icon text-gray-400">
@@ -93,25 +93,25 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          <th scope="col" class="py-3 pr-4 text-right text-theme-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
         </tr>
       </thead>
 
       <thead class="sm:hidden">
         <tr class="border-gray-100 border-y dark:border-gray-800">
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Broker Fee</th>
-          <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400">Partner</th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400">Broker Fee</th>
+          <th scope="col" class="py-3 pr-4 text-right text-theme-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
         </tr>
       </thead>
 
       <tbody class="divide-y divide-gray-100 dark:divide-gray-800" id="partnersTableBody">
         <template x-for="partner in paginatedData" :key="partner.id">
-          <tr class="partner-row hover:bg-gray-50 transition duration-150">
-            <td class="py-3 hidden sm:table-cell">
+          <tr class="partner-row transition duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+            <td class="py-3 pr-4 hidden sm:table-cell">
               <div class="flex items-center gap-3">
-                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span class="text-blue-600 font-medium" x-text="(partner.name || '?').charAt(0).toUpperCase()"></span>
+                <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-500/15">
+                  <span class="text-theme-xs font-semibold text-brand-600 dark:text-brand-400" x-text="(partner.name || '?').charAt(0).toUpperCase()"></span>
                 </div>
                 <div>
                   <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90" x-text="partner.name"></p>
@@ -120,48 +120,48 @@
               </div>
             </td>
 
-            <td class="py-3 hidden sm:table-cell">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+            <td class="py-3 pr-4 hidden sm:table-cell">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-theme-xs font-medium"
                     :class="{
-                      'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300': partner.type === 'partner',
-                      'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300': partner.type === 'business',
-                      'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300': partner.type === 'company',
-                      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': partner.type === 'investor'
+                      'bg-blue-light-50 text-blue-light-700 dark:bg-blue-900/30 dark:text-blue-300': partner.type === 'partner',
+                      'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300': partner.type === 'business',
+                      'bg-brand-50 text-brand-700 dark:bg-indigo-900/30 dark:text-indigo-300': partner.type === 'company',
+                      'bg-success-50 text-success-700 dark:bg-green-900/30 dark:text-green-300': partner.type === 'investor'
                     }"
                     x-text="partner.type ? partner.type.charAt(0).toUpperCase() + partner.type.slice(1) : 'N/A'">
               </span>
             </td>
 
-            <td class="py-3 hidden sm:table-cell">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+            <td class="py-3 pr-4 hidden sm:table-cell">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-theme-xs font-medium"
                     :class="{
-                      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': partner.status === 'active',
+                      'bg-success-50 text-success-700 dark:bg-green-900/30 dark:text-green-300': partner.status === 'active',
                       'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': partner.status === 'inactive',
-                      'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300': partner.status === 'suspended'
+                      'bg-error-50 text-error-700 dark:bg-red-900/30 dark:text-red-300': partner.status === 'suspended'
                     }"
                     x-text="partner.status ? partner.status.charAt(0).toUpperCase() + partner.status.slice(1) : 'N/A'">
               </span>
             </td>
 
-            <td class="py-3 hidden sm:table-cell">
+            <td class="py-3 pr-4 hidden sm:table-cell">
               <p class="font-medium text-theme-sm dark:text-white/90"
                  :class="(partner.principal_balance || 0) > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
                  x-text="formatCurrency(partner.principal_balance || 0)"></p>
             </td>
 
-            <td class="py-3 hidden sm:table-cell">
+            <td class="py-3 pr-4 hidden sm:table-cell">
               <p class="font-medium text-theme-sm dark:text-white/90"
                  :class="(partner.interest_balance || 0) > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'"
                  x-text="formatCurrency(partner.interest_balance || 0)"></p>
             </td>
 
-            <td class="py-3 hidden sm:table-cell">
+            <td class="py-3 pr-4 hidden sm:table-cell">
               <p class="font-medium text-theme-sm dark:text-white/90"
                  :class="(partner.broker_fee_balance || 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'"
                  x-text="formatCurrency(partner.broker_fee_balance || 0)"></p>
             </td>
 
-            <td class="py-3 hidden sm:table-cell">
+            <td class="py-3 pr-4 hidden sm:table-cell">
               <p class="font-medium text-theme-sm dark:text-white/90"
                  :class="(partner.tracker_balance || 0) > 0 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 dark:text-gray-400'"
                  x-text="formatCurrency(partner.tracker_balance || 0)"></p>
@@ -194,7 +194,7 @@
             <td class="py-3 sm:hidden">
               <div class="flex items-center gap-3">
                 <div class="h-[40px] w-[40px] overflow-hidden rounded-md bg-blue-100 flex items-center justify-center">
-                  <span class="text-blue-600 font-medium" x-text="(partner.name || '?').charAt(0).toUpperCase()"></span>
+                  <span class="text-theme-xs font-semibold text-brand-600 dark:text-brand-400" x-text="(partner.name || '?').charAt(0).toUpperCase()"></span>
                 </div>
                 <div>
                   <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90" x-text="partner.name"></p>

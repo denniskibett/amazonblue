@@ -23,7 +23,7 @@
     <table class="min-w-full" id="investmentsTable" data-table data-table-search="Search investments" data-table-buttons="#investments-tools > *">
       <thead class="hidden sm:table-header-group">
         <tr class="border-gray-100 border-y dark:border-gray-800">
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Investment</span>
               <span class="sort-icon text-gray-400">
@@ -33,11 +33,11 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sector</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400">User</th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400">Type</th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400">Sector</th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400">Country</th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Amount</span>
               <span class="sort-icon text-gray-400">
@@ -47,7 +47,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Return</span>
               <span class="sort-icon text-gray-400">
@@ -57,26 +57,26 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-          <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400">Status</th>
+          <th scope="col" class="py-3 pr-4 text-right text-theme-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
         </tr>
       </thead>
       
       <thead class="sm:hidden">
         <tr class="border-gray-100 border-y dark:border-gray-800">
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Investment</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-          <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400">Investment</th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400">Amount</th>
+          <th scope="col" class="py-3 pr-4 text-right text-theme-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
         </tr>
       </thead>
 
       <tbody class="divide-y divide-gray-100 dark:divide-gray-800" id="investmentsTableBody">
         @forelse($investments as $investment)
-        <tr class="investment-row hover:bg-gray-50 transition duration-150" data-investment-id="{{ $investment['id'] }}">
-          <td class="py-3 hidden sm:table-cell">
+        <tr class="investment-row transition duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.02]" data-investment-id="{{ $investment['id'] }}">
+          <td class="py-3 pr-4 hidden sm:table-cell">
             <div class="flex items-center gap-3">
-              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <span class="text-blue-600 font-medium">{{ ucfirst(substr($investment['name'], 0, 1)) }}</span>
+              <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-500/15">
+                <span class="text-theme-xs font-semibold text-brand-600 dark:text-brand-400">{{ ucfirst(substr($investment['name'], 0, 1)) }}</span>
               </div>
               <div>
                 <a href="{{ route('investments.show', $investment['id']) }}" class="hover:text-blue-600 dark:hover:text-blue-400">
@@ -87,46 +87,46 @@
             </div>
           </td>
 
-          <td class="py-3 hidden sm:table-cell">
+          <td class="py-3 pr-4 hidden sm:table-cell">
             <span class="text-gray-800 text-theme-sm dark:text-white/90">{{ $investment['user_name'] ?? 'N/A' }}</span>
           </td>
 
-          <td class="py-3 hidden sm:table-cell">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+          <td class="py-3 pr-4 hidden sm:table-cell">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-light-50 text-blue-light-700 dark:bg-blue-900/30 dark:text-blue-300">
               {{ ucfirst(str_replace('_', ' ', $investment['type'])) }}
             </span>
           </td>
 
-          <td class="py-3 hidden sm:table-cell">
+          <td class="py-3 pr-4 hidden sm:table-cell">
             <span class="text-gray-800 text-theme-sm dark:text-white/90">{{ $investment['sector'] ?? 'N/A' }}</span>
           </td>
 
-          <td class="py-3 hidden sm:table-cell">
+          <td class="py-3 pr-4 hidden sm:table-cell">
             <span class="text-gray-800 text-theme-sm dark:text-white/90">{{ $investment['country'] }}</span>
           </td>
 
-          <td class="py-3 hidden sm:table-cell">
+          <td class="py-3 pr-4 hidden sm:table-cell">
             <div>
               <p class="text-gray-800 text-theme-sm dark:text-white/90">KES {{ number_format($investment['initial_amount'], 2) }}</p>
               <span class="text-gray-500 text-theme-xs dark:text-gray-400">Funded: KES {{ number_format($investment['total_funding_raised'] ?? 0, 2) }}</span>
             </div>
           </td>
 
-          <td class="py-3 hidden sm:table-cell">
+          <td class="py-3 pr-4 hidden sm:table-cell">
             <span class="font-medium text-theme-sm" 
                   :class="{{ $investment['return_percentage'] ?? 0 }} >= 15 ? 'text-green-600 dark:text-green-400' : ({{ $investment['return_percentage'] ?? 0 }} >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400')">
               {{ number_format($investment['return_percentage'] ?? 0, 1) }}%
             </span>
           </td>
 
-          <td class="py-3">
+          <td class="py-3 pr-4 hidden sm:table-cell">
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium investment-status"
                   :class="{
-                    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300': '{{ $investment['status'] }}' === 'pipeline' || '{{ $investment['status'] }}' === 'due_diligence',
-                    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': '{{ $investment['status'] }}' === 'active',
-                    'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300': '{{ $investment['status'] }}' === 'matured',
+                    'bg-amber-50 text-amber-700 dark:bg-yellow-900/30 dark:text-yellow-300': '{{ $investment['status'] }}' === 'pipeline' || '{{ $investment['status'] }}' === 'due_diligence',
+                    'bg-success-50 text-success-700 dark:bg-green-900/30 dark:text-green-300': '{{ $investment['status'] }}' === 'active',
+                    'bg-blue-light-50 text-blue-light-700 dark:bg-blue-900/30 dark:text-blue-300': '{{ $investment['status'] }}' === 'matured',
                     'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': '{{ $investment['status'] }}' === 'liquidated',
-                    'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300': '{{ $investment['status'] }}' === 'write_off'
+                    'bg-error-50 text-error-700 dark:bg-red-900/30 dark:text-red-300': '{{ $investment['status'] }}' === 'write_off'
                   }">
               {{ ucfirst(str_replace('_', ' ', $investment['status'])) }}
             </span>
@@ -160,7 +160,7 @@
             <div class="flex items-center gap-3">
               <div class="h-[40px] w-[40px] overflow-hidden rounded-md bg-blue-100 flex items-center justify-center">
                 <a href="{{ route('investments.show', $investment['id']) }}">
-                  <span class="text-blue-600 font-medium">{{ ucfirst(substr($investment['name'], 0, 1)) }}</span>
+                  <span class="text-theme-xs font-semibold text-brand-600 dark:text-brand-400">{{ ucfirst(substr($investment['name'], 0, 1)) }}</span>
                 </a>
               </div>
               <div>

@@ -22,7 +22,7 @@
       </x-staff.empty>
     </div>
   @else
-    <x-staff.table caption="Approved loans" :headers="['Loan', 'Borrower', 'Product', ['Principal', 'num'], ['Loan amount', 'num'], 'Limit', 'Approved', '']">
+    <x-staff.table title="Approved, waiting to be sent" caption="Approved loans" :headers="['Loan', 'Borrower', 'Product', ['Principal', 'num'], ['Loan amount', 'num'], 'Limit', 'Approved', '']">
       @foreach ($loans as $loan)
         @php $ra = $loan->getLatestRiskAssessment(); @endphp
         <tr>

@@ -3,9 +3,9 @@
 @extends('layouts.app')
 
 @php
-  $tab = 'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-theme-sm font-medium';
-  $on = 'bg-white text-gray-900 shadow-theme-xs dark:bg-gray-800 dark:text-white';
-  $off = 'text-gray-500 hover:text-gray-700 dark:text-gray-400';
+  $tabCls = '-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-theme-sm font-medium';
+  $tabOn = 'border-brand-500 text-brand-500 dark:border-brand-400 dark:text-brand-400';
+  $tabOff = 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200';
   $canApprove = auth()->user()->can('approve loans');
   $canReject = auth()->user()->can('edit loans') && $canApprove;
   $back = route('staff.approvals', ['status' => $status]);
@@ -22,52 +22,59 @@
     <x-staff.alert type="info" class="mb-6" title="Read-only">You can see the queue but not decide on loans (needs the “approve loans” permission).</x-staff.alert>
   @endunless
 
-  <div class="mb-4 inline-flex gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-900" role="tablist">
-    @foreach (['pending' => 'Waiting for decision', 'approved' => 'Approved, not disbursed'] as $key => $label)
-      <a href="{{ route('staff.approvals', ['status' => $key]) }}" role="tab" aria-selected="{{ $status === $key ? 'true' : 'false' }}" class="{{ $tab }} {{ $status === $key ? $on : $off }}">
-        {{ $label }} <span class="rounded-full bg-gray-200 px-2 text-theme-xs dark:bg-gray-700">{{ $counts[$key]->n ?? 0 }}</span>
-      </a>
-    @endforeach
-  </div>
-
-  @if ($loans->isEmpty())
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <x-staff.empty title="Nothing waiting" message="{{ $status === 'pending' ? 'No applications are waiting for a decision.' : 'No approved loans are waiting to be disbursed.' }}" />
-    </div>
-  @else
-    <x-staff.table caption="Loans {{ $status }}" :headers="['Loan', 'Borrower', ['Amount · product', 'num'], '4Cs score', ['Limit', 'num'], 'Recommendation', '']">
-      @foreach ($loans as $loan)
+  <x-staff.table :title="$status === 'pending' ? 'Waiting for a decision' : 'Approved, not disbursed'" caption="Loans {{ $status }}"
+    :headers="['Borrower', 'Loan · product', ['Amount', 'num'], '4Cs assessment', 'Recommendation', 'Waiting', '']">
+    <x-slot:tabs>
+      @foreach (['pending' => 'Waiting for decision', 'approved' => 'Approved, not disbursed'] as $key => $label)
+        <a href="{{ route('staff.approvals', ['status' => $key]) }}" role="tab" aria-selected="{{ $status === $key ? 'true' : 'false' }}"
+          class="{{ $tabCls }} {{ $status === $key ? $tabOn : $tabOff }}">
+          {{ $label }} <span class="rounded-full px-2 text-theme-xs {{ $status === $key ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400' : 'bg-gray-100 dark:bg-gray-800' }}">{{ $counts[$key]->n ?? 0 }}</span>
+        </a>
+      @endforeach
+    </x-slot:tabs>
+    @forelse ($loans as $loan)
         @php
           $ra = $loan->getLatestRiskAssessment();
           $over = $ra && $ra->limit_amount !== null && (float) $loan->amount > (float) $ra->limit_amount;
           $reasonOk = mb_strlen(trim((string) $loan->reason)) >= 10;
+          $score = $ra?->overall_score;
+          $scoreTone = $score === null ? 'gray' : ($score >= 70 ? 'green' : ($score >= 50 ? 'amber' : 'red'));
+          $since = $status === 'pending' ? $loan->created_at : $loan->updated_at;
         @endphp
         <tr>
-          <td><a class="font-medium text-brand-500 hover:underline" href="{{ route('users.loans.show', [$loan->user_id, $loan->id]) }}" title="Open loan">#{{ $loan->id }}</a>
-            <span class="block text-theme-xs text-gray-500">{{ ($status === 'pending' ? $loan->created_at : $loan->updated_at)?->diffForHumans(short: true) }}</span></td>
-          <td>
-            <span class="font-medium text-gray-800 dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">{{ $loan->user->name ?? '—' }}</span>
-            <span class="block text-theme-xs text-gray-500">{{ $loan->user->phone ?? $loan->user->email ?? '' }}</span>
+          <td data-sort-value="{{ $loan->user->name ?? '' }}"><x-staff.person :user="$loan->user" :sub="$loan->user->phone ?? $loan->user->email ?? null" /></td>
+          <td data-filter-value="{{ $loan->loanType->name ?? '' }}">
+            <a class="font-medium text-gray-800 hover:text-brand-500 dark:text-white/90" href="{{ route('users.loans.show', [$loan->user_id, $loan->id]) }}" title="Open loan">Loan #{{ $loan->id }}</a>
+            <span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ $loan->loanType->name ?? '—' }}</span>
           </td>
-          <td class="num"><x-staff.money :amount="$loan->amount" />
-            <span class="block font-figtree text-theme-xs text-gray-500">{{ $loan->loanType->name ?? '—' }}</span></td>
-          <td>
+          <td class="num" data-sort-value="{{ (float) $loan->amount }}">
+            <x-staff.money :amount="$loan->amount" class="text-gray-800 dark:text-white/90" />
+            <span class="mt-0.5 flex items-center justify-end gap-1 text-theme-xs text-gray-500 dark:text-gray-400">
+              @if ($ra && $ra->limit_amount !== null)
+                @if ($over)<x-staff.pill tone="red">Above limit</x-staff.pill>@endif
+                limit {{ number_format($ra->limit_amount, 2) }}
+              @else no limit set @endif
+            </span>
+          </td>
+          <td data-sort-value="{{ $score ?? -1 }}">
             @if ($ra)
-              <span class="font-outfit text-base font-semibold text-gray-800 dark:text-white/90">{{ $ra->overall_score ?? '—' }}</span>
-              <span class="ml-1 text-theme-xs text-gray-500" title="Character · Capacity · Capital · Conditions">{{ $ra->character_score ?? '–' }} · {{ $ra->capacity_score ?? '–' }} · {{ $ra->capital_score ?? '–' }} · {{ $ra->conditions_score ?? '–' }}</span>
-              <span class="block text-theme-xs text-gray-500">{{ $ra->risk_category ?? '' }}{{ $ra->source === 'manual' ? ' · staff' : ' · system' }}</span>
+              <div class="flex items-center gap-2">
+                <x-staff.pill :tone="$scoreTone" class="font-outfit !text-theme-sm">{{ $score ?? '—' }}</x-staff.pill>
+                <div class="text-theme-xs text-gray-500 dark:text-gray-400">
+                  <span class="block" title="Character · Capacity · Capital · Conditions">C {{ $ra->character_score ?? '–' }} · Cap {{ $ra->capacity_score ?? '–' }} · K {{ $ra->capital_score ?? '–' }} · Cond {{ $ra->conditions_score ?? '–' }}</span>
+                  <span class="block">{{ $ra->risk_category ? (stripos($ra->risk_category, 'risk') === false ? ucfirst($ra->risk_category) . ' risk' : $ra->risk_category) : '' }}{{ $ra->source === 'manual' ? ' · by staff' : ' · by system' }}</span>
+                </div>
+              </div>
             @else
-              <span class="text-theme-xs text-gray-500">Not assessed</span>
+              <x-staff.pill tone="gray">Not assessed</x-staff.pill>
             @endif
           </td>
-          <td class="num">
-            @if ($ra && $ra->limit_amount !== null)
-              <x-staff.money :amount="$ra->limit_amount" />
-              @if ($over)<span class="block text-theme-xs font-medium text-az-rose-d">Above limit</span>@endif
-            @else — @endif
+          <td class="max-w-[220px] !whitespace-normal text-theme-xs text-gray-600 dark:text-gray-400"><span class="line-clamp-2" title="{{ $ra->recommendation ?? '' }}">{{ $ra->recommendation ?? '—' }}</span></td>
+          <td data-sort-value="{{ $since?->timestamp }}">
+            <span class="text-theme-sm text-gray-700 dark:text-gray-300">{{ $since?->diffForHumans(short: true) }}</span>
+            <span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ $since?->format('j M, H:i') }}</span>
           </td>
-          <td class="max-w-[200px] !whitespace-normal text-theme-xs"><span class="line-clamp-2" title="{{ $ra->recommendation ?? '' }}">{{ $ra->recommendation ?? '—' }}</span></td>
-          <td class="text-right">
+          <td class="text-right" data-actions>
             <div class="flex justify-end gap-2">
               @if ($status === 'pending' && $canApprove)
                 <x-desk.dialog id="approve-{{ $loan->id }}" :action="route('loans.update', $loan)" method="PUT" title="Approve loan #{{ $loan->id }}?"
@@ -104,9 +111,10 @@
             </div>
           </td>
         </tr>
-      @endforeach
-    </x-staff.table>
-  @endif
+    @empty
+      <tr data-table-skip><td colspan="7"><x-staff.empty title="Nothing waiting" message="{{ $status === 'pending' ? 'No applications are waiting for a decision.' : 'No approved loans are waiting to be disbursed.' }}" /></td></tr>
+    @endforelse
+  </x-staff.table>
 
   <x-staff.placeholder class="mt-6" dependency="approval limits and maker-checker" title="Approval limits">
     Today anyone with “approve loans” can approve any amount, and the person who approves can also disburse. Limits per role and a second approver are Stage 4.

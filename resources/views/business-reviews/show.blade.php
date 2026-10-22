@@ -57,7 +57,7 @@
                     <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">Directors &amp; owners</h2>
                     <span class="text-sm {{ $total > 100 ? 'text-error-500' : 'text-gray-500' }} font-outfit">{{ $pct($total) }} listed</span>
                 </div>
-                <x-staff.table :headers="['Person', 'Role', ['Owns', 'num'], 'KYC']" caption="Directors and owners">
+                <x-staff.table bare :list="false" :headers="['Person', 'Role', ['Owns', 'num'], 'KYC']" caption="Directors and owners">
                     @foreach ($business->members as $m)
                         <tr>
                             <td>

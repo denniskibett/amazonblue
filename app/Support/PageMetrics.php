@@ -184,13 +184,29 @@ class PageMetrics
 
     public function pageApprovals(): array
     {
+        // reordered (owner, 22 Oct 2026): the queue, its age, what needs a closer look, then what was decided
         $pending = Loan::where('status', Loan::STATUS_PENDING);
+        $approved = Loan::where('status', Loan::STATUS_APPROVED);
         $decided = fn ($s) => DB::table('audit_logs')->where('table_name', 'loans')->where('new_values', 'like', '%"status":"' . $s . '"%')->where('created_at', '>=', now()->startOfMonth())->count();
+        $waiting = (clone $pending)->count();
+        $oldest = (clone $pending)->min('created_at');
+        $over = 0;
+        $unassessed = 0;
+        foreach ((clone $pending)->with('riskAssessments')->get(['id', 'amount']) as $loan) {
+            $ra = $loan->getLatestRiskAssessment();
+            if (! $ra) {
+                $unassessed++;
+            } elseif ($ra->limit_amount !== null && (float) $loan->amount > (float) $ra->limit_amount) {
+                $over++;
+            }
+        }
 
         return [
-            $this->card('Waiting for a decision', self::n((clone $pending)->count()), 'inbox', 'oldest first', null, (clone $pending)->count() ? 'warn' : 'neutral'),
-            $this->card('Amount asked', self::kes((float) (clone $pending)->sum('amount')), 'wallet', 'all pending loans'),
-            $this->card('Approved this month', self::n($decided('approved')), 'check-circle', 'then sent to the queue'),
+            $this->card('Waiting for a decision', self::n($waiting), 'inbox', self::kes0((float) (clone $pending)->sum('amount')) . ' asked', null, $waiting ? 'warn' : 'neutral'),
+            $this->card('Oldest application', $oldest ? Carbon::parse($oldest)->diffForHumans(short: true, syntax: \Carbon\CarbonInterface::DIFF_ABSOLUTE) : '—', 'clock', $oldest ? 'since ' . Carbon::parse($oldest)->format('j M') : 'queue is clear'),
+            $this->card('Above the assessed limit', self::n($over), 'alert', $unassessed ? $unassessed . ' not assessed yet' : 'all assessed'),
+            $this->card('Approved, not sent', self::n((clone $approved)->count()), 'send', self::kes0((float) (clone $approved)->sum('amount')) . ' to disburse', null, 'neutral', $this->route('staff.disbursements.queue')),
+            $this->card('Approved this month', self::n($decided('approved')), 'check-circle', 'since ' . now()->startOfMonth()->format('j M')),
             $this->card('Rejected this month', self::n($decided('rejected')), 'x-circle', 'with the reason saved'),
         ];
     }
