@@ -10,8 +10,8 @@
 @else
   <link rel="canonical" href="{{ url()->current() }}" />
 @endif
-<link rel="icon" href="{{ asset('assets/images/logo/favicon.ico') }}" sizes="any" />
-<link rel="icon" href="{{ asset('assets/images/logo/favicon.svg') }}" type="image/svg+xml" />
+<link rel="icon" href="{{ asset('assets/images/logo/favicon.ico') }}?v=2" sizes="32x32" />
+<link rel="icon" href="{{ asset('assets/images/logo/favicon.svg') }}?v=2" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="{{ asset('assets/images/logo/apple-touch-icon.png') }}" />
 <link rel="manifest" href="{{ asset('assets/images/logo/site.webmanifest') }}" />
 <meta property="og:title" content="{{ $title }}" />

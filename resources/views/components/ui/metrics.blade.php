@@ -11,7 +11,7 @@
 @if ($items)
   <div {{ $attributes->merge(['class' => "mb-6 grid grid-cols-1 gap-3 md:gap-4 {$grid}"]) }}>
     @foreach ($items as $m)
-      <x-ui.metric :label="$m['label']" :value="$m['value']" :icon="$m['icon'] ?? 'chart'" :hint="$m['hint'] ?? null" :delta="$m['delta'] ?? null" :tone="$m['tone'] ?? 'neutral'" :href="$m['href'] ?? null" :size="$size" />
+      <x-ui.metric :label="$m['label']" :value="$m['value']" :icon="$m['icon'] ?? 'chart'" :hint="$m['hint'] ?? null" :delta="$m['delta'] ?? null" :tone="$m['tone'] ?? 'neutral'" :href="$m['href'] ?? null" :size="$size" :color="$m['color'] ?? null" />
     @endforeach
   </div>
 @endif

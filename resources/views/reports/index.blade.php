@@ -166,10 +166,8 @@
       @endforeach
     </div>
   </div>
-@endsection
-
+{{-- inside the content so it draws again when the page updates in place --}}
 @if ($analytics)
-@push('scripts')
 <script>
 (function () {
   const data = @json($analytics);
@@ -224,9 +222,11 @@
   }
 
   document.addEventListener('DOMContentLoaded', render);
+  if (window.__azReportsObs) window.__azReportsObs.disconnect();
   let was = null;
-  new MutationObserver(() => { const d = document.body.classList.contains('dark'); if (was !== null && d !== was) render(); was = d; }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  window.__azReportsObs = new MutationObserver(() => { const d = document.body.classList.contains('dark'); if (was !== null && d !== was) render(); was = d; });
+  window.__azReportsObs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 })();
 </script>
-@endpush
 @endif
+@endsection

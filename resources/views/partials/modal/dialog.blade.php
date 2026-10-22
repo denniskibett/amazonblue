@@ -39,7 +39,6 @@
       open: false, mode: 'alert', type: 'info', title: '', message: '', okText: 'OK', cancelText: 'Cancel', resolve: null, queue: [],
       init() {
         window.__uiDialog = this;
-        window.addEventListener('show-alert', e => this.ask('alert', e.detail.message || '', {type: e.detail.type, title: e.detail.title}));
       },
       ask(mode, message, o = {}) {
         return new Promise(resolve => {
@@ -65,6 +64,9 @@
   window.uiAlert = (message, o = {}) => window.__uiDialog ? window.__uiDialog.ask('alert', message, o) : Promise.resolve(true);
   window.uiConfirm = (message, o = {}) => window.__uiDialog ? window.__uiDialog.ask('confirm', message, o) : Promise.resolve(false);
   window.alert = (message) => { window.uiAlert(message); };
+  // pages without the old alert modal still answer showAlert(type, title, message); a page that includes
+  // partials.modal.alert-modal replaces this with its own (only one of them listens, so no double pop-ups)
+  window.showAlert = window.showAlert || ((type, title, message) => window.uiAlert(message, {type, title}));
   // forms and buttons that ask first: data-confirm="question" (data-confirm-danger for destructive ones)
   document.addEventListener('submit', async (e) => {
     const form = e.target, by = e.submitter;

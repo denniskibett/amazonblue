@@ -102,6 +102,7 @@
         </div>
       </main>
     </div>
+    @include('home.kyc.partials.capture')
     @include('home.partials.toast')
     @stack('scripts')
   </body>

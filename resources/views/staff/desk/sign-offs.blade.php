@@ -53,7 +53,7 @@
           <td>{{ $names[$a->requested_by] ?? '' }}</td><td>{{ $names[$a->decided_by] ?? '' }}</td>
           <td>{{ ucfirst($a->status) }}{{ $a->reason ? ': ' . $a->reason : '' }}</td></tr>
       @empty
-        <tr><td colspan="6" class="text-theme-sm text-gray-500">None yet.</td></tr>
+        <tr data-table-skip><td colspan="6" class="text-theme-sm text-gray-500">None yet.</td></tr>
       @endforelse
     </x-staff.table>
   </section>

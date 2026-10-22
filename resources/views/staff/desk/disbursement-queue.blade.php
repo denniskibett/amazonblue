@@ -27,7 +27,7 @@
         @php $ra = $loan->getLatestRiskAssessment(); @endphp
         <tr>
           <td><a class="font-medium text-brand-500 hover:underline" href="{{ route('users.loans.show', [$loan->user_id, $loan->id]) }}">#{{ $loan->id }}</a></td>
-          <td><span class="font-medium text-gray-800 dark:text-white/90">{{ $loan->user->name ?? '—' }}</span><span class="block text-theme-xs text-gray-500">{{ $loan->user->phone ?? '' }}</span></td>
+          <td><span class="font-medium text-gray-800 dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">{{ $loan->user->name ?? '—' }}</span><span class="block text-theme-xs text-gray-500">{{ $loan->user->phone ?? '' }}</span></td>
           <td>{{ $loan->loanType->name ?? '—' }}</td>
           <td class="num">@if ($loan->original_amount)<x-staff.money :amount="$loan->original_amount" />@else — @endif</td>
           <td class="num"><x-staff.money :amount="$loan->amount" /></td>
@@ -41,6 +41,5 @@
         </tr>
       @endforeach
     </x-staff.table>
-    <div class="mt-4">{{ $loans->links() }}</div>
   @endif
 @endsection

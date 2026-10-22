@@ -6,60 +6,30 @@
      x-data="recoveryTable()"
      x-init="init()">
     
-    <!-- Table Header -->
-    <div class="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Debt Recovery Cases</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Showing <span id="recoveryShowingStart">1</span> to <span id="recoveryShowingEnd">10</span> of <span id="recoveryTotalCount">{{ $recoveryCases->count() }}</span> cases
-            </p>
-        </div>
-        
-        <div class="flex flex-wrap items-center gap-3">
-            <div class="relative flex-1 min-w-[150px]">
-                <input type="text" id="recoverySearch" placeholder="Search cases..." 
-                       class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 pl-10">
-                <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                </div>
-            </div>
-            
+    <!-- Table Header: search, status filter, paging and sort come from the standard table engine -->
+    <div class="mb-4"><h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Debt Recovery Cases</h3></div>
+    <div id="recovery-tools" class="contents">
             @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller'))
-            <button onclick="window.dispatchEvent(new CustomEvent('open-case-create'))"
-                    class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 transition-colors">
+            <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-case-create'))"
+                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                 </svg>
                 New Case
             </button>
             @endif
-        </div>
-    </div>
-
-    <!-- Status Filter -->
-    <div class="flex flex-wrap gap-2 mb-4">
-        <button class="recovery-filter-btn px-3 py-1.5 text-xs font-medium rounded-full bg-blue-600 text-white" data-filter="all">All</button>
-        <button class="recovery-filter-btn px-3 py-1.5 text-xs font-medium rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300" data-filter="open">Open</button>
-        <button class="recovery-filter-btn px-3 py-1.5 text-xs font-medium rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300" data-filter="in_progress">In Progress</button>
-        <button class="recovery-filter-btn px-3 py-1.5 text-xs font-medium rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300" data-filter="negotiation">Negotiation</button>
-        <button class="recovery-filter-btn px-3 py-1.5 text-xs font-medium rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300" data-filter="legal">Legal</button>
-        <button class="recovery-filter-btn px-3 py-1.5 text-xs font-medium rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300" data-filter="recovered">Recovered</button>
-        <button class="recovery-filter-btn px-3 py-1.5 text-xs font-medium rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300" data-filter="written_off">Written Off</button>
-        <button class="recovery-filter-btn px-3 py-1.5 text-xs font-medium rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300" data-filter="closed">Closed</button>
     </div>
 
     <!-- Table -->
     <div class="w-full overflow-x-auto">
-        <table class="min-w-full" id="recoveryTable">
+        <table class="min-w-full" id="recoveryTable" data-table data-table-search="Search cases" data-table-buttons="#recovery-tools > *">
             <thead>
                 <tr class="border-gray-100 border-y dark:border-gray-800">
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Case #</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Debtor</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-filter="status">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-filter="priority">Priority</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Overdue</th>
                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -104,7 +74,7 @@
                                 {{ $case->user->getInitialsAttribute() ?? 'U' }}
                             </div>
                             <div>
-                                <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ $case->user->name }}</p>
+                                <p class="text-sm font-medium text-gray-800 dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $case->user_id }}">{{ $case->user->name }}</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $case->user->phone ?? 'No phone' }}</p>
                             </div>
                         </div>
@@ -185,7 +155,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
+                <tr data-table-skip>
                     <td colspan="7" class="py-8 text-center">
                         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -213,9 +183,7 @@ function recoveryTable() {
             this.$nextTick(() => {
                 this.allRows = Array.from(document.querySelectorAll('.recovery-row'));
                 this.filteredRows = [...this.allRows];
-                this.updateTable();
-                this.attachEventListeners();
-                
+ 
                 // Listen for refresh events
                 window.addEventListener('refresh-cases', () => {
                     location.reload();

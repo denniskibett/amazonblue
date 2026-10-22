@@ -3,7 +3,6 @@
 @section('content')
   @include('staff.desk._header', ['title' => 'Operations review', 'sub' => 'Review recent application errors and loan receivables that differ from their latest cycle. No changes are made unless you submit a forbearance action.'])
 
-  @if (session('success'))<x-staff.alert type="ok" class="mb-5">{{ session('success') }}</x-staff.alert>@endif
   @if ($errors->any())<x-staff.alert type="err" class="mb-5">{{ $errors->first() }}</x-staff.alert>@endif
 
   <div class="mb-5 flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-800">

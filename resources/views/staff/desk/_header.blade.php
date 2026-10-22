@@ -20,8 +20,7 @@
     'repaid' => 'Repayment recorded through the existing repayment path.',
   ][request('done')] ?? null;
 @endphp
-<div class="mb-6 space-y-3 empty:hidden print:hidden">
-  @if (session('success'))<x-staff.alert type="ok">{{ session('success') }}</x-staff.alert>@endif
-  @if (session('error'))<x-staff.alert type="err">{{ session('error') }}</x-staff.alert>@endif
-  @if ($done)<x-staff.alert type="ok">{{ $done }}@if (request('ref')) <span class="font-medium">#{{ (int) request('ref') }}</span>@endif</x-staff.alert>@endif
-</div>
+{{-- flashed success / error messages show as toasts (partials.modal.toasts); this one comes from the address --}}
+@if ($done)
+  <script>document.addEventListener('alpine:initialized', () => window.toast(@js($done . (request('ref') ? ' #' . (int) request('ref') : '')), 'success'));</script>
+@endif

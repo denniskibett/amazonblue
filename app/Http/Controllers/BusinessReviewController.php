@@ -18,6 +18,35 @@ use Illuminate\View\View;
  */
 class BusinessReviewController extends Controller
 {
+    /** Crop a company document picture (same rules as the borrower KYC crop). */
+    public function crop(Request $request, Business $business, \App\Models\BusinessDocument $document): RedirectResponse
+    {
+        abort_unless($document->business_id === $business->id, 404);
+        $data = $request->validate([
+            'x' => ['required', 'integer', 'min:0'], 'y' => ['required', 'integer', 'min:0'],
+            'width' => ['required', 'integer', 'min:40', 'max:8000'], 'height' => ['required', 'integer', 'min:40', 'max:8000'],
+            'rotate' => ['nullable', 'integer', 'in:0,90,180,270'], 'restore' => ['nullable', 'boolean'],
+        ]);
+        $file = \App\Support\PrivateFiles::absolute($document->path);
+        if (! $file) {
+            return back()->with('error', 'That document is not on this server.');
+        }
+        try {
+            if ($request->boolean('restore')) {
+                \App\Services\Kyc\ImageCrop::restore($file);
+                \App\Services\AuditTrail::record('business_documents', $document->id, 'update', ['path' => 'cropped'], ['path' => 'original picture restored']);
+
+                return back()->with('success', 'The original picture is back.');
+            }
+            [$w, $h] = \App\Services\Kyc\ImageCrop::crop($file, $data['x'], $data['y'], $data['width'], $data['height'], (int) ($data['rotate'] ?? 0));
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+        \App\Services\AuditTrail::record('business_documents', $document->id, 'update', ['path' => 'as uploaded'], ['path' => "cropped to {$w} x {$h}"]);
+
+        return back()->with('success', "Document cropped to {$w} x {$h} px.");
+    }
+
     public const STATUSES = [
         Business::STATUS_SUBMITTED => 'Waiting for review',
         Business::STATUS_APPROVED => 'Approved',
@@ -36,8 +65,7 @@ class BusinessReviewController extends Controller
                 Business::STATUS_DRAFT => 'updated_at',
                 default => 'reviewed_at',
             }, $status === Business::STATUS_SUBMITTED ? 'asc' : 'desc')
-            ->paginate(20)
-            ->withQueryString();
+            ->limit(1000)->get();
 
         $counts = Business::select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
 

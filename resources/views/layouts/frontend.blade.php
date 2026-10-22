@@ -3,7 +3,13 @@
 
 <head>
     <meta charset="utf-8" />
+    @include('partials.ui.img-fallback')
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {{-- Favicons: the brand icon first; an icon uploaded in System settings is used only when its file is really there --}}
+    <link rel="icon" href="{{ asset('assets/images/logo/favicon.svg') }}?v=2" type="image/svg+xml">
+    <link rel="icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}" sizes="32x32">
+    <link rel="apple-touch-icon" href="{{ asset('assets/images/logo/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset('assets/images/logo/site.webmanifest') }}">
     <title>@yield('title', 'AmazonBlue Capital | We Sell Convenience')</title>
     
     <!-- Bootstrap CSS -->
@@ -48,6 +54,7 @@
     <script src="{{ asset('frontend/js/script.js') }}"></script>
     
     @include('partials.modal.dialog')
+@include('partials.modal.toasts')
 @stack('scripts')
 </body>
 

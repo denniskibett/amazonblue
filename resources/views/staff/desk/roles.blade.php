@@ -44,7 +44,7 @@
     <x-staff.alert type="info" class="mb-6" title="Read-only">Changing role permissions needs “manage roles” (super-admin only today).</x-staff.alert>
   @endcan
 
-  <x-staff.table caption="Roles by permission" class="!min-w-[900px]">
+  <x-staff.table caption="Roles by permission" class="!min-w-[900px]" :list="false">
     <x-slot:head>
       <tr>
         <th scope="col" class="sticky left-0 bg-gray-50 px-5 py-3 text-left font-medium dark:bg-gray-900">Permission</th>

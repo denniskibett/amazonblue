@@ -94,7 +94,7 @@
                             <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ $log->ip_address ?? '-' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No audit entries yet.</td></tr>
+                        <tr data-table-skip><td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No audit entries yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

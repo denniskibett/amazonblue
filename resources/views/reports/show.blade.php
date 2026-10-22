@@ -87,7 +87,7 @@
     </div>
 </div>
 
-@push('scripts')
+{{-- page scripts sit inside the content so they run again when the page updates in place --}}
 <script>
 function reportFilters() {
     return {
@@ -293,9 +293,9 @@ function reportDisplay() {
     chart = new ApexCharts(document.querySelector('#reportChart'), o); chart.render();
   }
   document.addEventListener('DOMContentLoaded', draw);
-  new MutationObserver(() => { const d = document.body.classList.contains('dark'); if (was !== null && d !== was) draw(); was = d; })
-    .observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  if (window.__azReportObs) window.__azReportObs.disconnect();
+  window.__azReportObs = new MutationObserver(() => { const d = document.body.classList.contains('dark'); if (was !== null && d !== was) draw(); was = d; });
+  window.__azReportObs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 })();
 </script>
-@endpush
 @endsection

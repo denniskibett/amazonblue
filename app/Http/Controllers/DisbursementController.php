@@ -79,7 +79,7 @@ class DisbursementController extends Controller
             }, $name, ['Content-Type' => 'text/csv']);
         }
 
-        $disbursements = $q->paginate(25)->withQueryString();
+        $disbursements = $q->limit(1000)->get();
         $modes = Disbursement::query()->whereNotNull('mode')->distinct()->pluck('mode')->filter()->values();
 
         return view('disbursements.index', compact('disbursements', 'totals', 'f', 'modes'));

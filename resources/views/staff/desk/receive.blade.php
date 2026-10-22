@@ -31,7 +31,7 @@
           @foreach ($results as $r)
             <tr @class(['bg-brand-50/50 dark:bg-brand-500/10' => $loan && $loan->id === $r->id])>
               <td class="font-medium">#{{ $r->id }}</td>
-              <td>{{ $r->user->name ?? '—' }}<span class="block text-theme-xs text-gray-500">{{ $r->user->phone ?? '' }}</span></td>
+              <td><span class="cursor-pointer hover:text-brand-500" data-user-peek="{{ $r->user_id }}">{{ $r->user->name ?? '—' }}</span><span class="block text-theme-xs text-gray-500">{{ $r->user->phone ?? '' }}</span></td>
               <td>{{ $r->loanType->name ?? '—' }}</td>
               <td><x-staff.status-badge :status="$r->status" /></td>
               <td class="num"><x-staff.money :amount="$r->amount" /></td>

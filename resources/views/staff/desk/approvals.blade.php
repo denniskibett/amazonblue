@@ -46,7 +46,7 @@
           <td><a class="font-medium text-brand-500 hover:underline" href="{{ route('users.loans.show', [$loan->user_id, $loan->id]) }}" title="Open loan">#{{ $loan->id }}</a>
             <span class="block text-theme-xs text-gray-500">{{ ($status === 'pending' ? $loan->created_at : $loan->updated_at)?->diffForHumans(short: true) }}</span></td>
           <td>
-            <span class="font-medium text-gray-800 dark:text-white/90">{{ $loan->user->name ?? '—' }}</span>
+            <span class="font-medium text-gray-800 dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">{{ $loan->user->name ?? '—' }}</span>
             <span class="block text-theme-xs text-gray-500">{{ $loan->user->phone ?? $loan->user->email ?? '' }}</span>
           </td>
           <td class="num"><x-staff.money :amount="$loan->amount" />
@@ -106,7 +106,6 @@
         </tr>
       @endforeach
     </x-staff.table>
-    <div class="mt-4">{{ $loans->links() }}</div>
   @endif
 
   <x-staff.placeholder class="mt-6" dependency="approval limits and maker-checker" title="Approval limits">

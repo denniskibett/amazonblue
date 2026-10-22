@@ -2,6 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
+    @include('partials.ui.img-fallback')
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -16,23 +17,24 @@
         <meta name="keywords" content="{{ \App\Helpers\SystemHelper::metaKeywords() }}">
     @endif
 
-    {{-- Favicons (an icon uploaded in System settings still takes over the .ico) --}}
-    <link rel="icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}" sizes="any">
-    <link rel="icon" href="{{ asset('assets/images/logo/favicon.svg') }}" type="image/svg+xml">
+    {{-- Favicons: the brand icon first; an icon uploaded in System settings is used only when its file is really there --}}
+    <link rel="icon" href="{{ asset('assets/images/logo/favicon.svg') }}?v=2" type="image/svg+xml">
+    <link rel="icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}" sizes="32x32">
     <link rel="apple-touch-icon" href="{{ asset('assets/images/logo/apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ asset('assets/images/logo/site.webmanifest') }}">
     <meta name="theme-color" content="#1B2B6B">
 
     {{-- Fonts --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- In the head section, make sure Alpine.js is loaded BEFORE your custom scripts -->
 
-    <!-- ApexCharts -->
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    {{-- Charts load without holding up the page (owner, 22 Oct 2026); pinned versions so an upstream release can't break us --}}
+    <script defer src="https://cdn.jsdelivr.net/npm/apexcharts@4.7.0/dist/apexcharts.min.js"></script>
 
     <!-- Flatpickr for date picker -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
 
     
     <!-- Vite Assets -->
@@ -43,9 +45,8 @@
         'resources/js/index.js',
     ])
 
-
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {{-- Alpine comes from resources/js/index.js (with the persist plugin). The second copy from the CDN that used to load
+         here started Alpine twice, which made modals, alerts and the loader misbehave (owner, 22 Oct 2026). --}}
 
 
     <style>    
@@ -337,6 +338,7 @@
       x-init="$watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
       :class="{'dark bg-gray-900': darkMode}">
 
+<script>try { if (JSON.parse(localStorage.getItem('darkMode'))) document.body.classList.add('dark', 'bg-gray-900'); } catch (e) {}</script>
 @include('partials.preloader')
 
 <div class="flex h-screen overflow-hidden">
@@ -359,6 +361,10 @@
 {{-- Page scripts pushed by staff views (@push('scripts')): cases, reports, partners, investments, users.
      Inline here, so their alpine:init listeners register before the deferred Alpine starts. --}}
 @include('partials.modal.dialog')
+@include('partials.modal.toasts')
+@include('partials.ui.datatable')
+@include('partials.ui.swap')
+@include('partials.ui.user-panel')
 @stack('scripts')
 </body>
 </html>

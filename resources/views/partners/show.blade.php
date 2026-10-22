@@ -270,7 +270,7 @@
                     </div>
                 </div>
 
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <table data-table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>

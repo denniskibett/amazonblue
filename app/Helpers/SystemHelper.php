@@ -193,7 +193,8 @@ public static function logoUrl($type = 'light')
             }
             
             // Then try storage directory
-            if (file_exists(storage_path('app/public/' . $favicon))) {
+            // only when the public/storage link exists on this server, or the browser gets a 404 (owner, 22 Oct 2026)
+            if (file_exists(public_path('storage/' . $favicon))) {
                 return asset('storage/' . $favicon);
             }
             
@@ -202,7 +203,7 @@ public static function logoUrl($type = 'light')
                 return asset($favicon);
             }
         }
-        return asset('favicon.ico');
+        return asset('assets/images/logo/favicon.ico') . '?v=2';
     }
     
 

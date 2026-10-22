@@ -26,9 +26,10 @@ class RepaymentController extends Controller
         $query = Repayment::with(['loan.borrower', 'loanCycle'])->latest();
         
         if ($user->hasRole('broker')) {
-            $query->whereHas('loan', function($q) use ($user) {
-                $q->where('broker_id', $user->id);
-            });
+            // loans have no broker_id: a broker sees the repayments of the borrowers linked to them
+            $broker = $user->broker()->first();
+            $ids = $broker ? \App\Models\Borrower::where('broker_id', $broker->id)->pluck('user_id') : collect();
+            $query->whereHas('loan', fn ($q) => $q->whereIn('user_id', $ids));
         } elseif ($user->hasRole('teller')) {
             $query->whereHas('loan', function($q) {
                 $q->where('status', 'active');
@@ -39,7 +40,7 @@ class RepaymentController extends Controller
             });
         }
         
-        $repayments = $query->paginate(10);
+        $repayments = $query->limit(1000)->get();
         return view('repayments.index', compact('repayments'));
     }
 

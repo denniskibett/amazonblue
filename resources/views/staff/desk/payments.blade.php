@@ -46,7 +46,7 @@
         @foreach ($claims as $c)
           <tr>
             <td class="font-mono">{{ $c->code }}</td>
-            <td>{{ $c->user->name ?? '—' }}</td>
+            <td><span class="cursor-pointer hover:text-brand-500" data-user-peek="{{ $c->user_id }}">{{ $c->user->name ?? '—' }}</span></td>
             <td>#{{ $c->loan_id }}</td>
             <td class="num"><x-staff.money :amount="$c->amount" /></td>
             <td>{{ $c->created_at->format('j M, H:i') }}</td>
@@ -95,7 +95,7 @@
         <tr><td class="font-mono">{{ $t->trans_id }}</td><td>{{ strtoupper($t->type) }}</td><td class="num"><x-staff.money :amount="$t->amount" /></td>
           <td>#{{ $t->loan_id }}</td><td>#{{ $t->repayment_id }}</td><td class="text-theme-xs text-gray-500">{{ $t->note }}</td></tr>
       @empty
-        <tr><td colspan="6" class="text-theme-sm text-gray-500">None yet.</td></tr>
+        <tr data-table-skip><td colspan="6" class="text-theme-sm text-gray-500">None yet.</td></tr>
       @endforelse
     </x-staff.table>
   </section>

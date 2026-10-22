@@ -327,19 +327,32 @@ class CustomerWallets
      */
     public function journalSlugMismatches(): array
     {
-        return DB::table('partner_transactions as pt')
-            ->join('transactions as t', DB::raw("json_unquote(json_extract(t.meta, '$.reference'))"), '=', 'pt.reference')
-            ->join('wallets as w', function ($j) {
-                $j->on('w.id', '=', 't.wallet_id')->on('w.holder_id', '=', 'pt.partner_id')
-                    ->where('w.holder_type', (new Partner)->getMorphClass())
-                    // the ledger's own postings carry the journal reference too; they are not journal wallets
-                    ->where('w.slug', 'not like', 'gl-%');
-            })
-            ->whereColumn('pt.wallet_slug', '<>', 'w.slug')
-            ->groupBy('pt.partner_id', 'pt.wallet_slug', 'w.slug')
-            ->get([DB::raw('pt.partner_id as partner'), DB::raw('pt.wallet_slug as journal_says'), DB::raw('w.slug as posted_to'),
-                DB::raw('count(*) as `rows`'), DB::raw('sum(pt.amount) as amount')])
-            ->map(fn ($r) => (array) $r)->all();
+        // two plain reads matched here by reference: joining the journal to every transaction on a JSON field took
+        // ~10 seconds on the wallets page (owner, 22 Oct 2026). Same answer, a fraction of the time.
+        $posted = DB::table('wallets as w')->join('transactions as t', 't.wallet_id', '=', 'w.id')
+            ->where('w.holder_type', (new Partner)->getMorphClass())
+            // the ledger's own postings carry the journal reference too; they are not journal wallets
+            ->where('w.slug', 'not like', 'gl-%')
+            ->whereNotNull('t.meta')
+            ->get(['w.holder_id', 'w.slug', 't.meta'])
+            ->map(fn ($r) => ['partner' => (int) $r->holder_id, 'slug' => $r->slug, 'ref' => json_decode((string) $r->meta, true)['reference'] ?? null])
+            ->filter(fn ($r) => $r['ref'] !== null)
+            ->groupBy(fn ($r) => $r['partner'] . '|' . $r['ref']);
+
+        $out = [];
+        foreach (DB::table('partner_transactions')->whereNotNull('reference')->get(['partner_id', 'wallet_slug', 'reference', 'amount']) as $pt) {
+            foreach ($posted->get($pt->partner_id . '|' . $pt->reference, []) as $p) {
+                if ($p['slug'] === $pt->wallet_slug) {
+                    continue;
+                }
+                $k = $pt->partner_id . '|' . $pt->wallet_slug . '|' . $p['slug'];
+                $out[$k] ??= ['partner' => (int) $pt->partner_id, 'journal_says' => $pt->wallet_slug, 'posted_to' => $p['slug'], 'rows' => 0, 'amount' => 0.0];
+                $out[$k]['rows']++;
+                $out[$k]['amount'] += (float) $pt->amount;
+            }
+        }
+
+        return array_values($out);
     }
 
     /**

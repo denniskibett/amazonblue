@@ -31,7 +31,7 @@
           </td>
         </tr>
       @empty
-        <tr><td colspan="6" class="text-theme-sm text-gray-500">Nothing waiting.</td></tr>
+        <tr data-table-skip><td colspan="6" class="text-theme-sm text-gray-500">Nothing waiting.</td></tr>
       @endforelse
     </x-staff.table>
   </section>
@@ -62,7 +62,7 @@
           </td>
         </tr>
       @empty
-        <tr><td colspan="7" class="text-theme-sm text-gray-500">Nothing waiting.</td></tr>
+        <tr data-table-skip><td colspan="7" class="text-theme-sm text-gray-500">Nothing waiting.</td></tr>
       @endforelse
     </x-staff.table>
   </section>

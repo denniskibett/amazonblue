@@ -1909,7 +1909,9 @@ class LoanController extends Controller
                 'cycles'
             ])->orderBy('borrow_date', 'desc')->get();
 
-            $stats = $this->calculateAdminStats($allLoans);
+            // the page's figures come from App\Support\PageMetrics now; working out every loan's metrics here only
+            // slowed the page down (owner, 22 Oct 2026: 6s for 281 loans)
+            $stats = [];
 
             return view('loans.index', [
                 'allLoans' => $allLoans,

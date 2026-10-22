@@ -24,7 +24,7 @@
     ];
     $groups['Cash desk'] = [
       ['Receive payment', 'staff.repayments.receive', 'hand-coins', $u->canAny(['create repayments', 'delete repayments']), ['staff.repayments.*'], null],
-      ['M-Pesa payments', 'staff.payments', 'phone', $u->can('create repayments'), ['staff.payments'], null],
+      ['M-Pesa payments', 'staff.payments', 'phone', $u->can('create repayments'), ['staff.payments'], $count(fn () => \Illuminate\Support\Facades\Schema::hasTable('mpesa_transactions') ? \Illuminate\Support\Facades\DB::table('mpesa_transactions')->whereIn('status', ['unmatched', 'received'])->count() : 0)],
       ['End of day', 'staff.end-of-day', 'clock', $u->canAny(['create repayments', 'create disbursements', 'view reports']), ['staff.end-of-day'], null],
     ];
     $groups['Customers'] = [
@@ -61,6 +61,21 @@
     ];
   }
   $groups = array_filter(array_map(fn ($items) => array_values(array_filter($items, fn ($i) => $i[3] && \Illuminate\Support\Facades\Route::has($i[1]))), $groups));
+  // Work waiting (owner, 22 Oct 2026): anything with a count moves up under Overview so staff see it first
+  if ($staff) {
+    $waiting = [];
+    foreach ($groups as $title => $items) {
+      if ($title === 'Overview') continue;
+      foreach ($items as $k => $i) {
+        if ($i[5] > 0) { $waiting[] = $i; unset($groups[$title][$k]); }
+      }
+      $groups[$title] = array_values($groups[$title]);
+    }
+    $groups = array_filter($groups);
+    if ($waiting) {
+      $groups = array_merge(array_intersect_key($groups, ['Overview' => 1]), ['Needs attention' => $waiting], array_diff_key($groups, ['Overview' => 1]));
+    }
+  }
 @endphp
 <aside
   :class="sidebarToggle ? 'translate-x-0 lg:w-[90px]' : '-translate-x-full'"
@@ -99,7 +114,7 @@
                   <x-ui.icon :name="$icon" class="size-6 shrink-0 {{ $active ? 'text-brand-500 dark:text-brand-400' : 'text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300' }}" />
                   <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">{{ $label }}</span>
                   @if ($badge)
-                    <span class="ml-auto rounded-full bg-brand-50 px-2 py-0.5 text-theme-xs font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-400" :class="sidebarToggle ? 'lg:hidden' : ''">{{ $badge }}</span>
+                    <span class="ml-auto rounded-full bg-orange-50 px-2 py-0.5 text-theme-xs font-medium text-orange-600 dark:bg-orange-500/15 dark:text-orange-400" :class="sidebarToggle ? 'lg:hidden' : ''">{{ $badge }}</span>
                   @endif
                 </a>
               </li>

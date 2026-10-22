@@ -44,7 +44,7 @@
         @php $k = $kind($p); @endphp
         <tr @class(['opacity-60 line-through' => $p->deleted_at])>
           <td>{{ $p->id }}</td>
-          <td>{{ $p->loan->user->name ?? '—' }}</td>
+          <td><span class="cursor-pointer hover:text-brand-500" data-user-peek="{{ $p->loan->user_id ?? '' }}">{{ $p->loan->user->name ?? '—' }}</span></td>
           <td>#{{ $p->loan_id }}</td>
           <td>{{ $p->mode ?: '—' }}</td>
           <td>{{ $p->transaction ?: '—' }}</td>
@@ -64,7 +64,7 @@
         @php $k = $kind($d); @endphp
         <tr>
           <td>{{ $d->id }}</td>
-          <td>{{ $d->loan->user->name ?? '—' }}</td>
+          <td><span class="cursor-pointer hover:text-brand-500" data-user-peek="{{ $d->loan->user_id ?? '' }}">{{ $d->loan->user->name ?? '—' }}</span></td>
           <td>#{{ $d->loan_id }}</td>
           <td>{{ $d->mode ?: '—' }}</td>
           <td>{{ $d->transaction ?: '—' }}</td>

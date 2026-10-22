@@ -112,7 +112,7 @@ class LoanDeskController extends Controller
         $loans = Loan::with(['user:id,name,email,phone,kyc_status', 'loanType:id,name,interest_rate,period,unit', 'riskAssessments'])
             ->where('status', $status)
             ->orderBy($status === Loan::STATUS_PENDING ? 'created_at' : 'updated_at')
-            ->paginate(15)->withQueryString();
+            ->limit(1000)->get(); // the list pages itself in the browser (partials/ui/datatable)
 
         $counts = Loan::whereIn('status', [Loan::STATUS_PENDING, Loan::STATUS_APPROVED])
             ->select('status', DB::raw('count(*) as n'), DB::raw('sum(amount) as total'))
@@ -127,7 +127,7 @@ class LoanDeskController extends Controller
         $loans = Loan::with(['user:id,name,email,phone', 'loanType:id,name', 'riskAssessments'])
             ->where('status', Loan::STATUS_APPROVED)
             ->oldest('updated_at')
-            ->paginate(15);
+            ->limit(1000)->get();
 
         $today = \App\Models\Disbursement::whereDate('disburse_date', today());
 

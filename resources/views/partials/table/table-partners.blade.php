@@ -7,52 +7,9 @@
 <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6"
      x-data="partnerTable()"
      x-init="init()">
-  <div class="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-        Partners Overview
-      </h3>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-        Showing <span x-text="startIndex + 1"></span> to <span x-text="endIndex"></span> of <span x-text="filteredData.length"></span> entries
-      </p>
-    </div>
-
-    <div class="flex flex-wrap items-center gap-3">
-      <div class="flex items-center">
-        <label for="entriesPerPage" class="text-sm text-gray-500 dark:text-gray-400 mr-2 hidden sm:inline">Show:</label>
-        <div class="relative">
-          <select id="entriesPerPage"
-                  x-model.number="perPage"
-                  @change="currentPage = 1; updateTable()"
-                  class="appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 pr-8">
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
-          <div class="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400 dark:text-gray-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="relative flex-1 min-w-[150px]">
-        <input type="text"
-               x-model="searchTerm"
-               @input="filterTable()"
-               placeholder="Search partners..."
-               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 pl-10">
-        <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-      </div>
-
-      <button
+  <div class="mb-4"><h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Partners Overview</h3></div>
+  <div id="partners-tools" class="contents">
+      <button type="button"
           @click="window.dispatchEvent(new CustomEvent('open-partner-create'))"
           class="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-theme-sm font-medium text-gray-500 shadow-theme-xs ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03]">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -60,14 +17,13 @@
           </svg>
           New Partner
       </button>
-    </div>
   </div>
 
   <div class="w-full overflow-x-auto">
-    <table class="min-w-full" id="partnersTable">
+    <table class="min-w-full" id="partnersTable" data-table data-table-search="Search partners" data-table-buttons="#partners-tools > *">
       <thead class="hidden sm:table-header-group">
         <tr class="border-gray-100 border-y dark:border-gray-800">
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('name')">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Partner</span>
               <span class="sort-icon text-gray-400">
@@ -77,7 +33,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('type')">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Type</span>
               <span class="sort-icon text-gray-400">
@@ -87,7 +43,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('status')">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Status</span>
               <span class="sort-icon text-gray-400">
@@ -97,7 +53,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('principal_balance')">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Principal</span>
               <span class="sort-icon text-gray-400">
@@ -107,7 +63,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('interest_balance')">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Interest</span>
               <span class="sort-icon text-gray-400">
@@ -117,7 +73,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('broker_fee_balance')">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Broker Fee</span>
               <span class="sort-icon text-gray-400">
@@ -127,7 +83,7 @@
               </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="sortBy('tracker_balance')">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Tracker</span>
               <span class="sort-icon text-gray-400">
@@ -274,7 +230,7 @@
           </tr>
         </template>
 
-        <tr x-show="filteredData.length === 0">
+        <tr x-show="filteredData.length === 0" data-table-skip>
           <td colspan="9" class="py-8 text-center">
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -285,34 +241,6 @@
         </tr>
       </tbody>
     </table>
-
-    <div class="flex flex-col items-center justify-between px-2 py-4 sm:flex-row sm:px-0">
-      <div class="hidden sm:flex">
-        <p class="text-sm text-gray-700 dark:text-gray-400">
-          Showing <span x-text="filteredData.length === 0 ? 0 : startIndex + 1"></span>
-          to <span x-text="endIndex"></span>
-          of <span x-text="filteredData.length"></span> results
-        </p>
-      </div>
-      <div class="flex-1 flex justify-between sm:justify-end">
-        <button @click="prevPage()" :disabled="currentPage === 1"
-                class="relative inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-          Previous
-        </button>
-        <div class="hidden sm:flex items-center ml-3 mr-3">
-          <template x-for="page in totalPages" :key="page">
-            <button @click="goToPage(page)"
-                    class="mx-0.5 px-3 py-1 rounded text-sm transition-colors"
-                    :class="currentPage === page ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
-                    x-text="page"></button>
-          </template>
-        </div>
-        <button @click="nextPage()" :disabled="currentPage === totalPages || totalPages === 0"
-                class="relative ml-3 inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-          Next
-        </button>
-      </div>
-    </div>
   </div>
 
   {{-- Create/Edit Modal --}}
@@ -364,9 +292,9 @@ function partnerTable() {
         },
 
         updateTable() {
-            const start = this.startIndex;
-            const end = this.endIndex;
-            this.paginatedData = this.filteredData.slice(start, end);
+            // every row is drawn; the standard table engine pages, searches and sorts them
+            this.paginatedData = this.filteredData;
+            this.$nextTick(() => { const t = document.getElementById('partnersTable'); if (t) (t.azTable ? t.azTable.refresh() : window.AzTable && window.AzTable.enhance(t)); });
         },
 
         filterTable() {

@@ -31,7 +31,7 @@
     <x-staff.table caption="Collections worklist" :headers="['Borrower', 'Loan', ['Amount · repaid', 'num'], ['Days late', 'num'], 'Case', 'Last action', '']">
       @foreach ($rows as $r)
         <tr>
-          <td><span class="font-medium text-gray-800 dark:text-white/90">{{ $r->loan->user->name ?? '—' }}</span><span class="block text-theme-xs text-gray-500">{{ $r->loan->user->phone ?? '' }}</span></td>
+          <td><span class="font-medium text-gray-800 dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $r->loan->user_id ?? '' }}">{{ $r->loan->user->name ?? '—' }}</span><span class="block text-theme-xs text-gray-500">{{ $r->loan->user->phone ?? '' }}</span></td>
           <td><a class="text-brand-500 hover:underline" href="{{ route('users.loans.show', [$r->loan->user_id, $r->loan->id]) }}">#{{ $r->loan->id }}</a> <x-staff.status-badge :status="$r->loan->status" class="ml-1" /><span class="block text-theme-xs text-gray-500">{{ \Illuminate\Support\Str::limit($r->loan->loanType->name ?? '', 22) }}</span></td>
           <td class="num"><x-staff.money :amount="$r->loan->amount" /><span class="block text-theme-xs text-gray-500">repaid <x-staff.money :amount="$r->repaid" :currency="false" tone="muted" /></span></td>
           <td class="num"><span @class(['font-semibold', 'text-az-rose-d' => $r->days > 30, 'text-az-apricot-d' => $r->days > 0 && $r->days <= 30])>{{ $r->days }}</span></td>

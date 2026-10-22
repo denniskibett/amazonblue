@@ -15,6 +15,39 @@ use Illuminate\View\View;
  */
 class KycReviewController extends Controller
 {
+    /**
+     * Crop one of the borrower's pictures to the width and height staff chose (owner, 22 Oct 2026). The first crop
+     * keeps the upload as {file}.original; "restore" puts it back. Audited.
+     */
+    public function crop(Request $request, User $user): RedirectResponse
+    {
+        $doc = $request->validate(['document' => ['required', 'in:' . implode(',', array_keys(\App\Support\PrivateFiles::USER_DOCUMENTS))]])['document'];
+        $data = $request->validate([
+            'x' => ['required', 'integer', 'min:0'], 'y' => ['required', 'integer', 'min:0'],
+            'width' => ['required', 'integer', 'min:40', 'max:8000'], 'height' => ['required', 'integer', 'min:40', 'max:8000'],
+            'rotate' => ['nullable', 'integer', 'in:0,90,180,270'], 'restore' => ['nullable', 'boolean'],
+        ]);
+        $column = \App\Support\PrivateFiles::USER_DOCUMENTS[$doc];
+        $file = \App\Support\PrivateFiles::absolute($user->{$column});
+        if (! $file) {
+            return back()->with('error', 'That picture is not on this server.');
+        }
+        try {
+            if ($request->boolean('restore')) {
+                \App\Services\Kyc\ImageCrop::restore($file);
+                \App\Services\AuditTrail::record('users', $user->id, 'update', [$column => 'cropped'], [$column => 'original picture restored']);
+
+                return back()->with('success', 'The original picture is back.');
+            }
+            [$w, $h] = \App\Services\Kyc\ImageCrop::crop($file, $data['x'], $data['y'], $data['width'], $data['height'], (int) ($data['rotate'] ?? 0));
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+        \App\Services\AuditTrail::record('users', $user->id, 'update', [$column => 'as uploaded'], [$column => "cropped to {$w} x {$h}" . (($data['rotate'] ?? 0) ? ", turned {$data['rotate']} degrees" : '')]);
+
+        return back()->with('success', "Picture cropped to {$w} x {$h} px.");
+    }
+
     public const STATUSES = ['submitted' => 'Waiting for review', 'approved' => 'Approved', 'rejected' => 'Rejected'];
 
     public function index(Request $request): View
@@ -24,8 +57,7 @@ class KycReviewController extends Controller
         $users = User::with('borrower')
             ->where('kyc_status', $status)
             ->orderBy($status === 'submitted' ? 'kyc_submitted_at' : 'kyc_reviewed_at', $status === 'submitted' ? 'asc' : 'desc')
-            ->paginate(20)
-            ->withQueryString();
+            ->limit(1000)->get();
 
         $counts = User::whereIn('kyc_status', array_keys(self::STATUSES))
             ->select('kyc_status', DB::raw('count(*) as total'))->groupBy('kyc_status')->pluck('total', 'kyc_status');

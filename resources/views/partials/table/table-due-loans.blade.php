@@ -35,9 +35,9 @@
         </div>
       </div>
       
-      <button class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+      <a href="{{ route('loans.index') }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
         See all
-      </button>
+      </a>
     </div>
   </div>
 
@@ -164,7 +164,7 @@
                   </div>
                   <div>
                     <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                      <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                      <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
                         {{ strtoupper($loan->user->name) }}
                       </p>
                     </a>
@@ -262,7 +262,7 @@
                 </div>
                 <div>
                   <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                    <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                    <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
                       {{ strtoupper($loan->user->name) }}
                     </p>
                   </a>
@@ -286,7 +286,7 @@
                   </div>
                   <div>
                     <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                      <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                      <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
                         {{ strtoupper($loan->user->name) }}
                       </p>
                     </a>
@@ -384,7 +384,7 @@
                 </div>
                 <div>
                   <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                    <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                    <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
                       {{ strtoupper($loan->user->name) }}
                     </p>
                   </a>
@@ -408,7 +408,7 @@
                   </div>
                   <div>
                     <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                      <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                      <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
                         {{ strtoupper($loan->user->name) }}
                       </p>
                     </a>
@@ -505,7 +505,7 @@
                 </div>
                 <div>
                   <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                    <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                    <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
                       {{ strtoupper($loan->user->name) }}
                     </p>
                   </a>

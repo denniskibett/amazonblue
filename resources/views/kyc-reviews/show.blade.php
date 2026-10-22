@@ -13,6 +13,11 @@
         'approved' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
         'rejected' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
     ][$user->kyc_status] ?? 'bg-gray-100 text-gray-700';
+    $docKeys = ['id-front' => $user->id_front_path, 'id-back' => $user->id_back_path, 'photo' => $user->avatar, 'signature' => $user->signature,
+        'selfie-center' => $user->selfie_center_path, 'selfie-left' => $user->selfie_left_path, 'selfie-right' => $user->selfie_right_path];
+    // a version stamp on each picture so a fresh crop shows straight away
+    $ver = fn ($path) => ($f = \App\Support\PrivateFiles::absolute($path)) ? '?v=' . filemtime($f) : '';
+    $canCrop = auth()->user()->can('edit users');
     $documents = [
         ($user->id_type === 'passport' ? 'Passport bio page' : 'National ID: front') => $user->id_front_path,
         'National ID: back' => $user->id_type === 'passport' ? null : $user->id_back_path,
@@ -69,14 +74,21 @@
                         <div>
                             <p class="{{ $label }} mb-1">{{ $name }}</p>
                             @if ($path)
-                                <a href="{{ $doc($path) }}" target="_blank" rel="noopener"
+                                <a href="{{ $doc($path) }}{{ $ver($path) }}" target="_blank" rel="noopener"
                                    class="block overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
                                     @if ($isPdf($path))
                                         <span class="flex h-28 items-center justify-center text-sm font-medium text-brand-500">Open PDF</span>
                                     @else
-                                        <img src="{{ $doc($path) }}" alt="{{ $name }}" class="h-28 w-full object-contain">
+                                        <img src="{{ $doc($path) }}{{ $ver($path) }}" alt="{{ $name }}" class="h-28 w-full object-contain">
                                     @endif
                                 </a>
+                                @if ($canCrop && ! $isPdf($path) && ($key = array_search($path, $docKeys, true)))
+                                    @php $abs = \App\Support\PrivateFiles::absolute($path); @endphp
+                                    <button type="button" class="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-brand-500 hover:underline"
+                                            @click="$dispatch('open-crop', {src: @js($doc($path)), action: @js(route('kyc-reviews.crop', $user)), document: @js($key), original: @js(\App\Services\Kyc\ImageCrop::hasOriginal($abs))})">
+                                        <x-ui.icon name="edit" class="size-3.5" /> Crop
+                                    </button>
+                                @endif
                             @else
                                 <span class="flex h-28 items-center justify-center rounded-lg border border-dashed border-gray-300 text-xs text-gray-400 dark:border-gray-700">Missing</span>
                             @endif
@@ -170,4 +182,5 @@
 </div>
 
 @include('partials.modal.flash-alert')
+    @include('partials.ui.crop-modal')
 @endsection

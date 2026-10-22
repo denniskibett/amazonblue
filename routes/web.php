@@ -176,6 +176,7 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             Route::get('/{user}', 'show')->name('show')->middleware('permission:view users');
             Route::post('/{user}/approve', 'approve')->name('approve')->middleware('permission:edit users');
             Route::post('/{user}/reject', 'reject')->name('reject')->middleware('permission:edit users');
+            Route::post('/{user}/crop', 'crop')->name('crop')->middleware('permission:edit users');
         });
 
     // ============ BUSINESS REVIEWS (staff verify business KYC) ============
@@ -185,6 +186,7 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             Route::get('/{business}', 'show')->name('show')->middleware('permission:view users');
             Route::post('/{business}/approve', 'approve')->name('approve')->middleware('permission:edit users');
             Route::post('/{business}/reject', 'reject')->name('reject')->middleware('permission:edit users');
+            Route::post('/{business}/documents/{document}/crop', 'crop')->name('crop')->middleware('permission:edit users');
         });
 
     // ============ USER LOAN ROUTES ============
@@ -472,6 +474,13 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('inbox', [\App\Http\Controllers\Staff\LoanDeskController::class, 'inbox'])->name('inbox');
         Route::get('approvals', [\App\Http\Controllers\Staff\LoanDeskController::class, 'approvals'])
             ->name('approvals')->middleware('permission:view loans');
+        // the person side panel, opened from any name (owner, 22 Oct 2026)
+        Route::get('users/{user}/peek', \App\Http\Controllers\Staff\UserPeekController::class)
+            ->name('users.peek')->middleware('permission:view users');
+        // notifications for every staff role (owner, 22 Oct 2026)
+        Route::get('notifications', [\App\Http\Controllers\Staff\NotificationsController::class, 'index'])->name('notifications');
+        Route::get('notifications/feed', [\App\Http\Controllers\Staff\NotificationsController::class, 'feed'])->name('notifications.feed');
+        Route::post('notifications/read', [\App\Http\Controllers\Staff\NotificationsController::class, 'read'])->name('notifications.read');
         Route::get('disbursements/queue', [\App\Http\Controllers\Staff\LoanDeskController::class, 'disbursementQueue'])
             ->name('disbursements.queue')->middleware('permission:view disbursements');
         Route::get('disbursements/{loan}/disburse', [\App\Http\Controllers\Staff\LoanDeskController::class, 'disburseForm'])

@@ -5,16 +5,4 @@
 @unless ($skipModal ?? false)
   @include('partials.modal.alert-modal')
 @endunless
-@if (session('alert'))
-  <script>
-    (function () {
-      var shown = false;
-      document.addEventListener('alpine:initialized', function () {
-        if (shown || !window.showAlert) return;
-        shown = true;
-        var a = @json(session('alert'));
-        window.showAlert(a.type, a.title, a.message);
-      });
-    })();
-  </script>
-@endif
+{{-- the flashed alert itself is shown by partials.modal.toasts in the layout --}}

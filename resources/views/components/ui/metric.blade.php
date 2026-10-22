@@ -40,7 +40,7 @@
           {{ $delta }}
         </span>
       @endif
-      @if ($hint)<span class="max-w-full truncate rounded-full px-2 py-0.5 text-theme-xs font-medium {{ $accent['pill'] }}" title="{{ $hint }}">{{ $hint }}</span>@endif
+      @if ($hint)<span class="max-w-full rounded-md px-2 py-0.5 text-theme-xs font-medium leading-snug {{ $accent['pill'] }}" title="{{ $hint }}">{{ $hint }}</span>@endif
     </div>
   @endif
 </{{ $tag }}>

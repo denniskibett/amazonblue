@@ -49,7 +49,7 @@
                 <input type="hidden" name="broker_status" x-model="brokerStatus">
                 <input type="hidden" name="status" x-model="form.status">
                 <input type="hidden" name="signature_data" x-model="signatureData">
-                <input type="hidden" name="use_existing_signature" x-model="useExistingSignature ? '1' : '0'">
+                <input type="hidden" name="use_existing_signature" :value="useExistingSignature ? '1' : '0'">
 
                 <!-- User Selection Section -->
                 <div class="mb-6">

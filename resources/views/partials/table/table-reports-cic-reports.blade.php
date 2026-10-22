@@ -52,7 +52,7 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="3" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Not available yet</td></tr>
+            <tr data-table-skip><td colspan="3" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Not available yet</td></tr>
             @endforelse
 
             <!-- Bureau Data -->
@@ -72,7 +72,7 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="3" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Not available yet</td></tr>
+            <tr data-table-skip><td colspan="3" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Not available yet</td></tr>
             @endforelse
 
             <!-- Compliance -->
@@ -100,7 +100,7 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="3" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Not available yet</td></tr>
+            <tr data-table-skip><td colspan="3" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Not available yet</td></tr>
             @endforelse
         </tbody>
     </table>

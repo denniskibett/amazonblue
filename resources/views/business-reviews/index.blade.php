@@ -39,7 +39,6 @@
                 </tr>
             @endforeach
         </x-staff.table>
-        <div class="mt-4">{{ $businesses->links() }}</div>
     @endif
 </div>
 

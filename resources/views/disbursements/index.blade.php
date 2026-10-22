@@ -41,12 +41,12 @@
       <x-staff.empty title="No disbursements" message="Nothing matches this filter." />
     @else
       <div class="overflow-x-auto">
-        <table class="min-w-full text-theme-sm">
+        <table data-table data-table-page="25" data-table-search="Search this list" class="min-w-full text-theme-sm">
           <thead class="border-b border-gray-200 text-left text-theme-xs uppercase tracking-wide text-gray-500 dark:border-gray-800 dark:text-gray-400">
             <tr>
               <th class="px-5 py-3 font-medium">Date</th><th class="px-5 py-3 font-medium">Loan</th><th class="px-5 py-3 font-medium">Borrower</th>
               <th class="px-5 py-3 text-right font-medium">Amount</th><th class="px-5 py-3 text-right font-medium">Fee</th>
-              <th class="px-5 py-3 font-medium">Mode</th><th class="px-5 py-3 font-medium">Kind</th><th class="px-5 py-3 font-medium">Reference</th><th class="px-5 py-3"></th>
+              <th class="px-5 py-3 font-medium" data-filter="Mode">Mode</th><th class="px-5 py-3 font-medium" data-filter="Kind">Kind</th><th class="px-5 py-3 font-medium">Reference</th><th class="px-5 py-3"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -55,7 +55,7 @@
               <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
                 <td class="whitespace-nowrap px-5 py-3 text-gray-700 dark:text-gray-300">{{ $d->disburse_date?->format('j M Y') }}</td>
                 <td class="px-5 py-3"><a class="font-medium text-brand-500 hover:underline" href="{{ route('loans.show', $d->loan_id) }}">#{{ $d->loan_id }}</a><span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ $d->loan->loanType->name ?? '' }}</span></td>
-                <td class="px-5 py-3 text-gray-800 dark:text-white/90">{{ $d->loan->user->name ?? '' }}</td>
+                <td class="px-5 py-3 text-gray-800 dark:text-white/90"><span class="cursor-pointer hover:text-brand-500" data-user-peek="{{ $d->loan->user_id ?? '' }}">{{ $d->loan->user->name ?? '' }}</span></td>
                 <td class="whitespace-nowrap px-5 py-3 text-right font-medium text-gray-800 dark:text-white/90">{{ number_format((float) $d->amount, 2) }}</td>
                 <td class="whitespace-nowrap px-5 py-3 text-right text-gray-600 dark:text-gray-400">{{ (float) $d->processing_fee ? number_format((float) $d->processing_fee, 2) : '' }}</td>
                 <td class="px-5 py-3 capitalize text-gray-600 dark:text-gray-400">{{ str_replace('_', ' ', (string) $d->mode) }}</td>
@@ -67,7 +67,6 @@
           </tbody>
         </table>
       </div>
-      <div class="border-t border-gray-200 px-5 py-4 dark:border-gray-800">{{ $disbursements->links() }}</div>
     @endif
   </div>
 @endsection

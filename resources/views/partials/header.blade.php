@@ -172,161 +172,66 @@
         </button>
         <!-- Dark Mode Toggler -->
 
-        <!-- Notification Menu Area -->
-        <div
-          class="relative"
-          x-data="{ dropdownOpen: false, notifying: true }"
-          @click.outside="dropdownOpen = false"
-        >
-          <button
-            class="hover:text-dark-900 relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
-            @click.prevent="dropdownOpen = ! dropdownOpen; notifying = false"
-          >
-            <span
-              :class="!notifying ? 'hidden' : 'flex'"
-              class="absolute right-0 top-0.5 z-1 h-2 w-2 rounded-full bg-orange-400"
-            >
-              <span
-                class="absolute -z-1 inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"
-              ></span>
-            </span>
-            <svg
-              class="fill-current"
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M10.75 2.29248C10.75 1.87827 10.4143 1.54248 10 1.54248C9.58583 1.54248 9.25004 1.87827 9.25004 2.29248V2.83613C6.08266 3.20733 3.62504 5.9004 3.62504 9.16748V14.4591H3.33337C2.91916 14.4591 2.58337 14.7949 2.58337 15.2091C2.58337 15.6234 2.91916 15.9591 3.33337 15.9591H4.37504H15.625H16.6667C17.0809 15.9591 17.4167 15.6234 17.4167 15.2091C17.4167 14.7949 17.0809 14.4591 16.6667 14.4591H16.375V9.16748C16.375 5.9004 13.9174 3.20733 10.75 2.83613V2.29248ZM14.875 14.4591V9.16748C14.875 6.47509 12.6924 4.29248 10 4.29248C7.30765 4.29248 5.12504 6.47509 5.12504 9.16748V14.4591H14.875ZM8.00004 17.7085C8.00004 18.1228 8.33583 18.4585 8.75004 18.4585H11.25C11.6643 18.4585 12 18.1228 12 17.7085C12 17.2943 11.6643 16.9585 11.25 16.9585H8.75004C8.33583 16.9585 8.00004 17.2943 8.00004 17.7085Z"
-                fill=""
-              />
-            </svg>
+        <!-- Notifications (owner, 22 Oct 2026): live for every staff role, refreshed quietly every minute -->
+        @if (auth()->user()->isStaff() && \Illuminate\Support\Facades\Route::has('staff.notifications.feed'))
+        <div class="relative" x-data="azBell(@js(route('staff.notifications.feed')), @js(route('staff.notifications.read')), @js(route('staff.notifications')))" @click.outside="open = false">
+          <button type="button" aria-label="Notifications" @click="toggle()"
+            class="relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white">
+            <span x-show="unread > 0" x-cloak class="absolute -right-1 -top-1 z-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-semibold text-white" x-text="unread > 99 ? '99+' : unread"></span>
+            <x-ui.icon name="bell" class="size-5" />
           </button>
-
-          <!-- Dropdown Start -->
-          <div
-            x-show="dropdownOpen"
-            class="absolute -right-[240px] mt-[17px] flex h-[480px] w-[350px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark sm:w-[361px] lg:right-0"
-          >
-            <div
-              class="mb-3 flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800"
-            >
-              <h5
-                class="text-lg font-semibold text-gray-800 dark:text-white/90"
-              >
-                Notification
-              </h5>
-
-              <button
-                @click="dropdownOpen = false"
-                class="text-gray-500 dark:text-gray-400"
-              >
-                <svg
-                  class="fill-current"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    clip-rule="evenodd"
-                    d="M6.21967 7.28131C5.92678 6.98841 5.92678 6.51354 6.21967 6.22065C6.51256 5.92775 6.98744 5.92775 7.28033 6.22065L11.999 10.9393L16.7176 6.22078C17.0105 5.92789 17.4854 5.92788 17.7782 6.22078C18.0711 6.51367 18.0711 6.98855 17.7782 7.28144L13.0597 12L17.7782 16.7186C18.0711 17.0115 18.0711 17.4863 17.7782 17.7792C17.4854 18.0721 17.0105 18.0721 16.7176 17.7792L11.999 13.0607L7.28033 17.7794C6.98744 18.0722 6.51256 18.0722 6.21967 17.7794C5.92678 17.4865 5.92678 17.0116 6.21967 16.7187L10.9384 12L6.21967 7.28131Z"
-                    fill=""
-                  />
-                </svg>
-              </button>
+          <div x-show="open" x-cloak x-transition.opacity
+               class="absolute -right-[240px] mt-[17px] flex max-h-[480px] w-[350px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark sm:w-[380px] lg:right-0">
+            <div class="mb-2 flex items-center justify-between border-b border-gray-100 px-1 pb-3 dark:border-gray-800">
+              <h5 class="text-lg font-semibold text-gray-800 dark:text-white/90">Notifications</h5>
+              <button type="button" x-show="unread > 0" @click="readAll()" class="text-theme-xs font-medium text-brand-500 hover:underline">Mark all as read</button>
             </div>
-
-            @php
-            $users = [
-                [
-                    'name' => 'Terry Franci',
-                    'image' => asset('images/user/user-02.jpg'),
-                    'status' => 'online',
-                    'time' => '5 min ago',
-                ],
-                [
-                    'name' => 'Alena Franci',
-                    'image' => asset('images/user/user-03.jpg'),
-                    'status' => 'online',
-                    'time' => '8 min ago',
-                ],
-                [
-                    'name' => 'Jocelyn Kenter',
-                    'image' => asset('images/user/user-04.jpg'),
-                    'status' => 'online',
-                    'time' => '15 min ago',
-                ],
-                [
-                    'name' => 'Brandon Philips',
-                    'image' => asset('images/user/user-05.jpg'),
-                    'status' => 'offline',
-                    'time' => '1 hr ago',
-                ],
-            ];
-            @endphp
-
-            <ul class="custom-scrollbar flex h-auto flex-col overflow-y-auto">
-                @foreach ($users as $user)
-                    @php
-                        // Safe initials generation with null check
-                        $nameParts = explode(' ', $user['name'] ?? '');
-                        $initials = '';
-                        foreach ($nameParts as $part) {
-                            if (!empty(trim($part))) {
-                                $initials .= strtoupper(substr(trim($part), 0, 1));
-                            }
-                        }
-                        $initials = $initials ?: 'U';
-                        $statusColor = ($user['status'] ?? 'offline') === 'online' ? 'bg-success-500' : 'bg-error-500';
-                    @endphp
-
-                    <li>
-                        <a href="#" class="flex gap-3 rounded-lg border-b border-gray-100 p-3 px-4.5 py-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5">
-                            <span class="relative z-1 block h-10 w-full max-w-10 rounded-full bg-gray-200 text-white font-semibold text-sm flex items-center justify-center overflow-hidden">
-                                <img
-                                    src="{{ $user['image'] }}"
-                                    alt="{{ $user['name'] ?? 'User' }}"
-                                    class="h-full w-full object-cover rounded-full"
-                                    onerror="this.style.display='none'; this.parentNode.innerHTML='{{ $initials }}';"
-                                />
-                                <span class="absolute bottom-0 right-0 z-10 h-2.5 w-full max-w-2.5 rounded-full border-[1.5px] border-white dark:border-gray-900 {{ $statusColor }}"></span>
-                            </span>
-
-                            <span class="block">
-                                <span class="mb-1.5 block text-theme-sm text-gray-500 dark:text-gray-400">
-                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user['name'] ?? 'User' }}</span>
-                                    requests permission to change
-                                    <span class="font-medium text-gray-800 dark:text-white/90">Project - Nganter App</span>
-                                </span>
-
-                                <span class="flex items-center gap-2 text-theme-xs text-gray-500 dark:text-gray-400">
-                                    <span>Project</span>
-                                    <span class="h-1 w-1 rounded-full bg-gray-400"></span>
-                                    <span>{{ $user['time'] ?? '' }}</span>
-                                </span>
-                            </span>
-                        </a>
-                    </li>
-                @endforeach
+            <ul class="custom-scrollbar flex flex-col overflow-y-auto">
+              <template x-if="!items.length"><li class="px-3 py-10 text-center text-theme-sm text-gray-500 dark:text-gray-400" x-text="loading ? 'Loading…' : 'Nothing new for you.'"></li></template>
+              <template x-for="n in items" :key="n.key">
+                <li>
+                  <a :href="n.href || allUrl" class="flex gap-3 rounded-lg border-b border-gray-100 px-3 py-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5">
+                    <span class="flex size-9 shrink-0 items-center justify-center rounded-full" :class="n.tone"><span class="size-2 rounded-full bg-current"></span></span>
+                    <span class="min-w-0 flex-1">
+                      <span class="flex items-center gap-2 text-theme-sm font-medium text-gray-800 dark:text-white/90"><span class="truncate" x-text="n.title"></span><span x-show="n.unread" class="size-2 shrink-0 rounded-full bg-brand-500"></span></span>
+                      <span class="block truncate text-theme-xs text-gray-500 dark:text-gray-400" x-text="n.line"></span>
+                      <span class="block text-theme-xs text-gray-400" x-text="n.when"></span>
+                    </span>
+                  </a>
+                </li>
+              </template>
             </ul>
-
-            <a
-              href="#"
-              class="mt-3 flex justify-center rounded-lg border border-gray-300 bg-white p-3 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
-            >
-              View All Notification
-            </a>
+            <a :href="allUrl" class="mt-3 flex justify-center rounded-lg border border-gray-300 bg-white p-3 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">View all notifications</a>
           </div>
-          <!-- Dropdown End -->
         </div>
-        <!-- Notification Menu Area -->
+        <script>
+          function azBell(feedUrl, readUrl, allUrl) {
+            return {
+              open: false, unread: 0, items: [], loading: true, allUrl, seen: null,
+              init() { this.load(true); setInterval(() => { if (!document.hidden) this.load(false); }, 60000); },
+              async load(first) {
+                try {
+                  const r = await fetch(feedUrl, {headers: {'Accept': 'application/json'}, credentials: 'same-origin'});
+                  if (!r.ok) return;
+                  const d = await r.json();
+                  // a toast for anything that arrived since the last check (not on the first load)
+                  if (!first && this.seen) d.items.filter(i => i.unread && !this.seen.has(i.key)).slice(0, 3)
+                    .forEach(i => window.dispatchEvent(new CustomEvent('toast', {detail: {type: 'info', title: i.title, message: i.line}})));
+                  this.seen = new Set(d.items.map(i => i.key));
+                  this.items = d.items; this.unread = d.unread;
+                } catch (e) {} finally { this.loading = false; }
+              },
+              toggle() { this.open = !this.open; if (this.open) this.load(false); },
+              async readAll() {
+                const token = document.querySelector('meta[name=csrf-token]')?.content;
+                await fetch(readUrl, {method: 'POST', headers: {'Accept': 'application/json', 'X-CSRF-TOKEN': token}, credentials: 'same-origin'});
+                this.items = this.items.map(i => ({...i, unread: false})); this.unread = 0;
+              },
+            };
+          }
+        </script>
+        @endif
+
       </div>
 
       <!-- User Area -->

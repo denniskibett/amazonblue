@@ -82,7 +82,7 @@ class CaseController extends Controller
         // Order
         $cases = $query->orderBy('priority_id', 'desc')
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->limit(1000)->get();
 
         // Filter options
         $statuses = RecoveryStatus::all();

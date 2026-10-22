@@ -1,1505 +1,344 @@
-{{--resources/views/users/show.blade.php--}}
+{{-- A person's profile (owner, 22 Oct 2026). One clean page shaped by who they are:
+     borrower (money, loans, 4Cs, businesses, KYC), partner or broker (wallets, clients) or staff (roles, recent work).
+     Businesses are shown as separate business accounts, not mixed into the personal profile. Data: App\Support\UserProfile. --}}
 @extends('layouts.app')
 
+@php
+  $p = \App\Support\UserProfile::of($user);
+  $id = $p->identity();
+  $kind = $p->kind();
+  $kyc = \App\Support\UserProfile::KYC[$id['kyc']] ?? null;
+  $open = $kind === 'borrower' ? $p->openLoans() : [];
+  $counts = $p->loanCounts();
+  $biz = $p->businesses();
+  $cases = $p->recoveryCases();
+  $card = 'rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6';
+  $label = 'text-theme-xs text-gray-500 dark:text-gray-400';
+  $val = 'text-theme-sm font-medium text-gray-800 dark:text-white/90';
+  $h = 'text-base font-semibold text-gray-800 dark:text-white/90';
+  $btn = 'inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]';
+  $tabs = $kind === 'borrower'
+    ? ['overview' => 'Overview', 'loans' => 'Loans (' . array_sum($counts) . ')', 'businesses' => 'Businesses (' . count($biz) . ')', 'kyc' => 'KYC & documents', 'recovery' => 'Recovery (' . $cases->count() . ')', 'activity' => 'Activity']
+    : ($kind === 'partner'
+      ? ['overview' => 'Overview', 'loans' => 'Loans (' . array_sum($counts) . ')', 'kyc' => 'Documents', 'activity' => 'Activity']
+      : ['overview' => 'Overview', 'activity' => 'Activity']);
+  $person = $user->contacts()->get();
+  $guarantor = $person->firstWhere('relationship_specific', \App\Http\Controllers\HomeController::GUARANTOR);
+  $kin = $person->first(fn ($c) => $c->relationship_specific !== \App\Http\Controllers\HomeController::GUARANTOR);
+  $address = $user->addresses()->orderByDesc('is_primary')->first();
+  $b = $user->borrower;
+  $docs = ['id-front' => [$user->id_type === 'passport' ? 'Passport bio page' : 'ID: front', $user->id_front_path], 'id-back' => ['ID: back', $user->id_type === 'passport' ? null : $user->id_back_path],
+           'photo' => ['Passport photo', $user->avatar], 'signature' => ['Signature', $user->signature], 'selfie-center' => ['Selfie: straight', $user->selfie_center_path],
+           'selfie-left' => ['Selfie: left', $user->selfie_left_path], 'selfie-right' => ['Selfie: right', $user->selfie_right_path]];
+@endphp
+
 @section('content')
-    <!-- Breadcrumb Start -->
-    <div x-data="{ pageName: 'User Profile' }">
-        @include('partials.breadcrumb')
-    </div>
-    <!-- Breadcrumb End -->
-
-    <!-- Main Content -->
-    <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-        <!-- Profile Header -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 lg:p-6 mb-6">
-            <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-                <div class="flex w-full flex-col items-center gap-6 xl:flex-row">
-                    <div class="h-20 w-20 overflow-hidden rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-100 dark:bg-gray-700">
-                        @php
-                            $avatarUrl = null;
-                            if ($user->avatar) {
-                                $avatarUrl = $user->documentUrl('photo');
-                            } elseif ($user->profile_photo_path) {
-                                $avatarUrl = asset('storage/' . $user->profile_photo_path);
-                            }
-                        @endphp
-                        @if($avatarUrl)
-                            <img 
-                                src="{{ $avatarUrl }}" 
-                                alt="Profile Photo" 
-                                class="h-full w-full object-cover"
-                            >
-                        @else
-                            @php $initials = $user->getInitials(); @endphp
-                    
-                            <span class="text-xl font-semibold text-gray-600 dark:text-gray-300">
-                                {{ $initials }}
-                            </span>
-                        @endif
-                    </div>
-
-                    <div class="order-3 xl:order-2">
-                        <h4 class="mb-2 text-center text-lg font-semibold xl:text-left">{{ $user->name }}@if($user->kyc_status === 'approved')<svg class="ml-1 inline-block h-4 w-4 align-[-2px] text-blue-600" viewBox="0 0 24 24" role="img" aria-label="Verified to borrow"><title>Verified to borrow</title><path fill="currentColor" d="M12 1.6l2.5 1.9 3.1-.3 1 3 2.6 1.7-.9 3 .9 3-2.6 1.7-1 3-3.1-.3L12 22.4l-2.5-1.9-3.1.3-1-3-2.6-1.7.9-3-.9-3 2.6-1.7 1-3 3.1.3z"/><path d="M8.2 12.3l2.6 2.6 5-5.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>@endif</h4>
-                        <div class="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
-                            @if($user->handle)
-                                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ '@' . $user->handle }}</p>
-                                <div class="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
-                            @endif
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ ucfirst($user->role) }} Profile</p>
-                            @if($user->hasRole('borrower') && $user->borrower)
-                                <div class="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
-                                <div class="flex items-center">
-                                    <span class="px-2 py-1 text-xs font-medium rounded-full 
-                                        @if($user->borrower->risk_category === 'Low Risk') bg-green-100 text-green-800
-                                        @elseif($user->borrower->risk_category === 'Medium Risk') bg-yellow-100 text-yellow-800
-                                        @elseif($user->borrower->risk_category === 'High Risk') bg-orange-100 text-orange-800
-                                        @else bg-red-100 text-red-800 @endif">
-                                        {{ $user->borrower->risk_category }}
-                                    </span>
-                                    <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                                        4Cs Score: {{ $user->borrower->calculate4csScore()['overall'] }}/100
-                                    </span>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="order-2 flex grow items-center gap-2 xl:order-3 xl:justify-end">
-                        @if($user->hasRole('borrower'))
-                            <a href="{{ route('loans.create', $user->id) }}" 
-                               class="flex items-center gap-2 rounded-full border border-blue-600 bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-theme-xs hover:bg-blue-700 hover:border-blue-700 transition-colors">
-                                <i class="fas fa-plus"></i> New Loan
-                            </a>
-                        @endif
-                        
-                        <!-- Edit Profile Button -->
-                        <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')"
-                            class="flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">
-                            <i class="fas fa-edit"></i> Edit Profile
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        @if($cash && $credit)
-            @php
-                $tones = ['on_time' => 'bg-green-500', 'late' => 'bg-amber-400', 'discounted' => 'bg-amber-400', 'rolled' => 'bg-blue-300', 'written_off' => 'bg-red-500', 'overdue' => 'bg-red-500', 'running' => 'bg-gray-300'];
-                $f = $credit['factors'];
-            @endphp
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {{-- real cash: staff and partners only (not shown to the borrower) --}}
-                <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <h3 class="text-md font-semibold text-gray-800 dark:text-white/90">Cash with us</h3>
-                    <dl class="mt-3 grid grid-cols-3 gap-3 text-sm">
-                        <div><dt class="text-gray-500">Sent to them</dt><dd class="font-semibold">KES {{ number_format($cash['received'], 2) }}</dd></div>
-                        <div><dt class="text-gray-500">Repaid to us</dt><dd class="font-semibold">KES {{ number_format($cash['repaid'], 2) }}</dd></div>
-                        <div><dt class="text-gray-500">Net</dt><dd class="font-semibold {{ $cash['balance'] < 0 ? 'text-red-600' : 'text-green-600' }}">{{ $cash['balance'] < 0 ? '−' : '+' }}KES {{ number_format(abs($cash['balance']), 2) }}</dd></div>
-                    </dl>
-                    <p class="mt-3 text-xs text-gray-500">Real money only, from the borrower's wallet. Rollovers, discounts and write-offs are not cash.</p>
-                </div>
-
-                {{-- today's 4Cs and repayment journey --}}
-                <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-md font-semibold text-gray-800 dark:text-white/90">4Cs today</h3>
-                        <span class="text-sm font-medium">{{ $credit['category']?->name ?? '—' }} · {{ $credit['overall'] }}/100</span>
-                    </div>
-                    <div class="mt-3 grid grid-cols-4 gap-3 text-center text-xs">
-                        @foreach ($credit['scores'] as $c => $v)
-                            <div><div class="text-lg font-semibold {{ $v >= 65 ? 'text-green-600' : ($v >= 50 ? 'text-orange-500' : 'text-red-600') }}">{{ $v }}</div><div class="text-gray-500">{{ ucfirst($c) }}</div></div>
-                        @endforeach
-                    </div>
-                    <p class="mt-3 text-sm">Self-service limit: <span class="font-semibold">KES {{ number_format($credit['limit']['limit'], 2) }}</span>
-                        @if ($credit['limit']['capped_by'])<span class="text-xs text-gray-500">(lowered from KES {{ number_format($credit['limit']['ladder'], 2) }} by {{ $credit['limit']['capped_by'] === 'risk' ? 'the risk score' : 'declared income' }})</span>@endif
-                    </p>
-                    <div class="mt-3 flex flex-wrap gap-1" aria-label="Loans, oldest first">
-                        @foreach ($credit['history'] as $h)
-                            <span class="h-4 w-4 rounded {{ $tones[$h['status']] ?? 'bg-gray-200' }}" title="#{{ $h['loan_id'] }} · {{ $h['borrow_date'] }} · KES {{ number_format($h['amount'], 2) }} · {{ $h['label'] }}"></span>
-                        @endforeach
-                    </div>
-                    <p class="mt-2 text-xs text-gray-500">{{ $f['on_time'] }} on time · {{ $f['late'] }} late · {{ $f['rolled'] }} rolled over · {{ $f['discounted'] }} discounted · {{ $f['written_off'] }} written off</p>
-                </div>
-            </div>
+  {{-- header --}}
+  <div class="mb-6 {{ $card }}">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex items-center gap-5">
+        @if ($id['photo'])
+          <img src="{{ $id['photo'] }}" alt="{{ $id['name'] }}" class="size-20 shrink-0 rounded-full border border-gray-200 object-cover dark:border-gray-800">
+        @else
+          <span class="flex size-20 shrink-0 items-center justify-center rounded-full bg-brand-50 text-2xl font-semibold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">{{ $id['initials'] }}</span>
         @endif
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="text-xl font-semibold text-gray-800 dark:text-white/90">{{ $id['name'] }}</h1>
+            @foreach ($id['roles'] as $r)<span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-theme-xs font-medium text-gray-700 dark:bg-white/5 dark:text-gray-300">{{ $r }}</span>@endforeach
+            @if ($kyc)<span class="rounded-full px-2.5 py-0.5 text-theme-xs font-medium {{ $kyc[1] }}">{{ $kyc[0] }}</span>@endif
+            @unless ($id['active'])<span class="rounded-full bg-error-50 px-2.5 py-0.5 text-theme-xs font-medium text-error-600">Inactive</span>@endunless
+          </div>
+          <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-theme-sm text-gray-500 dark:text-gray-400">
+            @if ($id['handle'])<span>{{ '@' . $id['handle'] }}</span>@endif
+            @if ($id['phone'])<a href="tel:{{ $id['phone'] }}" class="inline-flex items-center gap-1.5 hover:text-brand-500"><x-ui.icon name="phone" class="size-4" />{{ $id['phone'] }}</a>@endif
+            @if ($id['email'])<span class="inline-flex items-center gap-1.5"><x-ui.icon name="mail" class="size-4" />{{ $id['email'] }}</span>@endif
+            @if ($user->id_number)<span class="inline-flex items-center gap-1.5"><x-ui.icon name="user-check" class="size-4" />{{ $id['id'] }}</span>@endif
+            <span class="inline-flex items-center gap-1.5"><x-ui.icon name="calendar" class="size-4" />Joined {{ optional($id['joined'])->format('j M Y') }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        @if ($kind === 'borrower' && auth()->user()->can('create loans') && \Illuminate\Support\Facades\Route::has('loans.create'))
+          <a href="{{ route('loans.create', $user->id) }}" class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white hover:bg-brand-600"><x-ui.icon name="plus" class="size-4" />New loan</a>
+        @endif
+        @if ($open && auth()->user()->canAny(['create repayments']) && \Illuminate\Support\Facades\Route::has('staff.repayments.receive'))
+          <a href="{{ route('staff.repayments.receive', ['loan' => $open[0]['loan']->id]) }}" class="{{ $btn }}"><x-ui.icon name="hand-coins" class="size-4" />Receive payment</a>
+        @endif
+        @if ($user->kyc_status === 'submitted' && auth()->user()->can('view users') && \Illuminate\Support\Facades\Route::has('kyc-reviews.show'))
+          <a href="{{ route('kyc-reviews.show', $user) }}" class="{{ $btn }}"><x-ui.icon name="user-check" class="size-4" />Review KYC</a>
+        @endif
+        @can('edit users')
+          <button type="button" onclick="document.getElementById('editProfileModal').classList.remove('hidden')" class="{{ $btn }}"><x-ui.icon name="edit" class="size-4" />Edit profile</button>
+        @endcan
+      </div>
+    </div>
+  </div>
 
-        @include('partials.card.users-card', ['user' => $user])
+  {{-- headline figures --}}
+  @if ($kind === 'borrower')
+    @php $cash = $p->cash(); $credit = $p->credit(); @endphp
+    <x-ui.metrics :items="array_values(array_filter([
+      ['label' => 'Owes today', 'value' => 'KES ' . number_format(collect($open)->sum('owed'), 2), 'icon' => 'wallet', 'hint' => count($open) . ' open loan' . (count($open) === 1 ? '' : 's')],
+      ['label' => 'Loans', 'value' => number_format(array_sum($counts)), 'icon' => 'briefcase', 'hint' => ($counts['repaid'] ?? 0) . ' repaid in full'],
+      $cash ? ['label' => 'Cash sent to them', 'value' => 'KES ' . number_format($cash['received'], 2), 'icon' => 'send', 'hint' => 'repaid KES ' . number_format($cash['repaid'], 2)] : null,
+      $credit ? ['label' => '4Cs score', 'value' => ($credit['overall'] ?? '—') . '/100', 'icon' => 'star', 'hint' => ($credit['category']['name'] ?? '') . (isset($credit['limit']['limit']) ? ' · limit KES ' . number_format((float) $credit['limit']['limit']) : '')] : null,
+    ]))" />
+  @elseif ($kind === 'partner')
+    <x-ui.metrics :items="collect($p->partnerWallets())->map(fn ($w) => ['label' => $w['name'], 'value' => 'KES ' . number_format($w['balance'], 2), 'icon' => 'wallet'])->push($user->hasRole('broker') ? ['label' => 'Clients brought in', 'value' => number_format($p->brokerClients()), 'icon' => 'users'] : null)->filter()->values()->all()" />
+  @endif
 
-        <!-- Main Tabbed Content -->
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
-            <!-- Tab Header -->
-            <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">User Profile Details</h3>
-            </div>
+  {{-- tabs --}}
+  <div x-data="{ tab: (location.hash || '').slice(1) in @js($tabs) ? location.hash.slice(1) : 'overview' }" x-init="$watch('tab', t => history.replaceState(null, '', '#' + t))">
+    <div class="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-white/[0.03]">
+      @foreach ($tabs as $k => $t)
+        <button type="button" @click="tab = @js($k)" :class="tab === @js($k) ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5'"
+                class="whitespace-nowrap rounded-lg px-4 py-2 text-theme-sm font-medium">{{ $t }}</button>
+      @endforeach
+    </div>
 
-            <!-- Tab Body -->
-            <div class="p-6">
-                <div x-data="{ activeTab: 'profile' }" class="space-y-6">
-                    <!-- Tab Navigation -->
-                    <div class="border-b border-gray-200 dark:border-gray-800">
-                        <nav class="-mb-px flex space-x-2 overflow-x-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:h-1.5">
-                            <!-- Profile Tab -->
-                            <button
-                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
-                                x-bind:class="activeTab === 'profile' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                                x-on:click="activeTab = 'profile'"
-                            >
-                                <i class="fas fa-user-circle text-lg"></i>
-                                Profile
-                                @if($user->hasRole('borrower') && !$user->hasCompleteBiodata())
-                                    @php $overallPercentage = $user->getBiodataCompletionPercentage(); @endphp
-                                    <span class="inline-flex items-center justify-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-500/15 dark:text-yellow-500">
-                                        {{ $overallPercentage }}%
-                                    </span>
-                                @endif
-                            </button>
-
-                            <!-- Documents Tab -->
-                            <button
-                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
-                                x-bind:class="activeTab === 'documents' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                                x-on:click="activeTab = 'documents'"
-                            >
-                                <i class="fas fa-file-alt text-lg"></i>
-                                Documents
-                                @php
-                                    $docCount = 0;
-                                    if($user->avatar) $docCount++;
-                                    if($user->id_front_path) $docCount++;
-                                    if($user->id_back_path) $docCount++;
-                                    if($user->signature) $docCount++;
-                                @endphp
-                                <span class="inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-600 dark:bg-blue-500/15 dark:text-blue-400">
-                                    {{ $docCount }}/4
-                                </span>
-                            </button>
-
-                            <!-- Employment Tab (Only for borrowers) -->
-                            @if($user->hasRole('borrower'))
-                            <button
-                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
-                                x-bind:class="activeTab === 'employment' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                                x-on:click="activeTab = 'employment'"
-                            >
-                                <i class="fas fa-briefcase text-lg"></i>
-                                Employment
-                            </button>
-                            @endif
-
-                            <!-- Next of Kin Tab -->
-                            @if($user->kin_name)
-                            <button
-                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
-                                x-bind:class="activeTab === 'kin' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                                x-on:click="activeTab = 'kin'"
-                            >
-                                <i class="fas fa-users text-lg"></i>
-                                Next of Kin
-                            </button>
-                            @endif
-
-                            <!-- Loan History Tab -->
-                            <button
-                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
-                                x-bind:class="activeTab === 'loans' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                                x-on:click="activeTab = 'loans'"
-                            >
-                                <i class="fas fa-history text-lg"></i>
-                                Loan History
-                                <span class="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-500/15 dark:text-gray-400">
-                                    {{ $user->loans->count() }}
-                                </span>
-                            </button>
-
-                            <!-- Recovery Tab -->
-                            @if($user->hasAnyRole(['admin', 'teller', 'borrower']) && $user->debtRecoveryCases->count() > 0)
-                            <button
-                                class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-200 ease-in-out whitespace-nowrap"
-                                x-bind:class="activeTab === 'recovery' ? 'text-brand-500 border-brand-500 dark:text-brand-400 dark:border-brand-400' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                                x-on:click="activeTab = 'recovery'"
-                            >
-                                <i class="fas fa-gavel text-lg"></i>
-                                Recovery
-                                <span class="inline-flex items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600 dark:bg-red-500/15 dark:text-red-400">
-                                    {{ $user->debtRecoveryCases->count() }}
-                                </span>
-                            </button>
-                            @endif
-                        </nav>
-                    </div>
-
-                    <!-- Tab Content -->
-                    <div class="pt-4">
-                        <!-- Profile Tab Content -->
-                        <div x-show="activeTab === 'profile'" x-cloak>
-                            <!-- Profile Completion Alert -->
-                            @if($user->hasRole('borrower') && !$user->hasCompleteBiodata())
-                                @php
-                                    $completionData = $user->getBiodataCompletionBySections();
-                                    $overallPercentage = $user->getBiodataCompletionPercentage();
-                                @endphp
-                                <div class="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-5 dark:border-yellow-800 dark:bg-yellow-900/20">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-3">
-                                            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/50">
-                                                <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-500"></i>
-                                            </div>
-                                            <div>
-                                                <h4 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
-                                                    Profile Incomplete ({{ $overallPercentage }}%)
-                                                </h4>
-                                                <p class="text-sm text-yellow-700 dark:text-yellow-300">
-                                                    Complete your profile to get better loan terms
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')"
-                                            class="inline-flex items-center gap-2 rounded-lg border border-yellow-500 bg-yellow-500 px-4 py-2 text-sm font-medium text-yellow-900 transition-colors hover:bg-yellow-600">
-                                            Complete Now <i class="fas fa-arrow-right ml-1"></i>
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Progress Grid -->
-                                    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                        @foreach($completionData['sections'] as $sectionName => $section)
-                                            <div class="rounded-lg border border-yellow-100 bg-white/50 p-3 dark:border-yellow-800/50 dark:bg-gray-800/30">
-                                                <div class="mb-2 flex items-center justify-between">
-                                                    <span class="text-xs font-medium text-yellow-800 dark:text-yellow-300">{{ $section['name'] }}</span>
-                                                    <span class="text-xs font-bold text-yellow-700 dark:text-yellow-400">{{ $section['percentage'] }}%</span>
-                                                </div>
-                                                <div class="h-1.5 rounded-full bg-yellow-100 dark:bg-yellow-900/50">
-                                                    <div class="h-full rounded-full bg-yellow-500 transition-all duration-300" 
-                                                         style="width: {{ $section['percentage'] }}%"></div>
-                                                </div>
-                                                @if(count($section['missing']) > 0)
-                                                    <p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400 truncate" 
-                                                       title="{{ implode(', ', $section['missing']) }}">
-                                                        Missing {{ count($section['missing']) }} field(s)
-                                                    </p>
-                                                @endif
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
-
-                            <!-- Personal Information Grid -->
-                            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                                <!-- Basic Information -->
-                                <div class="space-y-6">
-                                    <div>
-                                        <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Basic Information</h4>
-                                        <div class="space-y-4">
-                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                <span class="text-sm text-gray-500 dark:text-gray-400">Full Name</span>
-                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->name }}</span>
-                                            </div>
-                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                <span class="text-sm text-gray-500 dark:text-gray-400">Email Address</span>
-                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->email }}</span>
-                                            </div>
-                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                <span class="text-sm text-gray-500 dark:text-gray-400">Phone Number</span>
-                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->phone ?? 'N/A' }}</span>
-                                            </div>
-                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                <span class="text-sm text-gray-500 dark:text-gray-400">Gender</span>
-                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ ucfirst($user->gender) ?? 'N/A' }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Personal Details -->
-                                    <div>
-                                        <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Personal Details</h4>
-                                        <div class="space-y-4">
-                                            @if($user->dob)
-                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                <span class="text-sm text-gray-500 dark:text-gray-400">Date of Birth</span>
-                                                <span class="font-medium text-gray-800 dark:text-white/90">
-                                                    {{ \Carbon\Carbon::parse($user->dob)->format('M d, Y') }} 
-                                                    <span class="text-xs text-gray-500">({{ $user->age ?? 'N/A' }} years)</span>
-                                                </span>
-                                            </div>
-                                            @endif
-                                            
-                                            @if($user->nationality)
-                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                <span class="text-sm text-gray-500 dark:text-gray-400">Nationality</span>
-                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->nationality }}</span>
-                                            </div>
-                                            @endif
-                                            
-                                            @if($user->id_number)
-                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                <span class="text-sm text-gray-500 dark:text-gray-400">{{ $user->id_type ?? 'ID' }} Number</span>
-                                                <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->id_number }}</span>
-                                            </div>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Additional Information -->
-                                <div class="space-y-6">
-                                    <!-- Status Information -->
-                                    <div>
-                                        <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status Information</h4>
-                                        <div class="space-y-4">
-                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                <span class="text-sm text-gray-500 dark:text-gray-400">User Status</span>
-                                                <span class="rounded-full px-3 py-1 text-xs font-medium
-                                                    @if($user->status === 0)
-                                                        bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-500
-                                                    @elseif($user->status === 1)
-                                                        bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-500
-                                                    @endif
-                                                ">
-                                                    {{ $user->status === 0 ? 'Active' : 'Inactive' }}
-                                                </span>
-
-                                            </div>
-                                            
-                                            @if($user->hasRole('borrower') && $user->borrower)
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Borrower Status</span>
-                                            
-                                                    <span class="rounded-full px-3 py-1 text-xs font-medium
-                                                        @if((int) $user->borrower->status === 1)
-                                                            bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-500
-                                                        @else
-                                                            bg-gray-100 text-gray-800 dark:bg-gray-500/15 dark:text-gray-400
-                                                        @endif
-                                                    ">
-                                                        {{ (int) $user->borrower->status === 1 ? 'Active' : 'Inactive' }}
-                                                    </span>
-                                                </div>
-                                            @endif
-                                            
-                                                                                        
-                                            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                <span class="text-sm text-gray-500 dark:text-gray-400">Account Created</span>
-                                                <span class="font-medium text-gray-800 dark:text-white/90">
-                                                    {{ \Carbon\Carbon::parse($user->created_at)->format('M d, Y') }}
-                                                </span>
-                                            </div>
-                                            
-                                            <div class="flex items-center justify-between">
-                                                <span class="text-sm text-gray-500 dark:text-gray-400">Last Updated</span>
-                                                <span class="font-medium text-gray-800 dark:text-white/90">
-                                                    {{ \Carbon\Carbon::parse($user->updated_at)->format('M d, Y') }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Additional Details -->
-                                    <div>
-                                        <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Additional Details</h4>
-                                        <div class="grid grid-cols-2 gap-4">
-                                            @if($user->marital_status)
-                                            <div>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">Marital Status</p>
-                                                <p class="font-medium text-gray-800 dark:text-white/90">{{ ucfirst($user->marital_status) }}</p>
-                                            </div>
-                                            @endif
-                                            
-                                            @if($user->education)
-                                            <div>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">Education</p>
-                                                <p class="font-medium text-gray-800 dark:text-white/90">{{ $user->education }}</p>
-                                            </div>
-                                            @endif
-                                            
-                                            @if($user->religion)
-                                            <div>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">Religion</p>
-                                                <p class="font-medium text-gray-800 dark:text-white/90">{{ $user->religion }}</p>
-                                            </div>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Documents Tab Content -->
-                        <div x-show="activeTab === 'documents'" x-cloak>
-                            <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                                <!-- Passport Photo -->
-                                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
-                                    <div class="mb-4 flex items-center justify-between">
-                                        <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">Passport Photo</h4>
-                                        @if($user->avatar)
-                                            <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-500/15 dark:text-green-500">
-                                                Uploaded
-                                            </span>
-                                        @else
-                                            <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-500/15 dark:text-gray-400">
-                                                Missing
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div class="flex justify-center">
-                                        @if($user->avatar)
-                                            <div class="relative group w-full">
-                                                <img 
-                                                    src="{{ $user->documentUrl('photo') }}" 
-                                                    alt="Passport Photo"
-                                                    class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700"
-                                                >
-                                                <a href="{{ $user->documentUrl('photo') }}" target="_blank"
-                                                   class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
-                                                    <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
-                                                </a>
-                                            </div>
-                                        @else
-                                            <x-staff.doc-drop :user="$user" document="photo" :initials="$user->getInitials()" title="Passport photo missing"
-                                                hint="A clear, recent head-and-shoulders photo of the customer, face visible." />
-                                        @endif
-                                    </div>
-                                    @if($user->avatar)
-                                        <div class="mt-4 flex justify-center">
-                                            <a href="{{ $user->documentUrl('photo') }}" target="_blank"
-                                               class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
-                                                <i class="fas fa-external-link-alt"></i> View Full Size
-                                            </a>
-                                        </div>
-                                    @endif
-                                </div>
-
-                                <!-- ID Front -->
-                                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
-                                    <div class="mb-4 flex items-center justify-between">
-                                        <div>
-                                            <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">ID Front</h4>
-                                            @if($user->id_type)
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $user->id_type }}</p>
-                                            @endif
-                                        </div>
-                                        @if($user->id_front_path)
-                                            <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-500/15 dark:text-green-500">
-                                                Uploaded
-                                            </span>
-                                        @else
-                                            <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-500/15 dark:text-gray-400">
-                                                Missing
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div class="flex justify-center">
-                                        @if($user->id_front_path)
-                                            <div class="relative group w-full">
-                                                <img
-                                                    src="{{ $user->documentUrl('id-front') }}"
-                                                    alt="ID Front"
-                                                    class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700"
-                                                >
-                                                <a href="{{ $user->documentUrl('id-front') }}" target="_blank"
-                                                   class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
-                                                    <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
-                                                </a>
-                                            </div>
-                                        @else
-                                            <x-staff.doc-drop :user="$user" document="id-front" icon="fa-id-card" title="ID front missing"
-                                                hint="Front of the national ID (photo side), or the passport bio page." />
-                                        @endif
-                                    </div>
-                                    @if($user->id_front_path)
-                                        <div class="mt-4 flex justify-center">
-                                            <a href="{{ $user->documentUrl('id-front') }}" target="_blank"
-                                               class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
-                                                <i class="fas fa-external-link-alt"></i> View Full Size
-                                            </a>
-                                        </div>
-                                    @endif
-                                </div>
-
-                                <!-- ID Back -->
-                                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
-                                    <div class="mb-4 flex items-center justify-between">
-                                        <div>
-                                            <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">ID Back</h4>
-                                            @if($user->id_type)
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $user->id_type }}</p>
-                                            @endif
-                                        </div>
-                                        @if($user->id_back_path)
-                                            <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-500/15 dark:text-green-500">
-                                                Uploaded
-                                            </span>
-                                        @else
-                                            <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-500/15 dark:text-gray-400">
-                                                Missing
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div class="flex justify-center">
-                                        @if($user->id_back_path)
-                                            <div class="relative group w-full">
-                                                <img
-                                                    src="{{ $user->documentUrl('id-back') }}"
-                                                    alt="ID Back"
-                                                    class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700"
-                                                >
-                                                <a href="{{ $user->documentUrl('id-back') }}" target="_blank"
-                                                   class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
-                                                    <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
-                                                </a>
-                                            </div>
-                                        @else
-                                            <x-staff.doc-drop :user="$user" document="id-back" icon="fa-id-card" title="ID back missing"
-                                                hint="Back of the national ID. Not needed for a passport." />
-                                        @endif
-                                    </div>
-                                    @if($user->id_back_path)
-                                        <div class="mt-4 flex justify-center">
-                                            <a href="{{ $user->documentUrl('id-back') }}" target="_blank"
-                                               class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
-                                                <i class="fas fa-external-link-alt"></i> View Full Size
-                                            </a>
-                                        </div>
-                                    @endif
-                                </div>
-
-                                <!-- Signature -->
-                                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
-                                    <div class="mb-4 flex items-center justify-between">
-                                        <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">Digital Signature</h4>
-                                        @if($user->signature)
-                                            <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-500/15 dark:text-green-500">
-                                                Uploaded
-                                            </span>
-                                        @else
-                                            <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-500/15 dark:text-gray-400">
-                                                Missing
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div class="flex justify-center">
-                                        @if($user->signature)
-                                            <div class="relative group w-full">
-                                                <img
-                                                    src="{{ $user->documentUrl('signature') }}"
-                                                    alt="Digital Signature"
-                                                    class="h-48 w-full rounded-lg object-contain border border-gray-200 dark:border-gray-700 bg-white p-4"
-                                                >
-                                                <a href="{{ $user->documentUrl('signature') }}" target="_blank"
-                                                   class="absolute inset-0 rounded-lg flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all">
-                                                    <i class="fas fa-search text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl"></i>
-                                                </a>
-                                            </div>
-                                        @else
-                                            <x-staff.doc-drop :user="$user" document="signature" icon="fa-signature" title="Signature missing"
-                                                hint="The customer's signature on plain white paper, cropped close." />
-                                        @endif
-                                    </div>
-                                    @if($user->signature)
-                                        <div class="mt-4 flex justify-center">
-                                            <a href="{{ $user->documentUrl('signature') }}" target="_blank"
-                                               class="inline-flex items-center gap-2 text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
-                                                <i class="fas fa-external-link-alt"></i> View Full Size
-                                            </a>
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-
-                            <!-- Selfies (KYC: straight, left, right) -->
-                            <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-                                @foreach (['selfie-center' => ['selfie_center_path', 'Selfie: straight', 'Customer looking straight at the camera, face fully visible.'],
-                                           'selfie-left' => ['selfie_left_path', 'Selfie: turned left', 'Customer with the head turned to their left (side of the face).'],
-                                           'selfie-right' => ['selfie_right_path', 'Selfie: turned right', 'Customer with the head turned to their right (other side).']] as $docKey => [$column, $docTitle, $docHint])
-                                    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
-                                        <div class="mb-4 flex items-center justify-between">
-                                            <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ $docTitle }}</h4>
-                                            <span class="rounded-full px-2 py-1 text-xs font-medium {{ $user->{$column} ? 'bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-500' : 'bg-gray-100 text-gray-600 dark:bg-gray-500/15 dark:text-gray-400' }}">{{ $user->{$column} ? 'Uploaded' : 'Missing' }}</span>
-                                        </div>
-                                        @if ($user->{$column})
-                                            <a href="{{ $user->documentUrl($docKey) }}" target="_blank" class="block">
-                                                <img src="{{ $user->documentUrl($docKey) }}" alt="{{ $docTitle }}" class="h-48 w-full rounded-lg object-cover border border-gray-200 dark:border-gray-700">
-                                            </a>
-                                        @else
-                                            <x-staff.doc-drop :user="$user" :document="$docKey" icon="fa-user" :title="$docTitle . ' missing'" :hint="$docHint" />
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
-</div>
-
-                        <!-- Employment Tab Content -->
-                        @if($user->hasRole('borrower'))
-                        <div x-show="activeTab === 'employment'" x-cloak>
-                            @if($user->borrower && $user->borrower->income_type)
-                                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                                    <!-- Employment Details -->
-                                    <div class="space-y-6">
-                                        <div>
-                                            <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Employment Details</h4>
-                                            <div class="space-y-4">
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Client Type</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">
-                                                        {{ $user->borrower->client_type === 0 ? 'Individual' : 'Non-Individual/Corporate' }}
-                                                    </span>
-                                                </div>
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Employment Status</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">
-                                                        {{ ucfirst(str_replace('_', ' ', $user->borrower->income_type)) }}
-                                                    </span>
-                                                </div>
-                                                @if($user->borrower->job_title)
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Job Title</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->borrower->job_title }}</span>
-                                                </div>
-                                                @endif
-                                                @if($user->borrower->department)
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Department</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->borrower->department }}</span>
-                                                </div>
-                                                @endif
-                                            </div>
-                                        </div>
-
-                                        <!-- Salary Information -->
-                                        <div>
-                                            <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Salary Information</h4>
-                                            <div class="space-y-4">
-                                                @if($user->borrower->gross_salary)
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Gross Salary</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">KES {{ number_format($user->borrower->gross_salary, 2) }}</span>
-                                                </div>
-                                                @endif
-                                                @if($user->borrower->net_salary)
-                                                <div class="flex items-center justify-between">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Net Salary</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">KES {{ number_format($user->borrower->net_salary, 2) }}</span>
-                                                </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Organization Details -->
-                                    <div class="space-y-6">
-                                        <div>
-                                            <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Organization Details</h4>
-                                            <div class="space-y-4">
-                                                @if($user->borrower->employer_name)
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Employer Name</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->borrower->employer_name }}</span>
-                                                </div>
-                                                @endif
-                                                @if($user->borrower->workplace)
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Workplace</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->borrower->workplace }}</span>
-                                                </div>
-                                                @endif
-                                                @if($user->borrower->employer_email)
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Organization Email</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->borrower->employer_email }}</span>
-                                                </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @else
-                                <div class="text-center py-8">
-                                    <i class="fas fa-briefcase text-gray-400 text-4xl mb-4"></i>
-                                    <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Employment Information</h4>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Employment information has not been added yet</p>
-                                    <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')"
-                                        class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs transition-colors hover:bg-brand-600">
-                                        <i class="fas fa-plus"></i> Add Employment Details
-                                    </button>
-                                </div>
-                            @endif
-                        </div>
-                        @endif
-
-                        <!-- Next of Kin Tab Content -->
-                        <div x-show="activeTab === 'kin'" x-cloak>
-                            @if($user->kin_name)
-                                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                                    <div class="space-y-6">
-                                        <!-- Kin Details -->
-                                        <div>
-                                            <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Next of Kin Details</h4>
-                                            <div class="space-y-4">
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Full Name</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->kin_name }}</span>
-                                                </div>
-                                                @if($user->kin_relation)
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Relationship</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->kin_relation }}</span>
-                                                </div>
-                                                @endif
-                                                @if($user->kin_phone)
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Phone Number</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->kin_phone }}</span>
-                                                </div>
-                                                @endif
-                                                @if($user->kin_email)
-                                                <div class="flex items-center justify-between">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Email Address</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->kin_email }}</span>
-                                                </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Additional Kin Information -->
-                                    <div class="space-y-6">
-                                        @if($user->kin_occupation)
-                                        <div>
-                                            <h4 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Additional Information</h4>
-                                            <div class="space-y-4">
-                                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Occupation</span>
-                                                    <span class="font-medium text-gray-800 dark:text-white/90">{{ $user->kin_occupation }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            @else
-                                <div class="text-center py-8">
-                                    <i class="fas fa-users text-gray-400 text-4xl mb-4"></i>
-                                    <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Next of Kin Information</h4>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Next of kin information has not been added yet</p>
-                                    <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')"
-                                        class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs transition-colors hover:bg-brand-600">
-                                        <i class="fas fa-plus"></i> Add Next of Kin
-                                    </button>
-                                </div>
-                            @endif
-                        </div>
-
-                        <!-- Loan History Tab Content -->
-                        <div x-show="activeTab === 'loans'" x-cloak>
-                            @if($user->loans->count() > 0)
-                                @include('partials.table.table-loans', ['loans' => $user->loans, 'userView' => true])
-                            @else
-                                <div class="text-center py-8">
-                                    <i class="fas fa-history text-gray-400 text-4xl mb-4"></i>
-                                    <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Loan History</h4>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">This user has no loan history yet</p>
-                                    @if($user->hasRole('borrower'))
-                                        <a href="{{ route('loans.create', $user->id) }}" 
-                                           class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-xs transition-colors hover:bg-brand-600">
-                                            <i class="fas fa-plus"></i> Create First Loan
-                                        </a>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-
-                        <!-- Recovery Tab Content -->
-                        <div x-show="activeTab === 'recovery'" x-cloak>
-                            @if($user->debtRecoveryCases->count() > 0)
-                                @foreach($user->debtRecoveryCases as $case)
-                                <div class="mb-6 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-                                    <div class="flex items-center justify-between mb-4">
-                                        <div>
-                                            <h4 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-                                                Case #{{ $case->case_number }}
-                                            </h4>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                                Started: {{ $case->created_at->format('M d, Y') }}
-                                                @if($case->loan)
-                                                <span class="ml-4">Loan: #{{ $case->loan->loan_reference ?? $case->loan->id }}</span>
-                                                @endif
-                                            </p>
-                                        </div>
-                                        <div class="flex items-center gap-3">
-                                            @include('partials.recovery.status-badge', ['status' => $case->status])
-                                            @include('partials.recovery.priority-badge', ['priority' => $case->priority])
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">Total Debt</p>
-                                            <p class="text-lg font-bold text-red-600">KES {{ number_format($case->total_debt_amount, 2) }}</p>
-                                        </div>
-                                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">Recovered</p>
-                                            <p class="text-lg font-bold text-green-600">KES {{ number_format($case->getTotalRecovered(), 2) }}</p>
-                                        </div>
-                                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">Remaining</p>
-                                            <p class="text-lg font-bold text-orange-600">KES {{ number_format($case->getRemainingBalance(), 2) }}</p>
-                                        </div>
-                                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">Days in Default</p>
-                                            <p class="text-lg font-bold {{ $case->days_in_default > 90 ? 'text-red-600' : ($case->days_in_default > 30 ? 'text-orange-600' : 'text-gray-600') }}">
-                                                {{ $case->days_in_default }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    
-                                    @if($case->actions->count() > 0)
-                                    <div class="mt-4">
-                                        <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Recent Actions</h5>
-                                        @include('partials.recovery.action-timeline', ['actions' => $case->actions->take(3)])
-                                        <a href="{{ route('recovery.cases.show', $case) }}" class="text-sm text-brand-600 hover:text-brand-700">
-                                            View All Actions →
-                                        </a>
-                                    </div>
-                                    @endif
-
-                                    @if($case->paymentPlans->count() > 0)
-                                    @php $activePlan = $case->getActivePaymentPlan(); @endphp
-                                    @if($activePlan)
-                                    <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                        <div class="flex items-center justify-between">
-                                            <div>
-                                                <p class="text-sm font-medium text-blue-800 dark:text-blue-300">
-                                                    Active Payment Plan
-                                                </p>
-                                                <p class="text-xs text-blue-600 dark:text-blue-400">
-                                                    {{ $activePlan->installment_frequency }} installments of KES {{ number_format($activePlan->installment_amount, 2) }}
-                                                </p>
-                                            </div>
-                                            <div class="text-right">
-                                                <p class="text-sm font-medium text-blue-800 dark:text-blue-300">
-                                                    {{ $activePlan->progress_percentage }}% Complete
-                                                </p>
-                                                <div class="w-32 bg-blue-200 rounded-full h-2 dark:bg-blue-800">
-                                                    <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $activePlan->progress_percentage }}%"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    @endif
-                                    @endif
-                                </div>
-                                @endforeach
-                            @else
-                                <div class="text-center py-8">
-                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <h4 class="mt-2 text-lg font-medium text-gray-700 dark:text-gray-300">No Recovery Cases</h4>
-                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">This user has no debt recovery cases</p>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
+    {{-- OVERVIEW --}}
+    <div x-show="tab === 'overview'" class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+      @if ($kind === 'borrower')
+        <div class="space-y-6 xl:col-span-2">
+          <div class="{{ $card }}">
+            <h3 class="mb-4 {{ $h }}">Open loans</h3>
+            @forelse ($open as $o)
+              @php $l = $o['loan']; @endphp
+              <a href="{{ route('loans.show', $l->id) }}" class="mb-3 flex items-center gap-4 rounded-xl border border-gray-200 p-4 last:mb-0 hover:border-brand-300 dark:border-gray-800">
+                <span class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-500 dark:bg-brand-500/15"><x-ui.icon name="briefcase" class="size-5" /></span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-theme-sm font-medium text-gray-800 dark:text-white/90">Loan #{{ $l->id }} · {{ $l->loanType->name ?? 'Loan' }}</span>
+                  <span class="block text-theme-xs text-gray-500">Borrowed {{ optional($l->borrow_date)->format('j M Y') }}{{ $l->due_date ? ' · due ' . \Illuminate\Support\Carbon::parse($l->due_date)->format('j M Y') : '' }} · {{ ucfirst($l->status) }}</span>
+                </span>
+                <span class="text-right"><span class="block {{ $label }}">Owes today</span><span class="text-theme-sm font-semibold text-gray-800 dark:text-white/90">KES {{ number_format($o['owed'], 2) }}</span></span>
+              </a>
+            @empty
+              <p class="text-theme-sm text-gray-500">No open loans.</p>
+            @endforelse
+          </div>
+          <div class="{{ $card }}">
+            <h3 class="mb-4 {{ $h }}">Recent payments</h3>
+            <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+              @forelse ($p->payments(8) as $pay)
+                <li class="flex items-center justify-between gap-3 py-2.5 text-theme-sm">
+                  <span><span class="font-medium text-gray-800 dark:text-white/90">{{ \Illuminate\Support\Carbon::parse($pay->repayment_date)->format('j M Y') }}</span> <span class="text-gray-500">· loan #{{ $pay->loan_id }} · {{ ucfirst($pay->mode ?? '') }} {{ $pay->kind && $pay->kind !== 'cash' ? '· ' . str_replace('_', ' ', $pay->kind) : '' }}</span></span>
+                  <span class="font-medium text-gray-800 dark:text-white/90">KES {{ number_format((float) $pay->amount, 2) }}</span>
+                </li>
+              @empty
+                <li class="py-3 text-theme-sm text-gray-500">No payments yet.</li>
+              @endforelse
+            </ul>
+          </div>
+        </div>
+        <div class="space-y-6">
+          @if (! empty($credit['scores']))
+            <div class="{{ $card }}">
+              <h3 class="mb-4 {{ $h }}">4Cs today</h3>
+              @foreach ($credit['scores'] as $name => $score)
+                <div class="mb-3">
+                  <div class="mb-1 flex justify-between text-theme-sm"><span class="text-gray-600 dark:text-gray-400">{{ ucfirst($name) }}</span><span class="font-medium text-gray-800 dark:text-white/90">{{ is_numeric($score) ? round($score) : $score }}</span></div>
+                  <div class="h-2 rounded-full bg-gray-100 dark:bg-gray-800"><div class="h-2 rounded-full {{ (float) $score >= 70 ? 'bg-success-500' : ((float) $score >= 40 ? 'bg-amber-400' : 'bg-error-500') }}" style="width: {{ min(100, max(0, (float) $score)) }}%"></div></div>
                 </div>
+              @endforeach
+              @if (isset($credit['limit']['limit']))<p class="mt-4 text-theme-sm text-gray-600 dark:text-gray-400">{{ $credit['limit']['label'] ?? 'Limit' }}: <span class="font-medium text-gray-800 dark:text-white/90">KES {{ number_format((float) $credit['limit']['limit'], 2) }}</span></p>@endif
             </div>
+          @endif
+          <div class="{{ $card }}">
+            <h3 class="mb-4 {{ $h }}">Personal details</h3>
+            <dl class="grid grid-cols-2 gap-4">
+              <div><dt class="{{ $label }}">Date of birth</dt><dd class="{{ $val }}">{{ $user->dob ? \Illuminate\Support\Carbon::parse($user->dob)->format('j M Y') . ' (' . \Illuminate\Support\Carbon::parse($user->dob)->age . ')' : '—' }}</dd></div>
+              <div><dt class="{{ $label }}">Gender</dt><dd class="{{ $val }}">{{ $user->gender ? ucfirst($user->gender) : '—' }}</dd></div>
+              <div><dt class="{{ $label }}">Marital status</dt><dd class="{{ $val }}">{{ $user->marital_status ? ucfirst($user->marital_status) : '—' }}</dd></div>
+              <div><dt class="{{ $label }}">KRA PIN</dt><dd class="{{ $val }}">{{ $user->kra_pin ?: '—' }}</dd></div>
+              <div class="col-span-2"><dt class="{{ $label }}">Address</dt><dd class="{{ $val }}">{{ $address ? trim($address->address_line_1 . ', ' . $address->city, ', ') : '—' }}</dd></div>
+              <div class="col-span-2"><dt class="{{ $label }}">Work</dt><dd class="{{ $val }}">{{ $b ? trim(($b->job_title ? $b->job_title . ' at ' : '') . ($b->employer_name ?: $b->workplace)) ?: '—' : '—' }}{{ $b && $b->net_salary ? ' · net KES ' . number_format((float) $b->net_salary) : '' }}</dd></div>
+            </dl>
+          </div>
+          <div class="{{ $card }}">
+            <h3 class="mb-4 {{ $h }}">People to call</h3>
+            @foreach (['Next of kin' => $kin, 'Guarantor' => $guarantor] as $t => $c)
+              <div class="mb-3 rounded-xl bg-gray-50 p-3 last:mb-0 dark:bg-white/[0.03]">
+                <p class="{{ $label }}">{{ $t }}{{ $c && $t === 'Next of kin' && $c->relationship_specific ? ' · ' . $c->relationship_specific : '' }}</p>
+                @if ($c)<p class="{{ $val }}">{{ $c->name }}</p><a href="tel:{{ $c->phone }}" class="text-theme-sm text-brand-500">{{ $c->phone }}</a>
+                @elseif ($t === 'Next of kin' && $user->kin_name)<p class="{{ $val }}">{{ $user->kin_name }}</p><a href="tel:{{ $user->kin_phone }}" class="text-theme-sm text-brand-500">{{ $user->kin_phone }}</a>
+                @else<p class="text-theme-sm text-gray-500">Not provided</p>@endif
+              </div>
+            @endforeach
+          </div>
         </div>
+      @elseif ($kind === 'partner')
+        <div class="{{ $card }} xl:col-span-3">
+          @php $partner = $p->partner(); @endphp
+          <h3 class="mb-4 {{ $h }}">Partner account</h3>
+          @if ($partner)
+            <dl class="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div><dt class="{{ $label }}">Name</dt><dd class="{{ $val }}">{{ $partner->name }}</dd></div>
+              <div><dt class="{{ $label }}">Type</dt><dd class="{{ $val }}">{{ ucfirst($partner->type ?? '—') }}</dd></div>
+              <div><dt class="{{ $label }}">Broker rate</dt><dd class="{{ $val }}">{{ $partner->broker_rate !== null ? $partner->broker_rate . '%' : '—' }}</dd></div>
+              <div><dt class="{{ $label }}">Profit share</dt><dd class="{{ $val }}">{{ $partner->profit_share_rate !== null ? $partner->profit_share_rate . '%' : '—' }}</dd></div>
+              <div><dt class="{{ $label }}">Bank</dt><dd class="{{ $val }}">{{ trim(($partner->bank_name ?? '') . ' ' . ($partner->bank_account_number ?? '')) ?: '—' }}</dd></div>
+              <div><dt class="{{ $label }}">Status</dt><dd class="{{ $val }}">{{ ucfirst($partner->status ?? '—') }}</dd></div>
+            </dl>
+            @if (\Illuminate\Support\Facades\Route::has('partners.show'))<a href="{{ route('partners.show', $partner->id) }}" class="mt-5 inline-flex {{ $btn }}">Open partner page</a>@endif
+          @else
+            <p class="text-theme-sm text-gray-500">No partner account linked.</p>
+          @endif
+        </div>
+      @else
+        <div class="{{ $card }}">
+          <h3 class="mb-4 {{ $h }}">Access</h3>
+          <div class="flex flex-wrap gap-1.5">@foreach ($id['roles'] as $r)<span class="rounded-full bg-brand-50 px-2.5 py-1 text-theme-xs font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">{{ $r }}</span>@endforeach</div>
+          <p class="mt-4 text-theme-sm text-gray-600 dark:text-gray-400">{{ $user->getAllPermissions()->count() }} permissions through these roles.</p>
+          @if (\Illuminate\Support\Facades\Route::has('staff.roles'))<a href="{{ route('staff.roles') }}" class="mt-4 inline-flex {{ $btn }}">Roles & permissions</a>@endif
+        </div>
+        <div class="{{ $card }} xl:col-span-2">
+          <h3 class="mb-4 {{ $h }}">Recent work</h3>
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            @forelse ($p->recentWork(12) as $w)
+              <li class="flex justify-between gap-3 py-2.5 text-theme-sm"><span class="text-gray-700 dark:text-gray-300">{{ ucfirst($w->action) }} {{ str_replace('_', ' ', \Illuminate\Support\Str::singular($w->table_name)) }} #{{ $w->record_id }}</span><span class="text-theme-xs text-gray-500">{{ \Illuminate\Support\Carbon::parse($w->created_at)->format('j M Y H:i') }}</span></li>
+            @empty
+              <li class="py-3 text-theme-sm text-gray-500">Nothing recorded yet.</li>
+            @endforelse
+          </ul>
+        </div>
+      @endif
     </div>
 
-    <!-- Edit Profile Modal -->
-    <div id="editProfileModal" class="fixed inset-0 z-99999 overflow-y-auto hidden">
-        <div class="flex items-center justify-center min-h-screen p-5">
-            <!-- Backdrop -->
-            <div onclick="document.getElementById('editProfileModal').classList.add('hidden')" 
-                 class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]"></div>
-            
-            <!-- Modal Content -->
-            <div class="relative w-full max-w-4xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10 z-50 max-h-[90vh] overflow-y-auto">
-                <!-- close btn -->
-                <button onclick="document.getElementById('editProfileModal').classList.add('hidden')" 
-                        class="group absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
-                    <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M6.04289 16.5413C5.65237 16.9318 5.65237 17.565 6.04289 17.9555C6.43342 18.346 7.06658 18.346 7.45711 17.9555L11.9987 13.4139L16.5408 17.956C16.9313 18.3466 17.5645 18.3466 17.955 17.956C18.3455 17.5655 18.3455 16.9323 17.955 16.5418L13.4129 11.9997L17.955 7.4576C18.3455 7.06707 18.3455 6.43391 17.955 6.04338C17.5645 5.65286 16.9313 5.65286 16.5408 6.04338L11.9987 10.5855L7.45711 6.0439C7.06658 5.65338 6.43342 5.65338 6.04289 6.0439C5.65237 6.43442 5.65237 7.06759 6.04289 7.45811L10.5845 11.9997L6.04289 16.5413Z" fill=""/>
-                    </svg>
-                </button>
+    {{-- LOANS --}}
+    @if (isset($tabs['loans']))
+      <div x-show="tab === 'loans'" x-cloak>
+        @include('partials.table.table-loans', ['loans' => $user->loans()->with(['loanType', 'repayments', 'user'])->orderByDesc('borrow_date')->get(), 'userView' => true, 'showUserColumn' => false, 'context' => 'user-' . $user->id])
+      </div>
+    @endif
 
-                <form method="POST" action="{{ route('users.update', $user->id) }}" enctype="multipart/form-data" id="editProfileForm" class="space-y-8">
-                    @csrf
-                    @method('PUT')
-            
-                    
-                    <h4 class="text-lg font-medium text-gray-800 dark:text-white/90 mb-6">
-                        Edit User Profile
-                    </h4>
-                    
-                    <input type="hidden" name="status" value="{{ $user->status }}">
-                    @if($user->hasRole('borrower') && $user->borrower)
-                        <input type="hidden" name="borrower_status" value="{{ $user->borrower->status }}">
-                    @endif
-
-                    <!-- Section 1: Basic Information -->
-                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
-                        <h5 class="mb-4 text-sm font-medium text-gray-700 dark:text-gray-300">Basic Information</h5>
-                        <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Full Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value="{{ old('name', $user->name) }}"
-                                    required
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Email Address *
-                                </label>
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value="{{ old('email', $user->email) }}"
-                                    required
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Phone Number *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="phone"
-                                    value="{{ old('phone', $user->phone) }}"
-                                    required
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Gender
-                                </label>
-                                <select name="gender" class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
-                                    <option value="">Select Gender</option>
-                                    <option value="male" {{ old('gender', $user->gender) == 'male' ? 'selected' : '' }}>Male</option>
-                                    <option value="female" {{ old('gender', $user->gender) == 'female' ? 'selected' : '' }}>Female</option>
-                                    <option value="other" {{ old('gender', $user->gender) == 'other' ? 'selected' : '' }}>Other</option>
-                                </select>
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Date of Birth
-                                </label>
-                                <input
-                                    type="date"
-                                    name="dob"
-                                    value="{{ old('dob', $user->dob ? \Carbon\Carbon::parse($user->dob)->format('Y-m-d') : '') }}"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                                @if($user->dob)
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        Current: {{ \Carbon\Carbon::parse($user->dob)->format('M d, Y') }}
-                                        ({{ $user->age ?? 'N/A' }} years old)
-                                    </p>
-                                @endif
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Nationality
-                                </label>
-                                <select name="nationality" class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
-                                    <option value="">Select Nationality</option>
-                                    @if(class_exists('PragmaRX\Countries\Package\Countries'))
-                                        @foreach(\PragmaRX\Countries\Package\Countries::all()->pluck('name.common')->sort() as $country)
-                                            <option value="{{ $country }}" {{ old('nationality', $user->nationality) == $country ? 'selected' : '' }}>{{ $country }}</option>
-                                        @endforeach
-                                    @else
-                                        <!-- Fallback to common countries -->
-                                        <option value="Kenyan" {{ old('nationality', $user->nationality) == 'Kenyan' ? 'selected' : '' }}>Kenyan</option>
-                                        <option value="Ugandan" {{ old('nationality', $user->nationality) == 'Ugandan' ? 'selected' : '' }}>Ugandan</option>
-                                        <option value="Tanzanian" {{ old('nationality', $user->nationality) == 'Tanzanian' ? 'selected' : '' }}>Tanzanian</option>
-                                        <option value="Rwandan" {{ old('nationality', $user->nationality) == 'Rwandan' ? 'selected' : '' }}>Rwandan</option>
-                                        <option value="Burundian" {{ old('nationality', $user->nationality) == 'Burundian' ? 'selected' : '' }}>Burundian</option>
-                                    @endif
-                                </select>
-                            </div>
-
-                            @if(auth()->user()->hasRole('admin'))
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Role *
-                                </label>
-                                <select name="role" required class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
-                                    <option value="borrower" {{ old('role', $user->role) == 'borrower' ? 'selected' : '' }}>Borrower</option>
-                                    <option value="broker" {{ old('role', $user->role) == 'broker' ? 'selected' : '' }}>Broker</option>
-                                    <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Admin</option>
-                                    <option value="teller" {{ old('role', $user->role) == 'teller' ? 'selected' : '' }}>Teller</option>
-                                </select>
-                            </div>
-                            @else
-                            <input type="hidden" name="role" value="{{ $user->role }}">
-                            @endif
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Password (Leave blank to keep current)
-                                </label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    placeholder="Enter new password"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Section 2: Personal Details -->
-                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
-                        <h5 class="mb-4 text-sm font-medium text-gray-700 dark:text-gray-300">Personal Details</h5>
-                        <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    ID Type
-                                </label>
-                                <select name="id_type" class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
-                                    <option value="">Select ID Type</option>
-                                    @foreach (\App\Models\User::ID_TYPES as $idValue => $idLabel)
-                                        <option value="{{ $idValue }}" @selected(\App\Models\User::normaliseIdType(old('id_type', $user->id_type)) === $idValue)>{{ $idLabel }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    ID Number
-                                </label>
-                                <input
-                                    type="text"
-                                    name="id_number"
-                                    value="{{ old('id_number', $user->id_number) }}"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Marital Status
-                                </label>
-                                <select name="marital_status" class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
-                                    <option value="">Select Status</option>
-                                    <option value="single" {{ old('marital_status', $user->marital_status) == 'single' ? 'selected' : '' }}>Single</option>
-                                    <option value="married" {{ old('marital_status', $user->marital_status) == 'married' ? 'selected' : '' }}>Married</option>
-                                    <option value="divorced" {{ old('marital_status', $user->marital_status) == 'divorced' ? 'selected' : '' }}>Divorced</option>
-                                    <option value="separated" {{ old('marital_status', $user->marital_status) == 'separated' ? 'selected' : '' }}>Separated</option>
-                                    <option value="widowed" {{ old('marital_status', $user->marital_status) == 'widowed' ? 'selected' : '' }}>Widowed</option>
-                                </select>
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Education Level
-                                </label>
-                                <select name="education" class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
-                                    <option value="">Select Education Level</option>
-                                    <option value="No Formal Education" {{ old('education', $user->education) == 'No Formal Education' ? 'selected' : '' }}>No Formal Education</option>
-                                    <option value="Primary School" {{ old('education', $user->education) == 'Primary School' ? 'selected' : '' }}>Primary School</option>
-                                    <option value="Secondary School" {{ old('education', $user->education) == 'Secondary School' ? 'selected' : '' }}>Secondary School</option>
-                                    <option value="High School" {{ old('education', $user->education) == 'High School' ? 'selected' : '' }}>High School</option>
-                                    <option value="Certificate" {{ old('education', $user->education) == 'Certificate' ? 'selected' : '' }}>Certificate</option>
-                                    <option value="Diploma" {{ old('education', $user->education) == 'Diploma' ? 'selected' : '' }}>Diploma</option>
-                                    <option value="Bachelor's Degree" {{ old('education', $user->education) == 'Bachelor\'s Degree' ? 'selected' : '' }}>Bachelor's Degree</option>
-                                    <option value="Master's Degree" {{ old('education', $user->education) == 'Master\'s Degree' ? 'selected' : '' }}>Master's Degree</option>
-                                    <option value="Doctorate" {{ old('education', $user->education) == 'Doctorate' ? 'selected' : '' }}>Doctorate</option>
-                                    <option value="Other" {{ old('education', $user->education) == 'Other' ? 'selected' : '' }}>Other</option>
-                                </select>
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Religion
-                                </label>
-                                <select name="religion" class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
-                                    <option value="">Select Religion</option>
-                                    <option value="Christianity" {{ old('religion', $user->religion) == 'Christianity' ? 'selected' : '' }}>Christianity</option>
-                                    <option value="Islam" {{ old('religion', $user->religion) == 'Islam' ? 'selected' : '' }}>Islam</option>
-                                    <option value="Hinduism" {{ old('religion', $user->religion) == 'Hinduism' ? 'selected' : '' }}>Hinduism</option>
-                                    <option value="Buddhism" {{ old('religion', $user->religion) == 'Buddhism' ? 'selected' : '' }}>Buddhism</option>
-                                    <option value="Traditional African" {{ old('religion', $user->religion) == 'Traditional African' ? 'selected' : '' }}>Traditional African</option>
-                                    <option value="Atheist" {{ old('religion', $user->religion) == 'Atheist' ? 'selected' : '' }}>Atheist</option>
-                                    <option value="Agnostic" {{ old('religion', $user->religion) == 'Agnostic' ? 'selected' : '' }}>Agnostic</option>
-                                    <option value="Other" {{ old('religion', $user->religion) == 'Other' ? 'selected' : '' }}>Other</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Section 3: Next of Kin -->
-                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
-                        <h5 class="mb-4 text-sm font-medium text-gray-700 dark:text-gray-300">Next of Kin</h5>
-                        <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="kin_name"
-                                    value="{{ old('kin_name', $user->kin_name) }}"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Relationship *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="kin_relation"
-                                    value="{{ old('kin_relation', $user->kin_relation) }}"
-                                    placeholder="e.g., Spouse, Parent, Sibling"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Phone Number
-                                </label>
-                                <input
-                                    type="text"
-                                    name="kin_phone"
-                                    value="{{ old('kin_phone', $user->kin_phone) }}"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Email
-                                </label>
-                                <input
-                                    type="email"
-                                    name="kin_email"
-                                    value="{{ old('kin_email', $user->kin_email) }}"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Occupation
-                                </label>
-                                <input
-                                    type="text"
-                                    name="kin_occupation"
-                                    value="{{ old('kin_occupation', $user->kin_occupation) }}"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Section 4: Employment Information (Only for Borrowers) -->
-                    @if($user->hasRole('borrower'))
-                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
-                        <h5 class="mb-4 text-sm font-medium text-gray-700 dark:text-gray-300">Employment Information</h5>
-                        <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Client Type *
-                                </label>
-                                <select name="client_type" class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
-                                    <option value="">Select Client Type</option>
-                                    <option value="individual" {{ old('client_type', $user->borrower->client_type ?? '') == 'individual' || (isset($user->borrower) && $user->borrower->client_type == 0) ? 'selected' : '' }}>Individual</option>
-                                    <option value="non_individual" {{ old('client_type', $user->borrower->client_type ?? '') == 'non_individual' || (isset($user->borrower) && $user->borrower->client_type == 1) ? 'selected' : '' }}>Non-Individual/Corporate</option>
-                                </select>
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Employment Status *
-                                </label>
-                                <select name="income_type" class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
-                                    <option value="">Select Employment Status</option>
-                                    <option value="employed" {{ old('income_type', $user->borrower->income_type ?? '') == 'employed' ? 'selected' : '' }}>Employed</option>
-                                    <option value="self_employed" {{ old('income_type', $user->borrower->income_type ?? '') == 'self_employed' ? 'selected' : '' }}>Self Employed</option>
-                                    <option value="business" {{ old('income_type', $user->borrower->income_type ?? '') == 'business' ? 'selected' : '' }}>Business Owner</option>
-                                    <option value="contract" {{ old('income_type', $user->borrower->income_type ?? '') == 'contract' ? 'selected' : '' }}>Contract Worker</option>
-                                    <option value="freelance" {{ old('income_type', $user->borrower->income_type ?? '') == 'freelance' ? 'selected' : '' }}>Freelancer</option>
-                                    <option value="casual" {{ old('income_type', $user->borrower->income_type ?? '') == 'casual' ? 'selected' : '' }}>Casual Worker</option>
-                                    <option value="student" {{ old('income_type', $user->borrower->income_type ?? '') == 'student' ? 'selected' : '' }}>Student</option>
-                                    <option value="unemployed" {{ old('income_type', $user->borrower->income_type ?? '') == 'unemployed' ? 'selected' : '' }}>Unemployed</option>
-                                </select>
-                            </div>
-
-                            <!-- Organization Information -->
-                            <div class="col-span-2">
-                                <h6 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Organization Information</h6>
-                                <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-                                    <div class="col-span-1">
-                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                            Organization/Employer Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="employer_name"
-                                            value="{{ old('employer_name', $user->borrower->employer_name ?? '') }}"
-                                            class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                        />
-                                    </div>
-
-                                    <div class="col-span-1">
-                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                            Workplace/Organization Location
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="workplace"
-                                            value="{{ old('workplace', $user->borrower->workplace ?? '') }}"
-                                            class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                        />
-                                    </div>
-
-                                    <div class="col-span-1">
-                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                            Organization Email
-                                        </label>
-                                        <input
-                                            type="email"
-                                            name="employer_email"
-                                            value="{{ old('employer_email', $user->borrower->employer_email ?? '') }}"
-                                            class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Position/Job Information -->
-                            <div class="col-span-2">
-                                <h6 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Position Information</h6>
-                                <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-                                    <div class="col-span-1">
-                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                            Job Title/Position
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="job_title"
-                                            value="{{ old('job_title', $user->borrower->job_title ?? '') }}"
-                                            class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                        />
-                                    </div>
-
-                                    <div class="col-span-1">
-                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                            Department
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="department"
-                                            value="{{ old('department', $user->borrower->department ?? '') }}"
-                                            class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                        />
-                                    </div>
-
-                                    <div class="col-span-1">
-                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                            Gross Salary (KES)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            name="gross_salary"
-                                            value="{{ old('gross_salary', $user->borrower->gross_salary ?? '') }}"
-                                            class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                        />
-                                    </div>
-
-                                    <div class="col-span-1">
-                                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                            Net Salary (KES)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            name="net_salary"
-                                            value="{{ old('net_salary', $user->borrower->net_salary ?? '') }}"
-                                            class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
-
-                    <!-- Section 5: Document Uploads -->
-                    <div class="pb-6">
-                        <h5 class="mb-4 text-sm font-medium text-gray-700 dark:text-gray-300">Document Uploads</h5>
-                        
-                        <!-- Passport Photo & Signature Row -->
-                        <div class="grid grid-cols-1 gap-x-6 gap-y-5 mb-6 sm:grid-cols-2">
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Passport Photo
-                                </label>
-                                <input
-                                    type="file"
-                                    name="avatar"
-                                    accept="image/*"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                                @if($user->avatar)
-                                <p class="text-xs text-gray-500 mt-2">
-                                    Current: <a href="{{ $user->documentUrl('photo') }}" target="_blank" class="text-blue-600 hover:underline">View</a>
-                                </p>
-                                @endif
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    Digital Signature
-                                </label>
-                                <input
-                                    type="file"
-                                    name="signature"
-                                    accept="image/*"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                                @if($user->signature)
-                                <p class="text-xs text-gray-500 mt-2">
-                                    Current: <a href="{{ $user->documentUrl('signature') }}" target="_blank" class="text-blue-600 hover:underline">View</a>
-                                </p>
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- ID Front & Back Row -->
-                        <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    ID Front
-                                </label>
-                                <input
-                                    type="file"
-                                    name="id_front_path"
-                                    accept="image/*"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                                @if($user->id_front_path)
-                                <p class="text-xs text-gray-500 mt-2">
-                                    Current: <a href="{{ $user->documentUrl('id-front') }}" target="_blank" class="text-blue-600 hover:underline">View</a>
-                                </p>
-                                @endif
-                            </div>
-
-                            <div class="col-span-1">
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                    ID Back
-                                </label>
-                                <input
-                                    type="file"
-                                    name="id_back_path"
-                                    accept="image/*"
-                                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                />
-                                @if($user->id_back_path)
-                                <p class="text-xs text-gray-500 mt-2">
-                                    Current: <a href="{{ $user->documentUrl('id-back') }}" target="_blank" class="text-blue-600 hover:underline">View</a>
-                                </p>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Form Actions -->
-                    <div class="flex items-center justify-end w-full gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-                        <button
-                            type="button"
-                            onclick="document.getElementById('editProfileModal').classList.add('hidden')"
-                            class="flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
-                        >
-                            Close
-                        </button>
-                        
-                        <button
-                            type="submit"
-                            class="flex items-center justify-center rounded-lg border border-brand-500 bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition-colors hover:bg-brand-600"
-                        >
-                            Save Changes
-                        </button>
-                    </div>
-                </form>
+    {{-- BUSINESSES: each business is its own account, shown apart from the personal profile --}}
+    @if (isset($tabs['businesses']))
+      <div x-show="tab === 'businesses'" x-cloak class="space-y-6">
+        @forelse ($biz as $row)
+          @php $bz = $row['business']; $members = $bz->members()->get(); @endphp
+          <div class="overflow-hidden rounded-2xl border border-success-500/30 bg-white dark:bg-white/[0.03]">
+            <div class="flex flex-col gap-4 border-b border-gray-200 bg-success-50/60 px-6 py-5 dark:border-gray-800 dark:bg-success-500/[0.06] sm:flex-row sm:items-center sm:justify-between">
+              <div class="flex items-center gap-4">
+                <span class="flex size-12 items-center justify-center rounded-xl bg-success-500 text-white"><x-ui.icon name="building" class="size-6" /></span>
+                <div>
+                  <p class="text-theme-xs font-medium uppercase tracking-wide text-success-700 dark:text-success-500">Business account · {{ $row['role'] }}</p>
+                  <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ $bz->trading_name ?: $bz->legal_name }}</h3>
+                  @if ($bz->trading_name && $bz->legal_name !== $bz->trading_name)<p class="text-theme-sm text-gray-500">{{ $bz->legal_name }}</p>@endif
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="rounded-full px-2.5 py-1 text-theme-xs font-medium {{ \App\Support\UserProfile::BUSINESS[$bz->status] ?? \App\Support\UserProfile::BUSINESS['draft'] }}">{{ ucfirst($bz->status) }}</span>
+                @if (\Illuminate\Support\Facades\Route::has('business-reviews.show'))<a href="{{ route('business-reviews.show', $bz->id) }}" class="{{ $btn }}">Open business</a>@endif
+              </div>
             </div>
+            <div class="grid grid-cols-1 gap-6 p-6 lg:grid-cols-3">
+              <dl class="grid grid-cols-2 gap-4 lg:col-span-2">
+                <div><dt class="{{ $label }}">Registration</dt><dd class="{{ $val }}">{{ $bz->registration_number ?: '—' }} {{ $bz->registration_type ? '· ' . str_replace('_', ' ', $bz->registration_type) : '' }}</dd></div>
+                <div><dt class="{{ $label }}">KRA PIN</dt><dd class="{{ $val }}">{{ $bz->kra_pin ?: '—' }}</dd></div>
+                <div><dt class="{{ $label }}">Industry</dt><dd class="{{ $val }}">{{ $bz->industry ?: '—' }}</dd></div>
+                <div><dt class="{{ $label }}">Location</dt><dd class="{{ $val }}">{{ trim(($bz->city ?? '') . ', ' . ($bz->county ?? ''), ', ') ?: '—' }}</dd></div>
+                <div><dt class="{{ $label }}">Monthly revenue</dt><dd class="{{ $val }}">{{ $bz->monthly_revenue ? 'KES ' . number_format((float) $bz->monthly_revenue, 2) : '—' }}</dd></div>
+                <div><dt class="{{ $label }}">Employees</dt><dd class="{{ $val }}">{{ $bz->employees ?: '—' }}</dd></div>
+                <div><dt class="{{ $label }}">Contact</dt><dd class="{{ $val }}">{{ $bz->phone ?: '—' }} {{ $bz->email ? '· ' . $bz->email : '' }}</dd></div>
+                <div><dt class="{{ $label }}">Bank</dt><dd class="{{ $val }}">{{ trim(($bz->bank_name ?? '') . ' ' . ($bz->bank_account ?? '')) ?: '—' }}</dd></div>
+              </dl>
+              <div>
+                <p class="mb-2 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Directors and shareholders</p>
+                <ul class="space-y-2">
+                  @forelse ($members as $m)
+                    <li class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 text-theme-sm dark:bg-white/[0.03]">
+                      <span class="{{ $m->user_id ? 'cursor-pointer hover:text-brand-500' : '' }} text-gray-800 dark:text-white/90" @if ($m->user_id) data-user-peek="{{ $m->user_id }}" @endif>{{ $m->full_name }}</span>
+                      <span class="text-theme-xs text-gray-500">{{ ucfirst(str_replace('_', ' ', $m->role)) }}{{ $m->ownership_pct ? ' · ' . rtrim(rtrim(number_format((float) $m->ownership_pct, 2), '0'), '.') . '%' : '' }}</span>
+                    </li>
+                  @empty
+                    <li class="text-theme-sm text-gray-500">None added yet.</li>
+                  @endforelse
+                </ul>
+              </div>
+            </div>
+          </div>
+        @empty
+          <div class="{{ $card }}"><x-staff.empty title="No business accounts" message="This person has not added a business, and is not a director or shareholder in one." /></div>
+        @endforelse
+      </div>
+    @endif
+
+    {{-- KYC & DOCUMENTS --}}
+    @if (isset($tabs['kyc']))
+      <div x-show="tab === 'kyc'" x-cloak class="space-y-6">
+        <div class="{{ $card }}">
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h3 class="{{ $h }}">Identity documents</h3>
+            <span class="text-theme-sm text-gray-500">{{ $user->kyc_submitted_at ? 'Submitted ' . $user->kyc_submitted_at->format('j M Y') : 'Not submitted' }}{{ $user->kyc_reviewed_at ? ' · reviewed ' . $user->kyc_reviewed_at->format('j M Y') : '' }}</span>
+          </div>
+          @if ($user->kyc_review_notes)<p class="mb-4 rounded-lg bg-gray-50 p-3 text-theme-sm text-gray-700 dark:bg-white/[0.03] dark:text-gray-300">{{ $user->kyc_review_notes }}</p>@endif
+          <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-7">
+            @foreach ($docs as $key => [$name, $path])
+              @continue($key === 'id-back' && $user->id_type === 'passport')
+              <div>
+                <p class="mb-1 {{ $label }}">{{ $name }}</p>
+                @if ($path && ($url = $user->documentUrl($key)))
+                  <a href="{{ $url }}" target="_blank" rel="noopener" class="block overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                    @if (str_ends_with(strtolower($path), '.pdf'))<span class="flex h-28 items-center justify-center text-sm font-medium text-brand-500">Open PDF</span>
+                    @else<img src="{{ $url }}" alt="{{ $name }}" class="h-28 w-full object-contain">@endif
+                  </a>
+                @else
+                  {{-- staff can paste, drop or choose the missing picture right here --}}
+                  @php
+                    $missing = ['id-front' => ['ID front missing', 'Front of the national ID (photo side), or the passport bio page.'],
+                                'id-back' => ['ID back missing', 'Back of the national ID.'],
+                                'photo' => ['Passport photo missing', 'A clear, recent head-and-shoulders photo of the customer, face visible.'],
+                                'signature' => ['Signature missing', 'The customer\'s signature on plain paper.'],
+                                'selfie-center' => ['Selfie: straight missing', 'Customer looking straight at the camera, face fully visible.'],
+                                'selfie-left' => ['Selfie: turned left missing', 'Customer with the head turned to their left (side of the face).'],
+                                'selfie-right' => ['Selfie: turned right missing', 'Customer with the head turned to their right (other side).']][$key];
+                  @endphp
+                  <x-staff.doc-drop :user="$user" :document="$key" :title="$missing[0]" :hint="$missing[1]" :initials="$key === 'photo' ? $user->getInitials() : null" class="!h-28 !p-2 [&_p]:text-[11px]" />
+                @endif
+              </div>
+            @endforeach
+          </div>
         </div>
+      </div>
+    @endif
+
+    {{-- RECOVERY --}}
+    @if (isset($tabs['recovery']))
+      <div x-show="tab === 'recovery'" x-cloak class="{{ $card }}">
+        <h3 class="mb-4 {{ $h }}">Recovery cases</h3>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+          @forelse ($cases as $c)
+            <li><a href="{{ route('cases.show', $c->id) }}" class="flex items-center justify-between gap-3 py-3 hover:text-brand-500">
+              <span class="text-theme-sm"><span class="font-medium text-gray-800 dark:text-white/90">{{ $c->case_number ?? 'Case #' . $c->id }}</span> <span class="text-gray-500">· loan #{{ $c->loan_id }} · opened {{ optional($c->created_at)->format('j M Y') }}</span></span>
+              <span class="text-theme-sm"><span class="mr-3 text-gray-500">{{ $c->status->name ?? '' }}</span><span class="font-medium text-gray-800 dark:text-white/90">KES {{ number_format((float) $c->total_debt_amount, 2) }}</span></span>
+            </a></li>
+          @empty
+            <li class="py-3 text-theme-sm text-gray-500">No recovery cases.</li>
+          @endforelse
+        </ul>
+      </div>
+    @endif
+
+    {{-- ACTIVITY: changes made to this person's records --}}
+    <div x-show="tab === 'activity'" x-cloak class="{{ $card }}">
+      <h3 class="mb-4 {{ $h }}">Activity</h3>
+      @php
+        $log = \Illuminate\Support\Facades\DB::table('audit_logs as a')->leftJoin('users as u', 'u.id', '=', 'a.user_id')
+          ->where(fn ($q) => $q->where(fn ($q) => $q->where('a.table_name', 'users')->where('a.record_id', $user->id))->orWhere('a.user_id', $user->id))
+          ->latest('a.created_at')->limit(40)->get(['a.table_name', 'a.record_id', 'a.action', 'a.created_at', 'u.name as by']);
+      @endphp
+      <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+        @forelse ($log as $w)
+          <li class="flex justify-between gap-3 py-2.5 text-theme-sm"><span class="text-gray-700 dark:text-gray-300">{{ ucfirst($w->action) }} {{ str_replace('_', ' ', \Illuminate\Support\Str::singular($w->table_name)) }} #{{ $w->record_id }} <span class="text-gray-500">by {{ $w->by ?? 'System' }}</span></span><span class="text-theme-xs text-gray-500">{{ \Illuminate\Support\Carbon::parse($w->created_at)->format('j M Y H:i') }}</span></li>
+        @empty
+          <li class="py-3 text-theme-sm text-gray-500">Nothing recorded yet.</li>
+        @endforelse
+      </ul>
     </div>
+  </div>
+
+  @can('edit users')
+    @include('users._edit-modal')
+  @endcan
 @endsection
-
-@push('styles')
-<style>
-    [x-cloak] {
-        display: none !important;
-    }
-    
-    .tab-content {
-        animation: fadeIn 0.3s ease-in-out;
-    }
-    
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .document-hover {
-        transition: transform 0.2s ease-in-out;
-    }
-    
-    .document-hover:hover {
-        transform: translateY(-2px);
-    }
-    
-    .group-hover\:scale-110:hover {
-        transform: scale(1.1);
-    }
-</style>
-@endpush
-
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Set default tab based on URL hash or first available
-        const hash = window.location.hash.substring(1);
-        const validTabs = ['profile', 'documents', 'employment', 'kin', 'loans', 'recovery'];
-        
-        if (hash && validTabs.includes(hash)) {
-            const el = document.querySelector(`[x-data]`);
-            if (el && el.__x) {
-                el.__x.$data.activeTab = hash;
-            }
-        }
-        
-        // Update URL when tab changes - use a safer approach
-        const tabContainer = document.querySelector('[x-data]');
-        if (tabContainer) {
-            // Use Alpine's watch if available
-            if (tabContainer.__x) {
-                tabContainer.__x.$watch('activeTab', (value) => {
-                    window.history.replaceState(null, null, `#${value}`);
-                });
-            }
-        }
-    });
-</script>
-@endpush

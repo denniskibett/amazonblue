@@ -46,44 +46,11 @@
      @if(isset($userDataForJs))
      data-user='@json($userDataForJs)'
      @endif>
-  <div class="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-        {{ $context === 'user-profile' ? 'Loan History' : 'Loans Overview' }}
-      </h3>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-        Showing <span id="showingStart">1</span> to <span id="showingEnd">10</span> of <span id="totalCount">{{ count($loans) }}</span> entries
-      </p>
-    </div>
-    
-    <div class="flex flex-wrap items-center gap-3">
-      <div class="flex items-center">
-        <label for="entriesPerPage" class="text-sm text-gray-500 dark:text-gray-400 mr-2 hidden sm:inline">Show:</label>
-        <div class="relative">
-          <select id="entriesPerPage" class="appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 pr-8">
-            <option value="5">5</option>
-            <option value="10" selected>10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
-          <div class="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400 dark:text-gray-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-      </div>
-      
-      <div class="relative flex-1 min-w-[150px]">
-        <input type="text" id="loanSearch" placeholder="Search loans..." class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 pl-10">
-        <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-      </div>
-
+  <div class="mb-1 flex items-center justify-between gap-3">
+    <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ $context === 'user-profile' ? 'Loan History' : 'Loans Overview' }}</h3>
+  </div>
+  {{-- the Create Loan button sits in the list toolbar (partials/ui/datatable moves it there) --}}
+  <div class="hidden" id="loans-tools-{{ $context ?? 'list' }}-src"><div id="loans-tools-{{ $context ?? 'list' }}" class="flex gap-2">
       @if(isset($user) && (auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller') || (auth()->user()->hasRole('broker') && auth()->user()->broker && $user->borrower->broker_id === auth()->user()->broker->id)))
       <button 
           @click="openCreateModal({ 
@@ -108,94 +75,53 @@
           Create Loan
       </button>
       @endif
-    </div>
-  </div>
+  </div></div>
 
   <div class="w-full overflow-x-auto">
-    <table class="min-w-full" id="loansTable">
+    <table class="min-w-full" id="loansTable" data-table data-table-search="Search loans" data-table-buttons="#loans-tools-{{ $context ?? 'list' }}">
       <thead class="hidden sm:table-header-group">
         <tr class="border-gray-100 border-y dark:border-gray-800">
           @if($showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']))
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable(0)">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>@if(auth()->user()->hasRole('broker')) Client @else Borrower @endif</span>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
             </div>
           </th>
           @endif
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 1 : 0 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Amount</span>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 2 : 1 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Borrow Date</span>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 3 : 2 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Duration</span>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 4 : 3 }})">
+          <th data-filter="Status" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Status</span>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 5 : 4 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Broker Fees</span>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
             </div>
           </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 6 : 5 }})">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Penalty</span>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
             </div>
           </th>
           @if(auth()->user()->hasRole('admin'))
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="window.loanTableInstance?.sortTable({{ $showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']) ? 7 : 6 }})">
+          <th data-filter="Type" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
             <div class="flex items-center justify-between">
               <span>Type</span>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
             </div>
           </th>
           @endif
@@ -248,7 +174,7 @@
               </div>
               <div>
                 <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                  <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">{{ $loan->user->name }}</p>
+                  <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">{{ $loan->user->name }}</p>
                 </a>
                 <span class="text-gray-500 text-theme-xs dark:text-gray-400 loan-type">{{ $loan->user->email }}</span>
               </div>
@@ -296,7 +222,7 @@
           </td>
           @endif
         
-          <td class="py-3 text-right">
+          <td class="py-3 text-right" data-actions>
             <div class="flex justify-end space-x-3">
               <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="text-blue-600 hover:text-blue-900" title="View">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -342,7 +268,7 @@
               </div>
               <div>
                 <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                  <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">{{ $loan->user->name }}</p>
+                  <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">{{ $loan->user->name }}</p>
                 </a>
                 <span class="text-gray-500 text-theme-xs dark:text-gray-400 loan-type">KES {{ number_format($loan->amount, 2) }}</span>
               </div>
@@ -404,22 +330,6 @@
     </tbody>
   </table>
 
-    <div class="flex flex-col items-center justify-between px-2 py-4 sm:flex-row sm:px-0">
-      <div class="hidden sm:flex">
-        <p class="text-sm text-gray-700 dark:text-gray-400">
-          Showing <span id="paginationStart">1</span> to <span id="paginationEnd">10</span> of <span id="paginationTotal">{{ count($loans) }}</span> results
-        </p>
-      </div>
-      <div class="flex-1 flex justify-between sm:justify-end">
-        <button id="prevPage" class="relative inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-          Previous
-        </button>
-        <div id="paginationNumbers" class="hidden sm:flex"></div>
-        <button id="nextPage" class="relative ml-3 inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-          Next
-        </button>
-      </div>
-    </div>
   </div>
 
   <!-- Loans Create Modal (Slideover) -->

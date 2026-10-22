@@ -100,8 +100,9 @@
                             <p class="{{ $label }} mb-1 truncate">{{ $doc->label() }}</p>
                             <a href="{{ $doc->url() }}" target="_blank" rel="noopener"
                                class="block overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                                @php $abs = \App\Support\PrivateFiles::absolute($doc->path); $v = $abs ? '?v=' . filemtime($abs) : ''; @endphp
                                 @if ($doc->isImage())
-                                    <img src="{{ $doc->url() }}" alt="{{ $doc->label() }}" class="h-32 w-full object-contain">
+                                    <img src="{{ $doc->url() }}{{ $v }}" alt="{{ $doc->label() }}" class="h-32 w-full object-contain">
                                 @else
                                     <span class="flex h-32 flex-col items-center justify-center gap-1 text-sm font-medium text-brand-500">
                                         <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 3h7l5 5v13H7zM14 3v5h5" /></svg>
@@ -110,6 +111,12 @@
                                 @endif
                             </a>
                             <p class="mt-1 truncate text-xs text-gray-500" title="{{ $doc->original_name }}">{{ $doc->original_name }} · {{ max(1, round(($doc->size ?? 0) / 1024)) }} KB</p>
+                            @if ($doc->isImage() && auth()->user()->can('edit users'))
+                                <button type="button" class="mt-1 inline-flex items-center gap-1 text-xs font-medium text-brand-500 hover:underline"
+                                        @click="$dispatch('open-crop', {src: @js($doc->url()), action: @js(route('business-reviews.crop', [$business, $doc])), original: @js(\App\Services\Kyc\ImageCrop::hasOriginal($abs))})">
+                                    <x-ui.icon name="edit" class="size-3.5" /> Crop
+                                </button>
+                            @endif
                         </div>
                     @empty
                         <p class="col-span-full text-sm text-gray-500">No documents uploaded.</p>
@@ -178,4 +185,5 @@
 </div>
 
 @include('partials.modal.flash-alert')
+    @include('partials.ui.crop-modal')
 @endsection

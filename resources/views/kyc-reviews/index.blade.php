@@ -24,7 +24,7 @@
             </div>
         @else
             <div class="overflow-x-auto">
-                <table class="min-w-full text-left text-sm">
+                <table data-table data-table-search="Search people" class="min-w-full text-left text-sm">
                     <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
                         <tr>
                             <th class="px-5 py-3 font-medium">Borrower</th>
@@ -57,7 +57,6 @@
                     </tbody>
                 </table>
             </div>
-            <div class="border-t border-gray-200 px-5 py-3 dark:border-gray-800">{{ $users->links() }}</div>
         @endif
     </div>
 </div>

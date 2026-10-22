@@ -76,9 +76,10 @@ class PageMetrics
 
         return [
             $this->card('Owed to us today', self::kes($p['owed']), 'wallet', $p['open_loans'] . ' open loans', null, 'neutral', $this->route('staff.portfolio', 'view reports')),
-            $this->card('Disbursed this month', self::kes($month), 'send', 'cash sent', self::change($month, $last), $month >= $last ? 'up' : 'down'),
-            $this->card('Collected this month', self::kes($in), 'hand-coins', 'cash received', self::change($in, $inLast), $in >= $inLast ? 'up' : 'down'),
-            $this->card('Portfolio at risk', $p['par30'] . '%', 'trending-down', 'owed 30+ days late · PAR90 ' . $p['par90'] . '%', null, 'neutral', $this->route('staff.collections', 'view recovery cases')),
+            // lifetime cash on the card, this month underneath (owner, 22 Oct 2026: closer to the earlier dashboard)
+            $this->card('Total disbursements', self::kes($this->cashOut(Carbon::create(2000), now())), 'send', self::kes0($month) . ' this month'),
+            $this->card('Total repayments', self::kes($this->cashIn(Carbon::create(2000), now())), 'hand-coins', self::kes0($in) . ' this month'),
+            $this->card('Portfolio at risk', $p['par30'] . '%', 'trending-down', '30+ days late · PAR90 ' . $p['par90'] . '%', null, 'neutral', $this->route('staff.collections', 'view recovery cases')),
             $this->card('Non-performing', self::kes($p['npl_owed']), 'alert', $p['npl_loans'] . ' loans past their default day', null, 'neutral', $this->route('staff.collections', 'view recovery cases')),
             $this->card('Active borrowers', self::n(Loan::whereIn('status', self::OPEN)->distinct('user_id')->count('user_id')), 'users', User::role('borrower')->where('created_at', '>=', now()->startOfMonth())->count() . ' new this month'),
         ];
@@ -108,7 +109,7 @@ class PageMetrics
             $this->card('Open', self::n((clone $open)->count()), 'clock', 'disbursed and not repaid'),
             $this->card('Owed today', self::kes($this->owedFor((clone $open)->pluck('id')->all())), 'wallet', 'principal + interest + penalty'),
             $this->card('Overdue or defaulted', self::n((clone $q)->whereIn('status', [Loan::STATUS_OVERDUE, Loan::STATUS_DEFAULTED, Loan::STATUS_RECOVERY])->count()), 'alert', 'past their due date', null, 'warn'),
-            $this->card('Waiting', self::n((clone $q)->whereIn('status', [Loan::STATUS_PENDING, Loan::STATUS_APPROVED])->count()), 'inbox', 'pending approval or disbursement'),
+            $this->card('Waiting', self::n((clone $q)->whereIn('status', [Loan::STATUS_PENDING, Loan::STATUS_APPROVED])->count()), 'inbox', 'pending approval'),
             $this->card('Repaid', self::n((clone $q)->where('status', Loan::STATUS_REPAID)->count()), 'check-circle', 'closed in full'),
         ];
     }
@@ -430,7 +431,7 @@ class PageMetrics
 
     private function cashOut(Carbon $from, Carbon $to): float
     {
-        return round((float) CustomerWallets::whereCash(DB::table('disbursements')->whereNull('deleted_at')->whereBetween('disburse_date', [$from->toDateString(), $to->toDateString()]))->sum('amount'), 2);
+        return round((float) CustomerWallets::whereCash(DB::table('disbursements')->whereNull('deleted_at')->whereBetween('disburse_date', [$from->toDateString(), $to->toDateString()]))->sum(DB::raw(CustomerWallets::DISBURSED_CASH_SQL)), 2);
     }
 
     private function cashOutCount(Carbon $from, Carbon $to): int
