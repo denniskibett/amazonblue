@@ -1,27 +1,45 @@
-<x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('This is a secure area of the application. Please confirm your password before continuing.') }}
+<!doctype html>
+<html lang="en">
+  <head>
+    @include('home.partials.head', ['title' => 'Confirm your password — Aimzone Ventures', 'description' => 'Your Aimzone Ventures account', 'noindex' => true])
+  </head>
+  <body>
+    {{-- Branded like the other sign-in pages (22 Oct 2026); the old starter layout crashed in production. --}}
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="auth">
+      <aside class="auth-art">
+        <a href="{{ url('/') }}" aria-label="Aimzone Ventures home"
+          ><img src="{{ asset('assets/images/logo/aimzone-primary-white.svg') }}" alt="Aimzone Ventures"
+        /></a>
+        <div class="art-copy art-copy-lg">
+          <h2>Just checking it's you.</h2>
+          <p>This part of your account needs your password again.</p>
+        </div>
+      </aside>
+      <main class="auth-main" id="main">
+        <div class="auth-box">
+          <a href="{{ url('/') }}" aria-label="Aimzone Ventures home"
+            ><img class="mobile-logo" src="{{ asset('assets/images/logo/aimzone-horizontal-blue.svg') }}" alt="Aimzone Ventures"
+          /></a>
+          <div class="auth2-head">
+            <h1>Confirm your password</h1>
+            <p class="muted">Enter your password to continue.</p>
+          </div>
+          @if ($errors->any())
+            <div class="kyc-note error" role="alert"><div><b>{{ $errors->first() }}</b></div></div>
+          @endif
+          <form method="POST" action="{{ route('password.confirm') }}" data-validate data-server novalidate class="auth2-form">
+            @csrf
+            <div class="field">
+              <label for="password">Password<span class="req">*</span></label
+              ><input class="input" id="password" name="password" type="password" autocomplete="current-password" required
+              /><span class="error">Enter your password.</span>
+            </div>
+            <button class="btn btn-primary btn-block" type="submit">Confirm</button>
+          </form>
+        </div>
+      </main>
     </div>
-
-    <form method="POST" action="{{ route('password.confirm') }}">
-        @csrf
-
-        <!-- Password -->
-        <div>
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <div class="flex justify-end mt-4">
-            <x-primary-button>
-                {{ __('Confirm') }}
-            </x-primary-button>
-        </div>
-    </form>
-</x-guest-layout>
+    @include('home.partials.toast')
+  </body>
+</html>

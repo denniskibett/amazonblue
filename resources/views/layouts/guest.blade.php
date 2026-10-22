@@ -34,7 +34,8 @@
 
     <!-- Auto-load JS components -->
     @php
-        $components = array_diff(scandir(resource_path('js/components')), array('..', '.'));
+        // only .js files: the charts folder is not a Vite entry and crashed every page on this layout (22 Oct 2026)
+        $components = array_filter(scandir(resource_path('js/components')), fn ($f) => str_ends_with($f, '.js'));
     @endphp
     @foreach ($components as $component)
         @vite(['resources/js/components/' . $component])
