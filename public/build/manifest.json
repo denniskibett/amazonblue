@@ -1,90 +1,16 @@
 {
-  "_apexcharts.esm-PvBfBjQs.js": {
-    "file": "assets/apexcharts.esm-PvBfBjQs.js",
-    "name": "apexcharts.esm"
-  },
   "resources/css/app.css": {
-    "file": "assets/app-BzSKba6w.css",
+    "file": "assets/app-ChMlOYdn.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
-  "resources/js/app.js": {
-    "file": "assets/app-vXxwagmv.js",
-    "name": "app",
-    "src": "resources/js/app.js",
-    "isEntry": true,
-    "imports": [
-      "resources/js/bootstrap.js"
-    ]
-  },
-  "resources/js/bootstrap.js": {
-    "file": "assets/bootstrap-CAiCLEjY.js",
-    "name": "bootstrap",
-    "src": "resources/js/bootstrap.js",
-    "isEntry": true
-  },
-  "resources/js/components/calendar-init.js": {
-    "file": "assets/calendar-init-BJTaB3BM.js",
-    "name": "calendar-init",
-    "src": "resources/js/components/calendar-init.js",
-    "isEntry": true
-  },
-  "resources/js/components/charts/chart-01.js": {
-    "file": "assets/chart-01-BaMP9KXI.js",
-    "name": "chart-01",
-    "src": "resources/js/components/charts/chart-01.js",
-    "isEntry": true,
-    "imports": [
-      "_apexcharts.esm-PvBfBjQs.js"
-    ]
-  },
-  "resources/js/components/charts/chart-02.js": {
-    "file": "assets/chart-02-B7UgVIAz.js",
-    "name": "chart-02",
-    "src": "resources/js/components/charts/chart-02.js",
-    "isEntry": true,
-    "imports": [
-      "_apexcharts.esm-PvBfBjQs.js"
-    ]
-  },
-  "resources/js/components/charts/chart-03.js": {
-    "file": "assets/chart-03-CI9GT5is.js",
-    "name": "chart-03",
-    "src": "resources/js/components/charts/chart-03.js",
-    "isEntry": true,
-    "imports": [
-      "_apexcharts.esm-PvBfBjQs.js"
-    ]
-  },
-  "resources/js/components/image-resize.js": {
-    "file": "assets/image-resize-i6EmqaZ5.js",
-    "name": "image-resize",
-    "src": "resources/js/components/image-resize.js",
-    "isEntry": true
-  },
-  "resources/js/components/map-01.js": {
-    "file": "assets/map-01-BVQCnvmm.js",
-    "name": "map-01",
-    "src": "resources/js/components/map-01.js",
-    "isEntry": true
-  },
   "resources/js/index.js": {
-    "file": "assets/index-D-JvM3Dr.js",
+    "file": "assets/index-Dcj8HvKd.js",
     "name": "index",
     "src": "resources/js/index.js",
     "isEntry": true,
-    "imports": [
-      "resources/js/components/charts/chart-01.js",
-      "resources/js/components/charts/chart-02.js",
-      "resources/js/components/charts/chart-03.js",
-      "resources/js/components/map-01.js",
-      "resources/js/components/calendar-init.js",
-      "resources/js/components/image-resize.js",
-      "_apexcharts.esm-PvBfBjQs.js"
-    ],
     "css": [
-      "assets/index-DKo5c4-a.css",
-      "assets/app-BzSKba6w.css"
+      "assets/index-CksuuEqD.css"
     ]
   }
 }
