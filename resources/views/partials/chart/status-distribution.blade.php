@@ -44,7 +44,6 @@
 
     function renderChart() {
         if (chartRendered) {
-            console.log('Chart already rendered, skipping...');
             return;
         }
 
@@ -143,7 +142,6 @@
             chartInstance = new ApexCharts(chartEl, options);
             chartInstance.render().then(() => {
                 chartRendered = true;
-                console.log('Status Distribution Chart rendered successfully');
                 window.statusDistributionChartInstance = chartInstance;
             }).catch(error => {
                 console.error('Chart render error:', error);
@@ -156,11 +154,9 @@
     window.statusDistributionChart = function() {
         return {
             init() {
-                console.log('Status Distribution Chart component initializing...');
                 this.$nextTick(() => {
                     const chartEl = document.querySelector("#statusDistributionChart");
                     if (chartEl && chartEl.querySelector('.apexcharts-canvas')) {
-                        console.log('Chart already rendered');
                         return;
                     }
                     renderChart();
@@ -207,7 +203,6 @@
 
     window.renderStatusDistributionChart = renderChart;
 
-    console.log('Status Distribution Chart script loaded');
 
 })();
 </script>

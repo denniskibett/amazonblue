@@ -2,7 +2,7 @@
      element with data-user-peek="{id}". Ctrl/Cmd-click still opens the full profile in a new tab. --}}
 @if (auth()->check() && auth()->user()->can('view users') && \Illuminate\Support\Facades\Route::has('staff.users.peek'))
 <div x-data="azPeek(@js(url('/staff/users')), @js(url('/users')))" @keydown.escape.window="close()" @az-peek.window="open($event.detail)">
-  <div x-show="show" x-cloak x-transition.opacity class="fixed inset-0 z-[100000] bg-gray-900/40" @click="close()"></div>
+  <div x-show="show" x-cloak x-transition.opacity class="fixed inset-0 z-[100000] az-backdrop" @click="close()"></div>
   <aside x-show="show" x-cloak
          x-transition:enter="transition duration-200 ease-out" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
          x-transition:leave="transition duration-150 ease-in" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"

@@ -490,7 +490,6 @@ document.addEventListener('alpine:init', () => {
         rc: caseData || {},
         
         init() {
-            console.log('Case data initialized:', this.rc);
         },
         
         formatCurrency(amount) {

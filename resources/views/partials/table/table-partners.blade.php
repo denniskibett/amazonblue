@@ -286,7 +286,7 @@ function partnerTable() {
 
             window.partnerTableInstance = this;
 
-            window.addEventListener('refresh-partners', () => {
+            window.azOn('refresh-partners', () => {
                 this.refreshData();
             });
         },

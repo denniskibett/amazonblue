@@ -157,12 +157,19 @@ class LoanDeskController extends Controller
             ->map(fn ($f) => ($f->partner?->name ?? 'Partner #' . $f->partner_id) . ($f->partner?->is_house_account ? ' (house)' : ''))
             ->unique()->values()->all()]);
 
+        // who brought the client and whose money it is (owner, 23 Oct 2026)
+        $links = app(\App\Services\Partners\PartnerLinks::class);
+
         return view('staff.desk.disburse', [
             'loan' => $loan,
             'cycle' => $loan->getCurrentCycle(),
             'investments' => $investments,
             'houseId' => $house?->id,
             'partners' => $partners,
+            'partnerList' => \App\Models\Partner::where('is_house_account', false)->orderBy('name')->pluck('name', 'id'),
+            'openLines' => app(\App\Services\Partners\PartnerLines::class)->openLines(),
+            'ownPartner' => $links->ownPartner($loan),
+            'defaultMaturity' => \App\Http\Controllers\Staff\PartnerFundingController::dueDate($loan),
         ]);
     }
 }

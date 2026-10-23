@@ -253,24 +253,20 @@ document.addEventListener('alpine:init', function() {
             },
 
             init() {
-                console.log('Investment table initialized');
                 this.allData = @json($investments);
                 this.filteredData = [...this.allData];
                 this.updateTable();
 
-                window.addEventListener('refresh-investments', () => {
-                    console.log('Refresh event received');
+                window.azOn('refresh-investments', () => {
                     this.refreshData();
                 });
             },
 
             openCreateModal() {
-                console.log('Open create modal triggered');
                 window.dispatchEvent(new CustomEvent('open-investment-create'));
             },
 
             showInvestment(investment) {
-                console.log('Show investment:', investment);
                 window.dispatchEvent(new CustomEvent('show-investment', {
                     detail: { investment }
                 }));

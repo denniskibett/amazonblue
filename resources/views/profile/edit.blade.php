@@ -1089,7 +1089,7 @@
 
     <!-- Password Modal -->
     <div x-show="showPasswordModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-5">
-        <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" @click="showPasswordModal = false"></div>
+        <div class="fixed inset-0 az-backdrop" @click="showPasswordModal = false"></div>
         <div @click.stop class="relative w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-xl overflow-hidden">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
@@ -1139,8 +1139,6 @@
 
 <!-- Include scripts -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
 <script>
 function profileData() {
@@ -1313,7 +1311,7 @@ function profileData() {
 
                 if (result.success) {
                     this.updateSignatureStatus('Signature saved successfully! Reloading...', 'text-green-500');
-                    setTimeout(() => window.location.reload(), 1500);
+                    setTimeout(() => (window.azRefresh ? window.azRefresh() : location.reload()), 300);
                 } else {
                     this.updateSignatureStatus('Error: ' + result.message, 'text-red-500');
                 }
@@ -1476,7 +1474,6 @@ function profileData() {
             for (let [key, value] of formData.entries()) {
                 data[key] = value;
             }
-            console.log('Profile Data:', data);
             return data;
         },
         
@@ -1528,7 +1525,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    console.log('Profile edit page initialized');
 });
 </script>
 @endsection

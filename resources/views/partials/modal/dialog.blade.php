@@ -7,7 +7,7 @@
        <button type="button" data-confirm="End forbearance?" data-confirm-submit="end-forbearance-form"> --}}
 <div x-data="uiDialog()" x-show="open" x-cloak @keydown.escape.window="open && answer(false)"
      class="fixed inset-0 z-[1000000] flex items-center justify-center overflow-y-auto p-5" role="dialog" aria-modal="true" :aria-label="title">
-  <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="answer(false)"></div>
+  <div class="fixed inset-0 az-backdrop" @click="answer(false)"></div>
   <div class="relative w-full max-w-md rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10" x-show="open" x-transition>
     <button type="button" @click="answer(false)" aria-label="Close"
             class="absolute right-3 top-3 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">

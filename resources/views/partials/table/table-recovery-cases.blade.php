@@ -185,8 +185,8 @@ function recoveryTable() {
                 this.filteredRows = [...this.allRows];
  
                 // Listen for refresh events
-                window.addEventListener('refresh-cases', () => {
-                    location.reload();
+                window.azOn('refresh-cases', () => {
+                    (window.azRefresh ? window.azRefresh() : location.reload());
                 });
             });
         },
@@ -280,7 +280,6 @@ function openEditCase(caseId) {
             const caseDataAttr = row.getAttribute('data-case-data');
             if (caseDataAttr) {
                 const caseData = JSON.parse(caseDataAttr);
-                console.log('Edit case data:', caseData);
                 window.dispatchEvent(new CustomEvent('edit-case', {
                     detail: { case: caseData }
                 }));

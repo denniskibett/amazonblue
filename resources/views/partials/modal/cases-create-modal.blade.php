@@ -47,7 +47,7 @@
      style="display: none;">
     
     <!-- Backdrop -->
-    <div class="fixed inset-0 bg-black/50" @click="close()"></div>
+    <div class="fixed inset-0 az-backdrop" @click="close()"></div>
     
     <!-- Slideover Panel -->
     <div class="fixed inset-y-0 right-0 max-w-full flex">
@@ -764,11 +764,11 @@ document.addEventListener('alpine:init', function() {
 
             // ============ INIT ============
             initModal() {
-                window.addEventListener('open-case-create', (event) => {
+                window.azOn('open-case-create', (event) => {
                     this.openCreate(event.detail || {});
                 });
 
-                window.addEventListener('edit-case', (event) => {
+                window.azOn('edit-case', (event) => {
                     this.openEdit(event.detail.case);
                 });
 

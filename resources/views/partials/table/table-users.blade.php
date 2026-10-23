@@ -17,7 +17,7 @@
      x-data="userTable()"
      x-init="init()">
   
-  <!-- CREATE USER MODAL -->
+  <!-- USER MODAL: creates and edits (owner, 23 Oct 2026) -->
   <div x-show="isCreateModalOpen" 
        x-cloak
        class="fixed inset-0 z-[99999]"
@@ -30,8 +30,8 @@
        x-transition:leave-end="opacity-0">
     
     <!-- Full screen backdrop -->
-    <div class="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" 
-         style="backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);"
+    <div class="fixed inset-0 h-full w-full az-backdrop" 
+        
          @click="closeCreateModal()"></div>
     
     <!-- Modal Content -->
@@ -50,9 +50,8 @@
         </button>
 
         <!-- Modal Form -->
-        <h4 class="mb-6 text-lg font-medium text-gray-800 dark:text-white/90">
-          Create New User
-        </h4>
+        <h4 class="mb-1 text-lg font-semibold text-gray-800 dark:text-white/90" x-text="isEdit ? 'Edit ' + (formData.name || 'user') : 'Create New User'"></h4>
+        <p class="mb-6 text-sm text-gray-500 dark:text-gray-400" x-text="isEdit ? 'Change their details. Leave the password blank to keep it.' : 'They can sign in once saved.'"></p>
         
         <!-- Success/Error Messages -->
         <div x-show="message" 
@@ -117,14 +116,14 @@
 
             <div class="col-span-1">
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                Password *
+                Password <span x-show="!isEdit">*</span>
               </label>
               <input type="password"
                      x-model="formData.password"
-                     placeholder="Minimum 6 characters"
+                     :placeholder="isEdit ? 'Leave blank to keep it' : 'Minimum 6 characters'"
                      class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                      minlength="6"
-                     required />
+                     :required="!isEdit" />
             </div>
 
             <!-- Broker Fields -->
@@ -246,259 +245,13 @@
                     class="flex justify-center w-full px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 sm:w-auto"
                     :disabled="isSubmitting"
                     :class="{'opacity-50 cursor-not-allowed': isSubmitting}">
-              <span x-show="!isSubmitting">Create User</span>
+              <span x-show="!isSubmitting" x-text="isEdit ? 'Save changes' : 'Create User'"></span>
               <span x-show="isSubmitting" class="flex items-center gap-2">
                 <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Creating...
-              </span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- EDIT USER MODAL -->
-  <div x-show="isEditModalOpen" 
-       x-cloak
-       class="fixed inset-0 z-[99999]"
-       style="z-index: 99999 !important;"
-       x-transition:enter="transition ease-out duration-300"
-       x-transition:enter-start="opacity-0"
-       x-transition:enter-end="opacity-100"
-       x-transition:leave="transition ease-in duration-200"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0">
-    
-    <!-- Full screen backdrop -->
-    <div class="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" 
-         style="backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);"
-         @click="closeEditModal()"></div>
-    
-    <!-- Modal Content -->
-    <div class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto">
-      <div class="relative w-full max-w-2xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10"
-           @click.outside="closeEditModal()">
-        
-        <!-- Close button -->
-        <button @click="closeEditModal()"
-                class="group absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
-          <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200"
-               width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd" clip-rule="evenodd" 
-                  d="M6.04289 16.5413C5.65237 16.9318 5.65237 17.565 6.04289 17.9555C6.43342 18.346 7.06658 18.346 7.45711 17.9555L11.9987 13.4139L16.5408 17.956C16.9313 18.3466 17.5645 18.3466 17.955 17.956C18.3455 17.5655 18.3455 16.9323 17.955 16.5418L13.4129 11.9997L17.955 7.4576C18.3455 7.06707 18.3455 6.43391 17.955 6.04338C17.5645 5.65286 16.9313 5.65286 16.5408 6.04338L11.9987 10.5855L7.45711 6.0439C7.06658 5.65338 6.43342 5.65338 6.04289 6.0439C5.65237 6.43442 5.65237 7.06759 6.04289 7.45811L10.5845 11.9997L6.04289 16.5413Z" />
-          </svg>
-        </button>
-
-        <!-- Modal Form -->
-        <h4 class="mb-6 text-lg font-medium text-gray-800 dark:text-white/90">
-          Edit User
-        </h4>
-        
-        <!-- Success/Error Messages -->
-        <div x-show="editMessage" 
-             x-text="editMessage"
-             :class="editMessageType === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
-             class="p-3 mb-4 rounded-lg"
-             x-transition></div>
-
-        <form @submit.prevent="submitEditForm" x-ref="editUserForm">
-          @csrf
-          @method('PUT')
-          <input type="hidden" x-model="editFormData.id">
-          
-          <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-            
-            <!-- Basic Information -->
-            <div class="col-span-1">
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                Full Name *
-              </label>
-              <input type="text"
-                     x-model="editFormData.name"
-                     placeholder="John Doe"
-                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                     required />
-            </div>
-
-            <div class="col-span-1">
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                Email Address *
-              </label>
-              <input type="email"
-                     x-model="editFormData.email"
-                     placeholder="user@example.com"
-                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                     required />
-            </div>
-
-            <div class="col-span-1">
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                Phone Number *
-              </label>
-              <input type="tel"
-                     x-model="editFormData.phone"
-                     placeholder="+254 712 345 678"
-                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                     required />
-            </div>
-
-            <div class="col-span-1">
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                Role *
-              </label>
-              <select x-model="editFormData.role"
-                      @change="toggleEditRoleFields()"
-                      class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                      required>
-                <option value="">Select Role</option>
-                <option value="admin">Admin</option>
-                <option value="broker">Broker</option>
-                <option value="borrower">Borrower</option>
-                <option value="teller">Teller</option>
-              </select>
-            </div>
-
-            <div class="col-span-1">
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                Password (leave blank to keep current)
-              </label>
-              <input type="password"
-                     x-model="editFormData.password"
-                     placeholder="Minimum 6 characters"
-                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                     minlength="6" />
-            </div>
-
-            <!-- Broker Fields -->
-            <template x-if="editFormData.role === 'broker'">
-              <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-                <div class="col-span-1">
-                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Certificate Number *
-                  </label>
-                  <input type="text"
-                         x-model="editFormData.cert_no"
-                         placeholder="e.g., CERT12345"
-                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
-                </div>
-
-                <div class="col-span-1">
-                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Client Interest Rate (%) *
-                  </label>
-                  <input type="number"
-                         x-model="editFormData.interest_client"
-                         placeholder="e.g., 5.5"
-                         step="0.01"
-                         min="0"
-                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
-                </div>
-
-                <div class="col-span-1">
-                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Broker Interest Rate (%) *
-                  </label>
-                  <input type="number"
-                         x-model="editFormData.interest_broker"
-                         placeholder="e.g., 2.5"
-                         step="0.01"
-                         min="0"
-                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
-                </div>
-
-                <div class="col-span-1">
-                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Client Penalty Rate (%) *
-                  </label>
-                  <input type="number"
-                         x-model="editFormData.penalty_client"
-                         placeholder="e.g., 1.5"
-                         step="0.01"
-                         min="0"
-                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
-                </div>
-
-                <div class="col-span-1 sm:col-span-2">
-                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Broker Penalty Rate (%) *
-                  </label>
-                  <input type="number"
-                         x-model="editFormData.penalty_broker"
-                         placeholder="e.g., 0.5"
-                         step="0.01"
-                         min="0"
-                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
-                </div>
-              </div>
-            </template>
-
-            <!-- Borrower Fields -->
-            <template x-if="editFormData.role === 'borrower'">
-              <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-                <div class="col-span-1">
-                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    National ID *
-                  </label>
-                  <input type="text"
-                         x-model="editFormData.national_id"
-                         placeholder="e.g., 12345678"
-                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
-                </div>
-
-                <div class="col-span-1">
-                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Client Type *
-                  </label>
-                  <select x-model="editFormData.client_type"
-                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                    <option value="individual">Individual</option>
-                    <option value="non_individual">Non-Individual</option>
-                  </select>
-                </div>
-
-                <div class="col-span-1">
-                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Status *
-                  </label>
-                  <select x-model="editFormData.status"
-                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                    <option value="1">Active</option>
-                    <option value="0">Inactive</option>
-                  </select>
-                </div>
-              </div>
-            </template>
-          </div>
-
-          <!-- Form Actions -->
-          <div class="flex items-center justify-end w-full gap-3 mt-8">
-            <button type="button"
-                    @click="closeEditModal()"
-                    class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 sm:w-auto"
-                    :disabled="isEditSubmitting">
-              Cancel
-            </button>
-            <button type="submit"
-                    class="flex justify-center w-full px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 sm:w-auto"
-                    :disabled="isEditSubmitting"
-                    :class="{'opacity-50 cursor-not-allowed': isEditSubmitting}">
-              <span x-show="!isEditSubmitting">Update User</span>
-              <span x-show="isEditSubmitting" class="flex items-center gap-2">
-                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Updating...
+                Saving...
               </span>
             </button>
           </div>
@@ -520,8 +273,8 @@
        x-transition:leave-end="opacity-0">
     
     <!-- Full screen backdrop -->
-    <div class="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" 
-         style="backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);"
+    <div class="fixed inset-0 h-full w-full az-backdrop" 
+        
          @click="closeDeleteModal()"></div>
     
     <!-- Modal Content -->
@@ -968,44 +721,22 @@
 <script>
 function userTable() {
     return {
-        // Modal states
+        // Modal states (one modal creates and edits)
         isCreateModalOpen: false,
-        isEditModalOpen: false,
+        isEdit: false,
+        editId: null,
         isDeleteModalOpen: false,
         
         // Form states
         isSubmitting: false,
-        isEditSubmitting: false,
         isDeleteSubmitting: false,
         
         // Messages
         message: '',
         messageType: '',
-        editMessage: '',
-        editMessageType: '',
         
         // Form data
         formData: {
-            name: '',
-            email: '',
-            phone: '',
-            role: '',
-            password: '',
-            // Broker fields
-            cert_no: '',
-            interest_client: '',
-            interest_broker: '',
-            penalty_client: '',
-            penalty_broker: '',
-            // Borrower fields (broker_id REMOVED)
-            national_id: '',
-            client_type: 'individual',
-            status: '1',
-        },
-        
-        // Edit form data
-        editFormData: {
-            id: '',
             name: '',
             email: '',
             phone: '',
@@ -1048,6 +779,8 @@ function userTable() {
         // ============= CREATE MODAL FUNCTIONS =============
         openCreateModal() {
             this.resetForm();
+            this.isEdit = false;
+            this.editId = null;
             this.isCreateModalOpen = true;
             // Prevent body scroll when modal is open
             document.body.style.overflow = 'hidden';
@@ -1059,6 +792,8 @@ function userTable() {
         
         closeCreateModal() {
             this.isCreateModalOpen = false;
+            this.isEdit = false;
+            this.editId = null;
             this.resetForm();
             // Restore body scroll
             document.body.style.overflow = '';
@@ -1096,8 +831,8 @@ function userTable() {
             this.messageType = '';
             
             try {
-                // Basic validation
-                if (!this.validateForm()) {
+                // Basic validation (a blank password on edit keeps the old one)
+                if (!this.isEdit && !this.validateForm()) {
                     throw new Error('Please fill in all required fields correctly.');
                 }
                 
@@ -1114,9 +849,14 @@ function userTable() {
                 if (csrfToken) {
                     formData.append('_token', csrfToken);
                 }
+                if (this.isEdit) {
+                    formData.append('_method', 'PUT');
+                    formData.append('id', this.editId);
+                    if (!this.formData.password) formData.delete('password');
+                }
                 
-                // Send request
-                const response = await fetch('{{ route("users.store") }}', {
+                // Send request: create, or update the user being edited
+                const response = await fetch(this.isEdit ? `/users/${this.editId}` : '{{ route("users.store") }}', {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -1137,14 +877,10 @@ function userTable() {
                     throw new Error(data.message || 'Something went wrong');
                 }
                 
-                // Success
-                this.message = data.message || 'User created successfully!';
-                this.messageType = 'success';
-                
-                // Reload page after success to show new user
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                // Success: close, say so, refresh the list in the background
+                window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: data.message || (this.isEdit ? 'User updated.' : 'User created.') } }));
+                this.closeCreateModal();
+                setTimeout(() => (window.azRefresh ? window.azRefresh() : location.reload()), 200);
                 
             } catch (error) {
                 this.message = error.message;
@@ -1162,125 +898,21 @@ function userTable() {
         // ============= EDIT MODAL FUNCTIONS =============
         openEditModal(userId) {
             const row = document.querySelector(`.user-row[data-user-id="${userId}"]`);
-            if (row) {
-                const userData = JSON.parse(row.getAttribute('data-user-data'));
-                this.editFormData = {
-                    id: userData.id,
-                    name: userData.name,
-                    email: userData.email,
-                    phone: userData.phone,
-                    role: userData.role,
-                    password: '',
-                    // Broker fields
-                    cert_no: userData.cert_no || '',
-                    interest_client: userData.interest_client || '',
-                    interest_broker: userData.interest_broker || '',
-                    penalty_client: userData.penalty_client || '',
-                    penalty_broker: userData.penalty_broker || '',
-                    // Borrower fields (broker_id REMOVED)
-                    national_id: userData.national_id || '',
-                    client_type: userData.client_type || 'individual',
-                    status: userData.status || '1',
-                };
-                this.isEditModalOpen = true;
-                this.editMessage = '';
-                this.editMessageType = '';
-                // Prevent body scroll when modal is open
-                document.body.style.overflow = 'hidden';
-            }
-        },
-        
-        closeEditModal() {
-            this.isEditModalOpen = false;
-            this.editFormData = {
-                id: '',
-                name: '',
-                email: '',
-                phone: '',
-                role: '',
-                password: '',
-                cert_no: '',
-                interest_client: '',
-                interest_broker: '',
-                penalty_client: '',
-                penalty_broker: '',
-                national_id: '',
-                client_type: 'individual',
-                status: '1',
+            if (!row) return;
+            const u = JSON.parse(row.getAttribute('data-user-data'));
+            this.resetForm();
+            this.formData = {
+                name: u.name || '', email: u.email || '', phone: u.phone || '', role: u.role || '', password: '',
+                cert_no: u.cert_no || '', interest_client: u.interest_client || '', interest_broker: u.interest_broker || '',
+                penalty_client: u.penalty_client || '', penalty_broker: u.penalty_broker || '',
+                national_id: u.national_id || '', client_type: u.client_type || 'individual', status: String(u.status ?? '1'),
             };
-            // Restore body scroll
-            document.body.style.overflow = '';
+            this.isEdit = true;
+            this.editId = u.id;
+            this.isCreateModalOpen = true;
+            document.body.style.overflow = 'hidden';
         },
-        
-        toggleEditRoleFields() {
-            // This function is triggered when role changes in edit modal
-        },
-        
-        async submitEditForm() {
-            this.isEditSubmitting = true;
-            this.editMessage = '';
-            this.editMessageType = '';
-            
-            try {
-                // Prepare form data
-                const formData = new FormData();
-                for (const key in this.editFormData) {
-                    if (this.editFormData[key] !== null && this.editFormData[key] !== undefined) {
-                        formData.append(key, this.editFormData[key]);
-                    }
-                }
-                
-                // Add CSRF token and method spoofing
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-                if (csrfToken) {
-                    formData.append('_token', csrfToken);
-                    formData.append('_method', 'PUT');
-                }
-                
-                // Send request
-                const response = await fetch(`/users/${this.editFormData.id}`, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfToken,
-                    },
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    // Handle validation errors
-                    if (data.errors) {
-                        const errorMessages = Object.values(data.errors).flat();
-                        throw new Error(errorMessages.join(', '));
-                    }
-                    throw new Error(data.message || 'Something went wrong');
-                }
-                
-                // Success
-                this.editMessage = data.message || 'User updated successfully!';
-                this.editMessageType = 'success';
-                
-                // Reload page after success
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-                
-            } catch (error) {
-                this.editMessage = error.message;
-                this.editMessageType = 'error';
-                // Scroll to error message
-                this.$nextTick(() => {
-                    const modal = document.querySelector('[x-show="isEditModalOpen"]');
-                    if (modal) modal.scrollTop = 0;
-                });
-            } finally {
-                this.isEditSubmitting = false;
-            }
-        },
-        
+
         // ============= DELETE MODAL FUNCTIONS =============
         openDeleteModal(userId, userName) {
             this.deleteUserId = userId;
@@ -1326,7 +958,7 @@ function userTable() {
                 }
                 
                 // Success - reload page
-                window.location.reload();
+                (window.azRefresh ? window.azRefresh() : location.reload());
                 
             } catch (error) {
                 uiAlert('Error deleting user: ' + error.message);

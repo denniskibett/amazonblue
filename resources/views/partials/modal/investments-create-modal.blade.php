@@ -17,7 +17,7 @@
      style="display: none;">
     
     <!-- Backdrop -->
-    <div class="fixed inset-0 bg-black/50" @click="close()"></div>
+    <div class="fixed inset-0 az-backdrop" @click="close()"></div>
     
     <!-- Slideover Panel -->
     <div class="fixed inset-y-0 right-0 max-w-full flex">
@@ -1399,18 +1399,17 @@ document.addEventListener('alpine:init', function() {
 
             // ============ INIT ============
             initModal() {
-                console.log('Investment form modal initialized');
                 
                 this.draftKey = 'investment_draft_' + (this.isEditMode ? 'edit_' + (this.formData.id || '') : 'new');
                 
                 const draft = localStorage.getItem(this.draftKey);
                 this.hasDraft = !!draft;
                 
-                window.addEventListener('open-investment-create', () => {
+                window.azOn('open-investment-create', () => {
                     this.openCreate();
                 });
 
-                window.addEventListener('edit-investment', (event) => {
+                window.azOn('edit-investment', (event) => {
                     this.openEdit(event.detail.investment);
                 });
             },
@@ -1493,7 +1492,6 @@ document.addEventListener('alpine:init', function() {
             },
 
             openEdit(investment) {
-                console.log('Opening edit modal for:', investment);
                 this.isEditMode = true;
                 this.isOpen = true;
                 this.errors = {};

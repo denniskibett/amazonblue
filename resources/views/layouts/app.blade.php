@@ -2,7 +2,9 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <style>[x-cloak]{display:none !important}</style>{{-- hidden until Alpine starts: no pop-up flashes on load (23 Oct 2026) --}}
+    <style>[x-cloak]{display:none !important}</style>
+    {{-- window.azOn(event, fn): one listener per event, so a component re-drawn by a background refresh doesn't stack copies (23 Oct 2026) --}}
+    <script>window.azOn=function(t,f){var k='__azOn_'+t;if(window[k])window.removeEventListener(t,window[k]);window[k]=f;window.addEventListener(t,f);};</script>{{-- hidden until Alpine starts: no pop-up flashes on load (23 Oct 2026) --}}
     @include('partials.ui.img-fallback')
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -33,18 +35,9 @@
     {{-- Charts load without holding up the page (owner, 22 Oct 2026); pinned versions so an upstream release can't break us --}}
     <script defer src="https://cdn.jsdelivr.net/npm/apexcharts@4.7.0/dist/apexcharts.min.js"></script>
 
-    <!-- Flatpickr for date picker -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
-
-    
-    <!-- Vite Assets -->
-    @vite([
-        'resources/css/app.css',
-        'resources/js/app.js',
-        'resources/js/bootstrap.js',
-        'resources/js/index.js',
-    ])
+    {{-- One stylesheet and one script (Alpine + flatpickr); date fields become pickers by themselves (owner, 23 Oct 2026) --}}
+    @vite(['resources/css/app.css', 'resources/js/index.js'])
+    <script defer src="{{ asset('assets/js/dates.js') }}?v={{ filemtime(public_path('assets/js/dates.js')) }}"></script>
 
     {{-- Alpine comes from resources/js/index.js (with the persist plugin). The second copy from the CDN that used to load
          here started Alpine twice, which made modals, alerts and the loader misbehave (owner, 22 Oct 2026). --}}

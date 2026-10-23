@@ -498,6 +498,12 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('users.peek')->middleware('permission:view users');
         // notifications for every staff role (owner, 22 Oct 2026)
         Route::get('notifications', [\App\Http\Controllers\Staff\NotificationsController::class, 'index'])->name('notifications');
+        // partner money and links: read an M-Pesa SMS, record a partner line, per-loan broker/funder with a dry run (owner, 23 Oct 2026)
+        Route::post('mpesa/read-sms', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'parseSms'])->name('mpesa.read-sms');
+        Route::post('partners/{partner}/lines', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'storeLine'])->name('partners.lines.store')->middleware('permission:edit partners');
+        Route::get('loans/{loan}/partner-options', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'options'])->name('loans.partner-options')->middleware('permission:create disbursements');
+        Route::get('loans/{loan}/partners', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'show'])->name('loans.partners')->middleware('permission:edit partners');
+        Route::post('loans/{loan}/partners', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'apply'])->name('loans.partners.apply')->middleware('permission:edit partners');
         // borrowers: details, gaps and behaviour in one list (owner, 23 Oct 2026)
         Route::get('borrowers', [\App\Http\Controllers\Staff\BorrowersController::class, 'index'])->name('borrowers')->middleware('permission:view users');
         // lending analytics: amount heatmaps and borrower behaviour (owner, 23 Oct 2026)

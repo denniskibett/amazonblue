@@ -19,6 +19,8 @@ class Disbursement extends Model
         'processing_fee',
         'net_amount',
         'transaction',
+        'bank_ref',      // bank Transaction Ref ID (owner, 23 Oct 2026: bank ↔ M-Pesa keeps both references)
+        'mpesa_ref',     // M-Pesa code
         'mode',
         'disburse_date',
         'payment_date',
@@ -38,6 +40,14 @@ class Disbursement extends Model
         'net_amount' => 'decimal:2'
     ];
 
+    private static ?bool $refColumns = null;
+
+    /** bank_ref / mpesa_ref exist once database/sql/2026_10_23_bank_and_mpesa_refs.sql has run. */
+    public static function hasRefColumns(): bool
+    {
+        return self::$refColumns ??= \Illuminate\Support\Facades\Schema::hasColumn((new self)->getTable(), 'mpesa_ref');
+    }
+
     protected static function booted(): void
     {
         // kind is stored (Stage 4 Phase 1). A form that sends no kind gets the old reading of the reference,
@@ -45,6 +55,10 @@ class Disbursement extends Model
         static::saving(function (self $row) {
             if (! in_array($row->kind, CustomerWallets::KINDS, true) || ($row->isDirty('transaction') && ! $row->isDirty('kind') && $row->exists)) {
                 $row->kind = CustomerWallets::kind($row->transaction);
+            }
+            // both references (owner, 23 Oct 2026): filled from the mode and the reference's shape when not given
+            if (self::hasRefColumns() && ! $row->bank_ref && ! $row->mpesa_ref && $row->kind === 'cash') {
+                [, $row->bank_ref, $row->mpesa_ref] = \App\Support\PaymentModes::refs('out', $row->mode, $row->transaction, null, null);
             }
         });
         static::creating(function (self $row) {

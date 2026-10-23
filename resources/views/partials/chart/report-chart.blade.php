@@ -14,13 +14,11 @@ document.addEventListener('alpine:initialized', function() {
             chartData: @json($reportData),
             
             init() {
-                console.log('Report chart initializing...');
                 this.renderChart(this.selected);
             },
             
             updateChart(type) {
                 this.selected = type;
-                console.log('Switching to chart:', type);
                 this.renderChart(type);
             },
             

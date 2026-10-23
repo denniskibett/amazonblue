@@ -33,3 +33,5 @@
   rel="stylesheet"
 />
 <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}" />
+{{-- date fields become flatpickr pickers; flatpickr itself is fetched only on pages with a date field (owner, 23 Oct 2026) --}}
+<script defer src="{{ asset('assets/js/dates.js') }}?v={{ filemtime(public_path('assets/js/dates.js')) }}"></script>

@@ -13,7 +13,7 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
-        class="fixed inset-0 bg-black/50 z-[99999]"
+        class="fixed inset-0 z-[99999] az-backdrop"
         @click="closeModal()"
     ></div>
 
@@ -31,7 +31,7 @@
     >
         <div class="flex flex-col h-full">
             <!-- Header -->
-            <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 p-4 sticky top-0 bg-white dark:bg-gray-900 z-10">
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5 sticky top-0 bg-white/95 backdrop-blur dark:bg-gray-900/95 z-10 sm:rounded-tl-3xl">
                 <div>
                     <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Loan Cycles</h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400">Complete history of all loan cycles</p>
@@ -141,7 +141,7 @@
                 <!-- Footer -->
                 <div class="mt-6 flex justify-end border-t border-gray-200 pt-4 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900">
                     <button @click="closeModal()" 
-                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
+                            class="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
                         Close
                     </button>
                 </div>
@@ -165,7 +165,7 @@ document.addEventListener('alpine:init', function() {
             loading: false,
 
             init() {
-                window.addEventListener('open-cycles-modal', (event) => {
+                window.azOn('open-cycles-modal', (event) => {
                     this.openModal(event.detail);
                 });
             },

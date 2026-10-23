@@ -19,7 +19,7 @@
 
     <!-- Filters: the report reads the date range from the address, so the form reloads the page -->
     <form method="GET" class="mb-6 flex flex-wrap items-end gap-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-        <label class="min-w-[160px] flex-1"><span class="mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400">From</span><input type="date" name="start_date" value="{{ $from }}" class="{{ $input }}"></label>
+        <label class="min-w-[160px] flex-1"><span class="mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400">Dates</span><input type="date" data-range-end="end_date" name="start_date" value="{{ $from }}" class="{{ $input }}"></label>
         <label class="min-w-[160px] flex-1"><span class="mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400">To</span><input type="date" name="end_date" value="{{ $to }}" class="{{ $input }}"></label>
         <div class="flex gap-2">
             <button class="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-5 text-theme-sm font-medium text-white hover:bg-brand-600"><x-ui.icon name="filter" class="size-4" /> Apply</button>
@@ -132,13 +132,11 @@ function reportDisplay() {
         
         initReport(data) {
             this.reportData = data;
-            console.log('Report data loaded:', data);
             // the chart is drawn by the server-side partial; the tabs are links (?chart=...)
         },
         
         loadChart(chartType) {
             this.selectedChart = chartType;
-            console.log('Loading chart:', chartType);
             
             // Update active button state
             document.querySelectorAll('[x-on\\:click^="loadChart"]').forEach(btn => {

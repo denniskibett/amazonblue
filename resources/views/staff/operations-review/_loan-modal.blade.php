@@ -4,7 +4,7 @@
 <style>[x-cloak]{display:none!important}</style>
 <div x-data="loanModal(@js(route('staff.operations-review.detail', ['loan' => '__LOAN__'])), @js(route('staff.operations-review.repair', ['loan' => '__LOAN__'])), @js(csrf_token()), @js($canFix))"
      @open-loan.window="load($event.detail.id)" @keydown.escape.window="close()" x-cloak>
-  <div x-show="id" class="fixed inset-0 z-99999 flex items-start justify-center overflow-y-auto bg-gray-900/50 p-3 backdrop-blur-sm sm:p-6" @click.self="close()">
+  <div x-show="id" class="fixed inset-0 z-99999 flex items-start justify-center overflow-y-auto p-3 sm:p-6 az-backdrop" @click.self="close()">
     <div class="relative w-full max-w-6xl rounded-2xl bg-white shadow-xl dark:bg-gray-900" role="dialog" aria-modal="true" :aria-label="'Loan #' + id">
 
       {{-- header --}}

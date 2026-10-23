@@ -13,7 +13,7 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
-        class="fixed inset-0 bg-black/50 z-[99999]"
+        class="fixed inset-0 z-[99999] az-backdrop"
         @click="close()"
     ></div>
 
@@ -26,13 +26,13 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="transform translate-x-0"
         x-transition:leave-end="transform translate-x-full"
-        class="fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-900 shadow-2xl z-[99999] overflow-y-auto"
+        class="fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-900 shadow-theme-xl sm:rounded-l-3xl z-[99999] overflow-y-auto"
         @click.away="close()"
     >
         <div class="flex flex-col h-full">
             <!-- Header -->
-            <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 p-4 sticky top-0 bg-white dark:bg-gray-900 z-10">
-                <h3 class="text-xl font-semibold text-gray-900 dark:text-white" x-text="title"></h3>
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5 sticky top-0 bg-white/95 backdrop-blur dark:bg-gray-900/95 z-10 sm:rounded-tl-3xl">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="title"></h3>
                 <button @click="close()" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -46,35 +46,17 @@
                 <input type="hidden" name="_method" x-model="method">
                 <input type="hidden" name="id" x-model="editId">
 
-                <!-- ============ MODE TOGGLE (only on create) ============ -->
-                <div x-show="!editId" class="mb-6">
-                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Disbursement Type <span class="text-red-500">*</span>
-                    </label>
-                    <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                        <button type="button" @click="setMode('loan')"
-                            :class="mode === 'loan' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400 font-semibold' : 'text-gray-600 dark:text-gray-400'"
-                            class="py-2 px-4 text-sm rounded-md transition-all">
-                            Loan Disbursement
-                        </button>
-                        <button type="button" @click="setMode('investment')"
-                            :class="mode === 'investment' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400 font-semibold' : 'text-gray-600 dark:text-gray-400'"
-                            class="py-2 px-4 text-sm rounded-md transition-all">
-                            Investment Disbursement
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Transaction Message Input - Only show on create -->
                 <div x-show="!editId" class="mb-6">
                     <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Paste Transaction Message
                     </label>
                     <div class="relative">
-                        <textarea x-model="message" @input="autoParseMessage()" rows="3" 
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                            placeholder="Paste transaction message here... It will auto-parse!"></textarea>
+                        <textarea x-model="message" @input.debounce.500ms="readMessage()" rows="3" 
+                            class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"
+                            placeholder="Paste the bank or M-Pesa message: amount, references and date are read from it"></textarea>
                     </div>
+                    <p class="mt-1 text-xs" :class="readOk ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'" x-show="readMsg" x-text="readMsg"></p>
                 </div>
 
                 <!-- ============ LOAN MODE: CYCLE SELECTION ============ -->
@@ -83,7 +65,7 @@
                         Apply to Loan Cycle <span class="text-red-500">*</span>
                     </label>
                     <select x-model="selectedCycleId" 
-                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                        class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
                         <option value="">-- Select Cycle --</option>
                         <template x-for="cycle in cycles" :key="cycle.id">
                             <option :value="cycle.id" x-text="'Cycle #' + cycle.cycle_number + ' - Balance: KES ' + Number(cycle.new_balance).toFixed(2) + ' (' + cycle.status + ')'"></option>
@@ -96,63 +78,59 @@
                     </p>
                 </div>
 
-                <!-- ============ INVESTMENT SELECTION (shown for investment mode OR when funding_source is partner/mixed) ============ -->
-                <div x-show="mode === 'investment' || form.funding_source === 'partner' || form.funding_source === 'mixed'"
-                     class="mb-4 space-y-4">
-                    <div>
-                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Investment
-                            <span class="text-red-500" x-show="mode === 'investment'">*</span>
-                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-2" x-show="mode === 'loan'">
-                                (Optional — link this disbursement to an investment)
-                            </span>
-                        </label>
-                        <select x-model="selectedInvestmentId" @change="onInvestmentChange()"
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
-                            <option value="">-- Select Investment --</option>
-                            <template x-for="inv in investments" :key="inv.id">
-                                <option :value="Number(inv.id)" x-text="inv.name + ' (' + inv.facility_type_label + ')'"></option>
-                            </template>
-                        </select>
-                        <p x-show="investments.length === 0" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Loading investments...
-                        </p>
-                    </div>
-
-                    <!-- Auto-populated partner info -->
-                    <div x-show="selectedInvestmentId && currentInvestmentPartners.length > 0"
-                         class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                        <p class="text-xs font-medium text-blue-800 dark:text-blue-300 mb-1">Funding Partners</p>
-                        <div class="flex flex-wrap gap-1">
-                            <template x-for="p in currentInvestmentPartners" :key="p.id">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-                                    <span x-text="p.name"></span>
-                                    <span x-show="p.amount_committed" class="ml-1 text-blue-600 dark:text-blue-300"
-                                          x-text="'(KES ' + Number(p.amount_committed).toLocaleString() + ')'"></span>
-                                </span>
-                            </template>
+                <!-- ============ WHO IS BEHIND THIS LOAN (owner, 23 Oct 2026) ============ -->
+                <div x-show="mode === 'loan'" class="mb-4 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
+                    <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Who is behind this loan</p>
+                    <p x-show="editId && opts.has_repayments" class="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                        Payments on this loan are already split, so a change here would move shares already paid.
+                        <a :href="opts.links_url" data-drawer class="font-medium underline" @click="close()">Change it with a preview</a>.
+                    </p>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Brought in by (broker)</label>
+                            <select x-model.number="broker" :disabled="editId && opts.has_repayments" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                <option :value="0">Nobody: our own client</option>
+                                <template x-for="p in opts.partners" :key="p.id"><option :value="p.id" x-text="p.name" :selected="Number(p.id) === Number(broker)"></option></template>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="opts.own && Number(broker) === Number(opts.own.id) ? 'Their own loan: full rate, their broker share of each repayment comes back to them.' : 'The broker earns their share of the interest and penalty on every repayment.'"></p>
+                        </div>
+                        <div>
+                            <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Funded by</span>
+                            <div class="flex flex-wrap gap-2 text-sm">
+                                <template x-for="[k, l] in (editId ? [['house', 'Our money'], ['line', 'A partner line']] : [['house', 'Our money'], ['line', 'A partner line'], ['new', 'New partner money']])" :key="k">
+                                    <button type="button" @click="fund = k" :disabled="(k === 'line' && opts.lines.length === 0) || (editId && opts.has_repayments)"
+                                        :class="fund === k ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'"
+                                        class="rounded-lg border px-3 py-2 font-medium disabled:opacity-40" x-text="l"></button>
+                                </template>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Remaining amount preview -->
-                    <div x-show="selectedInvestmentId && currentInvestment"
-                         class="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                        <div class="grid grid-cols-3 gap-2 text-xs">
-                            <div>
-                                <p class="text-gray-500 dark:text-gray-400">Committed</p>
-                                <p class="font-semibold text-gray-800 dark:text-white"
-                                   x-text="'KES ' + Number(currentInvestment?.committed_amount || 0).toLocaleString()"></p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500 dark:text-gray-400">Disbursed</p>
-                                <p class="font-semibold text-gray-800 dark:text-white"
-                                   x-text="'KES ' + Number(currentInvestment?.disbursed_amount || 0).toLocaleString()"></p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500 dark:text-gray-400">Remaining</p>
-                                <p class="font-semibold text-green-700 dark:text-green-400"
-                                   x-text="'KES ' + Number(currentInvestment?.remaining_amount || 0).toLocaleString()"></p>
-                            </div>
+                    <div x-show="fund === 'line'" class="mt-4">
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Partner line</label>
+                        <select x-model="lineId" :disabled="editId && opts.has_repayments" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                            <template x-for="l in opts.lines" :key="l.id"><option :value="l.id" x-text="l.label"></option></template>
+                        </select>
+                    </div>
+                    <div x-show="fund === 'new'" class="mt-4 space-y-4">
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">The partner's M-Pesa or bank message</label>
+                            <textarea x-model="np.sms" @input.debounce.500ms="readPartnerSms()" rows="2" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" placeholder="Paste the message for the money the partner sent"></textarea>
+                            <p class="mt-1 text-xs" :class="np.ok ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'" x-show="np.msg" x-text="np.msg"></p>
+                        </div>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Partner who sent it</label>
+                                <select x-model="np.partner" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"><option value="">Choose…</option>
+                                    <template x-for="p in opts.partners" :key="p.id"><option :value="p.id" x-text="p.name"></option></template></select></div>
+                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Amount received (KES)</label><input type="number" step="0.01" min="1" x-model="np.amount" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></div>
+                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Reference (M-Pesa or bank)</label><input type="text" x-model="np.code" maxlength="40" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" style="text-transform:uppercase"></div>
+                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Date received</label><input type="date" x-model="np.date" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></div>
+                            <div><span class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">How long</span>
+                                <div class="flex gap-2 text-sm">
+                                    <button type="button" @click="np.term = 'short_term'; np.maturity = opts.maturity" :class="np.term === 'short_term' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'" class="rounded-lg border px-3 py-2 font-medium">Short term</button>
+                                    <button type="button" @click="np.term = 'long_term'; np.maturity = ''" :class="np.term === 'long_term' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'" class="rounded-lg border px-3 py-2 font-medium">Long term</button>
+                                </div></div>
+                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Pay back by</label><input type="date" x-model="np.maturity" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="np.term === 'short_term' ? 'Closes and pays out when its loans are repaid.' : 'Lends again what comes back until this date.'"></p></div>
                         </div>
                     </div>
                 </div>
@@ -164,7 +142,7 @@
                             Amount (KES) <span class="text-red-500">*</span>
                         </label>
                         <input type="number" x-model="form.amount" step="0.01" min="0"
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"
                             required>
                     </div>
 
@@ -173,33 +151,30 @@
                             Disbursement Date <span class="text-red-500">*</span>
                         </label>
                         <input type="text" x-model="form.disburse_date" x-ref="datepicker"
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"
                             placeholder="Select date" required>
                     </div>
 
                     <div>
-                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Transaction Reference <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" x-model="form.transaction" 
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                            placeholder="e.g., 4540EMLQ4038" required>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">How the money was sent</label>
+                        <select x-model="form.mode" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                            <option value="">Select mode...</option>
+                            @foreach (\App\Support\PaymentModes::MODES as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach
+                        </select>
                     </div>
 
-                    <div>
-                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Payment Mode
-                        </label>
-                        <select x-model="form.mode" 
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
-                            <option value="">Select mode...</option>
-                            <option value="mpesa">M-PESA</option>
-                            <option value="pesalink">Pesalink</option>
-                            <option value="bank_transfer">Bank Transfer</option>
-                            <option value="cash">Cash</option>
-                            <option value="cheque">Cheque</option>
-                            <option value="other">Other</option>
-                        </select>
+                    <div x-show="!['bank_to_mpesa', 'mpesa_to_bank'].includes(form.mode)">
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Transaction Reference <span class="text-red-500">*</span></label>
+                        <input type="text" x-model="form.transaction" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" placeholder="e.g., 4540EMLQ4038">
+                    </div>
+                    <div x-show="['bank_to_mpesa', 'mpesa_to_bank'].includes(form.mode)">
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Bank Transaction Ref ID <span class="text-red-500">*</span></label>
+                        <input type="text" x-model="form.bank_ref" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" placeholder="e.g., 5690NMQS2509">
+                    </div>
+                    <div x-show="['bank_to_mpesa', 'mpesa_to_bank'].includes(form.mode)">
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">M-Pesa code <span class="text-red-500">*</span></label>
+                        <input type="text" x-model="form.mpesa_ref" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" placeholder="e.g., UJH6OA6DRB" style="text-transform:uppercase">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Both are kept, so the bank statement and the M-Pesa statement each match.</p>
                     </div>
 
                     <div>
@@ -207,33 +182,25 @@
                             Payment Date (Optional)
                         </label>
                         <input type="text" x-model="form.payment_date" x-ref="paymentDatepicker"
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"
                             placeholder="Select date">
                     </div>
 
-                    <!-- Funding source (auto-detected but user can override) -->
-                    <div>
-                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Funding Source
-                        </label>
-                        <select x-model="form.funding_source" 
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
-                            <option value="internal">Internal Funds</option>
-                            <option value="partner">Partner Funds</option>
-                            <option value="mixed">Mixed Funds</option>
-                        </select>
-                    </div>
+                </div>
+
+                <div x-show="errors.length" class="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                    <template x-for="e in errors" :key="e"><p x-text="e"></p></template>
                 </div>
 
                 <!-- Footer -->
                 <div class="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900">
                     <button type="button" @click="close()" 
-                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
+                        class="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
                         Cancel
                     </button>
                     <button type="submit" 
-                        class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800">
-                        <span x-text="submitText"></span>
+                        class="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 focus:ring-4 focus:ring-brand-500/20">
+                        <span x-text="saving ? 'Saving…' : submitText"></span>
                     </button>
                 </div>
             </form>
@@ -271,10 +238,22 @@ function disbursementModal() {
             amount: '',
             disburse_date: '',
             transaction: '',
+            bank_ref: '',
+            mpesa_ref: '',
             mode: '',
             payment_date: '',
             funding_source: 'internal'
         },
+        // who is behind the loan (owner, 23 Oct 2026)
+        opts: { partners: [], lines: [], own: null, house: null, maturity: '', has_repayments: false, links_url: '#' },
+        broker: 0,
+        fund: 'house',
+        lineId: '',
+        np: { sms: '', msg: '', ok: false, partner: '', amount: '', code: '', date: '', term: 'short_term', maturity: '' },
+        readMsg: '',
+        readOk: false,
+        errors: [],
+        saving: false,
 
         get currentInvestment() {
             return this.investments.find(i => Number(i.id) === Number(this.selectedInvestmentId)) || null;
@@ -297,7 +276,7 @@ function disbursementModal() {
             window.openInvestmentDisbursementModal = (data) => this.openInvestmentModal(data);
             window.closeDisbursementModal = () => this.close();
 
-            window.addEventListener('set-disbursement-cycles', (event) => {
+            window.azOn('set-disbursement-cycles', (event) => {
                 if (event.detail && event.detail.cycles) {
                     this.cycles = event.detail.cycles;
                     this.cyclesLoaded = true;
@@ -312,6 +291,7 @@ function disbursementModal() {
                 if (input._flatpickr) input._flatpickr.destroy();
                 flatpickr(input, {
                     dateFormat: 'Y-m-d',
+                    altInput: true, altFormat: 'j M Y',   // shows 23 Oct 2026, sends 2026-10-23
                     locale: { firstDayOfWeek: 1 },
                     onChange: (selectedDates) => {
                         if (selectedDates.length > 0) this.form.disburse_date = selectedDates[0];
@@ -324,6 +304,7 @@ function disbursementModal() {
                 if (paymentInput._flatpickr) paymentInput._flatpickr.destroy();
                 flatpickr(paymentInput, {
                     dateFormat: 'Y-m-d',
+                    altInput: true, altFormat: 'j M Y',   // shows 23 Oct 2026, sends 2026-10-23
                     locale: { firstDayOfWeek: 1 },
                     onChange: (selectedDates) => {
                         if (selectedDates.length > 0) this.form.payment_date = selectedDates[0];
@@ -405,7 +386,6 @@ function disbursementModal() {
          */
         async loadInvestments(force = false) {
             if (!force && this.investmentsLoaded && this.investments.length > 0) {
-                console.log('Disbursement: investments already cached', this.investments.length);
                 return;
             }
 
@@ -417,7 +397,6 @@ function disbursementModal() {
                     facility_type_label: inv.facility_type === 'short_term' ? 'Short-Term' : 'Long-Term',
                 }));
                 this.investmentsLoaded = true;
-                console.log('Disbursement: investments loaded from window.investmentsData', this.investments.length);
                 return;
             }
 
@@ -433,7 +412,6 @@ function disbursementModal() {
                             facility_type_label: inv.facility_type === 'short_term' ? 'Short-Term' : 'Long-Term',
                         }));
                         this.investmentsLoaded = true;
-                        console.log('Disbursement: investments loaded from data-investments', this.investments.length);
                         return;
                     }
                 } catch (e) {
@@ -443,7 +421,6 @@ function disbursementModal() {
 
             // AJAX
             try {
-                console.log('Disbursement: fetching investments via AJAX');
                 const response = await fetch('/investments/data', {
                     method: 'GET',
                     credentials: 'same-origin',
@@ -472,7 +449,6 @@ function disbursementModal() {
                     facility_type_label: inv.facility_type === 'short_term' ? 'Short-Term' : 'Long-Term',
                 }));
                 this.investmentsLoaded = true;
-                console.log('Disbursement: investments loaded via AJAX', this.investments.length);
 
             } catch (error) {
                 console.error('Disbursement: error loading investments', error);
@@ -529,6 +505,8 @@ function disbursementModal() {
                 this.selectedInvestmentId = data.investment_id ? Number(data.investment_id) : null;
                 this.form.amount = data.amount;
                 this.form.transaction = data.transaction || '';
+                this.form.bank_ref = data.bank_ref || '';
+                this.form.mpesa_ref = data.mpesa_ref || '';
                 this.form.mode = data.mode || '';
                 this.form.funding_source = data.funding_source || 'internal';
 
@@ -551,6 +529,7 @@ function disbursementModal() {
                 if (data.investment_id && !data.loan_id) {
                     this.mode = 'investment';
                 }
+                this.loadPartnerOptions();
 
                 // ============ FIX: FORCE refresh investments on edit ============
                 await this.loadInvestments(true);
@@ -571,6 +550,7 @@ function disbursementModal() {
                 this.submitText = 'Create Disbursement';
                 this.method = 'POST';
                 this.editId = null;
+                this.loadPartnerOptions();
 
                 this.$nextTick(() => {
                     const input = this.$refs.datepicker;
@@ -578,6 +558,8 @@ function disbursementModal() {
                         const now = new Date();
                         input._flatpickr.setDate(now);
                         this.form.disburse_date = now;
+                    } else if (!this.form.disburse_date) {
+                        this.form.disburse_date = new Date().toLocaleDateString('en-CA');   // today, when no date picker is loaded
                     }
                 });
             }
@@ -627,10 +609,14 @@ function disbursementModal() {
                 amount: '',
                 disburse_date: '',
                 transaction: '',
+                bank_ref: '',
+                mpesa_ref: '',
                 mode: '',
                 payment_date: '',
                 funding_source: 'internal'
             };
+            this.broker = 0; this.fund = 'house'; this.lineId = ''; this.errors = []; this.readMsg = ''; this.readOk = false;
+            this.np = { sms: '', msg: '', ok: false, partner: '', amount: '', code: '', date: '', term: 'short_term', maturity: '' };
             this.message = '';
             this.parsedData = {};
             this.editId = null;
@@ -640,6 +626,67 @@ function disbursementModal() {
             this.cyclesLoaded = false;
             this.currentInvestmentPartners = [];
             this.mode = 'loan';
+        },
+
+        async loadPartnerOptions() {
+            if (!this.loanId) return;
+            try {
+                const res = await fetch(`/staff/loans/${this.loanId}/partner-options`, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                if (!res.ok) return;
+                this.opts = await res.json();
+                this.np.maturity = this.opts.maturity || '';
+                if (this.editId) {
+                    // editing: start from what the loan has now
+                    this.broker = Number(this.opts.current_broker || 0);
+                    this.fund = this.opts.current_line && Number(this.opts.current_line) !== Number(this.opts.house) ? 'line' : 'house';
+                    this.lineId = this.opts.current_line || (this.opts.lines.length ? this.opts.lines[0].id : '');
+                } else {
+                    this.broker = Number(this.opts.broker || 0);
+                    this.lineId = this.opts.lines.length ? this.opts.lines[0].id : '';
+                }
+            } catch (e) { /* the modal still records the money as before */ }
+        },
+
+        async readSms(text) {
+            const res = await fetch('/staff/mpesa/read-sms', { method: 'POST', credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                body: JSON.stringify({ sms: text }) });
+            return res.ok ? res.json() : { ok: false };
+        },
+
+        // the payout message: bank and M-Pesa both read on the server, with both references when the message has them
+        async readMessage() {
+            const text = this.message.trim();
+            if (!text) { this.readMsg = ''; return; }
+            let body = { ok: false };
+            try { body = await this.readSms(text); } catch (e) {}
+            if (!body.ok) { this.autoParseMessage(); this.readOk = !!this.parsedData.amount; this.readMsg = this.readOk ? 'Read from the message. Check the amount and reference.' : 'Could not read that message. Type the details in.'; return; }
+            const m = body.sms;
+            this.form.amount = m.amount;
+            this.form.mode = m.mode || this.form.mode;
+            this.form.bank_ref = m.bank_ref || '';
+            this.form.mpesa_ref = m.mpesa_ref || '';
+            this.form.transaction = m.bank_ref || m.mpesa_ref || m.code;
+            if (m.date) {
+                this.form.disburse_date = m.date; this.form.payment_date = m.date;
+                this.$nextTick(() => { this.$refs.datepicker?._flatpickr?.setDate(m.date); this.$refs.paymentDatepicker?._flatpickr?.setDate(m.date); });
+            }
+            this.readOk = !(body.seen || []).length;
+            this.readMsg = (body.seen || []).length ? 'Already recorded: ' + body.seen.join(', ') + '. Check you are not entering it twice.'
+                : 'Read: ' + body.mode_label + ' · KES ' + Number(m.amount).toLocaleString('en-KE', { minimumFractionDigits: 2 })
+                  + (m.bank_ref ? ' · bank ' + m.bank_ref : '') + (m.mpesa_ref ? ' · M-Pesa ' + m.mpesa_ref : '') + (m.party ? ' · ' + m.party : '');
+        },
+
+        async readPartnerSms() {
+            const text = this.np.sms.trim();
+            if (!text) { this.np.msg = ''; return; }
+            let body = { ok: false };
+            try { body = await this.readSms(text); } catch (e) {}
+            if (!body.ok) { this.np.ok = false; this.np.msg = body.message || 'Could not read it. Type the reference and amount in.'; return; }
+            const m = body.sms;
+            this.np.amount = m.amount; this.np.code = m.code; if (m.date) this.np.date = m.date;
+            this.np.ok = !body.used;
+            this.np.msg = body.used ? m.code + ' has already been recorded as partner money.' : 'Read: ' + m.code + ' · KES ' + Number(m.amount).toLocaleString('en-KE', { minimumFractionDigits: 2 }) + (m.party ? ' · ' + m.party : '') + '. Choose the partner.';
         },
 
         autoParseMessage() {
@@ -752,31 +799,49 @@ function disbursementModal() {
                 window.showAlert('error', 'Error!', 'Please select a loan cycle.');
                 return;
             }
-            if (this.mode === 'investment' && !this.selectedInvestmentId) {
-                window.showAlert('error', 'Error!', 'Please select an investment.');
-                return;
-            }
-
+            if (this.saving) return;
+            this.errors = [];
+            this.saving = true;
             try {
                 const formData = new FormData();
                 const action = this.editId ? `/disbursements/${this.editId}` : '/disbursements';
+                const both = ['bank_to_mpesa', 'mpesa_to_bank'].includes(this.form.mode);
 
                 formData.append('_method', this.method);
                 formData.append('amount', this.form.amount);
                 formData.append('disburse_date', this.formatDate(this.form.disburse_date));
-                formData.append('transaction', this.form.transaction || '');
+                formData.append('transaction', both ? (this.form.bank_ref || this.form.mpesa_ref || '') : (this.form.transaction || ''));
+                formData.append('bank_ref', this.form.bank_ref || '');
+                formData.append('mpesa_ref', this.form.mpesa_ref || '');
                 formData.append('mode', this.form.mode || '');
                 formData.append('payment_date', this.formatDate(this.form.payment_date) || '');
-                formData.append('funding_source', this.form.funding_source || 'internal');
+                formData.append('loan_id', this.loanId);
+                formData.append('loan_cycle_id', this.selectedCycleId);
 
-                if (this.mode === 'loan') {
-                    formData.append('loan_id', this.loanId);
-                    formData.append('loan_cycle_id', this.selectedCycleId);
-                    if (this.selectedInvestmentId) {
-                        formData.append('investment_id', this.selectedInvestmentId);
+                if (this.editId) {
+                    // broker and funding: changed straight away before any payment, refused (with a link to the preview) after
+                    if (!this.opts.has_repayments && this.opts.partners.length) {
+                        formData.append('broker_partner_id', Number(this.broker) || 0);
+                        formData.append('funding_mode', this.fund);
+                        formData.append('investment_id', this.fund === 'line' ? (this.lineId || '') : (this.opts.house || ''));
+                    } else {
+                        formData.append('funding_source', this.form.funding_source || 'internal');
+                        if (this.selectedInvestmentId) formData.append('investment_id', this.selectedInvestmentId);
                     }
                 } else {
-                    formData.append('investment_id', this.selectedInvestmentId);
+                    // who is behind the loan (owner, 23 Oct 2026)
+                    formData.append('broker_partner_id', Number(this.broker) || 0);
+                    formData.append('funding_mode', this.fund);
+                    if (this.fund === 'house' && this.opts.house) formData.append('investment_id', this.opts.house);
+                    if (this.fund === 'line') formData.append('investment_id', this.lineId || '');
+                    if (this.fund === 'new') {
+                        formData.append('new_partner_id', this.np.partner || '');
+                        formData.append('new_amount', this.np.amount || '');
+                        formData.append('new_code', this.np.code || '');
+                        formData.append('new_date', this.np.date || '');
+                        formData.append('new_term', this.np.term);
+                        formData.append('new_maturity', this.np.maturity || '');
+                    }
                 }
 
                 const response = await fetch(action, {
@@ -788,17 +853,20 @@ function disbursementModal() {
                     body: formData
                 });
 
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
 
                 if (response.ok) {
-                    window.showAlert('success', 'Success!', this.editId ? 'Disbursement updated successfully!' : 'Disbursement created successfully!');
+                    window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: this.editId ? 'Disbursement updated.' : 'Disbursement recorded.' } }));
                     this.close();
-                    setTimeout(() => window.location.reload(), 1500);
+                    // the loan's cards, cycles and tables refresh in the background (owner, 23 Oct 2026)
+                    setTimeout(() => (window.azRefresh ? window.azRefresh() : location.reload()), 300);
                 } else {
-                    window.showAlert('error', 'Error!', data.message || 'Something went wrong.');
+                    this.errors = data.errors ? Object.values(data.errors).flat() : [data.message || 'Something went wrong.'];
                 }
             } catch (error) {
-                window.showAlert('error', 'Error!', 'Network error. Please try again.');
+                this.errors = ['Network error. Nothing was saved. Please try again.'];
+            } finally {
+                this.saving = false;
             }
         },
 

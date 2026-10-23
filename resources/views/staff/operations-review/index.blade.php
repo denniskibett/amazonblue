@@ -66,8 +66,8 @@
             @endforeach
           </select>
         </label>
-        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">Due from
-          <input type="date" name="due_from" value="{{ $filters['due_from'] ?? '' }}" class="mt-1 block w-full rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">Due dates
+          <input type="date" data-range-end="due_to" name="due_from" value="{{ $filters['due_from'] ?? '' }}" class="mt-1 block w-full rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
         </label>
         <label class="text-xs font-medium text-gray-600 dark:text-gray-300">Due to
           <input type="date" name="due_to" value="{{ $filters['due_to'] ?? '' }}" class="mt-1 block w-full rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">

@@ -73,10 +73,14 @@ class RepaymentController extends Controller
             'amount' => 'required|numeric|min:0',
             'repayment_date' => 'required|date',
             'transaction' => 'nullable|string',
+            'bank_ref' => 'nullable|string|max:100',
+            'mpesa_ref' => 'nullable|string|max:40',
             'mode' => 'nullable|string',
             // what the row is; left out, it is read from the reference as before (Repayment::booted)
             'kind' => ['nullable', \Illuminate\Validation\Rule::in(\App\Services\CustomerWallets::KINDS)],
         ]);
+        // bank ↔ M-Pesa keeps both references; the same money can't go on a loan twice (owner, 23 Oct 2026)
+        $validated = array_merge($validated, \App\Support\PaymentModes::fromRequest($request, 'in', 'repayments', (int) $validated['loan_id']));
 
         // Create repayment
         $repayment = Repayment::create($validated);
@@ -132,10 +136,13 @@ class RepaymentController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'repayment_date' => 'required|date',
             'transaction' => 'required|string|max:255|unique:repayments,transaction,' . $repayment->id . ',id,loan_id,' . $repayment->loan_id,
+            'bank_ref' => 'nullable|string|max:100',
+            'mpesa_ref' => 'nullable|string|max:40',
             'mode' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
             'kind' => ['nullable', \Illuminate\Validation\Rule::in(\App\Services\CustomerWallets::KINDS)],
         ]);
+        $validated = array_merge($validated, \App\Support\PaymentModes::fromRequest($request, 'in', 'repayments', $repayment->loan_id, $repayment->id));
 
         // Recalculate processing fee
         $loan = $repayment->loan;

@@ -56,7 +56,7 @@
               const data = await res.json().catch(() => ({}));
               throw new Error(data.errors?.file?.[0] || data.message || 'Could not save the image.');
             }
-            window.location.reload();
+            (window.azRefresh ? window.azRefresh() : location.reload());
           } catch (err) { this.error = err.message; this.busy = false; }
         },
       };

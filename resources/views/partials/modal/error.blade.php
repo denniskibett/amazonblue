@@ -1,7 +1,7 @@
 {{-- resources/views/reports/partials/modal/error.blade.php --}}
 <div x-data="errorModal()" x-show="isOpen" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
     <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75 transition-opacity" @click="close()"></div>
+        <div class="fixed inset-0 transition-opacity az-backdrop" @click="close()"></div>
         
         <div class="relative bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 shadow-xl transform transition-all">
             <div class="text-center">

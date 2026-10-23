@@ -17,7 +17,7 @@
 
     {{-- backdrop --}}
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms @click="open = false"
-         class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
+         class="fixed inset-0 az-backdrop"></div>
 
     {{-- panel --}}
     <div x-show="open" x-cloak

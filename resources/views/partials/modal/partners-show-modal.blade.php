@@ -11,7 +11,7 @@
      x-transition:leave-end="opacity-0">
     
     <div class="flex items-center justify-center min-h-screen p-5">
-        <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="close()"></div>
+        <div class="fixed inset-0 az-backdrop" @click="close()"></div>
         
         <div class="relative w-full max-w-4xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10 z-50 max-h-[90vh] overflow-y-auto">
             <!-- Close Button -->
@@ -286,7 +286,7 @@ function partnerShowModal() {
 
 // Event listener for showing partner
 document.addEventListener('alpine:init', () => {
-    window.addEventListener('show-partner', (event) => {
+    window.azOn('show-partner', (event) => {
         const modal = document.querySelector('[x-data="partnerShowModal()"]')?.__x?.$data;
         if (modal) modal.open(event.detail.partner);
     });

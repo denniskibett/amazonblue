@@ -337,7 +337,7 @@
 
   <!-- PDF Agreement Modal -->
   <div x-show="isPdfModalOpen" class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto modal z-99999" style="display: none;">
-    <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" @click="closePdfModal()"></div>
+    <div class="modal-close-btn fixed inset-0 h-full w-full az-backdrop" @click="closePdfModal()"></div>
     <div @click.outside="closePdfModal()" class="relative w-full max-w-6xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10 max-h-[90vh] flex flex-col">
       <button @click="closePdfModal()" class="group absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
         <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -385,7 +385,7 @@
 
   <!-- Delete Confirmation Modal -->
   <div x-show="isDeleteModalOpen" class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto modal z-99999" style="display: none;">
-    <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]" @click="closeDeleteModal()"></div>
+    <div class="modal-close-btn fixed inset-0 h-full w-full az-backdrop" @click="closeDeleteModal()"></div>
     <div @click.outside="closeDeleteModal()" class="relative w-full max-w-md rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
       <button @click="closeDeleteModal()" class="group absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">
         <svg class="transition-colors fill-current group-hover:text-gray-600 dark:group-hover:text-gray-200" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -462,7 +462,6 @@ function loanTable() {
             if (userDataEl) {
                 try {
                     this.userData = JSON.parse(userDataEl.dataset.user);
-                    console.log('User data loaded in table:', this.userData);
                 } catch (e) {
                     console.warn('Failed to parse user data:', e);
                     this.userData = null;
@@ -472,12 +471,10 @@ function loanTable() {
             // Set up table instance for external access
             window.loanTableInstance = this;
             
-            console.log('LoanTable initialized with', this.allLoans.length, 'loans');
         },
         
         // ============ FIXED: openCreateModal with signature data ============
         openCreateModal(data = null) {
-            console.log('openCreateModal called with data:', data);
             
             // If we have user data with signature info, merge it
             if (this.userData) {
@@ -488,7 +485,6 @@ function loanTable() {
                     signatureUrl: this.userData.signatureUrl || '',
                     ...(data || {}) // Merge any additional data passed
                 };
-                console.log('Passing user data with signature to modal:', modalData);
                 
                 if (typeof window.openLoansCreateModal === 'function') {
                     window.openLoansCreateModal(modalData);
@@ -497,7 +493,6 @@ function loanTable() {
                 }
             } else {
                 // Fallback: pass data as is
-                console.log('No user data available, passing data as is');
                 if (typeof window.openLoansCreateModal === 'function') {
                     window.openLoansCreateModal(data);
                 } else {
@@ -507,7 +502,6 @@ function loanTable() {
         },
         
         async openEditModal(loanId) {
-            console.log('openEditModal called for loan ID:', loanId);
             
             try {
                 const response = await fetch(`/loans/${loanId}/edit`, {
@@ -523,7 +517,6 @@ function loanTable() {
                 }
                 
                 const data = await response.json();
-                console.log('Fetched loan data:', data);
                 
                 // Pass signature data from the user if available
                 const modalData = {
@@ -639,7 +632,7 @@ function loanTable() {
                         uiAlert(data.message);
                     }
                     this.closeDeleteModal();
-                    setTimeout(() => window.location.reload(), 1500);
+                    setTimeout(() => (window.azRefresh ? window.azRefresh() : location.reload()), 300);
                 } else {
                     throw new Error(data.message || 'Failed to delete loan');
                 }
@@ -678,7 +671,6 @@ function loanTable() {
         },
         
         sortTable(columnIndex) {
-            console.log('Sorting column', columnIndex);
         }
     };
 }

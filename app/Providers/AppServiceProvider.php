@@ -162,6 +162,18 @@ class AppServiceProvider extends ServiceProvider
                 });
             });
         }
+        // a loan that closes without a payment (written off) can still close the partner line it drew on
+        \App\Models\Loan::saved(function ($loan) {
+            if ($loan->wasChanged('status') && in_array($loan->status, \App\Models\Loan::STATUS_FINAL_LIST, true)) {
+                DB::afterCommit(function () use ($loan) {
+                    try {
+                        app(\App\Services\Partners\PartnerLines::class)->closeForLoan((int) $loan->id);
+                    } catch (\Throwable $e) {
+                        Log::error("Partner line close failed for loan #{$loan->id}", ['error' => $e->getMessage()]);
+                    }
+                });
+            }
+        });
         \App\Models\LoanCycle::saved(fn ($c) => $charges([$c->id, \App\Models\LoanCycle::where('loan_id', $c->loan_id)
             ->where('cycle_number', $c->cycle_number - 1)->value('id')]));
 

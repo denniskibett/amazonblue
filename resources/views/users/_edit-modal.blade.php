@@ -3,7 +3,7 @@
         <div class="flex items-center justify-center min-h-screen p-5">
             <!-- Backdrop -->
             <div onclick="document.getElementById('editProfileModal').classList.add('hidden')" 
-                 class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]"></div>
+                 class="fixed inset-0 az-backdrop"></div>
             
             <!-- Modal Content -->
             <div class="relative w-full max-w-4xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10 z-50 max-h-[90vh] overflow-y-auto">

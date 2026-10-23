@@ -25,22 +25,9 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-    <!-- Scripts -->
-    @vite([
-        'resources/css/app.css',
-        'resources/js/app.js',
-        'resources/js/bootstrap.js',
-        'resources/js/index.js'
-    ])
-
-    <!-- Auto-load JS components -->
-    @php
-        // only .js files: the charts folder is not a Vite entry and crashed every page on this layout (22 Oct 2026)
-        $components = array_filter(scandir(resource_path('js/components')), fn ($f) => str_ends_with($f, '.js'));
-    @endphp
-    @foreach ($components as $component)
-        @vite(['resources/js/components/' . $component])
-    @endforeach
+    <!-- Scripts: one stylesheet and one script (owner, 23 Oct 2026) -->
+    @vite(['resources/css/app.css', 'resources/js/index.js'])
+    <script defer src="{{ asset('assets/js/dates.js') }}?v={{ filemtime(public_path('assets/js/dates.js')) }}"></script>
 </head>
 <body class="font-sans antialiased">
     @yield('content')

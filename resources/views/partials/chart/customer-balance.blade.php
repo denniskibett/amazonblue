@@ -46,7 +46,6 @@
 
     function renderChart() {
         if (chartRendered) {
-            console.log('Chart already rendered, skipping...');
             return;
         }
 
@@ -162,7 +161,6 @@
             chartInstance = new ApexCharts(chartEl, options);
             chartInstance.render().then(() => {
                 chartRendered = true;
-                console.log('Customer Balance Chart rendered successfully');
                 window.customerBalanceChartInstance = chartInstance;
             }).catch(error => {
                 console.error('Chart render error:', error);
@@ -179,11 +177,9 @@
     window.customerBalanceChart = function() {
         return {
             init() {
-                console.log('Customer Balance Chart component initializing...');
                 this.$nextTick(() => {
                     const chartEl = document.querySelector("#customerBalanceChart");
                     if (chartEl && chartEl.querySelector('.apexcharts-canvas')) {
-                        console.log('Chart already rendered');
                         return;
                     }
                     renderChart();
@@ -234,7 +230,6 @@
 
     window.renderCustomerBalanceChart = renderChart;
 
-    console.log('Customer Balance Chart script loaded');
 
 })();
 </script>

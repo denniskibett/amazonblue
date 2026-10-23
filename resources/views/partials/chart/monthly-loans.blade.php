@@ -428,10 +428,6 @@
         const disbursements = preparedData.disbursements || [];
         const repayments = preparedData.repayments || [];
 
-        console.log('Rendering chart with filter:', filterType || currentFilter);
-        console.log('Data points:', months.length);
-        console.log('First 10 labels:', months.slice(0, 10));
-        console.log('Last 10 labels:', months.slice(-10));
 
         if (months.length === 0) {
             chartEl.innerHTML = '<div class="text-center py-10 text-gray-500 font-outfit">No data available for selected period</div>';
@@ -575,8 +571,6 @@
             chartInstance = new ApexCharts(chartEl, options);
             chartInstance.render().then(() => {
                 chartRendered = true;
-                console.log('Chart rendered successfully with', months.length, 'data points');
-                console.log('Filter:', filterType || currentFilter);
                 window.loanChartInstance = chartInstance;
             }).catch(error => {
                 console.error('Chart render error:', error);
@@ -591,10 +585,8 @@
     // ============================================================
 
     function filterDataByDateRange(startDate, endDate, filterType) {
-        console.log('Filtering data from', startDate, 'to', endDate, 'with filter:', filterType);
 
         if (!startDate || !endDate) {
-            console.log('Invalid date range, showing all data');
             renderChart(originalMonthlyData, filterType || currentFilter);
             return;
         }
@@ -603,7 +595,6 @@
         const end = new Date(endDate);
         
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-            console.log('Invalid date objects, showing all data');
             renderChart(originalMonthlyData, filterType || currentFilter);
             return;
         }
@@ -694,12 +685,10 @@
             },
 
             init() {
-                console.log('Alpine component initializing...');
                 
                 this.$nextTick(() => {
                     const chartEl = document.querySelector("#loanStatsChart");
                     if (chartEl && chartEl.querySelector('.apexcharts-canvas')) {
-                        console.log('Chart already rendered');
                         this.chart = window.loanChartInstance || null;
                         this.initDatePicker();
                         return;
@@ -734,7 +723,6 @@
                             if (selectedDates.length === 2) {
                                 const startDate = selectedDates[0];
                                 const endDate = selectedDates[1];
-                                console.log("Date range selected:", startDate, "to", endDate);
                                 
                                 filterDataByDateRange(startDate, endDate, this.selected);
                                 
@@ -745,7 +733,6 @@
                         }
                     });
                     
-                    console.log('Date picker initialized with range:', firstDate, 'to', lastDate);
                 } else {
                     console.warn('Date picker not found or flatpickr not loaded');
                 }
@@ -755,7 +742,6 @@
                 this.selected = type;
                 currentFilter = type;
                 
-                console.log('Updating chart filter to:', type);
                 
                 if (this.datePickerInstance) {
                     const selectedDates = this.datePickerInstance.selectedDates;
@@ -795,13 +781,11 @@
     function initChartOnReady() {
         const chartEl = document.querySelector("#loanStatsChart");
         if (chartEl && chartEl.querySelector('.apexcharts-canvas')) {
-            console.log('Chart already exists');
             chartRendered = true;
             return;
         }
         
         if (typeof Alpine !== 'undefined' && document.querySelector('[x-data]')?.__x) {
-            console.log('Alpine already initialized, letting Alpine handle chart');
             return;
         }
         
@@ -816,17 +800,14 @@
     }
 
     document.addEventListener('alpine:initialized', function() {
-        console.log('Alpine initialized event fired');
         
         const chartEl = document.querySelector("#loanStatsChart");
         if (chartEl && chartEl.querySelector('.apexcharts-canvas')) {
-            console.log('Chart already rendered');
             return;
         }
         
         setTimeout(() => {
             if (chartEl && chartEl.querySelector('.apexcharts-canvas')) {
-                console.log('Chart rendered by Alpine');
                 chartRendered = true;
                 return;
             }
@@ -839,9 +820,6 @@
     window.filterLoanChartData = filterDataByDateRange;
     window.loanChartAllData = originalMonthlyData;
 
-    console.log('Monthly Loans Chart script loaded');
-    console.log('Total data points:', originalMonthlyData.labels.length);
-    console.log('Date range:', originalMonthlyData.dates[0], 'to', originalMonthlyData.dates[originalMonthlyData.dates.length - 1]);
 
 })();
 </script>

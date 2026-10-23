@@ -22,8 +22,43 @@ class PartnerController extends Controller
         $users = User::role('partner')
             ->orWhereDoesntHave('partner')
             ->get(['id', 'name', 'email', 'role']);
+        $prefill = $this->prefillFromUser(request('from_user'), request('name'), request('person'));
 
-        return view('partners.index', compact('partners', 'users'));
+        return view('partners.index', compact('partners', 'users', 'prefill'));
+    }
+
+    /**
+     * "Make partner" (owner, 23 Oct 2026): the partner form opens filled in from the user's account and their business:
+     * business name (their verified business, else the account name), email, phone, type, and the person behind the login.
+     */
+    private function prefillFromUser($userId, ?string $name = null, ?string $person = null): ?array
+    {
+        $user = $userId ? User::find($userId) : null;
+        if (! $user || Partner::where('user_id', $user->id)->exists()) {
+            return null;
+        }
+        $business = \Illuminate\Support\Facades\Schema::hasTable('businesses')
+            ? \Illuminate\Support\Facades\DB::table('businesses')->where('owner_user_id', $user->id)->whereNull('deleted_at')->orderByDesc('id')->first()
+            : null;
+        $company = $name ?: ($business->trading_name ?? $business->legal_name ?? null);
+        $looksLikeBusiness = (bool) preg_match('/\b(agenc(y|ies)|ltd|limited|enterprises?|company|co\.|group|ventures|holdings|investments?)\b/i', $company ?: $user->name);
+        $company = $company ?: ($looksLikeBusiness ? $user->name : null);
+
+        return [
+            'user_id' => $user->id,
+            'name' => $company ?: $user->name,
+            'company_name' => $company ?: '',
+            'email' => Partner::where('email', $user->email)->exists() ? '' : (string) $user->email,
+            'phone' => (string) $user->phone,
+            'registration_number' => (string) ($business->registration_number ?? ''),
+            'tax_id' => (string) ($business->kra_pin ?? $user->kra_pin ?? ''),
+            'bank_name' => (string) ($business->bank_name ?? ''),
+            'bank_account_number' => (string) ($business->bank_account ?? ''),
+            'bank_account_name' => $company ?: $user->name,
+            'type' => $company ? 'business' : 'individual',
+            // when the login carries the business name, the person behind it can be named here
+            'person_name' => $person ?: ($looksLikeBusiness ? '' : $user->name),
+        ];
     }
 
     public function getData()
@@ -95,7 +130,7 @@ class PartnerController extends Controller
             'phone' => 'nullable|string|max:255',
             'company_name' => 'nullable|string|max:255',
             'registration_number' => 'nullable|string|max:255',
-            'type' => 'required|in:individual,corporate,institutional',
+            'type' => 'required|in:individual,business,company,corporate,partner',
             'status' => 'required|in:active,inactive,suspended',
             'profit_share_rate' => 'nullable|numeric|min:0|max:100',
             'max_loan_to_value' => 'nullable|numeric|min:0|max:100',
@@ -106,6 +141,7 @@ class PartnerController extends Controller
             'swift_code' => 'nullable|string|max:50',
             'tax_id' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
+            'person_name' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -138,12 +174,17 @@ class PartnerController extends Controller
                 'notes' => $request->notes,
             ]);
 
-            // If a user was provided, update their role
+            // If a user was provided, update their role (and, when given, the person's name on the login)
             if ($request->filled('user_id')) {
                 $user = User::find($request->user_id);
                 if ($user && ! $user->hasRole('partner')) {
                     $user->assignRole('partner');
                     $user->syncLegacyRole();
+                }
+                if ($user && $request->filled('person_name') && trim($request->person_name) !== $user->name) {
+                    $old = $user->name;
+                    $user->forceFill(['name' => trim($request->person_name)])->save();
+                    \App\Services\AuditTrail::record('users', $user->id, 'update', ['name' => $old], ['name' => $user->name, 'event' => 'made_partner']);
                 }
             }
 
@@ -216,7 +257,7 @@ class PartnerController extends Controller
             'phone' => 'nullable|string|max:255',
             'company_name' => 'nullable|string|max:255',
             'registration_number' => 'nullable|string|max:255',
-            'type' => 'sometimes|required|in:individual,corporate,institutional',
+            'type' => 'sometimes|required|in:individual,business,company,corporate,partner',
             'status' => 'sometimes|required|in:active,inactive,suspended',
             'profit_share_rate' => 'nullable|numeric|min:0|max:100',
             'max_loan_to_value' => 'nullable|numeric|min:0|max:100',

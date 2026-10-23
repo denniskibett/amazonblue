@@ -43,7 +43,6 @@
 
     function renderChart() {
         if (chartRendered) {
-            console.log('Chart already rendered, skipping...');
             return;
         }
 
@@ -129,7 +128,6 @@
             chartInstance = new ApexCharts(chartEl, options);
             chartInstance.render().then(() => {
                 chartRendered = true;
-                console.log('Gender Distribution Chart rendered successfully');
                 window.genderDistributionChartInstance = chartInstance;
             }).catch(error => {
                 console.error('Chart render error:', error);
@@ -142,11 +140,9 @@
     window.genderDistributionChart = function() {
         return {
             init() {
-                console.log('Gender Distribution Chart component initializing...');
                 this.$nextTick(() => {
                     const chartEl = document.querySelector("#genderDistributionChart");
                     if (chartEl && chartEl.querySelector('.apexcharts-canvas')) {
-                        console.log('Chart already rendered');
                         return;
                     }
                     renderChart();
@@ -193,7 +189,6 @@
 
     window.renderGenderDistributionChart = renderChart;
 
-    console.log('Gender Distribution Chart script loaded');
 
 })();
 </script>

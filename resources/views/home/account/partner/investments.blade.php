@@ -23,8 +23,14 @@
           <dl class="a-dl">
             <div><dt>Committed</dt><dd><x-az.money :amount="$funding->amount_committed" /></dd></div>
             <div><dt>Lent to borrowers</dt><dd><x-az.money :amount="$funding->amount_disbursed" /></dd></div>
-            <div><dt>Returned</dt><dd>—</dd></div>{{-- S-P3: not recorded yet (Phase 3) --}}
+            <div><dt>Paid back to the line</dt><dd><x-az.money :amount="$funding->amount_returned" /></dd></div>
             <div><dt>Loans</dt><dd>{{ $loanCounts[$inv->id] ?? 0 }}</dd></div>
+            {{-- partner lines (owner, 23 Oct 2026): what it earned and when it comes back --}}
+            @if ($inv->return_type === 'loan_share')
+              @php $st = app(\App\Services\Partners\PartnerLines::class)->status($inv); @endphp
+              <div><dt>Earned so far</dt><dd><x-az.money :amount="$st['earned']" /></dd></div>
+              <div><dt>{{ $inv->status === 'active' ? 'Comes back' : 'Closed' }}</dt><dd>{{ $inv->status === 'active' ? ($inv->maturity_date ? 'by ' . $inv->maturity_date->format('j M Y') : 'when its loans are repaid') : ($inv->exit_date?->format('j M Y') ?? 'yes') }}</dd></div>
+            @endif
           </dl>
           @if ($used !== null)
             <div class="a-progress" style="margin-top:12px" aria-label="{{ $used }}% of the commitment lent out"><i style="width: {{ $used }}%"></i></div>

@@ -43,6 +43,8 @@ class DisbursementService
                 'processing_fee' => $processingFee,
                 'net_amount' => $netAmount,
                 'transaction' => $data['transaction'] ?? 'DISBURSEMENT',
+                // both references when the money crossed between a bank and M-Pesa (owner, 23 Oct 2026)
+                ...(Disbursement::hasRefColumns() ? ['bank_ref' => $data['bank_ref'] ?? null, 'mpesa_ref' => $data['mpesa_ref'] ?? null] : []),
                 'kind' => $data['kind'] ?? null,
                 'mode' => $data['mode'] ?? 'bank_transfer',
                 'disburse_date' => $data['disburse_date'] ?? now(),

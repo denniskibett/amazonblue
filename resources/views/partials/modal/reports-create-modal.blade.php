@@ -1,7 +1,7 @@
 blade.php{{-- resources/views/reports/partials/modal/slideover.blade.php --}}
 <div x-data="slideoverModal()" x-show="isOpen" class="fixed inset-0 z-50 overflow-hidden" style="display: none;">
     <!-- Backdrop -->
-    <div class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75 transition-opacity" @click="close()"></div>
+    <div class="fixed inset-0 transition-opacity az-backdrop" @click="close()"></div>
     
     <!-- Slideover Panel -->
     <div class="fixed inset-y-0 right-0 max-w-full flex">

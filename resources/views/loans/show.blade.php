@@ -375,7 +375,7 @@
                                         @endif
                                     </div>
                                     <div class="text-right">
-                                        <p class="text-xs text-gray-500">{{ $disbursement->transaction ?? 'N/A' }}</p>
+                                        <p class="text-xs text-gray-500">{{ $disbursement->transaction ?? 'N/A' }}@if ($disbursement->bank_ref && $disbursement->mpesa_ref) <span class="whitespace-nowrap">· M-Pesa {{ $disbursement->mpesa_ref }}</span>@endif</p>
                                         <p class="text-xs text-gray-400">{{ $disbursement->mode ?? '' }}</p>
                                         @if(! auth()->user()->hasRole('borrower'))
                                         <div class="flex space-x-1 mt-1 justify-end">
@@ -435,7 +435,7 @@
                                         <p class="text-xs text-green-600">Cycle #{{ $activeCycle->cycle_number ?? 1 }}</p>
                                     </div>
                                     <div class="text-right">
-                                        <p class="text-xs text-gray-500">{{ $repayment->transaction ?? 'N/A' }}</p>
+                                        <p class="text-xs text-gray-500">{{ $repayment->transaction ?? 'N/A' }}@if ($repayment->bank_ref && $repayment->mpesa_ref) <span class="whitespace-nowrap">· bank {{ $repayment->bank_ref }}</span>@endif</p>
                                         <p class="text-xs text-gray-400">{{ $repayment->mode ?? '' }}</p>
                                         @if(! auth()->user()->hasRole('borrower'))
                                         <div class="flex space-x-1 mt-1 justify-end">
@@ -651,7 +651,7 @@ document.addEventListener('alpine:init', function() {
             init() {
                 window.loanData = @json($loanJsData);
                 
-                window.addEventListener('open-forbearance-modal', () => {
+                window.azOn('open-forbearance-modal', () => {
                     this.isForbearanceModalOpen = true;
                     document.body.style.overflow = 'hidden';
                 });

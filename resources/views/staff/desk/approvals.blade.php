@@ -112,7 +112,7 @@
               @endif
               @if ($status === 'approved')
                 @can('create disbursements')
-                  <a href="{{ route('staff.disbursements.disburse', $loan) }}" class="inline-flex items-center rounded-lg bg-brand-500 px-3 py-2 text-theme-xs font-medium text-white hover:bg-brand-600">Disburse</a>
+                  <a href="{{ route('staff.disbursements.disburse', $loan) }}" data-drawer class="inline-flex items-center rounded-lg bg-brand-500 px-3 py-2 text-theme-xs font-medium text-white hover:bg-brand-600">Disburse</a>
                 @endcan
               @endif
               @if ($canReject)

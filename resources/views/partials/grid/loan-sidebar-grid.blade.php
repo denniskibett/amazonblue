@@ -184,6 +184,14 @@
         <!-- ============ QUICK ACTIONS ============ -->
         <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
             
+            {{-- who brought it in and whose money funded it, with a dry run (owner, 23 Oct 2026) --}}
+            @can('edit partners')
+            <a href="{{ route('staff.loans.partners', $loan) }}" data-drawer
+               class="w-full flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
+                <x-ui.icon name="users" class="size-4" />
+                Partners: broker and funding{{ $loan->broker_status ? ' · brokered' : '' }}
+            </a>
+            @endcan
             <!-- Rollover Loan -->
             @if(in_array($loan->status, ['active', 'overdue', 'disbursed']) && !$loan->isDefaulted() && !$loan->isInForbearance())
             <button @click="window.openRolloverModal({{ $loan->id }})"

@@ -65,6 +65,10 @@
         @if ($open && auth()->user()->canAny(['create repayments']) && \Illuminate\Support\Facades\Route::has('staff.repayments.receive'))
           <a href="{{ route('staff.repayments.receive', ['loan' => $open[0]['loan']->id]) }}" class="{{ $btn }}"><x-ui.icon name="hand-coins" class="size-4" />Receive payment</a>
         @endif
+        {{-- make this person a partner: the partner form opens filled in from their account and business (owner, 23 Oct 2026) --}}
+        @if (auth()->user()->can('create partners') && ! \App\Models\Partner::where('user_id', $user->id)->exists() && ! $user->isStaff())
+          <a href="{{ route('partners.index', ['from_user' => $user->id]) }}" class="{{ $btn }}" data-no-swap><x-ui.icon name="users" class="size-4" />Make partner</a>
+        @endif
         @if ($user->kyc_status === 'submitted' && auth()->user()->can('view users') && \Illuminate\Support\Facades\Route::has('kyc-reviews.show'))
           <a href="{{ route('kyc-reviews.show', $user) }}" class="{{ $btn }}"><x-ui.icon name="user-check" class="size-4" />Review KYC</a>
         @endif

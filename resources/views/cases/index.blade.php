@@ -29,7 +29,7 @@
     // Listen for refresh events
     document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('refresh-cases', function() {
-            location.reload();
+            (window.azRefresh ? window.azRefresh() : location.reload());
         });
     });
 </script>

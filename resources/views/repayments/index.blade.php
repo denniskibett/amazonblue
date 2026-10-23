@@ -35,7 +35,7 @@
               <td class="px-5 py-3">@if ($r->loan_id)<a class="text-brand-500 hover:underline" href="{{ route('loans.show', $r->loan_id) }}">#{{ $r->loan_id }}</a>@endif</td>
               <td class="whitespace-nowrap px-5 py-3 text-right font-medium text-gray-800 dark:text-white/90" data-sort-value="{{ $r->amount }}">{{ number_format((float) $r->amount, 2) }}</td>
               <td class="px-5 py-3 capitalize text-gray-600 dark:text-gray-400">{{ str_replace('_', ' ', $kind) }}</td>
-              <td class="max-w-[220px] truncate px-5 py-3 font-mono text-theme-xs text-gray-500 dark:text-gray-400" title="{{ $r->transaction }}">{{ $r->transaction }}</td>
+              <td class="max-w-[220px] truncate px-5 py-3 font-mono text-theme-xs text-gray-500 dark:text-gray-400" title="{{ $r->transaction }}">{{ $r->transaction }}@if ($r->bank_ref && $r->mpesa_ref)<span class="block">bank {{ $r->bank_ref }}</span>@endif</td>
               <td class="px-5 py-3 text-right" data-actions>
                 <a href="{{ route('repayments.show', $r->id) }}">View</a>
                 @if ($u->hasAnyRole(['admin', 'teller']))<a href="{{ route('repayments.edit', $r->id) }}">Edit</a>@endif

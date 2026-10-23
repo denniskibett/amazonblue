@@ -51,7 +51,7 @@
     </section>
   @elseif ($b->status === 'sending')
     <x-staff.alert type="info" class="mb-6" title="Sending">Results fill in as each message goes out. This page refreshes every 10 seconds.</x-staff.alert>
-    <script>setTimeout(() => location.reload(), 10000);</script>
+    <script>setTimeout(() => (window.azRefresh ? window.azRefresh() : location.reload()), 10000);</script>
     <form method="POST" action="{{ route('staff.messages.cancel', $b->id) }}" class="-mt-4 mb-6" data-confirm="Stop sending? Messages already sent stay sent.">@csrf<button class="text-theme-sm font-medium text-error-600 hover:underline">Stop sending the rest</button></form>
   @endif
 

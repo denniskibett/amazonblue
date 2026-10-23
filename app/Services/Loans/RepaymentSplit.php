@@ -190,6 +190,17 @@ class RepaymentSplit
         if (! $funder || ! $line || ! in_array($line->return_type, ['loan_share', 'fixed_rate'], true)) {
             return;
         }
+        $this->syncLineReturns($line, $funder);
+    }
+
+    /** Recomputes the principal paid back to one partner line from every loan it lent to (also after a loan moves off it). */
+    public function syncLineReturns(Investment $line, ?int $funder = null): void
+    {
+        $funder ??= InvestmentFunding::where('investment_id', $line->id)->whereHas('partner', fn ($q) => $q->where('is_house_account', false))
+            ->orderBy('id')->value('partner_id');
+        if (! $funder || ! in_array($line->return_type, ['loan_share', 'fixed_rate'], true)) {
+            return;
+        }
         $loanIds = Disbursement::where('investment_id', $line->id)->where('kind', 'cash')->distinct()->pluck('loan_id');
         $principal = 0.0;
         foreach (LoanCycle::whereIn('loan_id', $loanIds)->get() as $cycle) {
@@ -201,6 +212,11 @@ class RepaymentSplit
         }
         $funding = InvestmentFunding::where('investment_id', $line->id)->where('partner_id', $funder)->orderBy('id')->first();
         $funding?->forceFill(['amount_returned' => round($principal, 2)])->save();
+
+        // a partner line whose loans are all closed (short term) or that has matured closes and queues its payout
+        if ($line->return_type === 'loan_share') {
+            app(\App\Services\Partners\PartnerLines::class)->closeIfDone($line->fresh());
+        }
     }
 
     private ?int $house = null;

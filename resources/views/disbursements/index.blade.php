@@ -24,7 +24,7 @@
   <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
     <form method="GET" class="grid grid-cols-1 gap-3 border-b border-gray-200 p-5 dark:border-gray-800 sm:grid-cols-2 lg:grid-cols-6">
       <input class="{{ $input }} lg:col-span-2" type="search" name="q" value="{{ $f['q'] ?? '' }}" placeholder="Borrower, phone, loan # or reference">
-      <input class="{{ $input }}" type="date" name="from" value="{{ $f['from'] ?? '' }}" title="From">
+      <input class="{{ $input }}" type="date" data-range-end="to" name="from" value="{{ $f['from'] ?? '' }}" title="Dates" placeholder="Dates">
       <input class="{{ $input }}" type="date" name="to" value="{{ $f['to'] ?? '' }}" title="To">
       <select class="{{ $input }}" name="kind">
         <option value="">Cash and book entries</option>
@@ -60,7 +60,7 @@
                 <td class="whitespace-nowrap px-5 py-3 text-right text-gray-600 dark:text-gray-400">{{ (float) $d->processing_fee ? number_format((float) $d->processing_fee, 2) : '' }}</td>
                 <td class="px-5 py-3 capitalize text-gray-600 dark:text-gray-400">{{ str_replace('_', ' ', (string) $d->mode) }}</td>
                 <td class="px-5 py-3"><span class="whitespace-nowrap rounded-full px-2.5 py-0.5 text-theme-xs font-medium {{ $kindTone[$kind] ?? $kindTone['non_cash'] }}">{{ str_replace('_', ' ', $kind) }}</span></td>
-                <td class="max-w-[220px] truncate px-5 py-3 font-mono text-theme-xs text-gray-500 dark:text-gray-400" title="{{ $d->transaction }}">{{ $d->transaction }}</td>
+                <td class="max-w-[220px] truncate px-5 py-3 font-mono text-theme-xs text-gray-500 dark:text-gray-400" title="{{ $d->transaction }}">{{ $d->transaction }}@if ($d->bank_ref && $d->mpesa_ref)<span class="block">M-Pesa {{ $d->mpesa_ref }}</span>@endif</td>
                 <td class="px-5 py-3 text-right"><a href="{{ route('disbursements.show', $d->id) }}" class="text-gray-500 hover:text-brand-500 dark:text-gray-400" title="Open"><x-ui.icon name="eye" class="size-4" /></a></td>
               </tr>
             @endforeach

@@ -45,7 +45,7 @@
         </select>
       </div>
     @endif
-    <x-az.field name="from" label="From" type="date" :value="$from?->toDateString()" />
+    <x-az.field name="from" label="Dates" type="date" data-range-end="to" :value="$from?->toDateString()" />
     <x-az.field name="to" label="To" type="date" :value="$to?->toDateString()" />
     <div class="bj-filter__go">
       <button class="btn btn-primary" type="submit">Show</button>

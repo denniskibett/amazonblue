@@ -75,8 +75,11 @@
         @php $asked = \Illuminate\Support\Carbon::parse($r->created_at); @endphp
         <tr>
           <td data-sort-value="{{ $r->partner }}"><x-staff.person :name="$r->partner" sub="Partner #{{ $r->partner_id }}" /></td>
-          <td data-filter-value="{{ $r->type === 'funding' ? 'Sent funds' : 'Withdrawal' }}">
-            <x-staff.pill :tone="$r->type === 'funding' ? 'green' : 'purple'" dot>{{ $r->type === 'funding' ? 'Sent funds' : 'Withdrawal' }}</x-staff.pill>
+          @php $linePay = $r->type === 'withdrawal' && str_starts_with((string) $r->reference, 'LINE-'); @endphp
+          <td class="!whitespace-normal" data-filter-value="{{ $r->type === 'funding' ? 'Sent funds' : ($linePay ? 'Line payout' : 'Withdrawal') }}">
+            <x-staff.pill :tone="$r->type === 'funding' ? 'green' : 'purple'" dot>{{ $r->type === 'funding' ? 'Sent funds' : ($linePay ? 'Line payout · ' . str_replace('_', ' ', $r->wallet_slug) : 'Withdrawal') }}</x-staff.pill>
+            {{-- a closed partner line pays out by itself (owner, 23 Oct 2026) --}}
+            @if ($linePay && $r->note)<span class="mt-1 block max-w-xs text-theme-xs text-gray-500 dark:text-gray-400">{{ $r->note }}</span>@endif
           </td>
           <td class="num" data-sort-value="{{ (float) $r->amount }}"><x-staff.money :amount="$r->amount" class="text-gray-800 dark:text-white/90" /></td>
           <td class="font-mono text-theme-xs text-gray-600 dark:text-gray-400">{{ $r->reference ?: $r->wallet_slug }}</td>

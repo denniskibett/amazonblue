@@ -151,3 +151,66 @@ Top-up rules: the loan is running and not past its due date, at least half of th
 nothing unpaid in the borrower's history, and the amount fits under their limit less what they owe. The current period
 closes today; the new period lends what was owed + the top-up, at the same rate, for one product period; the top-up
 is a cash disbursement on the new period, from the same funding line as the loan's first payout.
+
+## Partner money (23 October 2026): no database change
+
+This round needs no SQL. It uses columns that already exist: `investments.facility_type`, `maturity_date`, `partner_requests`.
+
+| Piece | Where | Notes |
+|---|---|---|
+| **Brought in by** on the disburse form: sets `broker_status = 1`, `partner_id`, `broker_rate` (the partner's broker rate) and `broker_penalty_rate` (their brokers row, else 50%) | Disbursement queue › Disburse | Defaults to the loan's current broker. A partner's own loan defaults to that partner, so they get their broker share back. |
+| **Funded by**: our money, a partner line with money free, or new partner money from a pasted M-Pesa SMS (code, amount, date and sender are read; a code can be used once) | Disburse form; partner page › "Record money … sent" | **Short term** closes when its loans are closed. **Long term** lends again what comes back, until its pay-back date. |
+| **Line payouts**: when a line closes, its capital (less anything written off) and what it earned wait on Requests as "Line payout" rows | Requests › Partner requests | Staff send them with the M-Pesa code as with any withdrawal. A shortfall is written on the request; deciding whether AC covers it stays with you. |
+| **Partner links per loan**: change the broker or the line on any loan. The preview shows how every share moves; the apply step posts only the difference | Loan page › "Partners: broker and funding" | This is the backfill for past loans. Nothing is saved without ticking "I checked the preview". |
+| Nightly `partners:lines` at 02:30 closes matured lines that no payment touched | schedule | `php artisan partners:lines --dry-run` lists them |
+
+**Backfill of partners' own loans** (dry run first, then sign-off):
+
+```bash
+php artisan partners:own-loans                 # dry run: per loan, what moves from AC to the partner; CSV in storage/app/private/reports
+php artisan partners:own-loans --apply         # after the owner signs the CSV
+php artisan wallets:check                      # partner wallets equal the journal; trial balance 0.0000
+```
+
+On the local copy of live, this covers ISIRO's 19 unbrokered own loans, and **KES 92,780.80** moves from AC's share to ISIRO (40% of the interest and 50% of the penalty already collected). Check whether those 19 loans really were ISIRO's own borrowing and not its clients booked under ISIRO's login.
+
+## Bank ↔ M-Pesa references, modals and no reloads (23 October 2026): one database change
+
+Run this on live **before** `push-live` (push-live refuses to deploy while a migration is pending):
+
+```bash
+mysql loans_main < database/sql/2026_10_23_bank_and_mpesa_refs.sql   # adds bank_ref and mpesa_ref to disbursements and repayments; no data changed
+```
+
+Once it is live:
+
+```bash
+php artisan payments:refs            # dry run: fills both references from the old ones and finds disbursements really sent bank → M-Pesa; CSV in storage/app/private/reports
+php artisan payments:refs --apply    # after the owner checks the CSV
+```
+
+On the local copy of live, it finds 377 disbursements and 395 repayments with a reference it can read. **75 disbursements marked "M-Pesa" were really sent bank → M-Pesa** (their reference is the bank's Transaction Ref ID). The M-Pesa code of those 75 was never recorded. Add it on the payment when it's known.
+
+| Piece | Where |
+|---|---|
+| New ways the money moved: **Bank → M-Pesa** and **M-Pesa → bank** ask for both references (bank Transaction Ref ID and M-Pesa code). Both are kept and searchable. | Disbursement and repayment modals, Disburse, Receive payment |
+| Pasting a bank or M-Pesa message fills the mode, both references, the amount and the date. It warns when that money is already recorded on any loan. | Same screens |
+| The same reference can't go on the same loan twice | Server check on every save |
+| **No full reloads**: after a modal saves, the cards, tables and counts refresh in the background. Disburse and "Partners: broker and funding" open in a side drawer over the page. | Every staff page |
+| Disbursement modal: **Who is behind this loan** (broker, our money, a partner line, or new partner money from its SMS, short or long term) | Loan page › Add disbursement |
+
+## Modals, date pickers and a lighter app (23 October 2026, evening): no database change
+
+- **One modal creates and edits.** This covers users (the separate edit modal is gone) and disbursements. On a disbursement, editing changes the broker and the funding line straight away while the loan has no payments. Once payments have been split, it sends you to "Partners: broker and funding", which shows the preview first.
+- **Every date field is a flatpickr picker.** One date, date and time, or a range (from/to on Operations review, Disbursements, Reports and the borrower statements). Picking a date updates the form and Alpine straight away. flatpickr is in the app bundle and isn't loaded twice any more. Borrower pages fetch it only when they have a date field.
+- **Every modal, drawer and dialog has the same backdrop**: a black gradient at about 50%. Modal fields and buttons are softer and use the brand colour.
+- **Lighter**: the template's demo charts, world map, calendar, image pane, Dropzone, axios and the second flatpickr no longer load on every page. Debug console logging is gone. Modal event listeners no longer stack up after background refreshes.
+- **Make partner**: the user page has a "Make partner" button. It opens the partner form filled in from their account and business, and can rename the login to the person behind it.
+
+**Run `npm run build` before `push-live`.** The scripts changed (`resources/js/index.js`, `vite.config.js`).
+
+**BUOSTI AGENCIES.** On the copy of live, user #111 is "BUOSTI AGENCY" (stephinebuluma@gmail.com, 0726330934). They are a borrower with no loans and no business record. Once deployed, open this link, check the details and press Save:
+
+    https://loans.sharet.africa/partners?from_user=111&name=BUOSTI%20AGENCIES&person=Stephine%20Buluma
+
+It creates the partner "BUOSTI AGENCIES" (type Business) linked to that login, gives the login the partner role, and renames it to "Stephine Buluma". Change any field before saving if needed.

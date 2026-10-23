@@ -615,7 +615,7 @@
     </div>
 
     <!-- Avatar Modal -->
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300"
+    <div class="fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 az-backdrop"
          x-show="modalOpen && activeModal === 'avatarModal'"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0"
@@ -696,7 +696,6 @@ function profileData() {
         loading: false,
 
         initProfile() {
-            console.log('Profile page initialized');
         },
 
         openModal(modalName) {

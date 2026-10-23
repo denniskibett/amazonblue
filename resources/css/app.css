@@ -564,3 +564,16 @@ span.flatpickr-weekday,
 .dark :is(.hover\:bg-gray-50, .hover\:bg-gray-100):not([class*="dark:hover:bg-"]):hover { background-color: rgb(255 255 255 / 0.05); }
 .dark thead:not([class*="dark:bg-"]) { background-color: rgb(255 255 255 / 0.02); }
 .dark .shadow-theme-xs, .dark .shadow-sm { box-shadow: none; }
+
+
+/* Modal backdrops (owner, 23 Oct 2026): every modal, drawer and dialog sits on the same soft black gradient, about 50%. */
+.az-backdrop {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0.58) 100%) !important;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+dialog::backdrop {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0.58) 100%) !important;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}

@@ -44,7 +44,6 @@
 
     function renderChart() {
         if (chartRendered) {
-            console.log('Chart already rendered, skipping...');
             return;
         }
 
@@ -167,7 +166,6 @@
             chartInstance = new ApexCharts(chartEl, options);
             chartInstance.render().then(() => {
                 chartRendered = true;
-                console.log('Cashflow Trend Chart rendered successfully');
                 window.cashflowTrendChartInstance = chartInstance;
             }).catch(error => {
                 console.error('Chart render error:', error);
@@ -180,11 +178,9 @@
     window.cashflowTrendChart = function() {
         return {
             init() {
-                console.log('Cashflow Trend Chart component initializing...');
                 this.$nextTick(() => {
                     const chartEl = document.querySelector("#cashflowTrendChart");
                     if (chartEl && chartEl.querySelector('.apexcharts-canvas')) {
-                        console.log('Chart already rendered');
                         return;
                     }
                     renderChart();
@@ -231,7 +227,6 @@
 
     window.renderCashflowTrendChart = renderChart;
 
-    console.log('Cashflow Trend Chart script loaded');
 
 })();
 </script>

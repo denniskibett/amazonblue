@@ -3,7 +3,7 @@
      if it is sideways, and save. The server keeps the upload as {file}.original, so "Undo crop" brings it back. --}}
 <template x-teleport="body">
 <div x-data="azCrop()" @open-crop.window="open($event.detail)" @keydown.escape.window="show = false"
-     x-show="show" x-cloak class="fixed inset-0 z-[100001] flex items-center justify-center bg-gray-900/70 p-4" style="display:none">
+     x-show="show" x-cloak class="fixed inset-0 z-[100001] flex items-center justify-center p-4 az-backdrop" style="display:none">
   <div class="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-theme-xl dark:bg-gray-900" @click.outside="show = false">
     <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800">
       <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Crop picture</h3>

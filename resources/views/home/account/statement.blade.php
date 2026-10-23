@@ -22,7 +22,7 @@
   <section class="a-card">
     <form class="p-dates" method="GET" action="{{ route('account.statement') }}">
       @if ($wallet)<input type="hidden" name="wallet" value="{{ $wallet }}" />@endif
-      <x-az.field name="from" label="From" type="date" :value="$from" />
+      <x-az.field name="from" label="Dates" type="date" data-range-end="to" :value="$from" />
       <x-az.field name="to" label="To" type="date" :value="$to" />
       <button class="btn btn-primary" type="submit">Show</button>
       @if ($from || $to)<a class="btn btn-ghost" href="{{ route('account.statement', array_filter(['wallet' => $wallet])) }}">Clear</a>@endif

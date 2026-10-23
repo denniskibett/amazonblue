@@ -42,6 +42,9 @@ Schedule::command('loans:check-integrity --csv --notify')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/loan-integrity.log'));
 
+// partner lines: close finished ones and queue their payouts (owner, 23 Oct 2026)
+Schedule::command('partners:lines')->dailyAt('02:30')->timezone('Africa/Nairobi')->withoutOverlapping();
+
 // borrower behaviour profiles for analytics and limits, after the nightly status and NPL runs (owner, 23 Oct 2026)
 Schedule::command('analytics:profiles')
     ->dailyAt('02:15')

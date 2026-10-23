@@ -48,7 +48,20 @@ class InvestmentFunding extends Model
 
     public function getRemainingToDisburseAttribute(): float
     {
+        // a long-term partner line lends its principal again once it is paid back (owner, 23 Oct 2026)
+        if ($this->recycles()) {
+            return max(0, (float) $this->amount_committed - (float) $this->amount_disbursed + (float) $this->amount_returned);
+        }
+
         return max(0, (float) $this->amount_committed - (float) $this->amount_disbursed);
+    }
+
+    /** Long-term loan-share lines recycle what comes back; everything else draws down once. */
+    public function recycles(): bool
+    {
+        $line = $this->relationLoaded('investment') ? $this->investment : $this->investment()->first(['id', 'facility_type', 'return_type']);
+
+        return $line && $line->facility_type === 'long_term' && $line->return_type === 'loan_share';
     }
 
     public function getRemainingToReturnAttribute(): float

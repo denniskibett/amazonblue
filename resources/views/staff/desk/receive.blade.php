@@ -129,10 +129,8 @@
               <x-staff.field name="amount" label="Amount (KES)" type="number" step="0.01" min="0.01" required />
               <x-staff.field name="repayment_date" label="Date received" type="date" :value="now()->toDateString()" required />
             </div>
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <x-staff.field name="mode" label="Mode" type="select" :options="['mpesa' => 'M-Pesa', 'cash' => 'Cash', 'bank' => 'Bank deposit', 'cheque' => 'Cheque']" value="mpesa" />
-              <x-staff.field name="transaction" label="Reference" required placeholder="M-Pesa code, receipt or slip number" />
-            </div>
+            {{-- mode and references; bank ↔ M-Pesa keeps both (owner, 23 Oct 2026) --}}
+            <x-staff.pay-refs direction="in" mode="mpesa" date-field="repayment_date" />
             <div data-errors hidden class="rounded-lg border border-error-500/30 bg-error-50 p-3 text-theme-sm text-error-800 dark:bg-error-500/15 dark:text-error-400" role="alert"></div>
             <button type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-brand-500 px-5 py-3 text-theme-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60 sm:w-auto">Record payment</button>
           </form>

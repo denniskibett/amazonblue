@@ -13,7 +13,7 @@
      x-transition:leave-end="opacity-0">
     
     <div class="flex items-center justify-center min-h-screen p-5">
-        <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="close()"></div>
+        <div class="fixed inset-0 az-backdrop" @click="close()"></div>
         
         <div class="relative w-full max-w-4xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10 z-50 max-h-[90vh] overflow-y-auto">
             <!-- Close Button -->
@@ -47,6 +47,12 @@
                                 </select>
                             </div>
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Associating a user allows them to log in and manage this partner account.</p>
+                            <div x-show="formData.user_id && !isEditMode" class="mt-4">
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Person behind the login <span class="font-normal text-gray-400">(optional)</span></label>
+                                <input type="text" x-model="formData.person_name" placeholder="e.g. Stephine Buluma"
+                                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Renames their login to the person; the partner keeps the business name.</p>
+                            </div>
                             <template x-if="errors.user_id">
                                 <p class="mt-1 text-sm text-red-500" x-text="errors.user_id[0]"></p>
                             </template>
@@ -130,10 +136,11 @@
                                 <div class="relative z-20 bg-transparent">
                                     <select x-model="formData.type" 
                                             class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" required>
-                                        <option value="partner">Partner</option>
+                                        <option value="individual">Individual</option>
                                         <option value="business">Business</option>
                                         <option value="company">Company</option>
-                                        <option value="investor">Investor</option>
+                                        <option value="corporate">Corporate</option>
+                                        <option value="partner">Partner</option>
                                     </select>
                                 </div>
                                 <template x-if="errors.type">
@@ -337,7 +344,6 @@ document.addEventListener('alpine:init', function() {
             },
             
             initPartnerModal() {
-                console.log('Partner form modal initialized');
                 
                 // Check if user is admin (injected from Laravel)
                 this.isAdmin = {{ auth()->user()->hasRole('admin') ? 'true' : 'false' }};
@@ -345,20 +351,18 @@ document.addEventListener('alpine:init', function() {
                 // Load users from the users prop passed via Alpine
                 this.users = @json($users ?? []);
                 
-                // Listen for create event
-                window.addEventListener('open-partner-create', () => {
-                    console.log('Received open-partner-create event');
-                    this.openCreate();
-                });
+                // Listen for create event (detail may carry a prefill)
+                window.azOn('open-partner-create', (e) => this.openCreate(e.detail || null));
+                const prefill = @json($prefill ?? null);
+                if (prefill) this.$nextTick(() => this.openCreate(prefill));
                 
                 // Listen for edit event
-                window.addEventListener('edit-partner', (event) => {
-                    console.log('Received edit-partner event');
+                window.azOn('edit-partner', (event) => {
                     this.openEdit(event.detail.partner);
                 });
             },
             
-            openCreate() {
+            openCreate(prefill = null) {
                 this.isEditMode = false;
                 this.isOpen = true;
                 this.errors = {};
@@ -380,13 +384,21 @@ document.addEventListener('alpine:init', function() {
                     bank_name: '',
                     swift_code: '',
                     tax_id: '',
-                    notes: ''
+                    notes: '',
+                    person_name: ''
                 };
+                // "Make partner" from a user: their details come filled in (owner, 23 Oct 2026)
+                if (prefill) {
+                    Object.assign(this.formData, prefill);
+                    if (prefill.user_id && !this.users.some(u => Number(u.id) === Number(prefill.user_id))) {
+                        this.users.unshift({ id: prefill.user_id, name: prefill.person_name || prefill.name, email: prefill.email });
+                    }
+                    this.formData.user_id = String(prefill.user_id);
+                }
                 document.body.style.overflow = 'hidden';
             },
             
             openEdit(partner) {
-                console.log('Opening edit for partner:', partner);
                 this.isEditMode = true;
                 this.isOpen = true;
                 this.errors = {};
@@ -424,8 +436,6 @@ document.addEventListener('alpine:init', function() {
                 this.errors = {};
                 
                 try {
-                    console.log('Submitting form to:', this.submitUrl);
-                    console.log('Form data:', this.formData);
                     
                     const response = await fetch(this.submitUrl, {
                         method: this.method,

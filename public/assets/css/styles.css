@@ -4699,8 +4699,9 @@ textarea.input {
   text-align: center;
 }
 .modal::backdrop {
-  background: rgba(21, 26, 46, 0.55);
-  backdrop-filter: blur(4px);
+  /* the same soft black gradient as the staff side (owner, 23 Oct 2026) */
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0.58) 100%);
+  backdrop-filter: blur(3px);
 }
 .modal[open] {
   animation: modal-in 0.28s var(--ease);

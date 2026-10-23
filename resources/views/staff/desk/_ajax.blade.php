@@ -6,7 +6,7 @@
 <script>
 document.addEventListener('submit', async (event) => {
   const form = event.target.closest('form[data-ajax-form]');
-  if (!form) return;
+  if (!form || event.defaultPrevented || form.closest('#az-drawer')) return;   // the side drawer sends its own forms
   event.preventDefault();
   const box = form.querySelector('[data-errors]');
   const button = form.querySelector('[type=submit]');
@@ -25,6 +25,8 @@ document.addEventListener('submit', async (event) => {
       let done = form.dataset.done || window.location.href;
       const id = body?.data?.id || body?.repayment?.id || body?.loan?.id;
       if (id) done += (done.includes('?') ? '&' : '?') + 'ref=' + encodeURIComponent(id);
+      // staying on this page: refresh it in the background (owner, 23 Oct 2026); another page: go there
+      if (window.azSwap && new URL(done, location.href).pathname === location.pathname) { window.azSwap.load(done, {}, 'replace'); if (button) { button.disabled = false; button.textContent = label; } return; }
       window.location.href = done;
       return;
     }

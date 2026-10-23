@@ -1,26 +1,28 @@
-import "jsvectormap/dist/jsvectormap.min.css";
 import "flatpickr/dist/flatpickr.min.css";
-import "dropzone/dist/dropzone.css";
-import "../css/app.css";
+// app.css is loaded on its own by the layouts (@vite), not again through this script
 
 import Alpine from "alpinejs";
 import persist from "@alpinejs/persist";
 import flatpickr from "flatpickr";
-import Dropzone from "dropzone";
 
-import chart01 from "./components/charts/chart-01";
-import chart02 from "./components/charts/chart-02";
-import chart03 from "./components/charts/chart-03";
-import map01 from "./components/map-01";
-import "./components/calendar-init.js";
-import "./components/image-resize";
+// Lighter app (owner, 23 Oct 2026): the template's demo charts, world map, calendar, image pane and Dropzone are no
+// longer in every page's download; nothing in the app used them. Charts come from ApexCharts on the pages that draw them.
+
+// one flatpickr for the whole app; public/assets/js/dates.js turns every date field into a picker
+window.flatpickr = flatpickr;
+// every picker, including the ones modals set up themselves, gets the same soft calendar and works the same on phones
+flatpickr.setDefaults({
+  disableMobile: true,
+  monthSelectorType: "static",
+  onReady: [(d, s, fp) => fp.calendarContainer && fp.calendarContainer.classList.add("az-cal")],
+});
 
 Alpine.plugin(persist);
 window.Alpine = Alpine;
 Alpine.start();
 
-// Init flatpickr
-flatpickr(".datepicker", {
+// The header-style range picker (.datepicker), where a page still has one
+if (document.querySelector(".datepicker")) flatpickr(".datepicker", {
   mode: "range",
   static: true,
   monthSelectorType: "static",
@@ -40,21 +42,6 @@ flatpickr(".datepicker", {
     // eslint-disable-next-line no-param-reassign
     instance.element.value = dateStr.replace("to", "-");
   },
-});
-
-// Init Dropzone
-const dropzoneArea = document.querySelectorAll("#demo-upload");
-
-if (dropzoneArea.length) {
-  let myDropzone = new Dropzone("#demo-upload", { url: "/file/post" });
-}
-
-// Document Loaded
-document.addEventListener("DOMContentLoaded", () => {
-  chart01();
-  chart02();
-  chart03();
-  map01();
 });
 
 // Get the current year

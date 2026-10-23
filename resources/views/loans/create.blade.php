@@ -905,7 +905,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // If using existing signature, no need for new signature data
             if (useExistingSignature) {
                 document.getElementById('signature-data').value = '';
-                console.log('Using existing signature - clearing signature data field');
             }
             
             // Validate signature if consent is given and not using existing signature
@@ -929,7 +928,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!useExistingSignature && signaturePad && !signaturePad.isEmpty() && (!signatureData || signatureData.trim() === '')) {
                 const autoSignatureData = getFullSquareSignature();
                 document.getElementById('signature-data').value = autoSignatureData;
-                console.log('Full square signature auto-saved on form submission');
             }
             
             // Show loading state
@@ -941,10 +939,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Final validation message
             if (useExistingSignature) {
-                console.log('Form will use existing signature for loan agreement');
                 updateSignatureStatus('Using existing signature for loan agreement', 'text-green-500');
             } else if (signatureData) {
-                console.log('Form will use new signature for loan agreement');
                 updateSignatureStatus('New signature will be used for loan agreement', 'text-green-500');
             }
         });

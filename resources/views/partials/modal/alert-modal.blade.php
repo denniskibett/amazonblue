@@ -13,7 +13,7 @@
      style="display: none;">
     
     <div class="flex items-center justify-center min-h-screen p-5">
-        <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="close()"></div>
+        <div class="fixed inset-0 az-backdrop" @click="close()"></div>
         
         <div class="relative w-full max-w-md rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10 z-50">
             <button @click="close()" 

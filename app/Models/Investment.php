@@ -403,7 +403,7 @@ class Investment extends Model
     {
         return (float) $this->fundings()->active()
             ->when($partnerId, fn ($q) => $q->where('partner_id', $partnerId))
-            ->get()->sum(fn ($f) => max(0, (float) $f->amount_committed - (float) $f->amount_disbursed));
+            ->get()->sum(fn ($f) => $f->remaining_to_disburse);
     }
 
     /**
@@ -413,6 +413,10 @@ class Investment extends Model
     {
         if ($this->isHouseLine()) {
             return;
+        }
+        // a closed or matured partner line lends no more (owner, 23 Oct 2026)
+        if ($this->status !== 'active' || ($this->maturity_date && \Illuminate\Support\Carbon::parse($this->maturity_date)->endOfDay()->isPast() && $this->return_type === 'loan_share')) {
+            throw new \DomainException(sprintf('Investment "%s" is closed or past its pay-back date, so it can\'t fund new loans.', $this->name));
         }
         $remaining = $this->remainingCommitted($partnerId);
         if (round($amount, 2) > round($remaining, 2)) {
@@ -469,7 +473,7 @@ class Investment extends Model
 
         foreach ($parts as [$row, $part]) {
             $row->amount_disbursed = (float) $row->amount_disbursed + $part;
-            if ((float) $row->amount_committed > 0 && (float) $row->amount_disbursed >= (float) $row->amount_committed) {
+            if ((float) $row->amount_committed > 0 && (float) $row->amount_disbursed >= (float) $row->amount_committed && ! $row->recycles()) {
                 $row->status = 'settled';
             }
             $row->save();
