@@ -541,6 +541,9 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         // borrower and partner requests (Stage 4 Phase 5)
         Route::get('requests', [\App\Http\Controllers\Staff\RequestsController::class, 'index'])
             ->name('requests')->middleware('permission:rollover loans|edit partners');
+        // approve-an-extension panel: what the new cycle would look like (restored 23 Oct 2026; lost in an earlier merge)
+        Route::get('requests/borrower/{id}/preview', [\App\Http\Controllers\Staff\RequestsController::class, 'preview'])
+            ->name('requests.preview')->middleware('permission:rollover loans');
         Route::post('requests/borrower/{id}', [\App\Http\Controllers\Staff\RequestsController::class, 'borrower'])
             ->name('requests.borrower')->middleware('permission:rollover loans');
         Route::post('requests/{id}/topup', [\App\Http\Controllers\Staff\TopUpController::class, 'approve'])->whereNumber('id')
