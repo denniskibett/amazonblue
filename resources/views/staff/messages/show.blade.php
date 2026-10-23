@@ -42,10 +42,10 @@
       </div>
       <div class="lg:col-span-3">
         @if ($first)
-          <div class="mb-3 rounded-xl bg-gray-50 px-4 py-3 text-theme-sm dark:bg-white/[0.03]" x-data="{ sms: '…' }" x-init="fetch(@js(route('staff.messages.preview', ['kind' => $b->kind, 'loan' => $first->loan_id, 'sms' => 1])), {headers: {Accept: 'application/json'}}).then(r => r.json()).then(j => sms = j.sms + ' (' + j.length + ' characters)').catch(() => sms = '')">
+          <div class="mb-3 rounded-xl bg-gray-50 px-4 py-3 text-theme-sm dark:bg-white/[0.03]" x-data="{ sms: '…' }" x-init="fetch(@js(route('staff.messages.preview', ['kind' => $b->kind, 'loan' => $first->loan_id ?? $first->user_id, 'sms' => 1])), {headers: {Accept: 'application/json'}}).then(r => r.json()).then(j => sms = j.sms + ' (' + j.length + ' characters)').catch(() => sms = '')">
             <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">SMS</p><p class="mt-1 text-gray-800 dark:text-white/90" x-text="sms"></p>
           </div>
-          <iframe src="{{ route('staff.messages.preview', ['kind' => $b->kind, 'loan' => $first->loan_id]) }}" class="h-[560px] w-full rounded-xl border border-gray-200 bg-white dark:border-gray-800" title="Email preview"></iframe>
+          <iframe src="{{ route('staff.messages.preview', ['kind' => $b->kind, 'loan' => $first->loan_id ?? $first->user_id]) }}" class="h-[560px] w-full rounded-xl border border-gray-200 bg-white dark:border-gray-800" title="Email preview"></iframe>
         @endif
       </div>
     </section>

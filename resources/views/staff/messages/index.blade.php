@@ -26,7 +26,7 @@
   </section>
 
   {{-- start a batch --}}
-  <section class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3" aria-label="Start a batch">
+  <section class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4" aria-label="Start a batch">
     @foreach ($kinds as $kind => $k)
       <div class="{{ $card }} flex flex-col">
         <div class="flex items-center justify-between gap-2">

@@ -246,6 +246,7 @@ class BorrowerAnalytics
     public function refreshProfiles(): int
     {
         $byUser = $this->loans(true)->groupBy('user_id');
+        $hasCopy = Schema::hasColumn('borrowers', 'behaviour_score');
         $n = 0;
         foreach ($byUser as $userId => $loans) {
             $p = self::profile($loans);
@@ -257,6 +258,14 @@ class BorrowerAnalytics
                 'flags' => json_encode(array_map(fn ($f) => ['text' => $f[0], 'tone' => $f[1]], $p['flags'])),
                 'last_outcome' => $p['last_outcome'], 'computed_at' => now(), 'updated_at' => now(),
             ]);
+            // a copy on the borrower's own row, for lists and exports (owner, 23 Oct 2026)
+            if ($hasCopy) {
+                DB::table('borrowers')->where('user_id', $userId)->update([
+                    'behaviour_score' => $p['score'], 'on_time_rate' => $p['on_time_rate'], 'comfort_amount' => $p['comfort_amount'],
+                    'suggested_limit' => $p['suggested_limit'], 'behaviour_flags' => json_encode(array_map(fn ($f) => $f[0], $p['flags'])),
+                    'behaviour_at' => now(),
+                ]);
+            }
             $n++;
         }
         Cache::forget('analytics:loans:' . now()->format('YmdH'));

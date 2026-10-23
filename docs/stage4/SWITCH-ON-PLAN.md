@@ -106,10 +106,10 @@ Weekly, upload the statement CSV on M-Pesa payments.
 - **Wallets & reconciliation text:** the page still says repayments since 7 Oct are not split to partners. That has
   been out of date since Phase 3 went live on 21 Oct. Update the text once step 0 confirms `LENDING_SPLIT_ENABLED=true`.
 
-## This round (23 October 2026): three database changes first, then deploy
+## This round (23 October 2026): four database changes first, then deploy
 
-`push-live` refuses to deploy while a database change is pending, so run the three SQL twins on live first. They
-create two new tables and add `topup` to the request types. No data changes. Each is safe to run twice.
+`push-live` refuses to deploy while a database change is pending, so run the four SQL twins on live first. They
+create two new tables, add `topup` to the request types, and add pay-schedule and behaviour columns to `borrowers`. No data changes. Each is safe to run twice.
 
 ```bash
 cd /home/loans.sharet.africa/laravel
@@ -118,6 +118,7 @@ git pull --ff-only origin stage-2-ui
 mysql loans_main < database/sql/2026_10_23_message_batches.sql
 mysql loans_main < database/sql/2026_10_23_borrower_profiles.sql
 mysql loans_main < database/sql/2026_10_23_borrower_requests_topup.sql
+mysql loans_main < database/sql/2026_10_23_borrowers_pay_and_behaviour.sql
 ```
 
 Then deploy from the Mac with `scripts/push-live.sh`. Once it's live:
@@ -125,7 +126,13 @@ Then deploy from the Mac with `scripts/push-live.sh`. Once it's live:
 ```bash
 php artisan analytics:profiles      # first run of the borrower profiles (nightly at 02:15 from then on)
 php artisan schedule:list           # shows analytics:profiles 02:15
+php artisan borrowers:fill-gaps     # dry run: counts + a CSV in storage/app/private/reports; nothing changes
 ```
+
+Send the fill-gaps CSV to the owner. After sign-off, `php artisan borrowers:fill-gaps --apply` creates the missing
+`borrowers` rows (plain individual borrowers; nothing a borrower entered is touched). Income, employer and pay
+schedule are never guessed: borrowers fill them in on "Complete your profile", and Messages › Complete your profile
+emails the verified ones who are missing something (you check and send the batch).
 
 What arrives:
 
@@ -136,6 +143,8 @@ What arrives:
 | Behaviour on approvals and in the person panel: on-time rate, comfortable amount, flags such as weekend lending | Loan approvals, any name | none (read-only) |
 | Behaviour can lower a borrower's limit (never raise it) | the borrower's limit | `LENDING_BEHAVIOUR_LIMITS=true`, after a week of reading the analytics |
 | Top-ups: a borrower asks on their loan page; staff send it from Requests with the M-Pesa code | account › loan › Top up; Requests | needs `LENDING_REQUESTS_ENABLED=true` (step 2) |
+| Borrowers list: income, employer, pay schedule, what is missing, score, on-time rate, comfortable amount, suggested limit, flags | Customers › Borrowers | none (read-only) |
+| "Complete your profile": borrowers add missing income, employer and pay schedule; details already on file stay read-only | account home prompt; account › details | none |
 | Sysadmin "View as": staff roles, a new borrower, or a customer's account; nothing is saved | user menu › View as another role | none (super-admin only) |
 
 Top-up rules: the loan is running and not past its due date, at least half of the current period is paid in cash,

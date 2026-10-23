@@ -8,6 +8,8 @@
   $tabOn = 'border-brand-500 text-brand-500 dark:border-brand-400 dark:text-brand-400';
   $tabOff = 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200';
   $ready = $rows->reject(fn ($r) => $r->skip);
+  $person = in_array($kind, \App\Services\Messaging\CollectionNotices::PERSON_KINDS, true);
+  $keyOf = fn ($r) => $r->loan ? $r->loan->id : $r->key;
   $field = 'h-10 rounded-lg border border-gray-300 bg-transparent px-3 text-theme-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300';
 @endphp
 
@@ -16,7 +18,7 @@
     'actions' => '<a href="' . route('staff.messages.index') . '" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">All batches</a>'])
 
   <script>
-    window.__azOwed = @js($rows->mapWithKeys(fn ($r) => [$r->loan->id => $r->owed]));
+    window.__azOwed = @js($rows->mapWithKeys(fn ($r) => [$keyOf($r) => $r->owed ?? 0]));
     window.batchPicker = function (ids, previewUrl, kind) {
       return {
         picked: new Set(ids), open: false, src: 'about:blank', who: '', sms: '', smsLen: 0,
@@ -34,7 +36,7 @@
       };
     };
   </script>
-  <div x-data="batchPicker(@js($ready->map(fn ($r) => $r->loan->id)->values()), @js(route('staff.messages.preview')), @js($kind))" @az-preview.window="show($event.detail.id, $event.detail.name)">
+  <div x-data="batchPicker(@js($ready->map(fn ($r) => $keyOf($r))->values()), @js(route('staff.messages.preview')), @js($kind))" @az-preview.window="show($event.detail.id, $event.detail.name)">
     <form method="POST" action="{{ route('staff.messages.store') }}" data-no-swap>
       @csrf
       <input type="hidden" name="kind" value="{{ $kind }}">
@@ -53,7 +55,7 @@
           <input id="note" name="note" maxlength="500" class="{{ $field }} w-full" placeholder="e.g. October arrears push">
         </div>
         <div class="flex flex-col justify-end gap-2">
-          <p class="text-theme-sm text-gray-600 dark:text-gray-400"><b class="font-outfit text-gray-800 dark:text-white/90" x-text="picked.size"></b> of {{ $ready->count() }} ticked · <span x-text="kes(total())"></span></p>
+          <p class="text-theme-sm text-gray-600 dark:text-gray-400"><b class="font-outfit text-gray-800 dark:text-white/90" x-text="picked.size"></b> of {{ $ready->count() }} ticked<span @class(["hidden" => $person])> · <span x-text="kes(total())"></span></span></p>
           <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50" :disabled="!picked.size">Save draft (nothing is sent yet)</button>
         </div>
       </div>
@@ -72,42 +74,63 @@
       </form>
     </div>
 
+    @if ($person)
+      <x-staff.table title="Recipients" caption="Recipients" data-table-buttons="#pick-tools > *" data-table-page="25" :headers="['', 'Borrower', ['Missing', null, 'mobile'], 'Last sent', '']">
+        <x-slot:tabs>
+          @foreach ($kinds as $k => $info)
+            <a href="{{ route('staff.messages.create', ['kind' => $k]) }}" role="tab" aria-selected="{{ $k === $kind ? 'true' : 'false' }}" class="{{ $tabCls }} {{ $k === $kind ? $tabOn : $tabOff }}">{{ $info['label'] }}</a>
+          @endforeach
+        </x-slot:tabs>
+        @forelse ($rows as $r)
+          <tr @class(['opacity-60' => $r->skip])>
+            <td class="w-8">@if ($r->skip)<span class="text-gray-300" title="{{ $r->skip }}">—</span>@else<input type="checkbox" class="size-4 accent-brand-500" :checked="picked.has({{ $r->key }})" @change="toggle({{ $r->key }})" aria-label="Send to {{ $r->user->name }}">@endif</td>
+            <td data-sort-value="{{ $r->user->name }}"><x-staff.person :user="$r->user" :sub="$r->user->email ?: 'no email'" /></td>
+            <td class="!whitespace-normal"><div class="flex flex-wrap gap-1">@foreach ($r->missing as $m)<x-staff.pill tone="amber">{{ ucfirst($m) }}</x-staff.pill>@endforeach</div></td>
+            <td class="text-theme-xs text-gray-500 dark:text-gray-400">@if ($r->skip)<x-staff.pill tone="gray">{{ $r->skip }}</x-staff.pill>@elseif ($r->last_sent){{ \Illuminate\Support\Carbon::parse($r->last_sent)->format('j M') }}@else Never @endif</td>
+            <td class="text-right" data-actions><button type="button" class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300" onclick="window.dispatchEvent(new CustomEvent('az-preview', {detail: {id: {{ $r->key }}, name: {{ \Illuminate\Support\Js::from($r->user->name) }}}}))">Preview</button></td>
+          </tr>
+        @empty
+          <tr data-table-skip><td colspan="5"><x-staff.empty title="Every verified borrower's profile is complete" /></td></tr>
+        @endforelse
+      </x-staff.table>
+    @else
     <x-staff.table title="Recipients" caption="Recipients" data-table-buttons="#pick-tools > *" data-table-page="25"
-      :headers="['', 'Borrower', 'Loan', ['Owed today', 'num', 'mobile'], $kind === 'due_soon' ? 'Due' : 'Days late', 'Last sent', '']">
-      <x-slot:tabs>
-        @foreach ($kinds as $k => $info)
-          <a href="{{ route('staff.messages.create', ['kind' => $k]) }}" role="tab" aria-selected="{{ $k === $kind ? 'true' : 'false' }}" class="{{ $tabCls }} {{ $k === $kind ? $tabOn : $tabOff }}">{{ $info['label'] }}</a>
-        @endforeach
-      </x-slot:tabs>
-      @forelse ($rows as $r)
-        <tr @class(['opacity-60' => $r->skip])>
-          <td class="w-8">
-            @if ($r->skip)
-              <span class="text-gray-300" title="{{ $r->skip }}">—</span>
-            @else
-              <input type="checkbox" class="size-4 accent-brand-500" :checked="picked.has({{ $r->loan->id }})" @change="toggle({{ $r->loan->id }})" aria-label="Send to {{ $r->user->name }}">
-            @endif
-          </td>
-          <td data-sort-value="{{ $r->user->name }}"><x-staff.person :user="$r->user" :sub="$r->user->email ?: 'no email'" /></td>
-          <td><a class="font-medium text-gray-800 hover:text-brand-500 dark:text-white/90" href="{{ route('users.loans.show', [$r->loan->user_id, $r->loan->id]) }}">Loan #{{ $r->loan->id }}</a><span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ $r->loan->loanType->name ?? '' }} · {{ ucfirst($r->status) }}</span></td>
-          <td class="num" data-sort-value="{{ $r->owed }}"><x-staff.money :amount="$r->owed" class="text-gray-800 dark:text-white/90" /></td>
-          <td data-sort-value="{{ $kind === 'due_soon' ? $r->due_in : $r->days_late }}">
-            @if ($kind === 'due_soon')
-              <x-staff.pill tone="blue">{{ $r->due_in === 0 ? 'Today' : 'In ' . $r->due_in . ' ' . \Illuminate\Support\Str::plural('day', $r->due_in) }}</x-staff.pill>
-            @else
-              <x-staff.pill :tone="$r->days_late > 30 ? 'red' : 'amber'">{{ $r->days_late }} days</x-staff.pill>
-            @endif
-            <span class="block text-theme-xs text-gray-500 dark:text-gray-400">due {{ $r->due_date->format('j M Y') }}</span>
-          </td>
-          <td class="text-theme-xs text-gray-500 dark:text-gray-400">@if ($r->skip)<x-staff.pill tone="gray">{{ $r->skip }}</x-staff.pill>@elseif ($r->last_sent){{ \Illuminate\Support\Carbon::parse($r->last_sent)->format('j M') }}@else Never @endif</td>
-          <td class="text-right" data-actions>
-            <button type="button" class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300" onclick="window.dispatchEvent(new CustomEvent('az-preview', {detail: {id: {{ $r->loan->id }}, name: {{ \Illuminate\Support\Js::from($r->user->name) }}}}))">Preview</button>
-          </td>
-        </tr>
-      @empty
-        <tr data-table-skip><td colspan="7"><x-staff.empty title="Nobody to send to" message="No open loan fits this notice today." /></td></tr>
-      @endforelse
-    </x-staff.table>
+        :headers="['', 'Borrower', 'Loan', ['Owed today', 'num', 'mobile'], $kind === 'due_soon' ? 'Due' : 'Days late', 'Last sent', '']">
+        <x-slot:tabs>
+          @foreach ($kinds as $k => $info)
+            <a href="{{ route('staff.messages.create', ['kind' => $k]) }}" role="tab" aria-selected="{{ $k === $kind ? 'true' : 'false' }}" class="{{ $tabCls }} {{ $k === $kind ? $tabOn : $tabOff }}">{{ $info['label'] }}</a>
+          @endforeach
+        </x-slot:tabs>
+        @forelse ($rows as $r)
+          <tr @class(['opacity-60' => $r->skip])>
+            <td class="w-8">
+              @if ($r->skip)
+                <span class="text-gray-300" title="{{ $r->skip }}">—</span>
+              @else
+                <input type="checkbox" class="size-4 accent-brand-500" :checked="picked.has({{ $r->loan->id }})" @change="toggle({{ $r->loan->id }})" aria-label="Send to {{ $r->user->name }}">
+              @endif
+            </td>
+            <td data-sort-value="{{ $r->user->name }}"><x-staff.person :user="$r->user" :sub="$r->user->email ?: 'no email'" /></td>
+            <td><a class="font-medium text-gray-800 hover:text-brand-500 dark:text-white/90" href="{{ route('users.loans.show', [$r->loan->user_id, $r->loan->id]) }}">Loan #{{ $r->loan->id }}</a><span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ $r->loan->loanType->name ?? '' }} · {{ ucfirst($r->status) }}</span></td>
+            <td class="num" data-sort-value="{{ $r->owed }}"><x-staff.money :amount="$r->owed" class="text-gray-800 dark:text-white/90" /></td>
+            <td data-sort-value="{{ $kind === 'due_soon' ? $r->due_in : $r->days_late }}">
+              @if ($kind === 'due_soon')
+                <x-staff.pill tone="blue">{{ $r->due_in === 0 ? 'Today' : 'In ' . $r->due_in . ' ' . \Illuminate\Support\Str::plural('day', $r->due_in) }}</x-staff.pill>
+              @else
+                <x-staff.pill :tone="$r->days_late > 30 ? 'red' : 'amber'">{{ $r->days_late }} days</x-staff.pill>
+              @endif
+              <span class="block text-theme-xs text-gray-500 dark:text-gray-400">due {{ $r->due_date->format('j M Y') }}</span>
+            </td>
+            <td class="text-theme-xs text-gray-500 dark:text-gray-400">@if ($r->skip)<x-staff.pill tone="gray">{{ $r->skip }}</x-staff.pill>@elseif ($r->last_sent){{ \Illuminate\Support\Carbon::parse($r->last_sent)->format('j M') }}@else Never @endif</td>
+            <td class="text-right" data-actions>
+              <button type="button" class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300" onclick="window.dispatchEvent(new CustomEvent('az-preview', {detail: {id: {{ $r->loan->id }}, name: {{ \Illuminate\Support\Js::from($r->user->name) }}}}))">Preview</button>
+            </td>
+          </tr>
+        @empty
+          <tr data-table-skip><td colspan="7"><x-staff.empty title="Nobody to send to" message="No open loan fits this notice today." /></td></tr>
+        @endforelse
+      </x-staff.table>
+    @endif
 
     {{-- preview: the exact email and SMS for one borrower --}}
     <div x-show="open" x-cloak class="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" @keydown.escape.window="open = false">

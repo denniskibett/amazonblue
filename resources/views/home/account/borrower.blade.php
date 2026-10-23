@@ -53,6 +53,14 @@
     @endif
   @endunless
 
+  {{-- complete your profile (owner, 23 Oct 2026): only for verified borrowers with something missing --}}
+  @if ($isVerified && ($missingDetails = ($user->borrower?->missing() ?? ['income', 'employer', 'pay schedule'])))
+    <div class="a-note info">
+      <div style="flex:1"><b>Complete your profile</b>Tell us your {{ implode(', ', $missingDetails) }} so your limit and reminders fit you.
+        <div><a class="btn btn-primary" href="{{ route('account.details') }}">Complete it now</a></div></div>
+    </div>
+  @endif
+
   {{-- hero: current loan, or what they can borrow --}}
   @if ($loan)
     @php

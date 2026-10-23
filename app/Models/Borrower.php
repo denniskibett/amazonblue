@@ -28,6 +28,10 @@ class Borrower extends Model
         'employer_email',
         'employer_title',
         'department',
+        // owner, 23 Oct 2026: pay schedule (borrower-entered) and when they completed their profile
+        'pay_frequency',
+        'pay_day',
+        'profile_completed_at',
     ];
 
     protected $casts = [
@@ -35,7 +39,28 @@ class Borrower extends Model
         'net_salary' => 'decimal:2',
         'client_type' => 'string',
         'status' => 'integer',
+        'pay_day' => 'integer',
+        'profile_completed_at' => 'datetime',
+        'behaviour_score' => 'integer',
+        'on_time_rate' => 'decimal:1',
+        'comfort_amount' => 'decimal:2',
+        'suggested_limit' => 'integer',
+        'behaviour_flags' => 'array',
+        'behaviour_at' => 'datetime',
     ];
+
+    public const PAY_FREQUENCIES = ['monthly' => 'Monthly', 'fortnightly' => 'Every two weeks', 'weekly' => 'Weekly', 'daily' => 'Daily', 'irregular' => 'Irregular (business or casual)'];
+
+    /** What a borrower still needs to tell us so their limit and reminders are right (owner, 23 Oct 2026). */
+    public function missing(): array
+    {
+        return array_keys(array_filter([
+            'income type' => empty($this->income_type),
+            'net income' => ! ((float) $this->net_salary > 0),
+            'employer or business' => empty($this->employer_name) && empty($this->workplace),
+            'pay schedule' => empty($this->pay_frequency) || ($this->pay_frequency === 'monthly' && empty($this->pay_day)),
+        ]));
+    }
 
     protected $appends = [
         'formatted_client_type',

@@ -58,6 +58,14 @@ class MessagesController extends Controller
         $this->guard($request);
         $kind = (string) $request->query('kind');
         abort_unless(isset(CollectionNotices::KINDS[$kind]), 404);
+        if (in_array($kind, CollectionNotices::PERSON_KINDS, true)) {
+            $user = User::with('borrower')->findOrFail((int) $request->query('loan'));
+            $missing = $user->borrower?->missing() ?: ['income type', 'net income', 'employer or business', 'pay schedule'];
+            $sms = $notices->personSms($kind, $user, $missing);
+
+            return $request->boolean('sms') ? response()->json(['sms' => $sms, 'length' => mb_strlen($sms)])
+                : response((string) Emails::mail($notices->personEmail($kind, $user, $missing))->render())->header('Content-Type', 'text/html; charset=utf-8')->header('X-Frame-Options', 'SAMEORIGIN');
+        }
         $loan = Loan::with(['user', 'loanType:id,name'])->findOrFail((int) $request->query('loan'));
         $row = $notices->current($kind, $loan, 30) ?? (object) ['owed' => 0.0, 'days_late' => 0, 'due_date' => now()];
         $email = $notices->email($kind, $loan->user, $loan, $row->owed, $row->days_late, $row->due_date);
@@ -80,14 +88,21 @@ class MessagesController extends Controller
             'channels.*' => 'in:email,sms',
             'note' => 'nullable|string|max:500',
         ]);
-        $loans = Loan::with(['user:id,name,email,phone', 'loanType:id,name'])->whereIn('id', $data['loans'])->get();
-        $id = DB::transaction(function () use ($data, $loans, $notices, $request) {
+        $person = in_array($data['kind'], CollectionNotices::PERSON_KINDS, true);
+        $loans = $person ? collect() : Loan::with(['user:id,name,email,phone', 'loanType:id,name'])->whereIn('id', $data['loans'])->get();
+        $people = $person ? $notices->people($data['kind'], 0)->whereIn('key', array_map('intval', $data['loans'])) : collect();
+        $id = DB::transaction(function () use ($data, $loans, $people, $notices, $request) {
             $id = DB::table('message_batches')->insertGetId([
                 'kind' => $data['kind'], 'channels' => implode(',', array_unique($data['channels'])), 'status' => 'draft',
                 'subject' => CollectionNotices::subject($data['kind']), 'note' => $data['note'] ?? null,
                 'created_by' => $request->user()->id, 'created_at' => now(), 'updated_at' => now(),
             ]);
             $n = 0;
+            foreach ($people as $p) {
+                DB::table('message_batch_items')->insert(['batch_id' => $id, 'user_id' => $p->user->id, 'loan_id' => null, 'owed' => 0, 'days_late' => 0,
+                    'status' => 'pending', 'created_at' => now(), 'updated_at' => now()]);
+                $n++;
+            }
             foreach ($loans as $loan) {
                 $row = $notices->current($data['kind'], $loan, 30);
                 if (! $row) {

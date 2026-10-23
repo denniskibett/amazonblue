@@ -46,6 +46,25 @@ class SendBatchItem implements ShouldQueue
                 $this->closeIfDone($batch->id);
             }
         };
+        // a notice about the person, not a loan (complete your profile)
+        if ($batch && $user && in_array($batch->kind, CollectionNotices::PERSON_KINDS, true) && $batch->status !== 'cancelled') {
+            $missing = $user->borrower?->missing() ?? ['income type', 'net income', 'employer or business', 'pay schedule'];
+            if (! $missing) {
+                $mark('skipped', 'profile already complete');
+
+                return;
+            }
+            try {
+                $user->notifyNow(new CollectionNotice($batch->kind, $notices->personEmail($batch->kind, $user, $missing),
+                    $notices->personSms($batch->kind, $user, $missing), explode(',', $batch->channels), route('account.details')));
+                $mark('sent');
+            } catch (\Throwable $e) {
+                report($e);
+                $mark('failed', $e->getMessage());
+            }
+
+            return;
+        }
         if (! $batch || $batch->status === 'cancelled' || ! $user || ! $loan) {
             $mark('skipped', 'batch cancelled, or the person or loan is gone');
 

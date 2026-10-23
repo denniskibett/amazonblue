@@ -28,7 +28,11 @@ class CollectionNotices
         'due_soon' => ['label' => 'Due soon', 'tone' => 'blue', 'about' => 'Open loans due in the next few days. A firm reminder to pay on time.'],
         'overdue' => ['label' => 'Overdue (1–30 days)', 'tone' => 'amber', 'about' => 'Loans up to 30 days late. A stern warning: pay now or ask for a plan.'],
         'final_notice' => ['label' => 'Final notice (30+ days, defaulted)', 'tone' => 'red', 'about' => 'Old and defaulted loans. Clear the balance or log in to set up a payment plan within 7 days.'],
+        'complete_profile' => ['label' => 'Complete your profile', 'tone' => 'purple', 'about' => 'Verified borrowers missing their income, employer or pay schedule. Asks them to fill it in from their account.'],
     ];
+
+    /** Kinds about a person, not a loan: rows are keyed by user (owner, 23 Oct 2026). */
+    public const PERSON_KINDS = ['complete_profile'];
 
     public const OPEN = [Loan::STATUS_DISBURSED, Loan::STATUS_ACTIVE, Loan::STATUS_OVERDUE, Loan::STATUS_DEFAULTED, Loan::STATUS_RECOVERY];
 
@@ -41,6 +45,9 @@ class CollectionNotices
     public function candidates(string $kind, int $dueWithin = 3, bool $includeForbearance = false, int $cooldownDays = 3): Collection
     {
         abort_unless(isset(self::KINDS[$kind]), 404);
+        if (in_array($kind, self::PERSON_KINDS, true)) {
+            return $this->people($kind, max($cooldownDays, 7));
+        }
         $statuses = self::OPEN;
         if ($includeForbearance) {
             $statuses[] = Loan::STATUS_FORBEARANCE;
@@ -109,10 +116,59 @@ class CollectionNotices
         };
     }
 
+    /**
+     * Verified borrowers with something missing from their profile (borrowers::missing()). Each row: key (user id),
+     * user, missing, last_sent, skip. Not sent again within $cooldownDays.
+     */
+    public function people(string $kind, int $cooldownDays = 7): Collection
+    {
+        $last = DB::table('message_batch_items as i')->join('message_batches as b', 'b.id', '=', 'i.batch_id')
+            ->where('b.kind', $kind)->where('i.status', 'sent')->groupBy('i.user_id')
+            ->selectRaw('i.user_id, max(i.sent_at) as at')->pluck('at', 'user_id');
+
+        return User::role('borrower')->whereNull('deleted_at')->where('kyc_status', 'approved')->with('borrower')->orderBy('name')->get()
+            ->reject(fn (User $u) => $u->isStaff())
+            ->map(function (User $u) use ($last, $cooldownDays) {
+                $missing = $u->borrower ? $u->borrower->missing() : ['income type', 'net income', 'employer or business', 'pay schedule'];
+                if (! $missing) {
+                    return null;
+                }
+                $at = $last[$u->id] ?? null;
+
+                return (object) ['key' => $u->id, 'user' => $u, 'loan' => null, 'missing' => $missing, 'last_sent' => $at,
+                    'skip' => empty($u->email) ? 'no email on file' : ($at && Carbon::parse($at)->gt(now()->subDays($cooldownDays)) ? 'sent ' . Carbon::parse($at)->diffForHumans() : null)];
+            })->filter()->values();
+    }
+
+    /** The "complete your profile" email. */
+    public function personEmail(string $kind, User $user, array $missing): array
+    {
+        $first = Emails::firstName($user->name);
+
+        return [
+            'subject' => 'Please complete your Aimzone profile',
+            'preheader' => 'Tell us your ' . implode(', ', $missing) . '.',
+            'badge' => ['Two minutes', 'info'],
+            'heading' => 'Help us set the right limit for you',
+            'paragraphs' => [
+                "Dear {$first}, a few details are missing from your Aimzone profile: " . implode(', ', $missing) . '.',
+                'We use them to set your borrowing limit and to send reminders around your payday rather than before it. It takes about two minutes.',
+            ],
+            'buttons' => [['Complete my profile', route('account.details'), true]],
+            'signoff' => ['Regards,', 'The AIMZONE Ventures team'],
+        ];
+    }
+
+    public function personSms(string $kind, User $user, array $missing): string
+    {
+        return 'Aimzone: please complete your profile (' . implode(', ', $missing) . ') so we can set your limit and time your reminders. Log in: ' . route('account.details');
+    }
+
     /** The subject line shown on the batch. */
     public static function subject(string $kind): string
     {
-        return ['due_soon' => 'Repayment due soon', 'overdue' => 'Overdue repayment: action required', 'final_notice' => 'Final notice before recovery action'][$kind];
+        return ['due_soon' => 'Repayment due soon', 'overdue' => 'Overdue repayment: action required', 'final_notice' => 'Final notice before recovery action',
+            'complete_profile' => 'Please complete your profile'][$kind];
     }
 
     /** The branded email for one recipient (Support\Emails layout). */
