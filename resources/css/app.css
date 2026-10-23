@@ -579,28 +579,30 @@ dialog::backdrop {
   backdrop-filter: none !important;
 }
 
-/* Side sheets (owner, 23 Oct 2026): every modal with a form slides in from the right as a floating panel with round
-   corners, the same size and place everywhere. Add az-sheet to the panel (az-sheet-wide for long forms). */
+/* Side sheets (owner, 23 Oct 2026): every modal with a form slides in from the right, flush with the top, right and
+   bottom of the screen, square corners, the same size and place everywhere. Add az-sheet to the panel
+   (az-sheet-wide for long forms). */
 .az-sheet {
   position: fixed !important;
-  top: 12px !important;
-  right: 12px !important;
-  bottom: 12px !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   left: auto !important;
-  height: auto !important;
+  height: 100% !important;
+  height: 100dvh !important;
   max-height: none !important;
-  width: min(var(--az-sheet-w, 42rem), calc(100vw - 24px)) !important;
+  width: min(var(--az-sheet-w, 42rem), 100vw) !important;
   max-width: none !important;
   margin: 0 !important;
-  border-radius: 24px !important;
+  border-radius: 0 !important;
   overflow-y: auto !important;
   z-index: 100000 !important;
-  box-shadow: 0 24px 64px -12px rgba(16, 24, 40, 0.45), 0 0 0 1px rgba(16, 24, 40, 0.04) !important;
+  box-shadow: -24px 0 64px -12px rgba(16, 24, 40, 0.45) !important;
   animation: az-sheet-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .az-sheet-wide { --az-sheet-w: 56rem; }
 @media (max-width: 640px) {
-  .az-sheet { top: 8px !important; right: 8px !important; bottom: 8px !important; width: calc(100vw - 16px) !important; border-radius: 20px !important; }
+  .az-sheet { width: 100vw !important; }
 }
 @keyframes az-sheet-in {
   from { transform: translateX(32px); opacity: 0; }
