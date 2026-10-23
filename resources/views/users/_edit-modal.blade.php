@@ -6,7 +6,7 @@
                  class="fixed inset-0 az-backdrop"></div>
             
             <!-- Modal Content -->
-            <div class="relative w-full max-w-4xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10 z-50 max-h-[90vh] overflow-y-auto">
+            <div class="az-sheet az-sheet-wide relative w-full max-w-4xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10 z-50 max-h-[90vh] overflow-y-auto">
                 <!-- close btn -->
                 <button onclick="document.getElementById('editProfileModal').classList.add('hidden')" 
                         class="group absolute right-3 top-3 z-999 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-gray-200 text-gray-500 transition-colors hover:bg-gray-300 hover:text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700 sm:right-6 sm:top-6 sm:h-11 sm:w-11">

@@ -171,6 +171,41 @@ class EngineV2Test extends TestCase
         $roll->preview(Loan::findOrFail(529));
     }
 
+    public function test_staff_can_pick_the_booking_day_and_the_new_due_date(): void
+    {
+        $this->loan529();
+        Carbon::setTestNow('2026-10-20 10:00');
+
+        $p = $this->calc->getRolloverPreview(Loan::findOrFail(529), ['date' => '2026-10-17', 'due_date' => '2026-11-30']);
+        $this->assertSame('2026-10-17', $p['rollover_date']);
+        $this->assertSame('2026-10-17', $p['new_start_date_raw']);
+        $this->assertSame('2026-11-30', $p['new_due_date_raw']);
+        $this->assertMoney(16258.00, $p['new_principal']);      // owed on the 17th, not the 20th
+
+        $this->calc->executeRollover(Loan::findOrFail(529), ['date' => '2026-10-17', 'due_date' => '2026-11-30']);
+        $c3 = LoanCycle::where('loan_id', 529)->where('cycle_number', 3)->firstOrFail();
+        $this->assertSame('2026-10-17', $c3->start_date->toDateString());
+        $this->assertSame('2026-11-30', $c3->due_date->toDateString());
+        $this->assertMoney(16258.00, $c3->previous_balance);
+    }
+
+    public function test_the_booking_day_stays_inside_the_cycle_and_not_in_the_future(): void
+    {
+        $this->loan529();
+        Carbon::setTestNow('2026-10-20 10:00');
+        $roll = app(\App\Services\Loans\Rollover::class);
+        $start = LoanCycle::findOrFail(606)->start_date->copy();
+
+        foreach ([$start->copy()->subDay()->toDateString(), '2026-10-21'] as $bad) {
+            try {
+                $roll->preview(Loan::findOrFail(529), ['date' => $bad]);
+                $this->fail("$bad should be refused");
+            } catch (\DomainException $e) {
+                $this->assertNotSame('', $e->getMessage());
+            }
+        }
+    }
+
     public function test_from_the_fifth_cycle_staff_must_set_a_rate(): void
     {
         $this->loan529();

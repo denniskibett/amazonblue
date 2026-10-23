@@ -184,6 +184,14 @@
         <!-- ============ QUICK ACTIONS ============ -->
         <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
             
+            {{-- edit the loan in the loan modal (owner, 23 Oct 2026) --}}
+            @can('edit loans')
+            <button type="button" onclick="window.openLoanEdit && window.openLoanEdit({{ $loan->id }})"
+               class="w-full flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
+                <x-ui.icon name="edit" class="size-4" />
+                Edit loan
+            </button>
+            @endcan
             {{-- who brought it in and whose money funded it, with a dry run (owner, 23 Oct 2026) --}}
             @can('edit partners')
             <a href="{{ route('staff.loans.partners', $loan) }}" data-drawer
@@ -500,11 +508,7 @@ function openPaymentPlanModal(loanId) {
     }));
 }
 
-function openRolloverModal(loanId) {
-    window.dispatchEvent(new CustomEvent('open-rollover-modal', {
-        detail: { loanId: loanId }
-    }));
-}
+// openRolloverModal comes from partials/modal/loan-rollover-modal (owner, 23 Oct 2026)
 
 function openCyclesModal(loanId) {
     window.dispatchEvent(new CustomEvent('open-cycles-modal', {

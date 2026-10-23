@@ -15,7 +15,7 @@
      x-show="open" x-cloak style="display: none;"
      class="fixed inset-0 z-[99999] flex items-center justify-center p-4">
     <div class="fixed inset-0 az-backdrop" @click="open = false"></div>
-    <div class="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 shadow-xl">
+    <div class="az-sheet relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 shadow-xl">
         <form method="POST" action="{{ route('cases.action.add', $case->id) }}">
             @csrf
             <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -119,7 +119,7 @@
      x-show="open" x-cloak style="display: none;"
      class="fixed inset-0 z-[99999] flex items-center justify-center p-4">
     <div class="fixed inset-0 az-backdrop" @click="open = false"></div>
-    <div class="relative w-full max-w-lg rounded-2xl bg-white dark:bg-gray-900 shadow-xl">
+    <div class="az-sheet relative w-full max-w-lg rounded-2xl bg-white dark:bg-gray-900 shadow-xl">
         <form method="POST" action="{{ route('cases.write-off', $case->id) }}">
             @csrf
             @method('PATCH')

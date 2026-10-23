@@ -26,12 +26,12 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="transform translate-x-0"
         x-transition:leave-end="transform translate-x-full"
-        class="fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-900 shadow-theme-xl sm:rounded-l-3xl z-[99999] overflow-y-auto"
+        class="az-sheet fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-900 shadow-theme-xl z-[99999] overflow-y-auto"
         @click.away="close()"
     >
         <div class="flex flex-col h-full">
             <!-- Header -->
-            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5 sticky top-0 bg-white/95 backdrop-blur dark:bg-gray-900/95 z-10 sm:rounded-tl-3xl">
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5 sticky top-0 bg-white/95 backdrop-blur dark:bg-gray-900/95 z-10">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="title"></h3>
                 <button @click="close()" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

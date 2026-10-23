@@ -7,7 +7,7 @@
   ></div>
   <div
     @click.outside="isProfileAddressModal = false"
-    class="no-scrollbar relative flex w-full max-w-[700px] flex-col overflow-y-auto rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-11"
+    class="az-sheet no-scrollbar relative flex w-full max-w-[700px] flex-col overflow-y-auto rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-11"
   >
     <!-- close btn -->
     <button

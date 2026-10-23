@@ -1332,6 +1332,8 @@ class LoanController extends Controller
             'interest_rate' => 'nullable|numeric|min:0|max:100',
             'period_days' => 'nullable|integer|min:1',
             'waive_penalty' => 'nullable|boolean',
+            'rollover_date' => 'nullable|date|before_or_equal:today',
+            'due_date' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -1359,6 +1361,9 @@ class LoanController extends Controller
                 'interest_rate' => $request->interest_rate,
                 'period_days' => $request->period_days,
                 'waive_penalty' => $request->waive_penalty,
+                // dates set in the modal (owner, 23 Oct 2026): the day it is booked, and a due date other than one period on
+                'date' => $request->rollover_date ?: null,
+                'due_date' => $request->due_date ?: null,
             ]);
 
             // Log the result
@@ -1397,13 +1402,23 @@ class LoanController extends Controller
             ], 403);
         }
 
+        // the modal can ask "what if": booked on another day, a different due date, rate or penalty waiver
+        $options = $request->validate([
+            'date' => ['nullable', 'date', 'before_or_equal:today'],
+            'due_date' => ['nullable', 'date'],
+            'interest_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'waive_penalty' => ['nullable', 'boolean'],
+        ]);
         try {
-            $previewData = $this->loanCalculator->getRolloverPreview($loan);
+            $previewData = $this->loanCalculator->getRolloverPreview($loan, $options);
             
             return response()->json([
                 'success' => true,
                 'data' => $previewData
             ]);
+        } catch (\DomainException $e) {
+            // a rule says no (closed cycle, a rate is needed, due date before start...): say why, the modal shows it
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

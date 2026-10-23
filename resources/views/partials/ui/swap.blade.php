@@ -42,7 +42,10 @@
   // runs straight away, because that moment has already passed
   function runScripts(root) {
     const add = document.addEventListener, addW = window.addEventListener;
-    const now = (type, fn, ...rest) => (type === 'DOMContentLoaded' || type === 'alpine:init') ? setTimeout(fn, 0) : null;
+    // alpine:init runs straight away (synchronously), so components the new content registers with Alpine.data()
+    // exist before Alpine starts the new content; with a delay they were missing and modals stopped opening
+    // after a background refresh (owner, 23 Oct 2026). DOMContentLoaded code runs just after.
+    const now = (type, fn, ...rest) => type === 'alpine:init' ? (fn(), true) : (type === 'DOMContentLoaded' ? setTimeout(fn, 0) : null);
     document.addEventListener = function (type, fn, ...rest) { if (now(type, fn) === null) return add.call(document, type, fn, ...rest); };
     window.addEventListener = function (type, fn, ...rest) { if (type === 'load' ? (setTimeout(fn, 0), true) : now(type, fn) !== null) return; return addW.call(window, type, fn, ...rest); };
     try {

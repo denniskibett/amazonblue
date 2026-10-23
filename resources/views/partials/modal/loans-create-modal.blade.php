@@ -26,12 +26,12 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="transform translate-x-0"
         x-transition:leave-end="transform translate-x-full"
-        class="fixed right-0 top-0 h-full w-full max-w-3xl bg-white dark:bg-gray-900 shadow-2xl z-[99999] overflow-y-auto"
+        class="az-sheet az-sheet-wide fixed right-0 top-0 h-full w-full max-w-3xl bg-white dark:bg-gray-900 shadow-2xl z-[99999] overflow-y-auto"
         @click.away="close()"
     >
         <div class="flex flex-col h-full">
             <!-- Header -->
-            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5 sticky top-0 bg-white/95 backdrop-blur dark:bg-gray-900/95 z-10 sm:rounded-tl-3xl">
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5 sticky top-0 bg-white/95 backdrop-blur dark:bg-gray-900/95 z-10">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="title"></h3>
                 <button @click="close()" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,15 +113,6 @@
                     </template>
                 </div>
 
-                <!-- Borrower Info Display (for non-admin users) -->
-                <div x-show="!showUserSelection && borrowerName" class="mb-6">
-                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Borrower
-                    </label>
-                    <p class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-white">
-                        <span x-text="borrowerName"></span>
-                    </p>
-                </div>
 
                 <div class="border-t border-gray-200 dark:border-gray-700 my-4"></div>
 
@@ -494,6 +485,18 @@ function loansCreateModal() {
             });
 
             window.openLoansCreateModal = (data) => this.openModal(data);
+            // edit a loan by its number from any page that has this modal (owner, 23 Oct 2026)
+            window.openLoanEdit = async (id) => {
+                try {
+                    const res = await fetch(`/loans/${id}/edit`, { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (!res.ok) throw new Error(res.status);
+                    const d = await res.json();
+                    const e = d.loan || d.data || d;
+                    this.openModal({ edit: e, userId: e.user_id, userName: e.user_name || '', hasSignature: e.has_signature || false, signatureUrl: e.signature_url || '' });
+                } catch (err) {
+                    window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message: 'Could not load loan #' + id + ' for editing.' } }));
+                }
+            };
             window.closeLoansCreateModal = () => this.close();
         },
 
@@ -537,7 +540,7 @@ function loansCreateModal() {
 
         initSignaturePad() {
             const canvas = document.querySelector('#signature-canvas-modal');
-            if (!canvas) return;
+            if (!canvas || typeof window.SignaturePad === 'undefined') return;
 
             if (this.signaturePad) {
                 this.signaturePad.clear();
@@ -888,7 +891,7 @@ function loansCreateModal() {
         },
 
         getFullSignature() {
-            return this.signaturePad.toDataURL('image/png');
+            return this.signaturePad ? this.signaturePad.toDataURL('image/png') : '';
         },
 
         clearSignature() {

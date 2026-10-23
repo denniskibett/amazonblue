@@ -52,6 +52,10 @@ class Rollover
         }
 
         $day = Carbon::parse($options['date'] ?? now())->startOfDay();
+        // a back-dated extension (owner, 23 Oct 2026) can't go before the cycle began or into the future
+        if ($day->lt(Carbon::parse($cycle->start_date)->startOfDay()) || $day->gt(now()->startOfDay())) {
+            throw new \DomainException('Book the extension between the cycle start (' . Carbon::parse($cycle->start_date)->format('j M Y') . ') and today.');
+        }
         $balance = CycleBalance::at($cycle, $day->toDateString());
         if ($balance['final_outstanding'] <= 0) {
             throw new \DomainException('Nothing is owed on this cycle, so there is nothing to extend.');

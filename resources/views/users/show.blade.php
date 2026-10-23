@@ -60,7 +60,8 @@
       </div>
       <div class="flex flex-wrap gap-2">
         @if ($kind === 'borrower' && auth()->user()->can('create loans') && \Illuminate\Support\Facades\Route::has('loans.create'))
-          <a href="{{ route('loans.create', $user->id) }}" class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white hover:bg-brand-600"><x-ui.icon name="plus" class="size-4" />New loan</a>
+          {{-- opens the loan modal (owner, 23 Oct 2026); the old page stays as the fallback --}}
+          <a href="{{ route('loans.create', $user->id) }}" onclick="if (window.openLoansCreateModal) { event.preventDefault(); window.dispatchEvent(new CustomEvent('open-loan-create')); }" data-no-swap class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white hover:bg-brand-600"><x-ui.icon name="plus" class="size-4" />New loan</a>
         @endif
         @if ($open && auth()->user()->canAny(['create repayments']) && \Illuminate\Support\Facades\Route::has('staff.repayments.receive'))
           <a href="{{ route('staff.repayments.receive', ['loan' => $open[0]['loan']->id]) }}" class="{{ $btn }}"><x-ui.icon name="hand-coins" class="size-4" />Receive payment</a>
@@ -93,7 +94,7 @@
   @endif
 
   {{-- tabs --}}
-  <div x-data="{ tab: (location.hash || '').slice(1) in @js($tabs) ? location.hash.slice(1) : 'overview' }" x-init="$watch('tab', t => history.replaceState(null, '', '#' + t))">
+  <div x-data="{ tab: (location.hash || '').slice(1) in @js($tabs) ? location.hash.slice(1) : 'overview' }" x-init="$watch('tab', t => history.replaceState(null, '', '#' + t))" @open-loan-create.window="if (@js(isset($tabs['loans']))) tab = 'loans'">
     <div class="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-white/[0.03]">
       @foreach ($tabs as $k => $t)
         <button type="button" @click="tab = @js($k)" :class="tab === @js($k) ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5'"

@@ -33,6 +33,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The loan modal (create and edit) works on any page that includes it: what it lists comes from here when
+        // the page didn't pass it (owner, 23 Oct 2026: edit a loan from the loan page, new loan from the person page).
+        \Illuminate\Support\Facades\View::composer('partials.modal.loans-create-modal', function ($view) {
+            $d = $view->getData();
+            $view->with([
+                'loanTypes' => $d['loanTypes'] ?? \App\Models\LoanType::orderBy('name')->get(),
+                'guarantors' => $d['guarantors'] ?? \App\Models\User::role('borrower')->whereNull('deleted_at')->orderBy('name')->get(['id', 'name', 'email']),
+                'loanOfficers' => $d['loanOfficers'] ?? \App\Models\User::role(['admin', 'teller'])->orderBy('name')->get(['id', 'name', 'role']),
+                'partners' => $d['partners'] ?? \App\Models\Partner::where('is_house_account', false)->orderBy('name')->get(['id', 'name', 'broker_rate']),
+            ]);
+        });
+
         // Laravel's own account emails in the branded design (App\Support\Emails)
         \Illuminate\Auth\Notifications\VerifyEmail::toMailUsing(fn ($user, string $url) => \App\Support\Emails::mail(
             \App\Support\Emails::verifyEmail(\App\Support\Emails::firstName($user->name), $url)));

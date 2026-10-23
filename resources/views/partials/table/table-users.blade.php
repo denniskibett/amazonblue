@@ -36,7 +36,7 @@
     
     <!-- Modal Content -->
     <div class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto">
-      <div class="relative w-full max-w-2xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10"
+      <div class="az-sheet relative w-full max-w-2xl rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10"
            @click.outside="closeCreateModal()">
         
         <!-- Close button -->

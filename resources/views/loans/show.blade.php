@@ -476,6 +476,10 @@
 
 {{-- Include all modals --}}
 @include('partials.modal.loan-rollover-modal')
+{{-- edit this loan in the same modal used to create loans (owner, 23 Oct 2026) --}}
+@can('edit loans')
+@include('partials.modal.loans-create-modal')
+@endcan
 @include('partials.modal.loan-payment-plan-modal') 
 @include('partials.modal.loan-cycles-modal')
 @include('partials.modal.cases-create-modal')
@@ -534,99 +538,7 @@ function openCaseModal(userId, loanId) {
     }));
 }
 
-function openRolloverModal(loanId) {
-    fetch(`/loans/${loanId}/rollover-preview`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const preview = data.data;
-                window.dispatchEvent(new CustomEvent('open-rollover-modal', {
-                    detail: {
-                        loanId: loanId,
-                        currentBalance: preview.current_balance,
-                        interestToCapitalize: preview.interest_to_capitalize,
-                        newBalance: preview.new_balance,
-                        currentCycle: preview.current_cycle,
-                        newCycle: preview.new_cycle,
-                        newDueDate: preview.new_due_date,
-                        previousDueDate: preview.previous_due_date,
-                        interestRate: preview.interest_rate,
-                        graceDaysBalance: preview.grace_days_balance,
-                        previousBalance: preview.previous_balance,
-                        missedCycles: preview.missed_cycles,
-                        potentialCycles: preview.potential_cycles,
-                        daysOverdue: preview.days_overdue,
-                        periodDisplay: preview.period_display,
-                        nextDueDateIfRolled: preview.next_due_date_if_rolled,
-                        currentDueDate: preview.current_due_date,
-                    }
-                }));
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching rollover preview:', error);
-            const loanData = window.loanData || {};
-            const currentBalance = loanData.amount || 0;
-            const interestRate = loanData.interest_rate || 0;
-            const period = loanData.period || 30;
-            const unit = loanData.unit || 'days';
-            const previousDueDate = loanData.due_date ? new Date(loanData.due_date) : new Date(loanData.borrow_date || new Date());
-            
-            const interestToCapitalize = (interestRate / 100) * currentBalance;
-            const newBalance = currentBalance + interestToCapitalize;
-            
-            const newDueDate = new Date(previousDueDate);
-            if (unit === 'days') {
-                newDueDate.setDate(newDueDate.getDate() + period);
-            } else if (unit === 'weeks') {
-                newDueDate.setDate(newDueDate.getDate() + (period * 7));
-            } else if (unit === 'months') {
-                newDueDate.setMonth(newDueDate.getMonth() + period);
-            } else if (unit === 'years') {
-                newDueDate.setFullYear(newDueDate.getFullYear() + period);
-            }
-            
-            window.dispatchEvent(new CustomEvent('open-rollover-modal', {
-                detail: {
-                    loanId: loanId,
-                    currentBalance: currentBalance,
-                    interestToCapitalize: interestToCapitalize,
-                    newBalance: newBalance,
-                    currentCycle: loanData.cycle || 1,
-                    newCycle: (loanData.cycle || 1) + 1,
-                    newDueDate: newDueDate.toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                    }),
-                    previousDueDate: previousDueDate.toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                    }),
-                    interestRate: interestRate,
-                    graceDaysBalance: loanData.grace_days_balance || 0,
-                    previousBalance: currentBalance,
-                    period: period,
-                    unit: unit,
-                    missedCycles: 0,
-                    potentialCycles: 0,
-                    daysOverdue: 0,
-                    periodDisplay: period + ' ' + unit,
-                    nextDueDateIfRolled: newDueDate.toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                    }),
-                    currentDueDate: previousDueDate.toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                    }),
-                }
-            }));
-        });
-}
+// openRolloverModal comes from partials/modal/loan-rollover-modal (owner, 23 Oct 2026)
 
 function openCyclesModal(loanId) {
     window.dispatchEvent(new CustomEvent('open-cycles-modal', {

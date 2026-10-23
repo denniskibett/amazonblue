@@ -1,460 +1,177 @@
-{{-- resources/views/partials/modal/loan-rollover-modal.blade.php --}}
-<div 
-    x-data="rolloverModal()" 
-    x-init="init()"
-    x-cloak
->
-    <!-- Backdrop -->
-    <div 
-        x-show="open" 
-        x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100"
-        x-transition:leave="transition ease-in duration-200"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-        class="fixed inset-0 z-[99999] az-backdrop"
-        @click="close()"
-    ></div>
-
-    <!-- Modal Slideover -->
-    <div 
-        x-show="open"
-        x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="transform translate-x-full"
-        x-transition:enter-end="transform translate-x-0"
-        x-transition:leave="transition ease-in duration-200"
-        x-transition:leave-start="transform translate-x-0"
-        x-transition:leave-end="transform translate-x-full"
-        class="fixed right-0 top-0 h-full w-full max-w-5xl bg-white dark:bg-gray-900 shadow-2xl z-[99999] overflow-y-auto"
-        @click.away="close()"
-    >
-        <div class="flex flex-col h-full">
-            <!-- Header -->
-            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5 sticky top-0 bg-white/95 backdrop-blur dark:bg-gray-900/95 z-10 sm:rounded-tl-3xl">
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Rollover Loan</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Renew the loan and capitalize the interest</p>
-                </div>
-                <button @click="close()" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Body -->
-            <form @submit.prevent="submitRollover()" class="flex-1 overflow-y-auto p-6">
-                @csrf
-
-                <!-- Loan Information -->
-                <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div>
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Loan ID</span>
-                        <p class="font-semibold text-gray-900 dark:text-white" x-text="loanId ? '#' + String(loanId).padStart(5, '0') : 'N/A'"></p>
-                    </div>
-                    <div>
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Interest Rate</span>
-                        <p class="font-semibold text-gray-900 dark:text-white" x-text="interestRate + '%'"></p>
-                    </div>
-                    <div>
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Current Cycle</span>
-                        <p class="font-semibold text-purple-600 dark:text-purple-400" x-text="currentCycle"></p>
-                    </div>
-                    <div>
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Original Principal</span>
-                        <p class="font-semibold text-gray-900 dark:text-white" x-text="formatCurrency(originalPrincipal)"></p>
-                    </div>
-                </div>
-
-                <!-- Potential Cycles Warning -->
-                <div x-show="missedCycles > 0" class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                    <h4 class="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-2"><x-ui.icon name="alert" class="inline-block size-4 align-[-3px]" /> Overdue Analysis</h4>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">Days Overdue</span>
-                            <p class="font-semibold text-red-600 dark:text-red-400" x-text="daysOverdue"></p>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">Period</span>
-                            <p class="font-semibold text-gray-900 dark:text-white" x-text="periodDisplay"></p>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">Missed Rollovers</span>
-                            <p class="font-semibold text-orange-600 dark:text-orange-400" x-text="missedCycles"></p>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">Potential Cycles</span>
-                            <p class="font-semibold text-purple-600 dark:text-purple-400" x-text="potentialCycles"></p>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">Current Due Date</span>
-                            <p class="font-semibold text-gray-900 dark:text-white" x-text="currentDueDate"></p>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">Next Due Date</span>
-                            <p class="font-semibold text-green-600 dark:text-green-400" x-text="nextDueDateIfRolled"></p>
-                        </div>
-                    </div>
-                    <p class="mt-2 text-xs text-yellow-700 dark:text-yellow-400">
-                        This loan has been overdue for <span x-text="daysOverdue"></span> days. 
-                        <span x-text="missedCycles"></span> rollover(s) have been missed.
-                    </p>
-                </div>
-
-                <!-- Interest Type Selection - MUTUALLY EXCLUSIVE -->
-                <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3">Interest Type</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Simple Interest Radio -->
-                        <label class="flex items-start gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md"
-                               :class="interestType === 'simple' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300'"
-                               @click="interestType = 'simple'">
-                            <input type="radio" x-model="interestType" value="simple" class="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2">
-                                    <p class="font-medium text-gray-900 dark:text-white">Simple Interest</p>
-                                    <span x-show="interestType === 'simple'" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
-                                        Selected
-                                    </span>
-                                </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Interest calculated on original principal only<br>
-                                    <span class="text-blue-600 dark:text-blue-400 font-medium"><span x-text="formatCurrency(simpleInterest)"></span> per cycle</span>
-                                </p>
-                            </div>
-                        </label>
-
-                        <!-- Compound Interest Radio -->
-                        <label class="flex items-start gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md"
-                               :class="interestType === 'compound' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 shadow-md' : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'"
-                               @click="interestType = 'compound'">
-                            <input type="radio" x-model="interestType" value="compound" class="mt-1 w-4 h-4 text-purple-600 focus:ring-purple-500">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2">
-                                    <p class="font-medium text-gray-900 dark:text-white">Compound Interest</p>
-                                    <span x-show="interestType === 'compound'" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
-                                        Selected
-                                    </span>
-                                </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Interest calculated on current balance<br>
-                                    <span class="text-purple-600 dark:text-purple-400 font-medium"><span x-text="formatCurrency(compoundInterest)"></span> this cycle</span>
-                                </p>
-                            </div>
-                        </label>
-                    </div>
-
-                    <!-- Info Text -->
-                    <div class="mt-4 p-3 rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-                        <div class="flex items-start gap-2">
-                            <svg class="w-5 h-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <div class="text-xs text-gray-600 dark:text-gray-300">
-                                <template x-if="interestType === 'simple'">
-                                    <div>
-                                        <p class="font-medium text-blue-700 dark:text-blue-300"><x-ui.icon name="info" class="inline-block size-4 align-[-3px]" /> Simple Interest</p>
-                                        <p>Interest is calculated on the original principal only. The interest amount stays the same each cycle.</p>
-                                        <p class="mt-1 text-blue-600 dark:text-blue-400">Example: 20% of KES 10,000 = KES 2,000 each cycle</p>
-                                    </div>
-                                </template>
-                                <template x-if="interestType === 'compound'">
-                                    <div>
-                                        <p class="font-medium text-purple-700 dark:text-purple-300"><x-ui.icon name="info" class="inline-block size-4 align-[-3px]" /> Compound Interest</p>
-                                        <p>Interest is calculated on the current balance (principal + accumulated interest). The interest grows each cycle.</p>
-                                        <p class="mt-1 text-purple-600 dark:text-purple-400">Example: Cycle 1: 20% of 10,000 = 2,000 | Cycle 2: 20% of 12,000 = 2,400</p>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-
-<!-- ============ PAYMENT PLAN TOGGLE ============ -->
-<div class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-    <label class="flex items-start gap-3 cursor-pointer">
-        <input type="checkbox" x-model="waivePenalty" class="mt-1 w-4 h-4 text-yellow-600 focus:ring-yellow-500">
-        <div>
-            <div class="flex items-center gap-2">
-                <p class="font-medium text-gray-900 dark:text-white"><x-ui.icon name="list" class="inline-block size-4 align-[-3px]" /> Payment Plan (Waive Penalties)</p>
-                <span x-show="waivePenalty" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
-                    Selected
-                </span>
-            </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Create a payment plan with waived penalties. New cycle will be in forbearance.
-            </p>
-            <div x-show="waivePenalty" class="mt-2 p-2 bg-green-100 dark:bg-green-800/30 rounded-lg">
-                <p class="text-xs text-green-700 dark:text-green-300 font-medium"><x-ui.icon name="check-circle" class="inline-block size-4 align-[-3px]" /> Penalties will be WAIVED for this cycle</p>
-            </div>
-        </div>
-    </label>
-</div>
-
-                <!-- Rollover Preview -->
-                <div class="mb-6 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Current Rollover Preview</h4>
-                    {{-- S-B3 interim until the Phase 2 cycle engine --}}
-                    <p class="mb-3 text-xs text-warning-700 dark:text-warning-400">Indicative only: the booked amount can differ when there are repayments or penalties. Check the Rollover Statement on the loan before you confirm, and agree the figure with the borrower.</p>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">Current Balance</span>
-                            <p class="font-semibold text-gray-900 dark:text-white" x-text="formatCurrency(currentBalance)"></p>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">Interest to Capitalize</span>
-                            <p class="font-semibold" 
-                               :class="interestType === 'simple' ? 'text-blue-600 dark:text-blue-400' : 'text-purple-600 dark:text-purple-400'"
-                               x-text="formatCurrency(interestType === 'simple' ? simpleInterest : compoundInterest)"></p>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">New Balance</span>
-                            <p class="font-semibold text-green-600 dark:text-green-400" 
-                               x-text="formatCurrency(interestType === 'simple' ? simpleNewBalance : compoundNewBalance)"></p>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">Current Cycle</span>
-                            <p class="font-semibold text-gray-900 dark:text-white" x-text="currentCycle"></p>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">New Cycle</span>
-                            <p class="font-semibold text-purple-600 dark:text-purple-400" x-text="newCycleNumber"></p>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 dark:text-gray-400">New Due Date</span>
-                            <p class="font-semibold text-gray-900 dark:text-white" x-text="newDueDate"></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Future Rollover Projections -->
-                <div x-show="projections && projections.length > 0" class="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3"><x-ui.icon name="trending-up" class="inline-block size-4 align-[-3px]" /> Future Rollover Projections</h4>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-100 dark:bg-gray-700/50">
-                                <tr>
-                                    <th class="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Cycle</th>
-                                    <th class="px-2 py-1 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Previous Balance</th>
-                                    <th class="px-2 py-1 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Interest</th>
-                                    <th class="px-2 py-1 text-right text-xs font-medium text-gray-500 dark:text-gray-400">New Balance</th>
-                                    <th class="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Due Date</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                <template x-for="proj in projections" :key="proj.cycle_number">
-                                    <tr>
-                                        <td class="px-2 py-1 font-medium text-gray-900 dark:text-white" x-text="'#' + proj.cycle_number"></td>
-                                        <td class="px-2 py-1 text-right text-gray-600 dark:text-gray-400" x-text="formatCurrency(interestType === 'simple' ? proj.simple_previous_balance : proj.compound_previous_balance)"></td>
-                                        <td class="px-2 py-1 text-right"
-                                           :class="interestType === 'simple' ? 'text-blue-600 dark:text-blue-400' : 'text-purple-600 dark:text-purple-400'"
-                                           x-text="formatCurrency(interestType === 'simple' ? proj.simple_interest : proj.compound_interest)"></td>
-                                        <td class="px-2 py-1 text-right font-medium text-green-600 dark:text-green-400" 
-                                            x-text="formatCurrency(interestType === 'simple' ? proj.simple_new_balance : proj.compound_new_balance)"></td>
-                                        <td class="px-2 py-1 text-gray-600 dark:text-gray-400" x-text="proj.due_date"></td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        Showing next 5 cycles with <span x-text="interestType"></span> interest at <span x-text="interestRate"></span>%
-                    </p>
-                </div>
-
-                <!-- Previous Due Date -->
-                <div class="mb-6 p-3 rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
-                    <div class="flex items-center gap-2">
-                        <span class="text-gray-500 dark:text-gray-400"><x-ui.icon name="calendar" class="inline-block size-4 align-[-3px]" /></span>
-                        <span class="font-medium text-gray-700 dark:text-gray-300">Previous Due Date</span>
-                        <span class="ml-auto text-sm text-gray-600 dark:text-gray-400" x-text="previousDueDate"></span>
-                    </div>
-                </div>
-
-                <!-- Grace Days -->
-                <div class="mb-6 p-3 rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
-                    <div class="flex items-center gap-2">
-                        <span x-show="graceDaysBalance > 0" class="text-blue-600 dark:text-blue-400"><x-ui.icon name="list" class="inline-block size-4 align-[-3px]" /></span>
-                        <span x-show="graceDaysBalance <= 0" class="text-gray-500 dark:text-gray-400"><x-ui.icon name="calendar" class="inline-block size-4 align-[-3px]" /></span>
-                        <span class="font-medium text-gray-700 dark:text-gray-300" x-text="graceDaysBalance > 0 ? graceDaysBalance + ' Grace Days Available' : 'No Grace Days'"></span>
-                    </div>
-                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Grace days will carry over to the new cycle
-                    </div>
-                </div>
-
-                <!-- Notes -->
-                <div>
-                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Notes (Optional)</label>
-                    <textarea x-model="notes" rows="3" 
-                              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                              placeholder="Reason for rollover..."></textarea>
-                </div>
-
-                <!-- Footer -->
-                <div class="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900">
-                    <button type="button" @click="close()" 
-                        class="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-                        Cancel
-                    </button>
-                    <button type="submit" :disabled="isSubmitting"
-                        class="rounded-lg bg-purple-600 px-6 py-2 text-sm font-medium text-white hover:bg-purple-700 focus:ring-4 focus:ring-purple-300 dark:focus:ring-purple-800 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span x-show="!isSubmitting">Confirm Rollover</span>
-                        <span x-show="isSubmitting" class="flex items-center">
-                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Processing...
-                        </span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
+{{-- Extend (roll over) a loan (owner, 23 Oct 2026). A right-side sheet that reads the real plan from the server
+     (loans.rollover.preview, the same rules the booking uses) and lets staff set the dates when needed:
+       - Booked on: the day the extension is recorded (today, or an earlier day inside the cycle);
+       - New due date: one product period on by default, or any later date.
+     The rate is kept for cycles 2–4; from cycle 5 a new rate is required. Open with window.openRolloverModal(loanId). --}}
 <script>
-document.addEventListener('alpine:init', function() {
-    Alpine.data('rolloverModal', function() {
-        return {
-            open: false,
-            isSubmitting: false,
-            loanId: null,
-            currentBalance: 0,
-            interestType: 'simple', // CHANGED: Default is now 'simple'
-            currentCycle: 1,
-            newCycleNumber: 2,
-            newDueDate: '',
-            previousDueDate: '',
-            interestRate: 0,
-            graceDaysBalance: 0,
-            originalPrincipal: 0,
-            waivePenalty: false,
-            // Simple Interest
-            simpleInterest: 0,
-            simpleNewBalance: 0,
-            // Compound Interest
-            compoundInterest: 0,
-            compoundNewBalance: 0,
-            // Cycle info
-            missedCycles: 0,
-            potentialCycles: 0,
-            daysOverdue: 0,
-            periodDisplay: '',
-            nextDueDateIfRolled: '',
-            currentDueDate: '',
-            projections: [],
-            notes: '',
-            errors: {},
-
-            init() {
-                window.azOn('open-rollover-modal', (event) => {
-                    this.openModal(event.detail);
-                });
-            },
-
-            openModal(data) {
-                this.loanId = data.loanId;
-                this.currentBalance = data.currentBalance || 0;
-                this.currentCycle = data.currentCycle || 1;
-                this.newCycleNumber = (data.currentCycle || 1) + 1;
-                this.newDueDate = data.newDueDate || '';
-                this.previousDueDate = data.previousDueDate || '';
-                this.interestRate = data.interestRate || 0;
-                this.graceDaysBalance = data.graceDaysBalance || 0;
-                this.originalPrincipal = data.originalPrincipal || data.currentBalance || 0;
-                this.waivePenalty = false; // Reset waive penalty on modal open
-                // Simple Interest
-                this.simpleInterest = data.simple_interest || 0;
-                this.simpleNewBalance = data.simple_new_balance || 0;
-                // Compound Interest
-                this.compoundInterest = data.compound_interest || 0;
-                this.compoundNewBalance = data.compound_new_balance || 0;
-                // Cycle info
-                this.missedCycles = data.missedCycles || 0;
-                this.potentialCycles = data.potentialCycles || 0;
-                this.daysOverdue = data.daysOverdue || 0;
-                this.periodDisplay = data.periodDisplay || '';
-                this.nextDueDateIfRolled = data.nextDueDateIfRolled || '';
-                this.currentDueDate = data.currentDueDate || '';
-                this.projections = data.projections || [];
-                // CHANGED: Set default to 'simple'
-                this.interestType = 'simple';
-                this.notes = '';
-                this.errors = {};
-                this.open = true;
-                document.body.style.overflow = 'hidden';
-            },
-
-            close() {
-                this.open = false;
-                this.isSubmitting = false;
-                document.body.style.overflow = '';
-            },
-
-            formatCurrency(amount) {
-                if (amount === undefined || amount === null) return 'KES 0.00';
-                return 'KES ' + parseFloat(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            },
-
-            async submitRollover() {
-                this.isSubmitting = true;
-                this.errors = {};
-
-                try {
-                    const response = await fetch(`/loans/${this.loanId}/rollover`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ 
-                            notes: this.notes,
-                            interest_type: this.interestType,
-                            waive_penalty: this.waivePenalty,  // Add this
-                            interest_rate: this.customInterestRate,  // Add custom rate
-                            period_days: this.customPeriodDays  // Add custom period
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        if (response.status === 422 && data.errors) {
-                            this.errors = data.errors;
-                            throw new Error(Object.values(data.errors).flat().join('\n'));
-                        }
-                        throw new Error(data.message || 'Failed to rollover loan');
-                    }
-
-                    window.dispatchEvent(new CustomEvent('show-alert', {
-                        detail: {
-                            type: 'success',
-                            title: 'Success!',
-                            message: data.message || 'Loan rolled over successfully.'
-                        }
-                    }));
-
-                    this.close();
-                    setTimeout(() => (window.azRefresh ? window.azRefresh() : location.reload()), 300);
-
-                } catch (error) {
-                    window.dispatchEvent(new CustomEvent('show-alert', {
-                        detail: {
-                            type: 'error',
-                            title: 'Error',
-                            message: error.message || 'Failed to rollover loan'
-                        }
-                    }));
-                } finally {
-                    this.isSubmitting = false;
-                }
-            }
-        };
-    });
-});
+  window.rolloverModal = window.rolloverModal || function () {
+    return {
+      open: false, loading: false, saving: false, loanId: null,
+      p: {}, error: '', errors: [],
+      form: { date: '', due_date: '', interest_rate: '', waive_penalty: false, notes: '' },
+      defaults: { due_date: '' },
+      today: new Date().toLocaleDateString('en-CA'),
+      timer: null,
+      init() {
+        window.openRolloverModal = (loanId) => this.show(loanId);
+        window.azOn('open-rollover-modal', (e) => this.show(e.detail && (e.detail.loanId || e.detail.loan_id)));
+      },
+      show(loanId) {
+        if (!loanId) return;
+        this.loanId = loanId; this.p = {}; this.error = ''; this.errors = [];
+        this.form = { date: this.today, due_date: '', interest_rate: '', waive_penalty: false, notes: '' };
+        this.open = true;
+        document.body.style.overflow = 'hidden';
+        this.preview(true);
+      },
+      close() { this.open = false; document.body.style.overflow = ''; },
+      changed() { clearTimeout(this.timer); this.timer = setTimeout(() => this.preview(false), 350); },
+      async preview(first) {
+        this.loading = true; this.error = '';
+        const q = new URLSearchParams();
+        if (this.form.date && this.form.date !== this.today) q.set('date', this.form.date);
+        if (this.form.due_date && this.form.due_date !== this.defaults.due_date) q.set('due_date', this.form.due_date);
+        if (this.form.interest_rate !== '' && this.form.interest_rate !== null) q.set('interest_rate', this.form.interest_rate);
+        if (this.form.waive_penalty) q.set('waive_penalty', 1);
+        try {
+          const res = await fetch(`/loans/${this.loanId}/rollover-preview?${q}`, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok || !body.success) {
+            this.error = body.message || (body.errors ? Object.values(body.errors).flat().join(' ') : 'The preview could not be worked out.');
+            return;
+          }
+          this.p = body.data;
+          // the product-period due date for this booking day; a date staff typed stays as it is
+          if (first || !this.form.due_date || this.form.due_date === this.defaults.due_date) {
+            this.defaults.due_date = this.p.new_due_date_raw;
+            this.form.due_date = this.p.new_due_date_raw;
+          }
+          if (first && this.form.interest_rate === '') this.form.interest_rate = this.p.interest_rate;
+        } catch (e) {
+          this.error = 'Could not reach the server. Nothing was saved.';
+        } finally { this.loading = false; }
+      },
+      needsRate() { return (this.p.new_cycle || 0) > (this.p.same_rate_cycles || 4); },
+      async submit() {
+        if (this.saving) return;
+        this.saving = true; this.errors = [];
+        const body = { interest_type: 'compound', notes: this.form.notes, waive_penalty: this.form.waive_penalty };
+        if (this.form.date && this.form.date !== this.today) body.rollover_date = this.form.date;
+        if (this.form.due_date && this.form.due_date !== this.defaults.due_date) body.due_date = this.form.due_date;
+        if (this.needsRate() || (this.form.interest_rate !== '' && Number(this.form.interest_rate) !== Number(this.p.interest_rate))) body.interest_rate = this.form.interest_rate;
+        try {
+          const res = await fetch(`/loans/${this.loanId}/rollover`, { method: 'POST', credentials: 'same-origin',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify(body) });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.success === false) {
+            this.errors = data.errors ? Object.values(data.errors).flat() : [data.message || 'The loan could not be extended.'];
+            return;
+          }
+          window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: data.message || 'Loan extended.' } }));
+          this.close();
+          setTimeout(() => (window.azRefresh ? window.azRefresh() : location.reload()), 250);
+        } catch (e) {
+          this.errors = ['Could not reach the server. Nothing was saved.'];
+        } finally { this.saving = false; }
+      },
+      kes(n) { return 'KES ' + Number(n || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+      day(d) { return d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; },
+    };
+  };
 </script>
+
+<div x-data="rolloverModal()" x-init="init()" x-cloak @keydown.escape.window="open && close()">
+  <div x-show="open" x-transition.opacity class="az-backdrop fixed inset-0 z-[99999]" @click="close()"></div>
+
+  <section x-show="open" class="az-sheet flex flex-col bg-white dark:bg-gray-900" role="dialog" aria-modal="true" aria-label="Extend loan">
+    <header class="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-gray-100 bg-white/95 px-6 py-5 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Extend loan <span x-text="loanId ? '#' + String(loanId).padStart(5, '0') : ''"></span></h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Close this cycle and start the next one with what is owed.</p>
+      </div>
+      <button type="button" @click="close()" class="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800" aria-label="Close">✕</button>
+    </header>
+
+    <form @submit.prevent="submit()" class="flex-1 space-y-5 px-6 py-5">
+      <div x-show="error" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300" x-text="error"></div>
+      <div x-show="loading && !p.new_cycle" class="rounded-2xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500 dark:bg-white/[0.03]">Working out the extension…</div>
+
+      <div x-show="p.new_cycle" class="space-y-5">
+        {{-- where the loan stands on the booking day --}}
+        <div class="grid grid-cols-2 gap-3 rounded-2xl bg-gray-50 p-4 text-sm dark:bg-white/[0.03] sm:grid-cols-4">
+          <div><p class="text-xs text-gray-500">Cycle</p><p class="font-semibold text-gray-900 dark:text-white" x-text="p.current_cycle"></p></div>
+          <div><p class="text-xs text-gray-500">Due</p><p class="font-semibold text-gray-900 dark:text-white" x-text="p.current_due_date"></p></div>
+          <div><p class="text-xs text-gray-500">Days late</p><p class="font-semibold" :class="p.days_overdue > 0 ? 'text-red-600' : 'text-gray-900 dark:text-white'" x-text="p.days_overdue || 0"></p></div>
+          <div><p class="text-xs text-gray-500">Owed that day</p><p class="font-semibold text-gray-900 dark:text-white" x-text="kes(p.final_outstanding)"></p></div>
+        </div>
+
+        {{-- the dates --}}
+        <div class="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
+          <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Dates</p>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-date">Booked on</label>
+              <input id="ro-date" type="date" x-model="form.date" @change="changed()" :min="p.cycle_start_date_raw" :max="today"
+                     class="h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Today unless it was agreed earlier. What is owed is worked out to this day.</p>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-due">New due date</label>
+              <input id="ro-due" type="date" x-model="form.due_date" @change="changed()" :min="p.new_start_date_raw"
+                     class="h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <span x-text="form.due_date === defaults.due_date ? 'One product period (' + (p.period_display || '') + ') from the start.' : 'Custom date.'"></span>
+                <button type="button" x-show="form.due_date !== defaults.due_date" @click="form.due_date = defaults.due_date; changed()" class="font-medium text-brand-600 hover:underline">Use the product period</button>
+              </p>
+            </div>
+          </div>
+          <p class="mt-3 rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+            The new cycle runs <b x-text="day(p.new_start_date_raw)"></b> to <b x-text="day(p.new_due_date_raw)"></b>.
+            <span x-text="p.days_overdue > 0 ? 'It starts on the booking day because the cycle is late.' : 'It starts on the current due date.'"></span>
+          </p>
+        </div>
+
+        {{-- rate and penalty --}}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-rate">Interest rate (%)</label>
+            <input id="ro-rate" type="number" step="0.01" min="0" max="100" x-model="form.interest_rate" @input="changed()" :readonly="!needsRate()"
+                   :class="!needsRate() ? 'bg-gray-100 text-gray-500 dark:bg-gray-800' : 'bg-gray-50/70'"
+                   class="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white">
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="needsRate() ? 'Cycle ' + p.new_cycle + ': set the rate for this cycle (or use a payment plan).' : 'Cycles 2 to ' + p.same_rate_cycles + ' keep the previous rate.'"></p>
+          </div>
+          <label class="flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50/60 p-4 text-sm dark:border-amber-500/20 dark:bg-amber-500/5">
+            <input type="checkbox" x-model="form.waive_penalty" @change="changed()" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600">
+            <span><span class="font-medium text-gray-800 dark:text-white">Waive penalty on the new cycle</span>
+              <span class="block text-xs text-gray-500 dark:text-gray-400">No late charges until the new due date.</span></span>
+          </label>
+        </div>
+
+        {{-- the result --}}
+        <div class="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
+          <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-white">New cycle <span x-text="p.new_cycle"></span> <span x-show="loading" class="ml-1 text-xs font-normal text-gray-400">updating…</span></p>
+          <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+            <div class="rounded-xl bg-gray-50 p-3 dark:bg-white/[0.03]"><dt class="text-xs text-gray-500">Carried over</dt><dd class="font-semibold text-gray-900 dark:text-white" x-text="kes(p.new_principal)"></dd></div>
+            <div class="rounded-xl bg-gray-50 p-3 dark:bg-white/[0.03]"><dt class="text-xs text-gray-500" x-text="'Interest (' + p.interest_rate + '%)'"></dt><dd class="font-semibold text-brand-600" x-text="kes(p.interest_to_capitalize)"></dd></div>
+            <div class="rounded-xl bg-success-50 p-3 dark:bg-success-500/10"><dt class="text-xs text-gray-500">New balance</dt><dd class="font-semibold text-success-700 dark:text-success-400" x-text="kes(p.new_balance)"></dd></div>
+          </dl>
+        </div>
+
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-notes">Notes <span class="font-normal text-gray-400">(optional)</span></label>
+          <textarea id="ro-notes" rows="2" x-model="form.notes" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></textarea>
+        </div>
+      </div>
+
+      <div x-show="errors.length" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+        <template x-for="e in errors" :key="e"><p x-text="e"></p></template>
+      </div>
+
+      <div class="sticky bottom-0 -mx-6 flex justify-end gap-3 border-t border-gray-100 bg-white/95 px-6 py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
+        <button type="button" @click="close()" class="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Cancel</button>
+        <button type="submit" :disabled="saving || loading || !p.new_cycle || !!error" class="rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:opacity-50" x-text="saving ? 'Extending…' : 'Extend loan'"></button>
+      </div>
+    </form>
+  </section>
+</div>

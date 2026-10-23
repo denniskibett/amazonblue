@@ -7,7 +7,7 @@
   <div x-show="open" x-transition.opacity class="fixed inset-0 z-[99999] bg-black/50" @click="close()"></div>
   <div x-show="open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
        x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
-       class="fixed right-0 top-0 z-[99999] h-full w-full max-w-2xl overflow-y-auto bg-white shadow-2xl dark:bg-gray-900" role="dialog" aria-modal="true" aria-label="Approve extension">
+       class="az-sheet fixed right-0 top-0 z-[99999] h-full w-full max-w-2xl overflow-y-auto bg-white shadow-2xl dark:bg-gray-900" role="dialog" aria-modal="true" aria-label="Approve extension">
     <div class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
       <div>
         <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Approve extension</h3>

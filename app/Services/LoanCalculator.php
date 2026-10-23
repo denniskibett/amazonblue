@@ -1014,10 +1014,10 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, ?Carbon $cal
     /**
      * Get rollover preview data
      */
-    public function getRolloverPreview(Loan $loan): array
+    public function getRolloverPreview(Loan $loan, array $options = []): array
     {
         if (self::v2()) {
-            return $this->rolloverPreviewV2($loan);
+            return $this->rolloverPreviewV2($loan, $options);
         }
 
         if (!$loan->loanType) {
@@ -1459,9 +1459,20 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, ?Carbon $cal
     }
 
     /** getRolloverPreview under v2: the same plan execute books, in the v1 preview shape. */
-    private function rolloverPreviewV2(Loan $loan): array
+    private function rolloverPreviewV2(Loan $loan, array $options = []): array
     {
-        $p = app(Rollover::class)->preview($loan);
+        // the rollover modal can set the booking day, the new due date, the rate and the penalty waiver (owner, 23 Oct 2026)
+        $options = array_filter($options, fn ($v) => $v !== null && $v !== '');
+        try {
+            $p = app(Rollover::class)->preview($loan, $options);
+        } catch (\DomainException $e) {
+            // from cycle 5 a rate must be set: show the plan at the previous rate so staff can see it and change the rate
+            $last = $loan->cycles()->orderByDesc('cycle_number')->first();
+            if (isset($options['interest_rate']) || ! $last || ! str_contains($e->getMessage(), 'set a new rate')) {
+                throw $e;
+            }
+            $p = app(Rollover::class)->preview($loan, $options + ['interest_rate' => (float) ($last->interest_rate ?? $loan->loanType?->interest_rate)]);
+        }
         $b = $p['balance'];
         $cycle = $p['cycle'];
         $type = $loan->loanType;
@@ -1497,6 +1508,12 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, ?Carbon $cal
             'new_start_date' => Carbon::parse($p['start_date'])->format('M d, Y'),
             'new_due_date' => Carbon::parse($p['due_date'])->format('M d, Y'),
             'new_due_date_raw' => $p['due_date'],
+            'new_start_date_raw' => $p['start_date'],
+            'rollover_date' => $p['rollover_date'],
+            'current_due_date_raw' => Carbon::parse($cycle->due_date)->toDateString(),
+            'cycle_start_date_raw' => Carbon::parse($cycle->start_date)->toDateString(),
+            'same_rate_cycles' => (int) config('lending.rollover.same_rate_cycles', 4),
+            'waive_penalty' => $p['waive_penalty'],
             'interest_to_capitalize' => $p['interest'],
             'new_principal' => $p['principal'],
             'new_balance' => $p['new_balance'],

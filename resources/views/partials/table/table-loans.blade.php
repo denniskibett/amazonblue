@@ -453,6 +453,9 @@ function loanTable() {
         filteredLoans: [],
         
         init() {
+            // "New loan" / "Edit" buttons elsewhere on the page open the same modal (owner, 23 Oct 2026)
+            window.azOn('open-loan-create', (e) => this.openCreateModal(e.detail || null));
+            window.azOn('open-loan-edit', (e) => e.detail && this.openEditModal(e.detail.id));
             this.allLoans = Array.from(document.querySelectorAll('.loan-row'));
             this.filteredLoans = [...this.allLoans];
             this.initializeStatusColors();

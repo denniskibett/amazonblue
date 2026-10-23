@@ -52,7 +52,7 @@
     <!-- Slideover Panel -->
     <div class="fixed inset-y-0 right-0 max-w-full flex">
         <div class="w-full max-w-4xl">
-            <div class="h-full flex flex-col bg-white dark:bg-gray-900 shadow-xl"
+            <div class="az-sheet az-sheet-wide h-full flex flex-col bg-white dark:bg-gray-900 shadow-xl"
                  x-show="isOpen"
                  x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
                  x-transition:enter-start="translate-x-full"

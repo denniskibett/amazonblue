@@ -26,12 +26,12 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="transform translate-x-0"
         x-transition:leave-end="transform translate-x-full"
-        class="fixed right-0 top-0 h-full w-full max-w-3xl bg-white dark:bg-gray-900 shadow-2xl z-[99999] overflow-y-auto"
+        class="az-sheet az-sheet-wide fixed right-0 top-0 h-full w-full max-w-3xl bg-white dark:bg-gray-900 shadow-2xl z-[99999] overflow-y-auto"
         @click.away="close()"
     >
         <div class="flex flex-col h-full">
             <!-- Header -->
-            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5 sticky top-0 bg-white/95 backdrop-blur dark:bg-gray-900/95 z-10 sm:rounded-tl-3xl">
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-5 sticky top-0 bg-white/95 backdrop-blur dark:bg-gray-900/95 z-10">
                 <div>
                     <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
                         <span x-show="!editMode"><x-ui.icon name="list" class="inline-block size-4 align-[-3px]" /> Payment Plan / Forbearance</span>
