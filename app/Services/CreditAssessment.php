@@ -232,6 +232,11 @@ class CreditAssessment
             }
         }
 
+        // how the borrower has actually repaid (borrower_profiles): it can only lower the limit, never raise it
+        if (! empty($factors['behaviour_limit']) && (int) $factors['behaviour_limit'] < $limit) {
+            [$limit, $cappedBy] = [(int) $factors['behaviour_limit'], 'behaviour'];
+        }
+
         $limit = max($first, $limit);
 
         return [
@@ -326,6 +331,9 @@ class CreditAssessment
             'cash_repaid' => round($cashIn, 2),
             'months_with_us' => $firstBorrow ? (int) $firstBorrow->diffInMonths($asOf) : 0,
             'income' => $income ?: null,
+            // behaviour profile's suggested limit (owner, 23 Oct 2026); only used when LENDING_BEHAVIOUR_LIMITS is on
+            'behaviour_limit' => config('lending.behaviour_limits') && $asOf->isToday()
+                ? (\App\Services\BorrowerAnalytics::profileFor($user->id)?->suggested_limit ?: null) : null,
         ];
 
         $scores = [

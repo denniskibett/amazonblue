@@ -12,6 +12,7 @@
     ['Dashboard', 'dashboard', 'grid', true, ['dashboard'], null],
     ['My inbox', 'staff.inbox', 'inbox', $u->isStaff(), ['staff.inbox'], null],
     ['Reports & Analytics', 'reports.index', 'chart', $u->can('view reports'), ['reports.*', 'disbursements.index'], null],
+    ['Lending analytics', 'staff.analytics', 'pie', $u->can('view reports'), ['staff.analytics'], null],
   ];
   if ($staff) {
     $groups['Lending'] = [
@@ -21,6 +22,8 @@
       ['Requests', 'staff.requests', 'mail', $u->canAny(['rollover loans', 'edit partners']), ['staff.requests'], $count(fn () => \Illuminate\Support\Facades\DB::table('borrower_requests')->where('status', 'open')->count())],
       ['Collections', 'staff.collections', 'alert', $u->can('view recovery cases'), ['staff.collections'], null],
       ['Debt Recovery', 'cases.index', 'shield', $u->can('view recovery cases'), ['cases.*'], $count(fn () => \App\Models\DebtRecoveryCase::open()->count())],
+
+      ['Messages', 'staff.messages.index', 'mail', $u->hasAnyRole(['super-admin', 'admin', 'manager']), ['staff.messages.*'], null],
     ];
     $groups['Cash desk'] = [
       ['Receive payment', 'staff.repayments.receive', 'hand-coins', $u->canAny(['create repayments', 'delete repayments']), ['staff.repayments.*'], null],

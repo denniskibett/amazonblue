@@ -105,3 +105,40 @@ Weekly, upload the statement CSV on M-Pesa payments.
   merged the owner-listed ones on 21 Oct. Compare step 0's count with the 98 recorded then.
 - **Wallets & reconciliation text:** the page still says repayments since 7 Oct are not split to partners. That has
   been out of date since Phase 3 went live on 21 Oct. Update the text once step 0 confirms `LENDING_SPLIT_ENABLED=true`.
+
+## This round (23 October 2026): three database changes first, then deploy
+
+`push-live` refuses to deploy while a database change is pending, so run the three SQL twins on live first. They
+create two new tables and add `topup` to the request types. No data changes. Each is safe to run twice.
+
+```bash
+cd /home/loans.sharet.africa/laravel
+mysqldump --single-transaction --routines --triggers loans_main | gzip > ~/backups/pre_20261023_$(date +%H%M).sql.gz
+git pull --ff-only origin stage-2-ui
+mysql loans_main < database/sql/2026_10_23_message_batches.sql
+mysql loans_main < database/sql/2026_10_23_borrower_profiles.sql
+mysql loans_main < database/sql/2026_10_23_borrower_requests_topup.sql
+```
+
+Then deploy from the Mac with `scripts/push-live.sh`. Once it's live:
+
+```bash
+php artisan analytics:profiles      # first run of the borrower profiles (nightly at 02:15 from then on)
+php artisan schedule:list           # shows analytics:profiles 02:15
+```
+
+What arrives:
+
+| Piece | Where | Switch |
+|---|---|---|
+| Email and SMS manager: reminders, overdue warnings and final notices, sent in batches you check first | Messages (managers, admins) | none: nothing goes out until someone presses Send. Email needs `MAIL_MAILER=smtp` and SPF/DKIM; SMS needs step 3 above |
+| Lending analytics: amount heatmap, weekday, time of month and repeat borrowing, borrower behaviour | Overview › Lending analytics | none (read-only) |
+| Behaviour on approvals and in the person panel: on-time rate, comfortable amount, flags such as weekend lending | Loan approvals, any name | none (read-only) |
+| Behaviour can lower a borrower's limit (never raise it) | the borrower's limit | `LENDING_BEHAVIOUR_LIMITS=true`, after a week of reading the analytics |
+| Top-ups: a borrower asks on their loan page; staff send it from Requests with the M-Pesa code | account › loan › Top up; Requests | needs `LENDING_REQUESTS_ENABLED=true` (step 2) |
+| Sysadmin "View as": staff roles, a new borrower, or a customer's account; nothing is saved | user menu › View as another role | none (super-admin only) |
+
+Top-up rules: the loan is running and not past its due date, at least half of the current period is paid in cash,
+nothing unpaid in the borrower's history, and the amount fits under their limit less what they owe. The current period
+closes today; the new period lends what was owed + the top-up, at the same rate, for one product period; the top-up
+is a cash disbursement on the new period, from the same funding line as the loan's first payout.

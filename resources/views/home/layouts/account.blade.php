@@ -43,6 +43,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
   </head>
   <body>
+    @include('partials.ui.preview-bar')
     <a class="skip" href="#main">Skip to content</a>
     <div class="acct">
       {{-- desktop sidebar --}}

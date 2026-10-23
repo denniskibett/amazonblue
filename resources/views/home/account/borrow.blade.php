@@ -179,6 +179,7 @@
               {{ match (true) {
                   ($limit['capped_by'] ?? null) === 'risk' => 'Your recent repayments keep this below ' . $kes($limit['ladder']) . '; paying in full and on time raises it.',
                   ($limit['capped_by'] ?? null) === 'income' => 'Based on your income. Talk to us if it has changed.',
+                  ($limit['capped_by'] ?? null) === 'behaviour' => 'Based on the amounts you have repaid on time so far; repaying on time raises it.',
                   $limit['tier'] === 'good_standing' => 'Good standing. Borrow any amount up to your limit.',
                   default => 'Repay on time to unlock up to ' . $kes($product['good_standing_limit']) . '.',
               } }}

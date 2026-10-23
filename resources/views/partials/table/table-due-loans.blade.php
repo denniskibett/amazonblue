@@ -106,6 +106,7 @@
               </span>
             </div>
           </th>
+          <th class="py-3 text-right"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Action</p></th>
         </tr>
       </thead>
       
@@ -124,30 +125,7 @@
               </span>
             </div>
           </th>
-          <th class="py-3 cursor-pointer" onclick="sortTable(3)">
-            <div class="flex items-center justify-between">
-              <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                Status
-              </p>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
-            </div>
-          </th>
-          <th class="py-3 cursor-pointer" onclick="sortTable(4)">
-            <div class="flex items-center justify-between">
-              <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                Due Date
-              </p>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
-            </div>
-          </th>
+          <th class="py-3 text-right"><p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Action</p></th>
         </tr>
       </thead>
 
@@ -163,11 +141,9 @@
                     <x-heroicon-s-user-circle class="h-full w-full text-gray-400" />
                   </div>
                   <div>
-                    <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                      <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
+                    <p class="loan-borrower font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}" title="Open borrower details">
                         {{ strtoupper($loan->user->name) }}
                       </p>
-                    </a>
                     <span class="text-gray-500 text-theme-xs dark:text-gray-400 loan-type">
                       {{ $loan->loanType->name ?? 'N/A' }}
                     </span>
@@ -200,14 +176,14 @@
                 </div>
               </div>
             </td>
-            <td class="py-3">
+            <td class="py-3 hidden sm:table-cell">
               <div class="flex items-center">
                 <span class="rounded-full px-2 py-0.5 text-theme-xs font-medium loan-status" data-sort-value="{{ $loan->status }}">
                   {{ ucfirst($loan->status) }}
                 </span>
               </div>
             </td>
-            <td class="py-3">
+            <td class="py-3 hidden sm:table-cell">
               <div class="flex items-center">
                 <p class="text-gray-500 text-theme-sm dark:text-gray-400 loan-due" data-sort-value="{{ $loan->remaining_days }}">
                   @if($loan->remaining_days < 0)
@@ -261,16 +237,21 @@
                   <x-heroicon-s-user-circle class="h-full w-full text-gray-400" />
                 </div>
                 <div>
-                  <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                    <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
+                  <p class="loan-borrower font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}" title="Open borrower details">
                       {{ strtoupper($loan->user->name) }}
                     </p>
-                  </a>
                   <span class="text-gray-500 text-theme-xs dark:text-gray-400 loan-type">
                     {{ $loan->loanType->name ?? 'N/A' }}
                   </span>
+                  <span class="mt-1 flex flex-wrap items-center gap-1.5 text-theme-xs">
+                    <span class="rounded-full px-2 py-0.5 font-medium loan-status" data-sort-value="{{ $loan->status }}">{{ ucfirst($loan->status) }}</span>
+                    <span class="text-gray-500 dark:text-gray-400">{{ $loan->remaining_days < 0 ? 'Overdue ' . abs($loan->remaining_days) . ' ' . \Illuminate\Support\Str::plural('day', abs($loan->remaining_days)) : ($loan->remaining_days == 0 ? 'Due today' : 'Due in ' . $loan->remaining_days . ' ' . \Illuminate\Support\Str::plural('day', $loan->remaining_days)) }}</span>
+                  </span>
                 </div>
               </div>
+            </td>
+            <td class="py-3 text-right">
+              <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="View loan #{{ $loan->id }}">View loan</a>
             </td>
           </tr>
           @endforeach
@@ -285,11 +266,9 @@
                     <x-heroicon-s-user-circle class="h-full w-full text-gray-400" />
                   </div>
                   <div>
-                    <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                      <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
+                    <p class="loan-borrower font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}" title="Open borrower details">
                         {{ strtoupper($loan->user->name) }}
                       </p>
-                    </a>
                     <span class="text-gray-500 text-theme-xs dark:text-gray-400 loan-type">
                       {{ $loan->loanType->name ?? 'N/A' }}
                     </span>
@@ -322,14 +301,14 @@
                 </div>
               </div>
             </td>
-            <td class="py-3">
+            <td class="py-3 hidden sm:table-cell">
               <div class="flex items-center">
                 <span class="rounded-full px-2 py-0.5 text-theme-xs font-medium loan-status" data-sort-value="{{ $loan->status }}">
                   {{ ucfirst($loan->status) }}
                 </span>
               </div>
             </td>
-            <td class="py-3">
+            <td class="py-3 hidden sm:table-cell">
               <div class="flex items-center">
                 <p class="text-gray-500 text-theme-sm dark:text-gray-400 loan-due" data-sort-value="{{ $loan->remaining_days }}">
                   @if($loan->remaining_days < 0)
@@ -383,16 +362,21 @@
                   <x-heroicon-s-user-circle class="h-full w-full text-gray-400" />
                 </div>
                 <div>
-                  <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                    <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
+                  <p class="loan-borrower font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}" title="Open borrower details">
                       {{ strtoupper($loan->user->name) }}
                     </p>
-                  </a>
                   <span class="text-gray-500 text-theme-xs dark:text-gray-400 loan-type">
                     {{ $loan->loanType->name ?? 'N/A' }}
                   </span>
+                  <span class="mt-1 flex flex-wrap items-center gap-1.5 text-theme-xs">
+                    <span class="rounded-full px-2 py-0.5 font-medium loan-status" data-sort-value="{{ $loan->status }}">{{ ucfirst($loan->status) }}</span>
+                    <span class="text-gray-500 dark:text-gray-400">{{ $loan->remaining_days < 0 ? 'Overdue ' . abs($loan->remaining_days) . ' ' . \Illuminate\Support\Str::plural('day', abs($loan->remaining_days)) : ($loan->remaining_days == 0 ? 'Due today' : 'Due in ' . $loan->remaining_days . ' ' . \Illuminate\Support\Str::plural('day', $loan->remaining_days)) }}</span>
+                  </span>
                 </div>
               </div>
+            </td>
+            <td class="py-3 text-right">
+              <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="View loan #{{ $loan->id }}">View loan</a>
             </td>
           </tr>
           @endforeach
@@ -407,11 +391,9 @@
                     <x-heroicon-s-user-circle class="h-full w-full text-gray-400" />
                   </div>
                   <div>
-                    <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                      <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
+                    <p class="loan-borrower font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}" title="Open borrower details">
                         {{ strtoupper($loan->user->name) }}
                       </p>
-                    </a>
                     <span class="text-gray-500 text-theme-xs dark:text-gray-400 loan-type">
                       {{ $loan->loanType->name ?? 'N/A' }}
                     </span>
@@ -443,14 +425,14 @@
                 </div>
               </div>
             </td>
-            <td class="py-3">
+            <td class="py-3 hidden sm:table-cell">
               <div class="flex items-center">
                 <span class="rounded-full px-2 py-0.5 text-theme-xs font-medium loan-status" data-sort-value="{{ $loan->status }}">
                   {{ ucfirst($loan->status) }}
                 </span>
               </div>
             </td>
-            <td class="py-3">
+            <td class="py-3 hidden sm:table-cell">
               <div class="flex items-center">
                 <p class="text-gray-500 text-theme-sm dark:text-gray-400 loan-due" data-sort-value="{{ $loan->remaining_days }}">
                   @if($loan->remaining_days < 0)
@@ -504,16 +486,21 @@
                   <x-heroicon-s-user-circle class="h-full w-full text-gray-400" />
                 </div>
                 <div>
-                  <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
-                    <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">
+                  <p class="loan-borrower font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}" title="Open borrower details">
                       {{ strtoupper($loan->user->name) }}
                     </p>
-                  </a>
                   <span class="text-gray-500 text-theme-xs dark:text-gray-400 loan-type">
                     {{ $loan->loanType->name ?? 'N/A' }}
                   </span>
+                  <span class="mt-1 flex flex-wrap items-center gap-1.5 text-theme-xs">
+                    <span class="rounded-full px-2 py-0.5 font-medium loan-status" data-sort-value="{{ $loan->status }}">{{ ucfirst($loan->status) }}</span>
+                    <span class="text-gray-500 dark:text-gray-400">{{ $loan->remaining_days < 0 ? 'Overdue ' . abs($loan->remaining_days) . ' ' . \Illuminate\Support\Str::plural('day', abs($loan->remaining_days)) : ($loan->remaining_days == 0 ? 'Due today' : 'Due in ' . $loan->remaining_days . ' ' . \Illuminate\Support\Str::plural('day', $loan->remaining_days)) }}</span>
+                  </span>
                 </div>
               </div>
+            </td>
+            <td class="py-3 text-right">
+              <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="View loan #{{ $loan->id }}">View loan</a>
             </td>
           </tr>
           @endforeach

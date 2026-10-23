@@ -42,6 +42,13 @@ Schedule::command('loans:check-integrity --csv --notify')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/loan-integrity.log'));
 
+// borrower behaviour profiles for analytics and limits, after the nightly status and NPL runs (owner, 23 Oct 2026)
+Schedule::command('analytics:profiles')
+    ->dailyAt('02:15')
+    ->timezone('Africa/Nairobi')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/analytics.log'));
+
 // fixed-rate partners: their monthly simple interest for the month that just ended (owner, 21 Oct 2026)
 Schedule::command('partners:accrue-fixed')
     ->monthlyOn(1, '02:30')

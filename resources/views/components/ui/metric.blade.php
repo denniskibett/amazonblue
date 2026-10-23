@@ -22,14 +22,18 @@
     'coins' => 'amber', 'percent' => 'amber', 'star' => 'amber', 'calendar' => 'amber', 'clock' => 'orange',
     'alert' => 'red', 'trending-down' => 'red', 'x-circle' => 'red', 'shield' => 'purple', 'users' => 'purple', 'user' => 'purple'];
   $accent = $accents[$color ?? ($byIcon[$icon] ?? 'brand')] ?? $accents['brand'];
-  $figure = $size === 'sm' ? 'text-base 2xl:text-xl' : 'text-2xl 2xl:text-title-sm';
+  // bigger figures, smaller labels (owner, 23 Oct 2026)
+  $figure = $size === 'sm' ? 'text-[1.05rem] leading-tight sm:text-xl xl:text-lg 2xl:text-2xl' : 'text-[1.05rem] leading-tight sm:text-[1.75rem] 2xl:text-title-sm';
   // the currency reads smaller than the figure, as on the earlier dashboard
-  $shown = preg_replace('/^KES\s*/', '<span class="mr-1 text-xs font-medium text-gray-400">KES</span>', (string) $value);
+  // the currency sits small above the figure, so the figure gets the card's full width (23 Oct 2026)
+  $isKes = (bool) preg_match('/^KES\s*/', (string) $value);
+  $shown = preg_replace('/^KES\s*/', '', (string) $value);
 @endphp
-<{{ $tag }} @if ($href) href="{{ $href }}" @endif {{ $attributes->merge(['class' => 'block min-w-0 rounded-2xl border border-gray-200 bg-white font-outfit ' . ($size === 'sm' ? 'p-4' : 'p-5') . ' dark:border-gray-800 dark:bg-white/[0.03]' . ($href ? ' transition hover:border-brand-300 dark:hover:border-brand-800' : '')]) }}>
+<{{ $tag }} @if ($href) href="{{ $href }}" @endif {{ $attributes->merge(['class' => 'block min-w-0 rounded-2xl border border-gray-200 bg-white font-outfit ' . ($size === 'sm' ? 'p-3.5 sm:p-4' : 'p-3.5 sm:p-5') . ' dark:border-gray-800 dark:bg-white/[0.03]' . ($href ? ' transition hover:border-brand-300 dark:hover:border-brand-800' : '')]) }}>
+  <p class="mb-0.5 text-[11px] font-medium uppercase leading-none tracking-wide text-gray-400 {{ $isKes ? '' : 'invisible' }}" aria-hidden="{{ $isKes ? 'false' : 'true' }}">KES</p>
   <h4 class="truncate font-bold tabular-nums text-gray-800 dark:text-white/90 {{ $figure }}" title="{{ strip_tags((string) $value) }}">{!! $shown !!}</h4>
-  <p class="mt-2 flex items-center gap-1.5 text-theme-sm text-gray-700 dark:text-gray-400">
-    <span class="flex size-6 shrink-0 items-center justify-center rounded-md {{ $accent['chip'] }}"><x-ui.icon :name="$icon" class="size-3.5" /></span>
+  <p class="mt-2 flex items-center gap-1.5 text-theme-xs font-medium text-gray-500 dark:text-gray-400">
+    <span class="flex size-5 shrink-0 items-center justify-center rounded-md {{ $accent['chip'] }}"><x-ui.icon :name="$icon" class="size-3" /></span>
     <span class="line-clamp-2 leading-snug" title="{{ $label }}">{{ $label }}</span>
   </p>
   @if (($delta !== null && $delta !== '') || $hint)

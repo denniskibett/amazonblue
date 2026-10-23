@@ -56,12 +56,12 @@
         </div>
 
         <div class="max-w-full overflow-x-auto px-4 pb-3 pt-4 sm:px-6">
-            <table class="w-full min-w-[760px] text-left text-theme-sm text-gray-700 dark:text-gray-300">
+            <table class="w-full table-fixed text-left sm:table-auto sm:min-w-[760px] text-theme-sm text-gray-700 dark:text-gray-300">
                 <caption class="sr-only">Audit log</caption>
                 <thead class="border-y border-gray-100 dark:border-gray-800">
                     <tr>
                         @foreach (['Who', 'Action', 'Record', 'What changed', 'When'] as $h)
-                            <th scope="col" class="whitespace-nowrap py-3 pr-4 text-theme-xs font-medium text-gray-500 dark:text-gray-400">{{ $h }}</th>
+                            <th scope="col" @class(['whitespace-nowrap py-3 pr-4 text-theme-xs font-medium text-gray-500 dark:text-gray-400', 'hidden sm:table-cell' => in_array($h, ['Action', 'Record', 'When'], true), 'w-[45%] sm:w-auto' => $h === 'Who'])>{{ $h }}</th>
                         @endforeach
                     </tr>
                 </thead>
@@ -69,20 +69,21 @@
                     @forelse($logs as $log)
                         @php $changes = $diff($log->old_values, $log->new_values); @endphp
                         <tr class="align-top">
-                            <td class="whitespace-nowrap py-3 pr-4">
+                            <td class="py-3 pr-4 sm:whitespace-nowrap">
                                 @if ($log->user)
                                     <x-staff.person :user="$log->user" :sub="'User #' . $log->user->id" />
                                 @else
                                     <x-staff.person name="System" sub="scheduled or automatic" />
                                 @endif
+                                <div class="mt-1.5 sm:hidden"><x-staff.pill :tone="$tone[$log->action] ?? 'gray'" dot>{{ $log->formatted_action }}</x-staff.pill> <span class="text-theme-xs text-gray-500">{{ optional($log->created_at)->format('j M, H:i') }}</span></div>
                             </td>
-                            <td class="whitespace-nowrap py-3 pr-4">
+                            <td class="hidden whitespace-nowrap py-3 pr-4 sm:table-cell">
                                 <x-staff.pill :tone="$tone[$log->action] ?? 'gray'" dot>{{ $log->formatted_action }}</x-staff.pill>
                                 @if(!empty($log->new_values['event']))
                                     <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">{{ str_replace('_', ' ', $log->new_values['event']) }}</span>
                                 @endif
                             </td>
-                            <td class="whitespace-nowrap py-3 pr-4">
+                            <td class="hidden whitespace-nowrap py-3 pr-4 sm:table-cell">
                                 <a class="font-medium text-gray-800 hover:text-brand-500 dark:text-white/90" href="{{ route('audit-log.index', ['table' => $log->table_name, 'record' => $log->record_id]) }}">{{ ucfirst(str_replace('_', ' ', $log->table_name)) }} #{{ $log->record_id }}</a>
                                 <span class="block text-theme-xs text-gray-500 dark:text-gray-400">all changes to this record</span>
                             </td>
@@ -90,7 +91,7 @@
                                 @if ($changes->isEmpty())
                                     <span class="text-theme-xs text-gray-400">—</span>
                                 @else
-                                    <div class="max-w-xl space-y-0.5 text-theme-xs" x-data="{ all: false }">
+                                    <div class="max-w-xl space-y-0.5 break-words text-theme-xs" x-data="{ all: false }">
                                         @foreach ($changes as $i => $c)
                                             <div class="flex flex-wrap gap-x-1.5" @if ($i >= 4) x-show="all" x-cloak @endif>
                                                 <span class="text-gray-500 dark:text-gray-400">{{ $c['key'] }}</span>
@@ -104,7 +105,7 @@
                                     </div>
                                 @endif
                             </td>
-                            <td class="whitespace-nowrap py-3 pr-4">
+                            <td class="hidden whitespace-nowrap py-3 pr-4 sm:table-cell">
                                 <span>{{ optional($log->created_at)->format('j M Y, H:i') }}</span>
                                 <span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ optional($log->created_at)->diffForHumans(short: true) }}{{ $log->ip_address ? ' · ' . $log->ip_address : '' }}</span>
                             </td>

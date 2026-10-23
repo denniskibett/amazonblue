@@ -114,6 +114,7 @@
         {{ match (true) {
             ($limit['capped_by'] ?? null) === 'risk' => 'Your recent repayments (rollovers, late or discounted loans) keep this below ' . $kes($limit['ladder']) . '. Pay your next loans in full and on time to raise it.',
             ($limit['capped_by'] ?? null) === 'income' => 'Based on your income: what you repay has to fit within a month\'s income. Talk to us if your income has changed.',
+            ($limit['capped_by'] ?? null) === 'behaviour' => 'Based on the amounts you have repaid on time so far. Repay this loan on time to raise it.',
             $limit['tier'] === 'good_standing' => 'Good standing. Thanks for repaying on time; keep it up to keep this limit.',
             default => 'Repay on or before the due date to unlock up to ' . $kes($product['good_standing_limit']) . '.',
         } }}

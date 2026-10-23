@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
+    <style>[x-cloak]{display:none !important}</style>{{-- hidden until Alpine starts: no pop-up flashes on load (23 Oct 2026) --}}
     @include('partials.ui.img-fallback')
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {{-- Favicons: the brand icon first; an icon uploaded in System settings is used only when its file is really there --}}

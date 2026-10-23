@@ -68,15 +68,26 @@ document.addEventListener('alpine:init', function() {
 
             init() {
                 this.isOpen = false;
-                
-                // Listen for show-alert events
-                window.addEventListener('show-alert', (event) => {
-                    this.show(
-                        event.detail.type || 'success',
-                        event.detail.title || 'Success',
-                        event.detail.message || 'Operation completed successfully.'
-                    );
-                });
+
+                // Listen for show-alert events: one listener for the whole visit, aimed at the newest copy of this
+                // modal, so in-place page changes don't stack listeners and open it several times (23 Oct 2026)
+                window.__azAlertModal = this;
+                if (!window.__azAlertBound) {
+                    window.__azAlertBound = true;
+                    window.addEventListener('show-alert', (event) => {
+                        const m = window.__azAlertModal;
+                        if (!m || !document.body.contains(m.$el)) {
+                            // this page has no copy of the modal: the app dialog shows it instead
+                            if (window.uiAlert) window.uiAlert(event.detail.message || '', {type: event.detail.type || 'info', title: event.detail.title || ''});
+                            return;
+                        }
+                        m.show(
+                            event.detail.type || 'success',
+                            event.detail.title || 'Success',
+                            event.detail.message || 'Operation completed successfully.'
+                        );
+                    });
+                }
             },
 
             show(type = 'success', title = 'Success', message = 'Operation completed successfully.') {

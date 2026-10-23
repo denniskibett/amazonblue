@@ -32,8 +32,8 @@ Code: {!! $m['code'] !!}
 {!! $m['note'] !!}
 @endif
 
-Warm regards,
-The AIMZONE Ventures team
+{{ $m['signoff'][0] ?? 'Warm regards,' }}
+{{ $m['signoff'][1] ?? 'The AIMZONE Ventures team' }}
 
 AIMZONE Ventures · The Atrium, 1st Floor, Lenana Road, Nairobi · +254 701 607 959 · hello@aimzoneventures.com
 We will never ask for your PIN, password or one-time codes.

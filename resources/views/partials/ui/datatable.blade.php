@@ -11,6 +11,17 @@
      data-table-buttons="#id" (elements moved into the toolbar, e.g. the button that opens a modal).
      Rows: tr[data-table-skip] stays as it is (headings, empty notes); tr[data-table-child] travels with the row above.
      After changing rows from script: table.azTable.refresh(). --}}
+<style>
+  /* phones: three columns sharing the screen width; the first takes most of it, the actions a fixed slot */
+  @media (max-width: 639px) {
+    table.az-phone { min-width: 0 !important; width: 100% !important; table-layout: fixed; }
+    table.az-phone .az-phone-hide { display: none !important; }
+    table.az-phone td, table.az-phone th { white-space: normal !important; overflow-wrap: break-word; }
+    table.az-phone .az-phone-first { width: 56%; }
+    table.az-phone .az-phone-act { width: 3rem; padding-right: 0 !important; }
+    table.az-phone .az-phone-first .size-10 { width: 2rem; height: 2rem; }
+  }
+</style>
 <script>
 (function () {
   const SIZES = [5, 10, 25, 50, 100, 250, 500, 1000];
@@ -96,6 +107,41 @@
       Array.from(tbody.rows).forEach(tr => { const cells = Array.from(tr.cells).filter(c => !c.classList.contains('sm:hidden')); if (cells.length) foldActions(cells[cells.length - 1]); });
     }
     collect();
+
+    // phones (owner, 23 Oct 2026): at most three columns: the first, one key figure (th[data-mobile], else the
+    // first number column, else the second) and the actions. Tables with their own phone cells are left alone.
+    const ownPhoneLayout = table.querySelector('td.sm\\:hidden, th.sm\\:hidden, td.hidden.sm\\:table-cell');
+    const phoneKeep = (() => {
+      if (ownPhoneLayout || ths.length <= 3) return null;
+      const last = ths.length - 1;
+      const lastIsActions = !text(ths[last]) || /^actions?$/i.test(text(ths[last]));
+      let key = ths.findIndex(th => 'mobile' in th.dataset);
+      if (key < 1) key = ths.findIndex((th, i) => i > 0 && i < last && (th.classList.contains('text-right') || th.classList.contains('num')));
+      if (key < 1) key = 1;
+      const keep = new Set([0, key, lastIsActions ? last : key]);
+      keep.act = lastIsActions && last !== key ? last : null;
+      return keep;
+    })();
+    const phoneMq = window.matchMedia('(max-width: 639px)');
+    function phoneColumns() {
+      if (!phoneKeep) return;
+      table.classList.add('az-phone');
+      [head, ...Array.from(tbody.rows)].forEach(tr => {
+        if (tr && tr.cells.length === 1 && tr.cells[0].colSpan > 1) {
+          // a note across the row ("Nothing waiting"): on a phone it spans only the columns shown
+          const td = tr.cells[0];
+          td.dataset.azSpan = td.dataset.azSpan || String(td.colSpan);
+          td.colSpan = phoneMq.matches ? phoneKeep.size : parseInt(td.dataset.azSpan, 10);
+          return;
+        }
+        if (!tr || tr.cells.length !== ths.length) return;   // other headings and notes stay whole
+        Array.from(tr.cells).forEach((c, i) => c.classList.toggle('az-phone-hide', !phoneKeep.has(i)));
+        tr.cells[0].classList.add('az-phone-first');
+        if (phoneKeep.act !== null) tr.cells[phoneKeep.act].classList.add('az-phone-act');
+      });
+    }
+    phoneColumns();
+    if (phoneKeep) (phoneMq.addEventListener ? phoneMq.addEventListener('change', phoneColumns) : phoneMq.addListener(phoneColumns));
     const cellOf = (g, col) => g.main.cells[col];
     const cellVal = (td, attr) => td ? (td.dataset[attr] ?? text(td)) : '';
 
@@ -209,7 +255,7 @@
       sWrap.classList.toggle('hidden', groups.length === 0);
       if (scroll) bar.scrollIntoView({block: 'nearest', behavior: 'smooth'});
     }
-    table.azTable = {refresh() { collect(); render(); }, render};
+    table.azTable = {refresh() { collect(); phoneColumns(); render(); }, render};
     render();
   }
 

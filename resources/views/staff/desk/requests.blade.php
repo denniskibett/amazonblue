@@ -20,7 +20,9 @@
         <tr>
           <td data-sort-value="{{ $r->borrower }}"><x-staff.person :name="$r->borrower" :id="$r->user_id" :sub="$r->loan_id ? 'Loan #' . $r->loan_id : 'No loan named'" /></td>
           <td data-filter-value="{{ ucfirst($r->type) }}">
-            <x-staff.pill :tone="$r->type === 'extension' ? 'blue' : 'gray'" dot>{{ ucfirst($r->type) }}</x-staff.pill>
+            @php $pl = json_decode((string) $r->payload, true) ?: []; @endphp
+            <x-staff.pill :tone="['extension' => 'blue', 'topup' => 'purple'][$r->type] ?? 'gray'" dot>{{ $r->type === 'topup' ? 'Top-up' : ucfirst($r->type) }}</x-staff.pill>
+            @if ($r->type === 'topup' && ! empty($pl['amount']))<span class="mt-1 block text-theme-xs font-medium text-gray-800 dark:text-white/90">KES {{ number_format((float) $pl['amount'], 2) }}</span>@endif
             @if ($r->loan_id)<a class="mt-1 block text-theme-xs text-brand-500 hover:underline" href="{{ route('loans.show', $r->loan_id) }}">Open loan #{{ $r->loan_id }}</a>@endif
           </td>
           <td class="max-w-sm !whitespace-normal text-theme-xs text-gray-600 dark:text-gray-400"><span class="line-clamp-2" title="{{ $r->message }}">{{ $r->message ?: '—' }}</span></td>
@@ -30,6 +32,24 @@
           </td>
           <td class="text-right" data-actions>
             <div class="flex justify-end gap-2">
+              @if ($r->type === 'topup')
+                @can('create disbursements')
+                  @php $tu = rescue(fn () => app(\App\Services\Loans\TopUp::class)->plan(\App\Models\Loan::findOrFail($r->loan_id), (float) ($pl['amount'] ?? 0), null, $r->id), null, false); @endphp
+                  <x-staff.confirm id="topup-{{ $r->id }}" :action="route('staff.requests.topup', $r->id)" title="Send this top-up?" trigger="Send top-up…" confirm="Record and send" :trigger-class="$btn">
+                    @if ($tu)
+                      {{ $r->borrower }} gets KES {{ number_format($tu['amount'], 2) }}. The loan becomes KES {{ number_format($tu['principal'], 2) }} (KES {{ number_format($tu['owed'], 2) }} still owed + the top-up), repay KES {{ number_format($tu['new_balance'], 2) }} by {{ \Illuminate\Support\Carbon::parse($tu['due_date'])->format('j M Y') }}. Send the M-Pesa payment first, then record its code here.
+                    @else
+                      This loan no longer qualifies for a top-up today ({{ app(\App\Services\Loans\TopUp::class)->check(\App\Models\Loan::findOrFail($r->loan_id), null, $r->id)['why'][0] ?? 'see the loan' }}). Decline it with a note.
+                    @endif
+                    <x-slot:fields>
+                      @if ($tu)
+                        <x-staff.field name="transaction" id="tu-ref-{{ $r->id }}" label="M-Pesa code of the payment sent" required maxlength="64" />
+                        <x-staff.field name="mode" id="tu-mode-{{ $r->id }}" label="Sent by" type="select" :options="['mpesa' => 'M-Pesa', 'bank_transfer' => 'Bank transfer', 'cash' => 'Cash', 'cheque' => 'Cheque']" value="mpesa" />
+                      @endif
+                    </x-slot:fields>
+                  </x-staff.confirm>
+                @endcan
+              @endif
               @if ($r->type === 'extension')
                 @can('rollover loans')
                   <button type="button" x-data @click="$dispatch('extend-request', {id: {{ (int) $r->id }}})" class="{{ $btn }}">Approve and extend…</button>

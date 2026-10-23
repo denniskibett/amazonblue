@@ -11,6 +11,7 @@
     ])
   </head>
   <body>
+    @include('partials.ui.preview-bar')
     <a class="skip" href="#main">Skip to content</a>
     @include('home.partials.header', ['variant' => $variant ?? '', 'active' => $active ?? null])
     <main id="main">

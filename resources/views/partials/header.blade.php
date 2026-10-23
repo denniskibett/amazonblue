@@ -437,6 +437,12 @@
               </a>
             </li>
           </ul>
+          @if (auth()->user()?->hasRole('super-admin') || app()->bound('az.preview'))
+            {{-- sysadmin "view as" (owner, 23 Oct 2026) --}}
+            <a href="{{ route('preview.index') }}" class="group mt-3 flex items-center gap-3 rounded-lg px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5">
+              <x-ui.icon name="eye" class="size-5 text-gray-500" /> View as another role
+            </a>
+          @endif
           <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
             @csrf
           </form>

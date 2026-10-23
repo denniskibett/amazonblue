@@ -1,6 +1,6 @@
 {{-- Staff table in the Loans Due look (owner, 22 Oct 2026): one white card holding the tabs (slot "tabs"), the title
      with "Showing 1 to N of M entries", Show / search / filters / buttons on the right, the table, and the pager.
-     Props: title, headers ('Label' or ['Label', 'num']), caption, list (false = small fixed table, no paging),
+     Props: title, headers ('Label', ['Label', 'num'], or ['Label', 'num', 'mobile'] for the column phones keep), caption, list (false = small fixed table, no paging),
      bare (true = no card of its own, for a table already inside a card).
      Rows: <tr><td>. The search, paging and sorting come from partials/ui/datatable. --}}
 @props(['headers' => [], 'caption' => null, 'list' => true, 'title' => null, 'bare' => false])
@@ -19,8 +19,8 @@
           @else
             <tr>
               @foreach ($headers as $h)
-                @php [$text, $align] = is_array($h) ? [$h[0], $h[1] ?? null] : [$h, null]; @endphp
-                <th scope="col" @class(['whitespace-nowrap py-3 pr-4 text-theme-xs font-medium text-gray-500 dark:text-gray-400', 'text-right' => $align === 'num'])>{{ $text }}</th>
+                @php [$text, $align, $phone] = is_array($h) ? [$h[0], $h[1] ?? null, ($h[2] ?? null) === 'mobile'] : [$h, null, false]; @endphp
+                <th scope="col" @if ($phone) data-mobile @endif @class(['whitespace-nowrap py-3 pr-4 text-theme-xs font-medium text-gray-500 dark:text-gray-400', 'text-right' => $align === 'num'])>{{ $text }}</th>
               @endforeach
             </tr>
           @endisset

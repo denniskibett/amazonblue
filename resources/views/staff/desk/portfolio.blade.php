@@ -34,7 +34,7 @@
     $openRows = $p['rows']->sortByDesc('owed')->values();
     (new \Illuminate\Database\Eloquent\Collection($openRows->pluck('loan')->all()))->load(['user:id,name,phone', 'loanType:id,name']);
   @endphp
-  <x-staff.table title="Open loans by balance" caption="Open loans" :headers="['Borrower', 'Loan · product', 'Status', ['Unpaid principal', 'num'], ['Owed today', 'num'], ['Days late', 'num'], 'NPL']">
+  <x-staff.table title="Open loans by balance" caption="Open loans" :headers="['Borrower', 'Loan · product', 'Status', ['Unpaid principal', 'num'], ['Owed today', 'num', 'mobile'], ['Days late', 'num'], 'NPL']">
     @foreach ($openRows as $r)
       @php $d = $r['days']; @endphp
       <tr>

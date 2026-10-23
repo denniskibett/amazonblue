@@ -49,14 +49,30 @@
         </div>
       </div>
     @endif
+    @php $bp = \App\Services\BorrowerAnalytics::profileFor($user->id); @endphp
+    @if ($bp && $bp->loans)
+      {{-- how they repay (borrower_profiles, owner 23 Oct 2026) --}}
+      <div class="{{ $box }}">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <p class="text-theme-sm font-semibold text-gray-800 dark:text-white/90">How they repay</p>
+          @if ($bp->score !== null)<x-staff.pill :tone="$bp->score >= 80 ? 'green' : ($bp->score >= 60 ? 'amber' : 'red')">Score {{ $bp->score }}</x-staff.pill>@endif
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-theme-sm">
+          <div><p class="{{ $label }}">On time</p><p class="{{ $val }}">{{ $bp->on_time_rate === null ? '—' : rtrim(rtrim(number_format($bp->on_time_rate, 1), '0'), '.') . '%' }}</p></div>
+          <div><p class="{{ $label }}">Comfortable up to</p><p class="{{ $val }}">{{ number_format($bp->comfort_amount, 2) }}</p></div>
+          <div><p class="{{ $label }}">Suggested limit</p><p class="{{ $val }}">{{ number_format($bp->suggested_limit, 2) }}</p></div>
+        </div>
+        @if ($bp->flags)<div class="mt-2 flex flex-wrap gap-1">@foreach ($bp->flags as $f)<x-staff.pill :tone="$f['tone']">{{ $f['text'] }}</x-staff.pill>@endforeach</div>@endif
+      </div>
+    @endif
     @if ($open)
       <div>
         <p class="mb-2 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Open loans</p>
         <ul class="divide-y divide-gray-100 rounded-xl border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
           @foreach ($open as $o)
-            <li><a href="{{ route('loans.show', $o['loan']->id) }}" class="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/[0.03]">
+            <li><a href="{{ route('users.loans.show', [$o['loan']->user_id, $o['loan']->id]) }}" class="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/[0.03]" title="View loan #{{ $o['loan']->id }}">
               <span><span class="text-theme-sm font-medium text-brand-500">#{{ $o['loan']->id }}</span> <span class="text-theme-xs text-gray-500">{{ $o['loan']->loanType->name ?? '' }} · {{ ucfirst($o['loan']->status) }} {{ $o['loan']->due_date ? '· due ' . \Illuminate\Support\Carbon::parse($o['loan']->due_date)->format('j M') : '' }}</span></span>
-              <span class="text-theme-sm font-medium text-gray-800 dark:text-white/90">{{ number_format($o['owed'], 2) }}</span>
+              <span class="flex items-center gap-3"><span class="text-theme-sm font-medium text-gray-800 dark:text-white/90">{{ number_format($o['owed'], 2) }}</span><span class="whitespace-nowrap text-theme-xs font-medium text-brand-500">View →</span></span>
             </a></li>
           @endforeach
         </ul>

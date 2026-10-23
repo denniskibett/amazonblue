@@ -44,4 +44,9 @@
   <x-az.alert type="info" title="Need more time to pay?">
     You can ask for an extension before the due date; it adds interest for the new period. <a href="{{ route('account.extension', $loan) }}">See the cost and ask</a>
   </x-az.alert>
+  @if (in_array($loan->status, \App\Services\Loans\TopUp::STATUSES, true))
+    <x-az.alert type="info" title="Need a little more?">
+      Once half of this period is paid, and before the due date, you can top up this loan. <a href="{{ route('account.topup', $loan) }}">See how much you can add</a>
+    </x-az.alert>
+  @endif
 @endif

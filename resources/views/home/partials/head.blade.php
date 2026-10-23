@@ -1,5 +1,6 @@
 {{-- Shared <head> for every Aimzone page. Pass $title and $description; $noindex = true keeps a page out of search results. --}}
 <meta charset="utf-8" />
+<style>[x-cloak]{display:none !important}</style>{{-- hidden until Alpine starts: no pop-up flashes on load (23 Oct 2026) --}}
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
 <title>{{ $title }}</title>

@@ -32,6 +32,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // admin "maintenance mode" switch (System settings): 503 for visitors/customers, staff carry on
         $middleware->web(append: \App\Http\Middleware\CheckMaintenanceMode::class);
 
+        // sysadmin "view as": a preview answers as the chosen role or account and keeps nothing (owner, 23 Oct 2026)
+        $middleware->web(append: \App\Http\Middleware\PreviewAs::class);
+
         // Safaricom's Daraja callbacks carry no session or CSRF token; they are protected by a secret path
         // segment and an IP allowlist instead (MpesaCallbackController)
         $middleware->validateCsrfTokens(except: ['mpesa/*']);

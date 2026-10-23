@@ -23,6 +23,7 @@
     ])
   </head>
   <body>
+    @include('partials.ui.preview-bar')
     <a class="skip" href="#main">Skip to content</a>
     <div class="kyc2" data-server>
       <aside class="auth-art kyc2-art">

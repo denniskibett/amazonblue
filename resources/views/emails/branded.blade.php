@@ -78,7 +78,7 @@ a{color:#1B2B6B}
 @if (! empty($m['note']))
 <tr><td style="padding-top:18px;font-family:{{ $sans }};font-size:13px;line-height:1.6;color:#5A6178">{{ $m['note'] }}</td></tr>
 @endif
-<tr><td style="padding-top:26px;font-family:{{ $sans }};font-size:15px;line-height:1.6;color:#151A2E">Warm regards,<br><strong>The AIMZONE Ventures team</strong></td></tr>
+<tr><td style="padding-top:26px;font-family:{{ $sans }};font-size:15px;line-height:1.6;color:#151A2E">{{ $m['signoff'][0] ?? 'Warm regards,' }}<br><strong>{{ $m['signoff'][1] ?? 'The AIMZONE Ventures team' }}</strong></td></tr>
 </table>
 </td></tr>
 <tr><td style="padding:22px 6px 0;font-family:{{ $sans }};font-size:12px;line-height:1.7;color:#5A6178">

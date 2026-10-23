@@ -10,6 +10,7 @@
 >
 <head>
     <meta charset="utf-8">
+    <style>[x-cloak]{display:none !important}</style>{{-- hidden until Alpine starts: no pop-up flashes on load (23 Oct 2026) --}}
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {{-- Favicons: the brand icon first; an icon uploaded in System settings is used only when its file is really there --}}
     <link rel="icon" href="{{ asset('assets/images/logo/favicon.svg') }}?v=2" type="image/svg+xml">

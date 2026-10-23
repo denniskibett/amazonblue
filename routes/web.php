@@ -76,6 +76,19 @@ Route::middleware(['auth', 'role:borrower'])->prefix('account/business')->name('
         Route::get('/{business}/submitted', 'businessSubmitted')->name('submitted');
     });
 
+// ============ SYSADMIN "VIEW AS" (owner, 23 Oct 2026): preview a role or account; nothing is saved ============
+Route::middleware('auth')->prefix('preview')->name('preview.')->controller(\App\Http\Controllers\PreviewController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::post('/', 'start')->name('start');
+    Route::post('/stop', 'stop')->name('stop');
+});
+
+// ============ TOP-UP (owner, 23 Oct 2026): a borrower asks for more on a loan repaid on time ============
+Route::middleware(['auth', 'role:borrower'])->prefix('account')->name('account.')->group(function () {
+    Route::get('/loans/{loan}/top-up', [\App\Http\Controllers\AccountTopUpController::class, 'show'])->name('topup');
+    Route::post('/loans/{loan}/top-up', [\App\Http\Controllers\AccountTopUpController::class, 'store'])->middleware('throttle:3,10')->name('topup.request');
+});
+
 // ============ CUSTOMER ACCOUNT (borrowers & partners; website design, mobile first) ============
 Route::middleware('auth')->prefix('account')->name('account.')->group(function () {
     Route::controller(HomeController::class)->group(function () {
@@ -479,6 +492,18 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('users.peek')->middleware('permission:view users');
         // notifications for every staff role (owner, 22 Oct 2026)
         Route::get('notifications', [\App\Http\Controllers\Staff\NotificationsController::class, 'index'])->name('notifications');
+        // lending analytics: amount heatmaps and borrower behaviour (owner, 23 Oct 2026)
+        Route::get('analytics', [\App\Http\Controllers\Staff\AnalyticsController::class, 'index'])->name('analytics')->middleware('permission:view reports');
+        // email and SMS manager: reminders and collection notices in batches a person checks and sends (23 Oct 2026)
+        Route::controller(\App\Http\Controllers\Staff\MessagesController::class)->prefix('messages')->name('messages.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/new', 'create')->name('create');
+            Route::get('/preview', 'preview')->name('preview');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{batch}', 'show')->whereNumber('batch')->name('show');
+            Route::post('/{batch}/send', 'send')->whereNumber('batch')->name('send');
+            Route::post('/{batch}/cancel', 'cancel')->whereNumber('batch')->name('cancel');
+        });
         Route::get('notifications/feed', [\App\Http\Controllers\Staff\NotificationsController::class, 'feed'])->name('notifications.feed');
         Route::post('notifications/read', [\App\Http\Controllers\Staff\NotificationsController::class, 'read'])->name('notifications.read');
         Route::get('disbursements/queue', [\App\Http\Controllers\Staff\LoanDeskController::class, 'disbursementQueue'])
@@ -506,6 +531,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('requests.preview')->middleware('permission:rollover loans');
         Route::post('requests/borrower/{id}', [\App\Http\Controllers\Staff\RequestsController::class, 'borrower'])
             ->name('requests.borrower')->middleware('permission:rollover loans');
+        Route::post('requests/{id}/topup', [\App\Http\Controllers\Staff\TopUpController::class, 'approve'])->whereNumber('id')
+            ->name('requests.topup')->middleware('permission:create disbursements');
         Route::post('requests/partner/{id}', [\App\Http\Controllers\Staff\RequestsController::class, 'partner'])
             ->name('requests.partner')->middleware('permission:edit partners');
 

@@ -151,6 +151,10 @@ return [
         ],
     ],
 
+    // Borrower behaviour (owner, 23 Oct 2026): when on, the suggested limit from each borrower's repayment
+    // history (borrower_profiles, analytics:profiles nightly) can lower their ladder limit. Off = shown to staff only.
+    'behaviour_limits' => (bool) env('LENDING_BEHAVIOUR_LIMITS', false),
+
     'rollover' => [
         // cycles 2..N keep the previous cycle's rate; from cycle N+1 staff must set a rate or use a payment plan (owner)
         'same_rate_cycles' => 4,

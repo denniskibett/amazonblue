@@ -40,7 +40,7 @@
         </td>
         <td class="num" data-sort-value="{{ (float) $r->loan->amount }}">
           <x-staff.money :amount="$r->loan->amount" class="text-gray-800 dark:text-white/90" />
-          <div class="ml-auto mt-1 flex w-36 items-center gap-2">
+          <div class="ml-auto mt-1 flex w-full max-w-36 items-center gap-2">
             <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"><div class="h-full rounded-full bg-success-500" style="width: {{ $pct }}%"></div></div>
             <span class="text-theme-xs text-gray-500 dark:text-gray-400">{{ $pct }}%</span>
           </div>

@@ -49,7 +49,7 @@
           </td>
           <td class="num" data-sort-value="{{ (float) $loan->amount }}">
             <x-staff.money :amount="$loan->amount" class="text-gray-800 dark:text-white/90" />
-            <span class="mt-0.5 flex items-center justify-end gap-1 text-theme-xs text-gray-500 dark:text-gray-400">
+            <span class="mt-0.5 flex flex-wrap items-center justify-end gap-1 text-theme-xs text-gray-500 dark:text-gray-400">
               @if ($ra && $ra->limit_amount !== null)
                 @if ($over)<x-staff.pill tone="red">Above limit</x-staff.pill>@endif
                 limit {{ number_format($ra->limit_amount, 2) }}
@@ -67,6 +67,20 @@
               </div>
             @else
               <x-staff.pill tone="gray">Not assessed</x-staff.pill>
+            @endif
+            @php $bp = \App\Services\BorrowerAnalytics::profileFor($loan->user_id); $weekendNow = now()->isoWeekday() >= 5; @endphp
+            @if ($bp && $bp->loans)
+              {{-- how they have actually repaid (borrower_profiles, owner 23 Oct 2026) --}}
+              <span class="mt-1 flex flex-wrap items-center gap-1 text-theme-xs text-gray-500 dark:text-gray-400">
+                Repays: {{ $bp->on_time_rate === null ? 'new' : rtrim(rtrim(number_format($bp->on_time_rate, 1), '0'), '.') . '% on time' }} · comfortable to {{ number_format($bp->comfort_amount) }}
+                @foreach ($bp->flags as $f)
+                  @if (str_contains($f['text'], 'weekend') && $weekendNow)
+                    <x-staff.pill tone="red">Weekend loan: this borrower pays late on Fri–Sun loans</x-staff.pill>
+                  @elseif ($f['tone'] === 'red')
+                    <x-staff.pill tone="red">{{ $f['text'] }}</x-staff.pill>
+                  @endif
+                @endforeach
+              </span>
             @endif
           </td>
           <td class="max-w-[220px] !whitespace-normal text-theme-xs text-gray-600 dark:text-gray-400"><span class="line-clamp-2" title="{{ $ra->recommendation ?? '' }}">{{ $ra->recommendation ?? '—' }}</span></td>

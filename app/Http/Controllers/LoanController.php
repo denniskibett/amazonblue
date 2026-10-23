@@ -558,6 +558,17 @@ class LoanController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        // /loans/{loan} (resource route) passes only the loan: open the borrower's loan page, which every other
+        // link uses. It used to read the loan id as the user id and answer "Loan not found" (owner, 23 Oct 2026).
+        if ($loanId === null) {
+            $found = Loan::withTrashed()->findOrFail($id);
+            if ($found->merged_into_loan_id ?? null) {
+                $found = Loan::withTrashed()->findOrFail($found->merged_into_loan_id);
+            }
+
+            return redirect()->route('users.loans.show', [$found->user_id, $found->id]);
+        }
+
         // ============================================================
         // BASIC DATA
         // ============================================================
