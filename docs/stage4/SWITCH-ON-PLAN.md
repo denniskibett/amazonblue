@@ -36,6 +36,19 @@ notification in step 3 would sit unsent.
 | Two people holding each sign-off permission | With maker-checker on, an item nobody else can approve waits forever | The tinker line in step 4 |
 | A backup | Any rollback that goes beyond the switch | `mysqldump --single-transaction --routines --triggers loans_main \| gzip > ~/backups/pre_switch_$(date +%Y%m%d_%H%M%S).sql.gz` |
 
+## Where things stand (23 Oct 2026, 19:07 server read)
+
+| Switch | Live value | Next |
+|---|---|---|
+| Ledger, engine v2, split | on | nothing |
+| Reversals (step 1) | on | done |
+| Requests (step 2) | on | done |
+| Notifications (step 3) | off, `SMS_DRIVER=log` | next, once SPF/DKIM pass |
+| Second sign-offs (step 4) | off | after notifications |
+| M-Pesa (step 5) | off, sandbox | when ready; never with test payments on live |
+| Scheduler cron | present | nothing |
+| `MAIL_MAILER` | smtp | check SPF/DKIM |
+
 ## 1. Reversals keep the original: `LENDING_REVERSALS_ENABLED=true`
 
 - **What changes:** "Reverse" on a payment entered **before today** keeps the original row and adds a minus row on
@@ -103,8 +116,8 @@ Weekly, upload the statement CSV on M-Pesa payments.
 - **Legacy ROLL OVER chains:** `loans:merge-chains --apply` waits for the owner's sign-off on `merge-chains-<date>.csv`
   (Phase 2 › "Next"). The receivable differences in `wallets:check` come mostly from these chains. Features 2a and 2c
   merged the owner-listed ones on 21 Oct. Compare step 0's count with the 98 recorded then.
-- **Wallets & reconciliation text:** the page still says repayments since 7 Oct are not split to partners. That has
-  been out of date since Phase 3 went live on 21 Oct. Update the text once step 0 confirms `LENDING_SPLIT_ENABLED=true`.
+- **Wallets & reconciliation text:** done 23 Oct. The page now says repayments are split to partners when
+  `LENDING_SPLIT_ENABLED=true` (step 0 confirmed it on).
 
 ## This round (23 October 2026): four database changes first, then deploy
 
@@ -214,3 +227,62 @@ On the local copy of live, it finds 377 disbursements and 395 repayments with a 
     https://loans.sharet.africa/partners?from_user=111&name=BUOSTI%20AGENCIES&person=Stephine%20Buluma
 
 It creates the partner "BUOSTI AGENCIES" (type Business) linked to that login, gives the login the partner role, and renames it to "Stephine Buluma". Change any field before saving if needed.
+
+## 24 October 2026: four features, four database changes
+
+Each feature stands on its own: its own routes file (`routes/features/`), controller folder, service folder and switch.
+All four switches start **off**, so deploying changes nothing a customer sees until you turn one on.
+
+**Database: columns on tables that already exist, plus one new table.** No data is changed.
+
+| Feature | Change | Why not a new table |
+|---|---|---|
+| Partner subscription | `partner_requests.payload` + `investment_id`; `partners.business_id` + `source_of_funds` | A subscription is a funding request; the line it opens is an investment; a business partner points at its verified business instead of copying the company details |
+| Business loans | `loans.business_id`; `loan_types.audience`; `businesses.credit_limit`; `business_members.verify_token_hash` / `verify_sent_at` / `verify_expires_at`; `business_documents.business_member_id`; `borrower_requests.business_id` + type `business_change` | A business loan is a loan; a director is a business member; their ID pictures are business documents; a change is a borrower request |
+| AML screening | **new table `sanctions_entries`** (the uploaded list). Results go in `businesses.checks['aml']` and `users.kyc_checks['aml']` | Nothing existing holds a sanctions list |
+| M-Pesa B2C | `mpesa_transactions` type `b2c` + `conversation_id` + `disbursement_id` | Money out is an M-Pesa transaction like money in |
+
+Run the four SQL twins on live **before** `push-live` (push-live refuses to deploy while a migration is pending). Each one is safe to run twice:
+
+```bash
+cd /home/loans.sharet.africa/laravel
+mysqldump --single-transaction --routines --triggers loans_main | gzip > ~/backups/pre_20261024_$(date +%H%M).sql.gz
+git pull --ff-only origin stage-2-ui
+mysql loans_main < database/sql/2026_10_24_partner_subscriptions.sql
+mysql loans_main < database/sql/2026_10_24_business_lending.sql
+mysql loans_main < database/sql/2026_10_24_sanctions_entries.sql
+mysql loans_main < database/sql/2026_10_24_mpesa_b2c.sql
+```
+
+Then deploy from the Mac with `scripts/push-live.sh`.
+
+### Switch them on, one per day
+
+| Order | Switch | Before you turn it on | What changes |
+|---|---|---|---|
+| 1 | `LENDING_AML_SCREENING=true` | Upload the UN list: Customers › Sanctions lists › upload `consolidated.xml` from scsanctions.un.org | Business and partner approvals need a clear screening (run it, tick 4 checks, explain any match) |
+| 2 | `LENDING_PARTNER_SUBSCRIPTIONS=true` | `LENDING_REQUESTS_ENABLED=true` (on) | Partners verify (ID, selfies, source of funds, business), sign a short- or long-term subscription, send the money; "Confirm and open line" on Requests opens the line |
+| 3 | `LENDING_BUSINESS_LOANS=true` | Mark at least one product **For: Businesses** (Loan products › Edit) | Business approval needs statements, 100% shareholding, every director self-verified, a unique registration number and a limit. Owners borrow from their business page |
+| 4 | `MPESA_B2C_ENABLED=true` + `MPESA_B2C_SHORTCODE`, `MPESA_B2C_INITIATOR`, `MPESA_B2C_SECURITY_CREDENTIAL` | `LENDING_APPROVALS_ENABLED=true` and M-Pesa production keys (sandbox first) | Approved loans get "Send by M-Pesa"; a second person approves; Safaricom's result records the disbursement |
+
+Rules used (the plan's defaults, confirmed 23 Oct): registration number unique · 100% shareholding for limited companies ·
+statements for the last 3 months · every owner, director and signatory verified before approval · approver needs `edit users`,
+plus a second approver when sign-offs are on · changes after approval go through a request that reopens the business.
+CRB checks stay out (owner: not now).
+
+### Server and owner items (from the 23 Oct tracker)
+
+```bash
+cd /home/loans.sharet.africa/laravel && bash scripts/server-tidy.sh          # report: logging, switches, sysadmin roles, sign-off holders, OS, SPF/DKIM
+cd /home/loans.sharet.africa/laravel && bash scripts/server-tidy.sh --apply  # removes the duplicate LOG_STACK, adds LOG_DAILY_DAYS=30 (backs up .env first)
+php artisan borrowers:fill-gaps --apply                                       # the 10 empty borrower rows
+php artisan loans:merge-chains --dry-run                                      # new CSV + hash; --apply --confirm=<hash> the same day, after the owner signs
+```
+
+By hand, never in a script or chat:
+
+- **Database password:** `mysql -e "ALTER USER '<db user>'@'localhost' IDENTIFIED BY '<new>';"`, put the new value in `.env`, then `php artisan config:cache`.
+- **M-Pesa keys:** Daraja portal › your app › regenerate the consumer key and secret; Lipa na M-Pesa passkey from Safaricom. Put them in `.env`, `config:cache`.
+- **SPF / DKIM:** at Olitt (not CyberPanel DNS): the SPF TXT record, the DKIM record from CyberPanel › Email › DKIM Manager, and the `mail.loans` A record. Test with a password reset (Gmail › Show original › SPF and DKIM say PASS).
+- **sysadmin:** set a strong password from the profile page; the script shows the roles.
+- **Server:** Ubuntu 20.04 is past standard support and the server has 2 GB RAM. Enable Ubuntu Pro or plan an upgrade with the host.

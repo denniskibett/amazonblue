@@ -34,7 +34,12 @@
         <p class="sub">Not counting <x-az.money :amount="$portfolio['lent_out']" /> of your capital lent out to borrowers.</p>
       @endif
       <div class="row">
-        <a class="btn btn-light" href="{{ route('account.partner.funds') }}">Add funds</a>
+        {{-- with online subscription on (owner, 24 Oct 2026), new money comes in through a signed subscription --}}
+        @if (\App\Services\Partners\Subscription::enabled())
+          <a class="btn btn-light" href="{{ route('partner.subscribe') }}">Fund loans</a>
+        @else
+          <a class="btn btn-light" href="{{ route('account.partner.funds') }}">Add funds</a>
+        @endif
         <a class="btn btn-glass" href="{{ route('account.partner.withdraw') }}">Withdraw</a>
       </div>
     </section>

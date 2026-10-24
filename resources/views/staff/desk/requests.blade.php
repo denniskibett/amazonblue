@@ -21,9 +21,11 @@
           <td data-sort-value="{{ $r->borrower }}"><x-staff.person :name="$r->borrower" :id="$r->user_id" :sub="$r->loan_id ? 'Loan #' . $r->loan_id : 'No loan named'" /></td>
           <td data-filter-value="{{ ucfirst($r->type) }}">
             @php $pl = json_decode((string) $r->payload, true) ?: []; @endphp
-            <x-staff.pill :tone="['extension' => 'blue', 'topup' => 'purple'][$r->type] ?? 'gray'" dot>{{ $r->type === 'topup' ? 'Top-up' : ucfirst($r->type) }}</x-staff.pill>
+            <x-staff.pill :tone="['extension' => 'blue', 'topup' => 'purple', 'business_change' => 'amber'][$r->type] ?? 'gray'" dot>{{ ['topup' => 'Top-up', 'business_change' => 'Business change'][$r->type] ?? ucfirst($r->type) }}</x-staff.pill>
             @if ($r->type === 'topup' && ! empty($pl['amount']))<span class="mt-1 block text-theme-xs font-medium text-gray-800 dark:text-white/90">KES {{ number_format((float) $pl['amount'], 2) }}</span>@endif
             @if ($r->loan_id)<a class="mt-1 block text-theme-xs text-brand-500 hover:underline" href="{{ route('loans.show', $r->loan_id) }}">Open loan #{{ $r->loan_id }}</a>@endif
+            {{-- a verified business asking to change its details (owner, 24 Oct 2026) --}}
+            @if ($r->type === 'business_change' && ($r->business_id ?? null))<a class="mt-1 block text-theme-xs text-brand-500 hover:underline" href="{{ route('business-reviews.show', $r->business_id) }}">Open the business</a>@endif
           </td>
           <td class="max-w-sm !whitespace-normal text-theme-xs text-gray-600 dark:text-gray-400"><span class="line-clamp-2" title="{{ $r->message }}">{{ $r->message ?: '—' }}</span></td>
           <td data-sort-value="{{ $asked->timestamp }}">
@@ -46,6 +48,17 @@
                         <x-staff.field name="transaction" id="tu-ref-{{ $r->id }}" label="M-Pesa code of the payment sent" required maxlength="64" />
                         <x-staff.field name="mode" id="tu-mode-{{ $r->id }}" label="Sent by" type="select" :options="['mpesa' => 'M-Pesa', 'bank_transfer' => 'Bank transfer', 'cash' => 'Cash', 'cheque' => 'Cheque']" value="mpesa" />
                       @endif
+                    </x-slot:fields>
+                  </x-staff.confirm>
+                @endcan
+              @endif
+              @if ($r->type === 'business_change')
+                @can('edit users')
+                  <x-staff.confirm id="reopen-{{ $r->id }}" :action="route('staff.requests.borrower', $r->id)" title="Reopen the business for changes?" trigger="Reopen for changes" confirm="Reopen" :trigger-class="$btn">
+                    {{ $r->borrower }} can edit the business again and resubmit it. It can't borrow until it is approved again.
+                    <x-slot:fields>
+                      <input type="hidden" name="decision" value="approve">
+                      <x-staff.field name="note" id="note-r-{{ $r->id }}" label="Note for the owner (optional)" type="textarea" maxlength="500" />
                     </x-slot:fields>
                   </x-staff.confirm>
                 @endcan
@@ -80,6 +93,14 @@
             <x-staff.pill :tone="$r->type === 'funding' ? 'green' : 'purple'" dot>{{ $r->type === 'funding' ? 'Sent funds' : ($linePay ? 'Line payout · ' . str_replace('_', ' ', $r->wallet_slug) : 'Withdrawal') }}</x-staff.pill>
             {{-- a closed partner line pays out by itself (owner, 23 Oct 2026) --}}
             @if ($linePay && $r->note)<span class="mt-1 block max-w-xs text-theme-xs text-gray-500 dark:text-gray-400">{{ $r->note }}</span>@endif
+            {{-- an online subscription (owner, 24 Oct 2026): the line it opens and the signed copy --}}
+            @php $sub = json_decode((string) ($r->payload ?? ''), true) ?: []; @endphp
+            @if (($sub['kind'] ?? null) === 'subscription')
+              <span class="mt-1 block max-w-xs text-theme-xs text-gray-500 dark:text-gray-400">
+                Subscription · {{ $sub['term'] === 'long_term' ? 'long term, ' . $sub['months'] . ' months to ' . \Illuminate\Support\Carbon::parse($sub['maturity'])->format('j M Y') : 'short term' }}
+                · <a class="text-brand-600 hover:underline" href="{{ route('partner.subscriptions.staff-file', $r->id) }}" target="_blank" rel="noopener">signed copy</a>
+              </span>
+            @endif
           </td>
           <td class="num" data-sort-value="{{ (float) $r->amount }}"><x-staff.money :amount="$r->amount" class="text-gray-800 dark:text-white/90" /></td>
           <td class="font-mono text-theme-xs text-gray-600 dark:text-gray-400">{{ $r->reference ?: $r->wallet_slug }}</td>
@@ -94,8 +115,12 @@
             @if ($r->status === 'pending')
               @can('edit partners')
                 <div class="flex justify-end gap-2">
+                  @if (($sub['kind'] ?? null) === 'subscription' && ! $r->reference)
+                    <span class="self-center text-theme-xs text-gray-500">Waiting for the money</span>
+                  @else
                   <form method="POST" action="{{ route('staff.requests.partner', $r->id) }}">@csrf<input type="hidden" name="decision" value="yes">
-                    <button class="{{ $btn }}">{{ $r->type === 'funding' ? 'Confirm received' : 'Prepare payout' }}</button></form>
+                    <button class="{{ $btn }}">{{ $r->type === 'funding' ? (($sub['kind'] ?? null) === 'subscription' ? 'Confirm and open line' : 'Confirm received') : 'Prepare payout' }}</button></form>
+                  @endif
                   <x-staff.confirm id="decline-p-{{ $r->id }}" :action="route('staff.requests.partner', $r->id)" title="Decline this request?" trigger="Decline" confirm="Decline" tone="danger" :trigger-class="$ghost">
                     {{ $r->partner }} sees why.
                     <x-slot:fields>

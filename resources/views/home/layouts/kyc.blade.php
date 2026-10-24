@@ -7,11 +7,17 @@
     5 => ['Documents', route('kyc.documents')],
     6 => ['Review', route('kyc.review')],
   ];
+  // a partner is verified on identity only (owner, 24 Oct 2026)
+  if (auth()->user()?->hasRole('partner') && ! auth()->user()->hasRole('borrower')) {
+    unset($steps[3], $steps[4]);
+  }
   $last = array_key_last($steps);
   $tick = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg>';
   $arrow = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>';
-  $prev = $steps[$step - 1][1] ?? null;
-  $next = $step < $last ? $steps[$step + 1][1] : null;
+  $keys = array_keys($steps);
+  $pos = array_search($step, $keys, true);
+  $prev = $pos !== false && $pos > 0 ? $steps[$keys[$pos - 1]][1] : null;
+  $next = $pos !== false && $pos < count($keys) - 1 ? $steps[$keys[$pos + 1]][1] : null;
 @endphp
 <!doctype html>
 <html lang="en">

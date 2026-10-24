@@ -9,7 +9,10 @@ class LoanType extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'period', 'unit', 'interest_rate', 'description'];
+    protected $fillable = ['name', 'audience', 'period', 'unit', 'interest_rate', 'description'];
+
+    // who a product is for (owner, 24 Oct 2026): individual borrowers or verified businesses
+    public const AUDIENCES = ['individual' => 'Individuals', 'business' => 'Businesses'];
 
 
     public function disbursements()

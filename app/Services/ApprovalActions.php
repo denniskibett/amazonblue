@@ -25,6 +25,9 @@ class ApprovalActions
             'reversal' => app(Reversal::class)->reverse(Repayment::findOrFail($a->subject_id),
                 trim(($payload['reason'] ?? '') . ' (asked by ' . ($maker->name ?? '#' . $a->requested_by) . ', approved by ' . $checker->name . ')')),
             'partner_withdrawal' => $this->payPartner((int) $a->subject_id, $checker),
+            'approve_business' => app(\App\Services\Business\BusinessApproval::class)->perform(\App\Models\Business::findOrFail($a->subject_id), $checker,
+                isset($payload['credit_limit']) ? (float) $payload['credit_limit'] : null, $payload['notes'] ?? null, $maker),
+            'mpesa_b2c' => app(\App\Services\Mpesa\B2cPayouts::class)->send((int) $a->subject_id, $checker),
             default => throw new \DomainException('Unknown action ' . $a->action),
         };
     }

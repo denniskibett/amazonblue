@@ -135,6 +135,10 @@
                 </div>
             </div>
 
+            @if ($user->hasRole('partner'))
+                @include('aml._panel', ['type' => 'user', 'subject' => $user])
+            @endif
+
             {{-- decision --}}
             <div class="{{ $card }}">
                 @if ($user->kyc_status === 'submitted')
@@ -144,6 +148,13 @@
                     @endif
                     <form method="POST" x-data="{ action: '' }" :action="action" class="space-y-4">
                         @csrf
+                        @if ($user->hasRole('partner') && ! $user->hasRole('borrower'))
+                        {{-- a partner (owner, 24 Oct 2026): identity only, plus the AML screening below --}}
+                        <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+                            <input type="checkbox" name="checked_identity" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300" @checked(old('checked_identity'))>
+                            The ID, photo and selfies are the same person, and the name matches the partner record
+                        </label>
+                        @else
                         <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
                             <input type="checkbox" name="called_next_of_kin" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300" @checked(old('called_next_of_kin'))>
                             I called the next of kin and they confirmed
@@ -152,6 +163,7 @@
                             <input type="checkbox" name="called_guarantor" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300" @checked(old('called_guarantor'))>
                             I called the guarantor and they agreed to vouch
                         </label>
+                        @endif
                         <div>
                             <label for="notes" class="{{ $label }}">Notes (required to reject; the borrower sees them)</label>
                             <textarea id="notes" name="notes" rows="3"

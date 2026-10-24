@@ -33,6 +33,9 @@
                   @endforeach
                   <label class="text-theme-xs">Unit<select name="unit" class="mt-0.5 h-8 w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
                     @foreach (['days', 'weeks', 'months', 'years'] as $u)<option @selected(rtrim($p->unit, 's') . 's' === $u)>{{ $u }}</option>@endforeach</select></label>
+                  {{-- who the product is for (owner, 24 Oct 2026): business products show only to verified businesses --}}
+                  <label class="text-theme-xs">For<select name="audience" class="mt-0.5 h-8 w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    @foreach (\App\Models\LoanType::AUDIENCES as $k => $v)<option value="{{ $k }}" @selected(($p->audience ?? 'individual') === $k)>{{ $v }}</option>@endforeach</select></label>
                   <label class="col-span-2 text-theme-xs">Why (kept with the old values)<input name="reason" required minlength="5" class="mt-0.5 h-8 w-full rounded border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
                   <button class="col-span-2 rounded-lg bg-brand-500 px-3 py-1.5 text-white">Save</button>
                 </form>

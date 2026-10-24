@@ -74,7 +74,7 @@ class BusinessReviewController extends Controller
 
     public function show(Business $business): View
     {
-        $business->load(['owner', 'members.user', 'documents', 'reviewer']);
+        $business->load(['owner', 'members.user', 'members.documents', 'documents', 'reviewer']);
 
         return view('business-reviews.show', [
             'business' => $business,
@@ -83,39 +83,48 @@ class BusinessReviewController extends Controller
                 ? Business::with('owner')->where('registration_number', $business->registration_number)->whereKeyNot($business->id)->get()
                 : collect(),
             'missing' => $business->missingDocumentTypes(),
+            // what still stops approval under the business-loan rules (owner, 24 Oct 2026)
+            'blockers' => app(\App\Services\Business\BusinessApproval::class)->blockers($business),
+            'directors' => app(\App\Services\Business\DirectorVerification::class),
         ]);
     }
 
-    public function approve(Request $request, Business $business): RedirectResponse
+    public function approve(Request $request, Business $business, \App\Services\Business\BusinessApproval $approval): RedirectResponse
     {
         abort_unless($business->status === Business::STATUS_SUBMITTED, 409, 'Only submitted businesses can be approved.');
 
-        $rules = collect(Business::CHECKS)->mapWithKeys(fn ($label, $key) => ["checks.$key" => ['accepted']])->all();
-        $data = $request->validate($rules + ['notes' => ['nullable', 'string', 'max:2000']], [
+        $rules = collect(Business::checks())->mapWithKeys(fn ($label, $key) => ["checks.$key" => ['accepted']])->all();
+        $data = $request->validate($rules + [
+            'notes' => ['nullable', 'string', 'max:2000'],
+            // the business limit (owner, 24 Oct 2026): required with business loans on
+            'credit_limit' => [\App\Services\Business\BusinessLending::enabled() ? 'required' : 'nullable', 'numeric', 'min:1', 'max:100000000'],
+        ], [
             'checks.*.accepted' => 'Tick every check before approving.',
+            'credit_limit.required' => 'Set the business limit.',
         ]);
-        if ($business->missingDocumentTypes()) {
-            return back()->withErrors(['checks' => 'Required documents are missing. Reject it and ask the borrower to upload them.']);
+
+        try {
+            $result = $approval->approve($business, $request->user(), isset($data['credit_limit']) ? (float) $data['credit_limit'] : null, $data['notes'] ?? null);
+        } catch (\DomainException $e) {
+            return back()->withInput()->withErrors(['checks' => $e->getMessage()]);
         }
 
-        DB::transaction(function () use ($request, $business, $data) {
-            $business->update([
-                'status' => Business::STATUS_APPROVED,
-                'reviewed_by' => $request->user()->id,
-                'reviewed_at' => now(),
-                'review_notes' => $data['notes'] ?? null,
-                'checks' => array_fill_keys(array_keys(Business::CHECKS), true),
-            ]);
-            if (! $business->handle && ($handle = Handle::forBusiness($business))) {
-                $business->update(['handle' => $handle]);
-            }
-            // people on the CR12 who are verified borrowers count as verified members
-            $business->members()->whereNotNull('user_id')->whereNull('verified_at')->update(['verified_at' => now()]);
-        });
-        CustomerNotifier::businessReviewed($business, true);
+        return redirect()->route('business-reviews.index')->with('alert', $result === 'second'
+            ? ['type' => 'info', 'title' => 'Waiting for a second sign-off', 'message' => 'A second person approves ' . $business->legal_name . ' on Second sign-offs.']
+            : ['type' => 'success', 'title' => 'Business approved', 'message' => $business->legal_name . ' is verified.']);
+    }
 
-        return redirect()->route('business-reviews.index')
-            ->with('alert', ['type' => 'success', 'title' => 'Business approved', 'message' => $business->legal_name . ' is verified.']);
+    /** Send a director their self-verification link again (owner, 24 Oct 2026). */
+    public function sendDirectorLink(Request $request, Business $business, \App\Models\BusinessMember $member): RedirectResponse
+    {
+        abort_unless($member->business_id === $business->id, 404);
+        try {
+            app(\App\Services\Business\DirectorVerification::class)->send($member, $request->user());
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Verification link sent to ' . $member->full_name . '.');
     }
 
     public function reject(Request $request, Business $business): RedirectResponse
@@ -134,7 +143,8 @@ class BusinessReviewController extends Controller
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
             'review_notes' => $data['notes'],
-            'checks' => collect(Business::CHECKS)->mapWithKeys(fn ($label, $key) => [$key => $request->boolean("checks.$key")])->all(),
+            'checks' => collect(Business::checks())->mapWithKeys(fn ($label, $key) => [$key => $request->boolean("checks.$key")])->all()
+                + (is_array($business->checks) ? array_intersect_key($business->checks, ['aml' => true]) : []),
         ]);
         CustomerNotifier::businessReviewed($business, false, $data['notes']);
 

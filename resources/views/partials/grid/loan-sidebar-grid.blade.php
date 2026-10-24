@@ -200,6 +200,22 @@
                 Partners: broker and funding{{ $loan->broker_status ? ' · brokered' : '' }}
             </a>
             @endcan
+            {{-- send an approved loan's money to the borrower's phone; a second person approves (owner, 24 Oct 2026) --}}
+            @if ($loan->status === 'approved' && \App\Services\Mpesa\B2cPayouts::enabled())
+            @can('disburse loans')
+            @php $b2cPhone = optional($loan->user?->paymentMethods()->where('method_type_id', \Illuminate\Support\Facades\DB::table('payment_method_types')->where('slug', 'mobile_money')->value('id'))->latest('id')->first())->mobile_number ?? $loan->user?->phone; @endphp
+            <details class="rounded-lg border border-gray-300 dark:border-gray-700">
+                <summary class="flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300">Send by M-Pesa</summary>
+                <form method="POST" action="{{ route('mpesa.payouts.store', $loan) }}" class="space-y-2 p-3">
+                    @csrf
+                    <x-staff.field name="phone" label="M-Pesa number" :value="$b2cPhone" required />
+                    <x-staff.field name="amount" type="number" label="Amount (KES)" :value="(int) $loan->amount" min="10" step="1" required />
+                    <button class="w-full rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600">Ask for the payout</button>
+                    <p class="text-xs text-gray-500">A second person approves it on Second sign-offs; then it is sent.</p>
+                </form>
+            </details>
+            @endcan
+            @endif
             <!-- Rollover Loan -->
             @if(in_array($loan->status, ['active', 'overdue', 'disbursed']) && !$loan->isDefaulted() && !$loan->isInForbearance())
             <button @click="window.openRolloverModal({{ $loan->id }})"
@@ -276,6 +292,10 @@
                 <p class="text-sm font-medium text-gray-600">Borrower</p>
                 <p class="font-medium">{{ $loan->user->name ?? 'N/A' }}</p>
                 <p class="text-xs text-gray-500">ID: {{ $loan->user_id }}</p>
+                {{-- a business loan (owner, 24 Oct 2026): the owner signs, the business borrows --}}
+                @if ($loan->business_id && ($biz = $loan->business))
+                    <p class="mt-1 text-xs text-gray-600">For <a class="font-medium text-brand-500 hover:underline" href="{{ route('business-reviews.show', $biz) }}">{{ $biz->legal_name }}</a></p>
+                @endif
             </div>
             
             <div>

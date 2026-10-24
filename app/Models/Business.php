@@ -56,7 +56,7 @@ class Business extends Model
         'owner_user_id', 'legal_name', 'trading_name', 'registration_number', 'registration_type', 'kra_pin',
         'industry', 'date_registered', 'address_line_1', 'address_line_2', 'city', 'county', 'postal_code',
         'country', 'phone', 'email', 'website', 'monthly_revenue', 'employees', 'bank_name', 'bank_account',
-        'status', 'submitted_at', 'reviewed_by', 'reviewed_at', 'review_notes', 'checks', 'handle',
+        'status', 'submitted_at', 'reviewed_by', 'reviewed_at', 'review_notes', 'checks', 'handle', 'credit_limit',
     ];
 
     protected function casts(): array
@@ -66,6 +66,7 @@ class Business extends Model
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'monthly_revenue' => 'decimal:2',
+            'credit_limit' => 'decimal:2',
             'employees' => 'integer',
             'checks' => 'array',
         ];
@@ -86,9 +87,26 @@ class Business extends Model
         return $this->hasMany(BusinessMember::class)->orderByRaw("role = 'owner' desc")->orderBy('id');
     }
 
+    /** The company's own documents; a director's ID pictures are on the member (staff see them in the review). */
     public function documents(): HasMany
     {
-        return $this->hasMany(BusinessDocument::class)->orderBy('id');
+        return $this->hasMany(BusinessDocument::class)->whereNull('business_member_id')->orderBy('id');
+    }
+
+    public function loans(): HasMany
+    {
+        return $this->hasMany(Loan::class);
+    }
+
+    /**
+     * What staff tick to approve: the four checks, plus, with business loans on, that the statements cover the
+     * months the plan asks for (owner, 24 Oct 2026).
+     */
+    public static function checks(): array
+    {
+        return self::CHECKS + (config('lending.business_loans.enabled')
+            ? ['statements' => 'Bank statements cover the last ' . (int) config('lending.business_loans.statement_months', 3) . ' months']
+            : []);
     }
 
     public function displayName(): string

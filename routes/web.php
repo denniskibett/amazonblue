@@ -27,7 +27,7 @@ Route::post('/contact', [HomeController::class, 'storeEnquiry'])
     ->name('enquiry.store');
 
 // ============ BORROWER KYC (individual onboarding) ============
-Route::middleware(['auth', 'role:borrower'])->prefix('kyc')->name('kyc.')->controller(HomeController::class)->group(function () {
+Route::middleware(['auth', 'role:borrower|partner'])->prefix('kyc')->name('kyc.')->controller(HomeController::class)->group(function () {
     Route::get('/', fn () => redirect()->route('kyc.personal'))->name('start');
     Route::get('/personal', 'kycPersonal')->name('personal');
     Route::post('/personal', 'storeKycPersonal')->name('personal.store');
@@ -54,7 +54,7 @@ Route::get('/files/businesses/{business}/{document}', [PrivateFileController::cl
     ->name('files.business');
 
 // ============ BUSINESS KYC (borrower adds a business; Concerns\BusinessOnboarding; own businesses only) ============
-Route::middleware(['auth', 'role:borrower'])->prefix('account/business')->name('account.business.')
+Route::middleware(['auth', 'role:borrower|partner'])->prefix('account/business')->name('account.business.')
     ->controller(HomeController::class)->group(function () {
         Route::get('/', 'businessIndex')->name('index');
         Route::get('/start', 'businessStart')->name('start');
@@ -530,9 +530,9 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('repayments.split-preview')->middleware('permission:create repayments|delete repayments');
         // second sign-offs (Stage 4 Phase 5); each decision checks the action's own permission
         Route::get('sign-offs', [\App\Http\Controllers\Staff\SignOffsController::class, 'index'])
-            ->name('sign-offs')->middleware('permission:approve loans|delete repayments|write off loan|edit partners');
+            ->name('sign-offs')->middleware('permission:approve loans|delete repayments|write off loan|edit partners|edit users|disburse loans');
         Route::post('sign-offs/{approval}', [\App\Http\Controllers\Staff\SignOffsController::class, 'decide'])
-            ->name('sign-offs.decide')->middleware('permission:approve loans|delete repayments|write off loan|edit partners');
+            ->name('sign-offs.decide')->middleware('permission:approve loans|delete repayments|write off loan|edit partners|edit users|disburse loans');
 
         // portfolio on the ledger (Stage 4 Phase 7)
         Route::get('portfolio', [\App\Http\Controllers\Staff\PortfolioController::class, 'index'])->name('portfolio')->middleware('permission:view reports');
@@ -628,3 +628,8 @@ Route::prefix('mpesa/{secret}')->middleware('throttle:120,1')->name('mpesa.')->g
     Route::post('c2b/confirmation', [\App\Http\Controllers\MpesaCallbackController::class, 'confirmation'])->name('c2b.confirmation');
     Route::post('stk', [\App\Http\Controllers\MpesaCallbackController::class, 'stk'])->name('stk');
 });
+
+// Features that stand on their own (owner, 23 Oct 2026): each has its own routes file, controller folder and switch.
+foreach (['aml', 'partner-subscriptions', 'business-lending', 'mpesa-b2c'] as $feature) {
+    require __DIR__ . '/features/' . $feature . '.php';
+}

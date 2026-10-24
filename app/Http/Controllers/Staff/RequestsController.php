@@ -35,7 +35,10 @@ class RequestsController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', $data['decision'] === 'approve' ? 'Extension booked. The borrower sees it on their account.' : 'Declined. The borrower sees your note.');
+        $type = DB::table('borrower_requests')->where('id', $id)->value('type');
+
+        return back()->with('success', $data['decision'] !== 'approve' ? 'Declined. The borrower sees your note.'
+            : ($type === 'business_change' ? 'Business reopened. The owner can change it and resubmit.' : 'Extension booked. The borrower sees it on their account.'));
     }
 
     /** What approving an extension would book, from the day chosen (default: the cycle's due date). JSON for the modal. */

@@ -19,7 +19,14 @@ class BusinessDocument extends Model
         'other' => ['Other document', 'e.g. board resolution or partnership deed'],
     ];
 
-    protected $fillable = ['business_id', 'type', 'path', 'original_name', 'mime', 'size', 'uploaded_by'];
+    // what a director uploads from their verification link (owner, 24 Oct 2026); kept apart from the company documents
+    public const DIRECTOR_TYPES = [
+        'director_id_front' => ['ID front (director)', 'National ID front or passport bio page'],
+        'director_id_back' => ['ID back (director)', 'National ID back'],
+        'director_selfie' => ['Selfie (director)', 'A clear photo of their face'],
+    ];
+
+    protected $fillable = ['business_id', 'business_member_id', 'type', 'path', 'original_name', 'mime', 'size', 'uploaded_by'];
 
     protected function casts(): array
     {
@@ -31,6 +38,11 @@ class BusinessDocument extends Model
         return $this->belongsTo(Business::class);
     }
 
+    public function member(): BelongsTo
+    {
+        return $this->belongsTo(BusinessMember::class, 'business_member_id');
+    }
+
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
@@ -38,7 +50,7 @@ class BusinessDocument extends Model
 
     public function label(): string
     {
-        return self::TYPES[$this->type][0] ?? ucfirst(str_replace('_', ' ', $this->type));
+        return (self::TYPES + self::DIRECTOR_TYPES)[$this->type][0] ?? ucfirst(str_replace('_', ' ', $this->type));
     }
 
     public function isImage(): bool

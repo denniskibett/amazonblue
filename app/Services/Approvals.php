@@ -23,6 +23,9 @@ class Approvals
         'write_off' => ['permission' => 'write off loan', 'label' => 'Write off'],
         'reversal' => ['permission' => 'delete repayments', 'label' => 'Reverse repayment'],
         'partner_withdrawal' => ['permission' => 'edit partners', 'label' => 'Pay a partner out'],
+        // owner, 24 Oct 2026
+        'approve_business' => ['permission' => 'edit users', 'label' => 'Approve a business and its limit'],
+        'mpesa_b2c' => ['permission' => 'disburse loans', 'label' => 'Send a disbursement by M-Pesa'],
     ];
 
     public static function enabled(): bool

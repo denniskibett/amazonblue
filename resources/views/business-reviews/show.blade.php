@@ -69,8 +69,22 @@
                             <td>
                                 @if ($m->user && $m->user->kyc_status === 'approved')
                                     @can('view users')<a href="{{ route('kyc-reviews.show', $m->user) }}" class="hover:underline">@endcan<x-staff.status-badge status="repaid" label="Verified" />@can('view users')</a>@endcan
+                                @elseif ($m->verified_at)
+                                    {{-- verified from their own link (owner, 24 Oct 2026): their ID pictures --}}
+                                    <x-staff.status-badge status="repaid" label="Self-verified" />
+                                    @foreach ($m->documents as $doc)
+                                        <a href="{{ $doc->url() }}" target="_blank" rel="noopener" class="ml-1 text-xs text-brand-500 hover:underline">{{ str_replace(' (director)', '', $doc->label()) }}</a>
+                                    @endforeach
                                 @else
                                     <x-staff.status-badge status="pending" label="Not verified" />
+                                    @if ($directors->required($business)->contains('id', $m->id))
+                                        <span class="block text-xs text-gray-500">{{ $m->verify_sent_at ? 'Link sent ' . $m->verify_sent_at->diffForHumans() : 'No link sent' }}</span>
+                                        @can('edit users')
+                                            <form method="POST" action="{{ route('business-reviews.director-link', [$business, $m]) }}" class="inline">@csrf
+                                                <button class="text-xs font-medium text-brand-500 hover:underline">{{ $m->verify_sent_at ? 'Send again' : 'Send link' }}</button>
+                                            </form>
+                                        @endcan
+                                    @endif
                                 @endif
                             </td>
                         </tr>
@@ -141,9 +155,18 @@
                     @if ($errors->any())
                         <x-staff.alert type="err" class="mb-4">{{ $errors->first() }}</x-staff.alert>
                     @endif
+                    @if ($blockers)
+                        <x-staff.alert type="warn" class="mb-4" title="Before it can be approved">
+                            <ul class="list-disc space-y-1 pl-4">@foreach ($blockers as $b)<li>{{ $b }}</li>@endforeach</ul>
+                        </x-staff.alert>
+                    @endif
                     <form method="POST" x-data="{ action: '' }" :action="action" class="space-y-4">
                         @csrf
-                        @foreach (\App\Models\Business::CHECKS as $key => $text)
+                        @if (\App\Services\Business\BusinessLending::enabled())
+                            <x-staff.field name="credit_limit" type="number" label="Business limit (KES)" min="1" step="1" :value="$business->credit_limit" required
+                                hint="The most the business can owe at once. Monthly revenue: {{ $business->monthly_revenue !== null ? 'KES ' . number_format((float) $business->monthly_revenue) : 'not given' }}." />
+                        @endif
+                        @foreach (\App\Models\Business::checks() as $key => $text)
                             <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
                                 <input type="checkbox" name="checks[{{ $key }}]" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300" @checked(old("checks.$key"))>
                                 {{ $text }}
@@ -169,7 +192,7 @@
                         <div><dt class="{{ $label }}">Reviewed by</dt><dd class="{{ $value }}">{{ $business->reviewer?->name ?? '—' }}, {{ optional($business->reviewed_at)->format('j M Y, H:i') }}</dd></div>
                         <div><dt class="{{ $label }}">Checks</dt>
                             <dd class="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                                @foreach (\App\Models\Business::CHECKS as $key => $text)
+                                @foreach (\App\Models\Business::checks() as $key => $text)
                                     <p><x-ui.icon :name="($business->checks[$key] ?? false) ? 'check' : 'x'" class="inline-block size-4 align-[-3px]" /> {{ $text }}</p>
                                 @endforeach
                             </dd></div>
@@ -178,8 +201,20 @@
                 @endif
             </div>
 
-            <x-staff.placeholder dependency="AML / sanctions and PEP screening provider" title="AML screening">Screen the business and every director against sanctions and PEP lists before approval.</x-staff.placeholder>
-            <x-staff.placeholder dependency="business loan products, limits and trade finance" title="Business limit">Set a business credit limit and open trade finance or asset-backed products.</x-staff.placeholder>
+            @include('aml._panel', ['type' => 'business', 'subject' => $business])
+
+            @if (\App\Services\Business\BusinessLending::enabled() && $business->status === 'approved')
+                @php $lending = app(\App\Services\Business\BusinessLending::class); @endphp
+                <div class="{{ $card }}">
+                    <h2 class="mb-3 text-lg font-semibold text-gray-800 dark:text-white/90">Business limit</h2>
+                    <dl class="grid grid-cols-3 gap-3 text-sm">
+                        <div><dt class="{{ $label }}">Limit</dt><dd class="{{ $value }}"><x-staff.money :amount="$business->credit_limit ?? 0" /></dd></div>
+                        <div><dt class="{{ $label }}">Owed</dt><dd class="{{ $value }}"><x-staff.money :amount="$lending->owed($business)" /></dd></div>
+                        <div><dt class="{{ $label }}">Can borrow</dt><dd class="{{ $value }}"><x-staff.money :amount="$lending->available($business)" /></dd></div>
+                    </dl>
+                    <p class="mt-3 text-xs text-gray-500">Changing the limit after approval goes through a change request on Requests.</p>
+                </div>
+            @endif
         </div>
     </div>
 </div>

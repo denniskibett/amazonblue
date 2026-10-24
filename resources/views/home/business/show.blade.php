@@ -40,7 +40,8 @@
       </div>
       @break
     @case('approved')
-      <div class="a-note ok"><div><b>Verified</b>Approved {{ optional($business->reviewed_at)->format('j M Y') }}. Business products open here in Stage 4.</div></div>
+      <div class="a-note ok"><div><b>Verified</b>Approved {{ optional($business->reviewed_at)->format('j M Y') }}.@if (\App\Services\Business\BusinessLending::enabled() && $business->credit_limit) Business limit KES {{ number_format((float) $business->credit_limit, 2) }}.@endif
+        @if (\App\Services\Business\BusinessLending::enabled())<div><a class="btn btn-primary" href="{{ route('account.business.borrow', $business) }}">Borrow for the business</a></div>@endif</div></div>
       @break
   @endswitch
 
@@ -59,11 +60,20 @@
     <section class="a-card">
       <div class="a-sec-h"><h2>People</h2>@if ($business->isEditable())<a href="{{ route('account.business.members', $business) }}">Edit</a>@endif</div>
       <div class="a-list">
+        @php $dv = app(\App\Services\Business\DirectorVerification::class); $mustVerify = $dv->required($business)->pluck('id')->all(); @endphp
+        @error('link')<x-az.alert type="err" title="Link not sent">{{ $message }}</x-az.alert>@enderror
         @forelse ($business->members as $m)
           <div class="a-row">
             <span class="biz-av">{{ $m->initials() }}</span>
-            <span class="t"><b>{{ $m->full_name }}</b><span>{{ $m->roleLabel() }}{{ $m->is_signatory ? ' · signs' : '' }}</span></span>
+            <span class="t"><b>{{ $m->full_name }}</b><span>{{ $m->roleLabel() }}{{ $m->is_signatory ? ' · signs' : '' }}
+              {{-- directors verify themselves from a link (owner, 24 Oct 2026) --}}
+              @if (\App\Services\Business\BusinessLending::enabled() && in_array($m->id, $mustVerify, true))
+                · {{ $dv->isVerified($m) ? 'verified' : ($m->verify_sent_at ? 'link sent ' . $m->verify_sent_at->diffForHumans() : 'not verified') }}
+              @endif</span></span>
             <span class="amt num">{{ $pct($m->ownership_pct) }}</span>
+            @if (\App\Services\Business\BusinessLending::enabled() && in_array($m->id, $mustVerify, true) && ! $dv->isVerified($m))
+              <form method="POST" action="{{ route('account.business.members.link', [$business, $m]) }}">@csrf<button class="btn btn-ghost" type="submit">{{ $m->verify_sent_at ? 'Send again' : 'Send link' }}</button></form>
+            @endif
           </div>
         @empty
           <p class="a-empty">No one added yet.</p>
@@ -72,10 +82,25 @@
     </section>
   </div>
 
+  @if ($business->status === 'approved' && \App\Services\Requests::enabled())
+    {{-- an approved business is locked; changes go through a request (owner, 24 Oct 2026) --}}
+    <section class="a-card">
+      <div class="a-sec-h"><h2>Something changed?</h2></div>
+      <p class="muted" style="font-size:14px;margin:0 0 10px">New director, new address or new bank? Tell us; we reopen the business for you to update it, then check it again.</p>
+      <form method="POST" action="{{ route('account.business.change', $business) }}" class="a-grid" style="gap:10px">
+        @csrf
+        <x-az.field name="message" label="What changed" type="textarea" required maxlength="1000" rows="2" />
+        <button class="btn btn-ghost" type="submit">Ask for a change</button>
+      </form>
+    </section>
+  @endif
+
   <section class="a-card">
     <div class="a-sec-h"><h2>Business products</h2></div>
     <div class="biz-ph">
+      @unless (\App\Services\Business\BusinessLending::enabled())
       <x-az.placeholder dependency="business loan products and limits" title="Business loans">Working-capital loans priced for {{ $business->trading_name ?: $business->legal_name }}, once business products and limits are set up.</x-az.placeholder>
+      @endunless
       <x-az.placeholder dependency="trade finance (LC, FX, supplier payments)" title="Trade finance">Pay suppliers, letters of credit and FX for verified businesses.</x-az.placeholder>
       <x-az.placeholder dependency="asset-backed lending and valuation" title="Asset-backed loans">Borrow against business assets after a valuation.</x-az.placeholder>
     </div>

@@ -41,11 +41,11 @@
         ><input type="checkbox" name="confirm_not_pep" value="1" required /><span
           >I am not a politically exposed person (PEP), nor related to one.</span
         ></label
-      ><label class="check"
+      >@unless (auth()->user()->hasRole('partner') && ! auth()->user()->hasRole('borrower'))<label class="check"
         ><input type="checkbox" name="confirm_crb" value="1" required /><span
           >I consent to Aimzone checking my details with credit reference bureaus.</span
         ></label
-      >
+      >@endunless
     </div>
     @endunless
     <div class="kyc-nav">

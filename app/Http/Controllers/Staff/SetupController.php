@@ -103,9 +103,11 @@ class SetupController extends Controller
             'unit' => 'required|in:days,weeks,months,years',
             'grace_period_days' => 'required|integer|min:0|max:365',
             'default_threshold_days' => 'required|integer|min:1|max:3650',
+            'audience' => 'nullable|in:individual,business',
             'reason' => 'required|string|min:5|max:500',
         ]);
-        $fields = ['name', 'interest_rate', 'penalty_rate', 'period', 'unit', 'grace_period_days', 'default_threshold_days'];
+        $data['audience'] = $data['audience'] ?? $loanType->audience ?? 'individual';
+        $fields = ['name', 'audience', 'interest_rate', 'penalty_rate', 'period', 'unit', 'grace_period_days', 'default_threshold_days'];
         DB::transaction(function () use ($loanType, $data, $fields, $request) {
             $version = (int) DB::table('loan_type_versions')->where('loan_type_id', $loanType->id)->max('version') + 1;
             DB::table('loan_type_versions')->insert(['loan_type_id' => $loanType->id, 'version' => $version,

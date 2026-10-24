@@ -28,6 +28,7 @@
     $groups['Cash desk'] = [
       ['Receive payment', 'staff.repayments.receive', 'hand-coins', $u->canAny(['create repayments', 'delete repayments']), ['staff.repayments.*'], null],
       ['M-Pesa payments', 'staff.payments', 'phone', $u->can('create repayments'), ['staff.payments'], $count(fn () => \Illuminate\Support\Facades\Schema::hasTable('mpesa_transactions') ? \Illuminate\Support\Facades\DB::table('mpesa_transactions')->whereIn('status', ['unmatched', 'received'])->count() : 0)],
+      ['M-Pesa payouts', 'mpesa.payouts', 'send', \App\Services\Mpesa\B2cPayouts::enabled() && $u->can('view disbursements'), ['mpesa.payouts'], null],
       ['End of day', 'staff.end-of-day', 'clock', $u->canAny(['create repayments', 'create disbursements', 'view reports']), ['staff.end-of-day'], null],
     ];
     $groups['Customers'] = [
@@ -35,6 +36,7 @@
       ['Borrowers', 'staff.borrowers', 'user', $u->can('view users'), ['staff.borrowers'], null],
       ['KYC Reviews', 'kyc-reviews.index', 'user-check', $u->can('edit users'), ['kyc-reviews.*'], $count(fn () => \App\Models\User::where('kyc_status', 'submitted')->count())],
       ['Business Reviews', 'business-reviews.index', 'building', $u->can('view users'), ['business-reviews.*'], $count(fn () => \App\Models\Business::where('status', 'submitted')->count())],
+      ['Sanctions lists', 'aml.lists', 'shield', $u->can('view kyc documents'), ['aml.*'], null],
     ];
     $groups['Finance'] = [
       ['Portfolio', 'staff.portfolio', 'pie', $u->can('view reports'), ['staff.portfolio'], null],
@@ -44,7 +46,7 @@
       ['Investment Portfolio', 'investments.index', 'layers', $u->can('view investments'), ['investments.*'], null],
     ];
     $groups['Control'] = [
-      ['Second sign-offs', 'staff.sign-offs', 'shield', $u->canAny(['approve loans', 'delete repayments', 'write off loan', 'edit partners']), ['staff.sign-offs'], $count(fn () => \Illuminate\Support\Facades\DB::table('approvals')->where('status', 'pending')->count())],
+      ['Second sign-offs', 'staff.sign-offs', 'shield', $u->canAny(['approve loans', 'delete repayments', 'write off loan', 'edit partners', 'edit users', 'disburse loans']), ['staff.sign-offs'], $count(fn () => \Illuminate\Support\Facades\DB::table('approvals')->where('status', 'pending')->count())],
       ['Operations review', 'staff.operations-review', 'refresh', $u->canAny(['view logs', 'view ledger']), ['staff.operations-review'], null],
       ['Audit Log', 'audit-log.index', 'list', $u->can('view audit log'), ['audit-log.*'], null],
       ['Roles & permissions', 'staff.roles', 'key', $u->canAny(['manage roles', 'view audit log']), ['staff.roles'], null],

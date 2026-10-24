@@ -20,8 +20,10 @@ class BusinessMember extends Model
 
     protected $fillable = [
         'business_id', 'user_id', 'full_name', 'role', 'id_number', 'kra_pin', 'phone', 'email',
-        'ownership_pct', 'is_signatory', 'verified_at',
+        'ownership_pct', 'is_signatory', 'verified_at', 'verify_sent_at', 'verify_expires_at',
     ];
+
+    protected $hidden = ['verify_token_hash'];
 
     protected function casts(): array
     {
@@ -29,6 +31,8 @@ class BusinessMember extends Model
             'ownership_pct' => 'decimal:2',
             'is_signatory' => 'boolean',
             'verified_at' => 'datetime',
+            'verify_sent_at' => 'datetime',
+            'verify_expires_at' => 'datetime',
         ];
     }
 
@@ -40,6 +44,12 @@ class BusinessMember extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** Their ID pictures from the self-verification link (owner, 24 Oct 2026). */
+    public function documents(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(BusinessDocument::class, 'business_member_id');
     }
 
     public function roleLabel(): string

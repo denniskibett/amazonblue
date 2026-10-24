@@ -430,7 +430,7 @@ class HomeController extends Controller
             ])->save();
         });
 
-        return redirect()->route('kyc.income');
+        return redirect()->route($this->isPartnerOnly($user) ? 'kyc.documents' : 'kyc.income');
     }
 
     // ============ KYC: DOCUMENTS ============
@@ -758,7 +758,7 @@ class HomeController extends Controller
         $request->validate([
             'confirm_true' => ['accepted'],
             'confirm_not_pep' => ['accepted'],
-            'confirm_crb' => ['accepted'],
+            'confirm_crb' => [$this->isPartnerOnly($user) ? 'nullable' : 'accepted'],
         ], [
             '*.accepted' => 'Tick all three declarations to submit.',
         ]);
@@ -812,7 +812,7 @@ class HomeController extends Controller
         $guarantor = $user->contacts()->where('relationship_specific', self::GUARANTOR)->latest('id')->first();
         $contactsDone = $user->kin_name && $user->kin_phone && $guarantor;
 
-        return [
+        $sections = [
             [
                 'title' => 'Personal details',
                 'href' => route('kyc.personal'),
@@ -849,6 +849,18 @@ class HomeController extends Controller
                 ]),
             ],
         ];
+
+        // a partner (not also a borrower) is verified on identity only: no income, next of kin or guarantor (owner, 24 Oct 2026)
+        if ($this->isPartnerOnly($user)) {
+            $sections = array_values(array_filter($sections, fn ($s) => in_array($s['title'], ['Personal details', 'Identity documents'], true)));
+        }
+
+        return $sections;
+    }
+
+    private function isPartnerOnly(User $user): bool
+    {
+        return $user->hasRole('partner') && ! $user->hasRole('borrower');
     }
 
     /**

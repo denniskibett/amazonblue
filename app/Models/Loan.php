@@ -46,6 +46,7 @@ class Loan extends Model
 
     protected $fillable = [
         'user_id',
+        'business_id',       // a business loan's business (owner, 24 Oct 2026); user_id stays the owner who signs
         'loan_type_id',
         'amount',
         'borrow_date',
@@ -114,6 +115,12 @@ class Loan extends Model
     ];
 
     // ============ RELATIONSHIPS ============
+
+    /** The business a business loan is for (owner, 24 Oct 2026). */
+    public function business()
+    {
+        return $this->belongsTo(Business::class);
+    }
 
     public function user()
     {

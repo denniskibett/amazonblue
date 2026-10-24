@@ -20,6 +20,8 @@ class Partner extends Model implements Wallet, Customer
 
     protected $fillable = [
         'user_id',
+        'business_id',       // a business partner's verified business (owner, 24 Oct 2026)
+        'source_of_funds',
         'wallet_slug',
         'type',
         'account_type',      // house accounts: principal / interest / operating / reserve
@@ -67,6 +69,12 @@ class Partner extends Model implements Wallet, Customer
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** The verified business behind a business partner (businesses table; one copy of the company details). */
+    public function business()
+    {
+        return $this->belongsTo(Business::class);
     }
 
     public function ledgerEntries()

@@ -92,22 +92,33 @@ class KycReviewController extends Controller
     {
         abort_unless($user->kyc_status === 'submitted', 409, 'Only submitted verifications can be approved.');
 
-        $data = $request->validate([
+        // a partner (owner, 24 Oct 2026): no next of kin or guarantor; their ID and selfies are checked and, with AML
+        // screening on, the screening must be clear (App\Services\Aml\Screening)
+        $partnerOnly = $user->hasRole('partner') && ! $user->hasRole('borrower');
+        $data = $request->validate($partnerOnly ? [
+            'checked_identity' => ['accepted'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ] : [
             'called_next_of_kin' => ['accepted'],
             'called_guarantor' => ['accepted'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ], [
+            'checked_identity.accepted' => 'Confirm the ID and selfies match before approving.',
             'called_next_of_kin.accepted' => 'Confirm you called the next of kin before approving.',
             'called_guarantor.accepted' => 'Confirm you called the guarantor before approving.',
         ]);
+        if ($partnerOnly && ($blocker = app(\App\Services\Aml\Screening::class)->blocker($user))) {
+            return back()->withErrors(['aml' => $blocker]);
+        }
 
-        DB::transaction(function () use ($request, $user, $data) {
+        DB::transaction(function () use ($request, $user, $data, $partnerOnly) {
+            $kept = is_array($user->kyc_checks) ? array_intersect_key($user->kyc_checks, ['aml' => true]) : [];
             $user->update([
                 'kyc_status' => 'approved',
                 'kyc_reviewed_by' => $request->user()->id,
                 'kyc_reviewed_at' => now(),
                 'kyc_review_notes' => $data['notes'] ?? null,
-                'kyc_checks' => ['next_of_kin' => true, 'guarantor' => true],
+                'kyc_checks' => ($partnerOnly ? ['identity' => true] : ['next_of_kin' => true, 'guarantor' => true]) + $kept,
             ]);
             // an active borrower can borrow from the dashboard
             $user->borrower?->update(['status' => 1]);
@@ -115,7 +126,7 @@ class KycReviewController extends Controller
         \App\Support\CustomerNotifier::kycReviewed($user, true);
 
         return redirect()->route('kyc-reviews.index')
-            ->with('alert', ['type' => 'success', 'title' => 'Verification approved', 'message' => $user->name . ' can now borrow from their dashboard.']);
+            ->with('alert', ['type' => 'success', 'title' => 'Verification approved', 'message' => $user->name . ($partnerOnly ? ' can now subscribe as a partner.' : ' can now borrow from their dashboard.')]);
     }
 
     public function reject(Request $request, User $user): RedirectResponse

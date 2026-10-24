@@ -83,6 +83,15 @@ class Requests
                 app(LoanCalculator::class)->executeRollover($loan, $opts + ['notes' => 'Extension requested by the borrower (request #' . $id . ')'
                     . ' from ' . \Illuminate\Support\Carbon::parse($opts['date'])->format('j M Y')]);
             }
+            if ($approve && $r->type === 'business_change') {
+                // reopen the verified business so the owner can change it; it is checked again (owner, 24 Oct 2026)
+                if (! $by->can('edit users')) {
+                    throw new \DomainException('You need the "edit users" permission to reopen a business.');
+                }
+                $business = \App\Models\Business::findOrFail($r->business_id);
+                $business->update(['status' => \App\Models\Business::STATUS_REJECTED, 'reviewed_by' => $by->id, 'reviewed_at' => now(),
+                    'review_notes' => 'Reopened for your changes: ' . $r->message . ($note ? ' — ' . $note : '')]);
+            }
             DB::table('borrower_requests')->where('id', $id)->update(['status' => $approve ? 'approved' : 'declined',
                 'decision_note' => $note, 'decided_by' => $by->id, 'decided_at' => now(), 'updated_at' => now()]);
             AuditTrail::record('borrower_requests', $id, 'update', ['status' => 'open'], ['status' => $approve ? 'approved' : 'declined', 'note' => $note]);
@@ -125,10 +134,24 @@ class Requests
             if (! $r || $r->status !== 'pending') {
                 throw new \DomainException('This request is no longer pending.');
             }
-            $journal = $received ? Partner::findOrFail($r->partner_id)->addContribution((float) $r->amount, 'FUND-PR' . $r->id . '-' . $r->reference,
-                'Funds received (request #' . $r->id . ')') : null;
+            $payload = json_decode((string) ($r->payload ?? ''), true) ?: [];
+            $lineId = null;
+            if ($received && ($payload['kind'] ?? null) === 'subscription') {
+                // an online subscription (Partners\Subscription): the money opens the line the partner signed for
+                if (! $r->reference) {
+                    throw new \DomainException('The partner has not said they sent the money yet (no transaction code).');
+                }
+                $line = app(\App\Services\Partners\PartnerLines::class)->open(Partner::findOrFail($r->partner_id), (float) $r->amount,
+                    $payload['term'], $payload['maturity'] ?? null, $r->reference, $payload['sent']['on'] ?? null, $by,
+                    'Online subscription (request #' . $r->id . ')');
+                $lineId = $line->id;
+                $journal = \App\Models\PartnerTransaction::where('investment_id', $line->id)->where('type', 'contribution')->latest('id')->first();
+            } else {
+                $journal = $received ? Partner::findOrFail($r->partner_id)->addContribution((float) $r->amount, 'FUND-PR' . $r->id . '-' . $r->reference,
+                    'Funds received (request #' . $r->id . ')') : null;
+            }
             DB::table('partner_requests')->where('id', $id)->update(['status' => $received ? 'done' : 'declined', 'prepared_by' => $by->id,
-                'partner_transaction_id' => $journal?->id, 'decision_note' => $note, 'updated_at' => now()]);
+                'partner_transaction_id' => $journal?->id, 'investment_id' => $lineId, 'decision_note' => $note, 'updated_at' => now()]);
             if ($received) {
                 $user = User::find(Partner::whereKey($r->partner_id)->value('user_id'));
                 DB::afterCommit(fn () => app(CustomerEvents::class)->partner('funds_confirmed', $user, (float) $r->amount));

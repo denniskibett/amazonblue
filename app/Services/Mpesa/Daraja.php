@@ -99,6 +99,41 @@ class Daraja
         ])->throw()->json();
     }
 
+    /** Why B2C payouts can't run, or null when they can (owner, 24 Oct 2026). */
+    public function b2cProblem(): ?string
+    {
+        if ($p = $this->problem()) {
+            return $p;
+        }
+        foreach (['b2c_shortcode' => 'MPESA_B2C_SHORTCODE', 'b2c_initiator' => 'MPESA_B2C_INITIATOR', 'b2c_security_credential' => 'MPESA_B2C_SECURITY_CREDENTIAL'] as $key => $env) {
+            if (! config('lending.mpesa.' . $key)) {
+                return $env . ' is not set.';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * B2C payment request: sends money from the B2C shortcode to a phone. Returns Daraja's reply
+     * (ConversationID, OriginatorConversationID, ResponseCode). Only the result callback says whether it was paid.
+     */
+    public function b2c(string $phone, int $amount, string $remarks, string $occasion): array
+    {
+        return Http::withToken($this->token())->timeout(30)->post($this->baseUrl() . '/mpesa/b2c/v1/paymentrequest', [
+            'InitiatorName' => (string) config('lending.mpesa.b2c_initiator'),
+            'SecurityCredential' => (string) config('lending.mpesa.b2c_security_credential'),
+            'CommandID' => (string) config('lending.mpesa.b2c_command', 'BusinessPayment'),
+            'Amount' => $amount,
+            'PartyA' => (string) config('lending.mpesa.b2c_shortcode'),
+            'PartyB' => $phone,
+            'Remarks' => mb_substr($remarks, 0, 100),
+            'QueueTimeOutURL' => $this->callbackUrl('b2c/timeout'),
+            'ResultURL' => $this->callbackUrl('b2c/result'),
+            'Occasion' => mb_substr($occasion, 0, 100),
+        ])->throw()->json();
+    }
+
     /** Kenyan phone to Daraja's 2547XXXXXXXX form, or null. */
     public static function msisdn(?string $phone): ?string
     {

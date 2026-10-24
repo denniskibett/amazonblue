@@ -69,6 +69,17 @@ return [
         // automatic matching: the account number must be an open loan's number; the payer's phone must be the
         // borrower's, unless Safaricom hid it, in which case the amount must not be more than is owed
         'match_other_payers' => (bool) env('MPESA_MATCH_OTHER_PAYERS', false),
+
+        // B2C payouts (owner, 23 Oct 2026): staff send a disbursement straight to the borrower's M-Pesa. Every payout
+        // needs a second person (LENDING_APPROVALS_ENABLED must be on). Off = the button is not shown.
+        'b2c_enabled' => (bool) env('MPESA_B2C_ENABLED', false),
+        // the B2C shortcode (often different from the paybill), the API operator ("initiator") and its password
+        // encrypted with Safaricom's certificate (the "security credential" from the Daraja portal)
+        'b2c_shortcode' => env('MPESA_B2C_SHORTCODE'),
+        'b2c_initiator' => env('MPESA_B2C_INITIATOR'),
+        'b2c_security_credential' => env('MPESA_B2C_SECURITY_CREDENTIAL'),
+        // BusinessPayment (plain payout) | SalaryPayment | PromotionPayment
+        'b2c_command' => env('MPESA_B2C_COMMAND', 'BusinessPayment'),
     ],
 
     // Partner self-service (account › Partner › Add funds / Withdraw). Stage 2 shows instructions and emails staff;
@@ -154,6 +165,33 @@ return [
     // Borrower behaviour (owner, 23 Oct 2026): when on, the suggested limit from each borrower's repayment
     // history (borrower_profiles, analytics:profiles nightly) can lower their ladder limit. Off = shown to staff only.
     'behaviour_limits' => (bool) env('LENDING_BEHAVIOUR_LIMITS', false),
+
+    // Partner KYC and online subscription (owner, 23 Oct 2026): a partner verifies themselves (or their business),
+    // picks a short- or long-term line and an amount, signs the subscription, sends the money and staff confirm it
+    // on Requests, which opens the line. Needs LENDING_REQUESTS_ENABLED. Off = Add funds works as before.
+    'partner_subscriptions' => [
+        'enabled' => (bool) env('LENDING_PARTNER_SUBSCRIPTIONS', false),
+        // bump when the subscription wording changes; stored with each signed copy
+        'version' => '2026-10-24',
+        // long-term terms partners can choose, in months
+        'long_term_months' => [6, 12, 24],
+    ],
+
+    // Business loans (owner, 23 Oct 2026; plan defaults): a verified business with a limit set by the approver can
+    // borrow on a business product. Directors verify themselves from a link; AML screening must be clear.
+    'business_loans' => [
+        'enabled' => (bool) env('LENDING_BUSINESS_LOANS', false),
+        // how long a director's verification link works
+        'link_days' => 7,
+        // statements that must be on file before approval
+        'statement_months' => 3,
+    ],
+
+    // AML screening (owner, 23 Oct 2026): staff checklist + the sanctions list staff upload. Required before a
+    // business or a partner is approved when on.
+    'aml' => [
+        'enabled' => (bool) env('LENDING_AML_SCREENING', false),
+    ],
 
     'rollover' => [
         // cycles 2..N keep the previous cycle's rate; from cycle N+1 staff must set a rate or use a payment plan (owner)

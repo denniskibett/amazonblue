@@ -34,7 +34,10 @@ class PrivateFileController extends Controller
     public function business(Request $request, \App\Models\Business $business, string $document)
     {
         abort_unless($business->isVisibleTo($request->user()), 404);
-        $doc = $business->documents()->whereKey((int) $document)->first();
+        // a director's ID pictures (owner, 24 Oct 2026): staff reviewers only, not the business owner
+        $doc = self::isStaffReviewer($request->user())
+            ? \App\Models\BusinessDocument::where('business_id', $business->id)->whereKey((int) $document)->first()
+            : $business->documents()->whereKey((int) $document)->first();
         $path = PrivateFiles::absolute($doc?->path);
         abort_unless($path, 404);
 
