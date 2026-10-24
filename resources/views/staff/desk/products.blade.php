@@ -47,8 +47,5 @@
     </x-staff.table>
   @endif
 
-  <x-staff.placeholder class="mt-6" dependency="products with audit and snapshotting" title="Editing products">
-    Open loans read the penalty rate from their product every day, so changing a product today would change loans already running.
-    Editing comes with Stage 4: each loan keeps a copy of its terms when it is approved, and every change is audited.
-  </x-staff.placeholder>
+  <p class="mt-4 text-theme-xs text-gray-500 dark:text-gray-400">Running loans keep the terms their cycles were created with; new cycles use the product as it is. Every edit keeps the old values and the reason.</p>
 @endsection

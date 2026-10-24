@@ -74,9 +74,9 @@
               </span>
               <span class="badge-s st-approved">Available</span>
             </label>
-            <x-az.placeholder dependency="more products (business, asset-backed)" style="margin-top:12px">
-              Other products are arranged with our team for now.
-            </x-az.placeholder>
+            @if (\App\Services\Business\BusinessLending::enabled())
+              <p class="muted" style="font-size:13px;margin-top:12px">Borrowing for your business? <a href="{{ route('account.business.index') }}">Add or open your business</a> to apply against its own limit.</p>
+            @endif
             <div class="bj-nav"><span></span><button type="button" class="btn btn-primary" @click="go(2)" @disabled(! $canApply)>Continue</button></div>
           </section>
 

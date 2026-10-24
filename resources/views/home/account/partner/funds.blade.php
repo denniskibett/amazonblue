@@ -67,9 +67,7 @@
         <x-az.field name="note" label="Note (optional)" type="textarea" maxlength="500" rows="2" />
         <button class="btn btn-primary btn-block" type="submit">Let our team know</button>
       </form>
-      <x-az.placeholder dependency="funding requests table + staff confirmation" style="margin-top:14px">
-        Today this sends an email to our team. Tracking each request and its confirmation in your account comes later.
-      </x-az.placeholder>
+      <p class="muted" style="font-size:13px;margin-top:14px">Our team checks the statement and confirms it. You get a message when it is added to your capital, and it shows on your statement.</p>
     </section>
   </div>
 @endsection

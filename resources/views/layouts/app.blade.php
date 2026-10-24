@@ -29,11 +29,10 @@
 
     {{-- Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    {{-- Charts load without holding up the page (owner, 22 Oct 2026); pinned versions so an upstream release can't break us --}}
-    <script defer src="https://cdn.jsdelivr.net/npm/apexcharts@4.7.0/dist/apexcharts.min.js"></script>
+    {{-- Charts load without holding up the page (owner, 22 Oct 2026), served by the app itself (24 Oct 2026) --}}
+    <script defer src="{{ asset('assets/vendor/apexcharts-4.7.0.min.js') }}"></script>
 
     {{-- One stylesheet and one script (Alpine + flatpickr); date fields become pickers by themselves (owner, 23 Oct 2026) --}}
     @vite(['resources/css/app.css', 'resources/js/index.js'])

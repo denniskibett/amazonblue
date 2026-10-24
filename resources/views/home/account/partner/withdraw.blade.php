@@ -69,9 +69,9 @@
       @endif
     </section>
 
-    <x-az.placeholder dependency="withdrawal requests table + maker-checker approval + PartnerLedger posting" title="How withdrawals work today">
-      Your request is emailed to our team and logged. A staff member checks your balance, pays you, and records the withdrawal, which then shows on your statement.
-      Tracking the request status in your account comes later.
-    </x-az.placeholder>
+    <section class="a-card">
+      <div class="a-sec-h"><h2>How withdrawals work</h2></div>
+      <p class="muted" style="font-size:14px;margin:0">One of our team checks your balance and prepares the payout{{ config('lending.approvals.enabled') ? ', a second person approves it,' : '' }} and it is paid to your registered account. You get a message when it is paid, and it shows on your statement.</p>
+    </section>
   </div>
 @endsection

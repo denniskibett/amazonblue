@@ -56,9 +56,11 @@
 
       <section class="a-card">
         <div class="a-sec-h"><h2>SMS and in-app alerts</h2></div>
-        <x-az.placeholder dependency="SMS gateway and in-app notifications">
-          We'll text you and show alerts here for these moments:
-        </x-az.placeholder>
+        @if (config('lending.notifications.enabled'))
+          <p class="muted" style="font-size:14px;margin:0 0 10px">We text you and show an alert here at these moments:</p>
+        @else
+          <p class="muted" style="font-size:14px;margin:0 0 10px">Texts and alerts for these moments are being switched on:</p>
+        @endif
         <ul class="bj-mail">
           @foreach ($coming as [$t, $d])
             <li><span class="badge-s st-rejected">Soon</span><div><b>{{ $t }}</b><span>{{ $d }}</span></div></li>

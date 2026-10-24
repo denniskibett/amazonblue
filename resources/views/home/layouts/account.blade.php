@@ -40,7 +40,8 @@
   <head>
     @include('home.partials.head', ['title' => $title . ' — Aimzone Ventures', 'description' => 'Your Aimzone Ventures account', 'noindex' => true])
     {{-- live figures on the account pages (amount picker, totals) --}}
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    {{-- served by the app itself, not a CDN (owner, 24 Oct 2026) --}}
+    <script defer src="{{ asset('assets/vendor/alpine-3.15.4.min.js') }}"></script>
   </head>
   <body>
     @include('partials.ui.preview-bar')

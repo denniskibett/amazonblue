@@ -92,7 +92,14 @@
     @endforeach
   </x-staff.table>
 
-  <x-staff.placeholder class="mt-6" dependency="approval limits per role" title="Approval limits">
-    Amount limits per role (who may approve how much) need their own table and checks in the approval path (Stage 4).
-  </x-staff.placeholder>
+  @php $limits = \Illuminate\Support\Facades\DB::table('approval_limits')->orderBy('role')->get(); @endphp
+  <x-staff.alert type="info" class="mt-6" title="Approval limits">
+    @if ($limits->isEmpty())
+      No limits set: anyone with "approve loans" approves any amount alone.
+    @else
+      Approving alone up to:
+      {{ $limits->map(fn ($l) => $l->role . ' KES ' . number_format((float) $l->max_amount))->implode(' · ') }}.
+      Above that a second person approves{{ config('lending.approvals.enabled') ? '' : ' once second sign-offs are switched on' }}.
+    @endif
+  </x-staff.alert>
 @endsection

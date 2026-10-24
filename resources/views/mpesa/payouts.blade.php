@@ -25,7 +25,7 @@
         <td class="text-theme-xs text-gray-500">{{ \Illuminate\Support\Carbon::parse($r->created_at)->format('j M, H:i') }}</td>
       </tr>
     @empty
-      <tr><td colspan="6"><x-staff.empty title="No payouts yet" message="Approved loans show a Send by M-Pesa button once payouts are switched on." /></td></tr>
+      <tr data-table-skip><td colspan="6"><x-staff.empty title="No payouts yet" message="Approved loans show a Send by M-Pesa button once payouts are switched on." /></td></tr>
     @endforelse
   </x-staff.table>
 @endsection

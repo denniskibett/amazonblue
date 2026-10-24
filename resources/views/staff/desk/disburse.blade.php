@@ -139,9 +139,13 @@
           <div class="flex justify-between gap-4 py-2"><dt class="text-gray-500">Phone</dt><dd>{{ $loan->user->phone ?? '—' }}</dd></div>
         </dl>
       </section>
-      <x-staff.placeholder dependency="M-Pesa B2C payout and maker-checker">
-        Money is sent outside the system today; this screen records it. Sending by M-Pesa from here and a second approver are Stage 4.
-      </x-staff.placeholder>
+      <p class="text-theme-xs text-gray-500 dark:text-gray-400">
+        @if (\App\Services\Mpesa\B2cPayouts::enabled())
+          To send the money straight to the borrower's phone instead, use Send by M-Pesa on the loan page; a second person approves it.
+        @else
+          This screen records money sent from the bank or M-Pesa. Sending straight from the app (M-Pesa payouts) is switched off.
+        @endif
+      </p>
     </aside>
   </div>
 

@@ -130,7 +130,11 @@
     @endforelse
   </x-staff.table>
 
-  <x-staff.placeholder class="mt-6" dependency="approval limits and maker-checker" title="Approval limits">
-    Today anyone with “approve loans” can approve any amount, and the person who approves can also disburse. Limits per role and a second approver are Stage 4.
-  </x-staff.placeholder>
+  <p class="mt-4 text-theme-xs text-gray-500 dark:text-gray-400">
+    @if (config('lending.approvals.enabled'))
+      Loans above your approval limit go to a second person on Second sign-offs, and the person who approves a loan can't also send its money.
+    @else
+      Second sign-offs are off: anyone with "approve loans" approves any amount.
+    @endif
+  </p>
 @endsection

@@ -4,10 +4,9 @@
 @section('content')
   @include('staff.desk._header', ['title' => 'Partner payouts', 'sub' => 'What each partner holds today, by wallet. Read-only.'])
 
-  <x-staff.placeholder class="mb-6" dependency="withdrawal requests and maker-checker" title="Paying a partner out">
-    Partners will request a withdrawal, one person prepares the payout and a second approves it, and the ledger and wallet move together.
-    That needs a withdrawal requests table and the maker-checker step (Stage 4). Until then payouts are recorded on the partner page.
-  </x-staff.placeholder>
+  <x-staff.alert type="info" class="mb-6" title="Paying a partner out">
+    Withdrawal requests and line payouts wait on <a class="underline" href="{{ route('staff.requests') }}">Requests</a>. One person prepares the payout{{ config('lending.approvals.enabled') ? '; a second approves it on Second sign-offs' : '' }}, and the ledger and wallet move together.
+  </x-staff.alert>
 
   @if ($rows->isEmpty())
     <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"><x-staff.empty title="No partners" /></div>

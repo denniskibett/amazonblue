@@ -63,9 +63,7 @@
             <a class="btn btn-ghost" href="{{ route('account.help', ['loan' => $loan->id]) }}">I have a question</a>
           </div>
         @endif
-        <x-az.placeholder dependency="signed plan consent stored on the loan" style="margin-top:14px">
-          Today your acceptance is recorded in our audit log and sent to our team.
-        </x-az.placeholder>
+        <p class="muted" style="font-size:13px;margin-top:14px">When you accept, we keep a record of the plan's terms with the date and time, and our team is told.</p>
       </section>
     </div>
   @endif

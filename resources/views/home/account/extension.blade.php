@@ -82,9 +82,11 @@
           @error('confirm')<p class="error">{{ $message }}</p>@enderror
           <button class="btn btn-primary btn-block" type="submit" style="margin-top:14px">Request extension</button>
         </form>
-        <x-az.placeholder dependency="requests table + approval in your account" style="margin-top:14px">
-          For now, requests go to our team by email and they call you back. You'll be able to follow approval here later.
-        </x-az.placeholder>
+        @if (\App\Services\Requests::enabled())
+          <p class="muted" style="font-size:13px;margin-top:14px">Your request shows on this loan with its status. When our team decides, you get a message and the new terms appear here.</p>
+        @else
+          <p class="muted" style="font-size:13px;margin-top:14px">Your request goes to our team, who call you back to agree the terms.</p>
+        @endif
       @else
         <a class="btn btn-primary btn-block" href="{{ route('account.help', ['loan' => $loan->id]) }}">Contact us about this loan</a>
       @endif

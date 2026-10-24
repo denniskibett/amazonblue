@@ -94,8 +94,8 @@
       </x-staff.table>
     @endif
 
-    <x-staff.placeholder dependency="general ledger and bank reconciliation" title="Ledger and bank statements">
-      Matching M-Pesa and bank statements line by line, and a double-entry ledger with the six accounts, are Stage 4.
-    </x-staff.placeholder>
+    <x-staff.alert type="info" title="Ledger and statements">
+      Every repayment and disbursement also posts to the double-entry ledger (six accounts). The weekly M-Pesa statement check is on M-Pesa payments.
+    </x-staff.alert>
   </div>
 @endsection

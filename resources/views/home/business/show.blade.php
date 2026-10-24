@@ -95,14 +95,15 @@
     </section>
   @endif
 
-  <section class="a-card">
-    <div class="a-sec-h"><h2>Business products</h2></div>
-    <div class="biz-ph">
-      @unless (\App\Services\Business\BusinessLending::enabled())
-      <x-az.placeholder dependency="business loan products and limits" title="Business loans">Working-capital loans priced for {{ $business->trading_name ?: $business->legal_name }}, once business products and limits are set up.</x-az.placeholder>
-      @endunless
-      <x-az.placeholder dependency="trade finance (LC, FX, supplier payments)" title="Trade finance">Pay suppliers, letters of credit and FX for verified businesses.</x-az.placeholder>
-      <x-az.placeholder dependency="asset-backed lending and valuation" title="Asset-backed loans">Borrow against business assets after a valuation.</x-az.placeholder>
-    </div>
-  </section>
+  @if (\App\Services\Business\BusinessLending::enabled())
+    <section class="a-card">
+      <div class="a-sec-h"><h2>Business loans</h2></div>
+      @if ($business->status === 'approved')
+        <p class="muted" style="font-size:14px;margin:0 0 12px">Borrow against {{ $business->trading_name ?: $business->legal_name }}'s own limit. You apply and sign as the owner.</p>
+        <a class="btn btn-primary" href="{{ route('account.business.borrow', $business) }}">Borrow for the business</a>
+      @else
+        <p class="muted" style="font-size:14px;margin:0">Once we verify the business and every director has verified themselves, you can borrow against its own limit here.</p>
+      @endif
+    </section>
+  @endif
 @endsection

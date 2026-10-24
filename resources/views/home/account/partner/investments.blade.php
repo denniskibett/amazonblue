@@ -41,7 +41,11 @@
     </div>
   @endif
 
-  <x-az.placeholder dependency="online subscriptions (partner KYC, subscription agreement, funding requests table)" title="Invest online">
-    Choosing a fund, amount and tenor and signing the subscription agreement in the app comes later. For now our team sets up each investment with you.
-  </x-az.placeholder>
+  @if (\App\Services\Partners\Subscription::enabled())
+    <section class="a-card">
+      <div class="a-sec-h"><h2>Invest online</h2></div>
+      <p class="muted" style="font-size:14px;margin:0 0 12px">Choose a short- or long-term line and an amount, sign the subscription and send the money.</p>
+      <a class="btn btn-primary" href="{{ route('partner.subscribe') }}">Fund loans</a>
+    </section>
+  @endif
 @endsection

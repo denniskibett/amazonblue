@@ -130,5 +130,5 @@
     <p class="mt-2 text-theme-xs text-gray-500 dark:text-gray-400">Collected = cash repayments in the month on loans with a recovery case, credited to the officer the case is assigned to now. Rollovers, discounts and write-offs are not counted. A promise is kept when the cash paid by the promised date covers it.</p>
   </div>
 
-  <x-staff.placeholder class="mt-6" dependency="restructure flow" title="Restructure">Restructuring needs the Stage 4 loan engine (new schedule, approvals). Use the loan page's payment plan or forbearance for now.</x-staff.placeholder>
+  <p class="mt-4 text-theme-xs text-gray-500 dark:text-gray-400">To restructure a loan, use Payment plan / forbearance or Extend on the loan page.</p>
 @endsection
