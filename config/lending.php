@@ -152,12 +152,28 @@ return [
     'notifications' => [
         'enabled' => (bool) env('NOTIFICATIONS_ENABLED', false),
         'sms' => [
-            // log (writes to the log only) | africastalking
+            // log (writes to the log only) | africastalking | kenyasms
             'driver' => env('SMS_DRIVER', 'log'),
             'africastalking' => [
                 'username' => env('AT_USERNAME', 'sandbox'),
                 'api_key' => env('AT_API_KEY'),
                 'sender_id' => env('AT_SENDER_ID'),
+            ],
+            // KenyaSMS (owner, 24 Oct 2026). How their API takes a message is set here, so matching their
+            // documentation is a settings change: the URL, where the key goes, the field names, JSON or form.
+            'kenyasms' => [
+                'url' => env('KENYASMS_URL'),
+                'api_key' => env('KENYASMS_API_KEY'),
+                'sender_id' => env('KENYASMS_SENDER_ID'),
+                // bearer (Authorization: Bearer <key>) | header:<Header-Name> | field:<body field name>
+                'auth' => env('KENYASMS_AUTH', 'bearer'),
+                // json | form
+                'format' => env('KENYASMS_FORMAT', 'json'),
+                'field_to' => env('KENYASMS_FIELD_TO', 'phone'),
+                'field_message' => env('KENYASMS_FIELD_MESSAGE', 'message'),
+                'field_sender' => env('KENYASMS_FIELD_SENDER', 'sender_id'),
+                // how the number is written: 254 (2547XXXXXXXX) | +254 | 0 (07XXXXXXXX)
+                'phone_format' => env('KENYASMS_PHONE_FORMAT', '254'),
             ],
         ],
     ],

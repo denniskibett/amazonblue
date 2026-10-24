@@ -286,3 +286,23 @@ By hand, never in a script or chat:
 - **SPF / DKIM:** at Olitt (not CyberPanel DNS): the SPF TXT record, the DKIM record from CyberPanel › Email › DKIM Manager, and the `mail.loans` A record. Test with a password reset (Gmail › Show original › SPF and DKIM say PASS).
 - **sysadmin:** set a strong password from the profile page; the script shows the roles.
 - **Server:** Ubuntu 20.04 is past standard support and the server has 2 GB RAM. Enable Ubuntu Pro or plan an upgrade with the host.
+
+### SMS through KenyaSMS (24 October 2026)
+
+The SMS provider is KenyaSMS. `SMS_DRIVER=kenyasms` sends through it; how their API takes a message is set in `.env`, so
+matching their documentation is a settings change, not a code change:
+
+```
+SMS_DRIVER=kenyasms
+KENYASMS_URL=<send-SMS URL from their API documentation>
+KENYASMS_API_KEY=<from the KenyaSMS dashboard>
+KENYASMS_SENDER_ID=<approved sender ID>
+KENYASMS_AUTH=bearer            # or header:<Header-Name>, or field:<body field name>
+KENYASMS_FORMAT=json            # or form
+KENYASMS_FIELD_TO=phone         # their name for the phone number field
+KENYASMS_FIELD_MESSAGE=message
+KENYASMS_FIELD_SENDER=sender_id
+KENYASMS_PHONE_FORMAT=254       # 254 (2547...), +254, or 0 (07...)
+```
+
+Confirm the values against their "Send SMS" example before switching. Quiet hours (no SMS 20:00 to 08:00) apply as before.

@@ -178,7 +178,7 @@ class MessagesController extends Controller
             'mail' => ['ok' => ! in_array($mailer, ['log', 'array'], true), 'value' => $mailer, 'from' => config('mail.from.address'),
                 'note' => in_array($mailer, ['log', 'array'], true) ? 'Emails are written to the log, not sent. Set MAIL_MAILER=smtp with the mail account.' : 'Sending through ' . strtoupper($mailer) . '. SPF and DKIM must pass or Gmail files them as spam.'],
             'sms' => ['ok' => $sms !== 'log', 'value' => $sms,
-                'note' => $sms === 'log' ? "SMS are written to the log only. Set SMS_DRIVER=africastalking with the Africa's Talking account." : "Sending through Africa's Talking" . (config('lending.notifications.sms.africastalking.username') === 'sandbox' ? ' sandbox (not delivered to phones).' : '.')],
+                'note' => $sms === 'log' ? "SMS are written to the log only. Set SMS_DRIVER=kenyasms with the KenyaSMS account." : ($sms === 'kenyasms' ? 'Sending through KenyaSMS.' : "Sending through Africa's Talking" . (config('lending.notifications.sms.africastalking.username') === 'sandbox' ? ' sandbox (not delivered to phones).' : '.'))],
             'queue' => ['ok' => $queue !== 'sync' || app()->environment('local', 'testing'), 'value' => $queue,
                 'pending' => Schema::hasTable('jobs') ? DB::table('jobs')->count() : 0,
                 'failed' => Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0,

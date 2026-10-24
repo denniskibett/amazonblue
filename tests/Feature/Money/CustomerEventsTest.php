@@ -68,6 +68,23 @@ class CustomerEventsTest extends TestCase
         Http::assertSent(fn ($r) => str_contains($r->url(), 'api.sandbox.africastalking.com/version1/messaging') && $r['to'] === '+254712345678');
     }
 
+    public function test_the_sms_goes_to_kenyasms_with_the_configured_shape(): void
+    {
+        config(['lending.notifications.sms.driver' => 'kenyasms', 'lending.notifications.sms.kenyasms' => [
+            'url' => 'https://api.kenyasms.test/v1/sms/send', 'api_key' => 'k', 'sender_id' => 'AIMZONE', 'auth' => 'bearer',
+            'format' => 'json', 'field_to' => 'phone', 'field_message' => 'message', 'field_sender' => 'sender_id', 'phone_format' => '254']]);
+        Http::fake(['api.kenyasms.test/*' => Http::sequence()->push(['status' => 'success', 'message_id' => 'abc'])->push(['status' => 'error', 'error' => 'Insufficient credit'])]);
+        $this->assertTrue(app(\App\Services\Sms\SmsSender::class)->send('0712 345 678', 'Hello'));
+        Http::assertSent(fn ($r) => $r->url() === 'https://api.kenyasms.test/v1/sms/send' && ($r->data()['phone'] ?? null) === '254712345678'
+            && ($r->data()['message'] ?? null) === 'Hello' && ($r->data()['sender_id'] ?? null) === 'AIMZONE' && $r->hasHeader('Authorization', 'Bearer k'));
+
+        // the key in the body, form-encoded, numbers as 07..., and a refusal is reported as not sent
+        config(['lending.notifications.sms.kenyasms.auth' => 'field:apikey', 'lending.notifications.sms.kenyasms.format' => 'form',
+            'lending.notifications.sms.kenyasms.phone_format' => '0', 'lending.notifications.sms.kenyasms.field_to' => 'mobile']);
+        $this->assertFalse(app(\App\Services\Sms\SmsSender::class)->send('+254712345678', 'Hi'));
+        Http::assertSent(fn ($r) => ($r->data()['mobile'] ?? null) === '0712345678' && ($r->data()['apikey'] ?? null) === 'k' && $r->isForm());
+    }
+
     public function test_off_sends_nothing(): void
     {
         Notification::fake();
