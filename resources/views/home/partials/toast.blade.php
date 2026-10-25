@@ -4,4 +4,4 @@
     ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg></span
   ><span data-msg></span>
 </div>
-<script src="{{ asset('assets/js/main.js') }}" defer></script>
+<script src="{{ asset('assets/js/main.js') }}?v={{ @filemtime(public_path('assets/js/main.js')) }}" defer></script>

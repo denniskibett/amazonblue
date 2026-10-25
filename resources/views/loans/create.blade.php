@@ -599,7 +599,7 @@
     </div>
 </div>
 
-<script src="{{ asset('assets/js/signature-pad.js') }}?v={{ @filemtime(public_path('assets/js/signature-pad.js')) }}"></script>
+@include('partials.ui.signature-pad-js')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Loan Calculation Functions

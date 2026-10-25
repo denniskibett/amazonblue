@@ -573,19 +573,36 @@
       var r = c.getBoundingClientRect();
       return { x: e.clientX - r.left, y: e.clientY - r.top };
     }
+    c.style.touchAction = 'none';
+    // every sample the device gives, joined with curves through the midpoints so it writes like a pen (owner, 25 Oct 2026)
+    var prev = null;
     c.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
       drawing = true;
       last = pos(e);
+      prev = null;
       c.setPointerCapture(e.pointerId);
+      ctx.beginPath();
+      ctx.arc(last.x, last.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fill();
     });
     c.addEventListener('pointermove', function (e) {
       if (!drawing) return;
-      var p = pos(e);
-      ctx.beginPath();
-      ctx.moveTo(last.x, last.y);
-      ctx.lineTo(p.x, p.y);
-      ctx.stroke();
-      last = p;
+      e.preventDefault();
+      var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+      if (!evs.length) evs = [e];
+      evs.forEach(function (ev) {
+        var p = pos(ev);
+        if (Math.hypot(p.x - last.x, p.y - last.y) < 1) return;
+        var mid = { x: (last.x + p.x) / 2, y: (last.y + p.y) / 2 };
+        ctx.beginPath();
+        ctx.moveTo(prev ? prev.x : last.x, prev ? prev.y : last.y);
+        ctx.quadraticCurveTo(last.x, last.y, mid.x, mid.y);
+        ctx.stroke();
+        prev = mid;
+        last = p;
+      });
       var row = c.closest('.upload');
       if (row) row.classList.add('done');
     });

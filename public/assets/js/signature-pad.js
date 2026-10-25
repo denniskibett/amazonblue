@@ -3,7 +3,8 @@
  * which the loan form, the loan modal and the profile page used to load at runtime. Same constructor and the three
  * methods the app calls: new SignaturePad(canvas, options), clear(), isEmpty(), toDataURL(type).
  * Options read: backgroundColor, penColor, minWidth, maxWidth, throttle (ms), velocityFilterWeight.
- * Mouse, touch and pen all work through pointer events; the stroke gets thinner the faster it is drawn.
+ * Mouse, touch and pen all work through pointer events. Used only when the original library (signature_pad from
+ * jsDelivr) can't load: partials/ui/signature-pad-js loads that first (owner, 25 Oct 2026).
  */
 (function (global) {
   'use strict';
@@ -51,10 +52,9 @@
     if (this.canvas.setPointerCapture) { try { this.canvas.setPointerCapture(e.pointerId); } catch (_) {} }
     this._drawing = true;
     var p = this._point(e);
-    this._last = p;
-    this._lastVelocity = 0;
+    this._pts = [p];
     this._lastWidth = (this.minWidth + this.maxWidth) / 2;
-    this._lastTime = p.t;
+    this._lastVelocity = 0;
     // a tap leaves a dot
     var ctx = this.ctx;
     ctx.fillStyle = this.penColor;
@@ -64,37 +64,60 @@
     this._empty = false;
   };
 
+  // every sample the device gives (coalesced events), joined with smooth curves through the midpoints,
+  // so the line follows the hand like a pen instead of straight segments (owner, 25 Oct 2026)
   SignaturePad.prototype._onMove = function (e) {
     if (!this._drawing) return;
     e.preventDefault();
-    var p = this._point(e);
-    if (p.t - this._lastTime < this.throttle && p.t !== this._lastTime) return;
-    var last = this._last;
+    var events = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+    if (!events.length) events = [e];
+    for (var i = 0; i < events.length; i++) this._add(this._point(events[i]));
+  };
+
+  SignaturePad.prototype._add = function (p) {
+    var pts = this._pts;
+    var last = pts[pts.length - 1];
     var dist = Math.hypot(p.x - last.x, p.y - last.y);
-    if (dist < 0.5) return;
+    if (dist < 1) return;
     var dt = Math.max(1, p.t - last.t);
-    var v = this.velocityFilterWeight * (dist / dt) + (1 - this.velocityFilterWeight) * this._lastVelocity;
-    var width = Math.max(this.minWidth, Math.min(this.maxWidth, this.maxWidth / (v + 1)));
+    var v = this.velocityFilterWeight * this._lastVelocity + (1 - this.velocityFilterWeight) * (dist / dt);
+    // a gentle change of width with speed; never jumps between strokes of one line
+    var target = Math.max(this.minWidth, Math.min(this.maxWidth, this.maxWidth - (this.maxWidth - this.minWidth) * Math.min(1, v / 3)));
+    var width = this._lastWidth + (target - this._lastWidth) * 0.35;
+    pts.push(p);
+    if (pts.length > 3) pts.shift();
     var ctx = this.ctx;
     ctx.strokeStyle = this.penColor;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = (width + this._lastWidth) / 2;
+    ctx.lineWidth = width;
     ctx.beginPath();
-    ctx.moveTo(last.x, last.y);
-    ctx.quadraticCurveTo(last.x, last.y, (last.x + p.x) / 2, (last.y + p.y) / 2);
-    ctx.lineTo(p.x, p.y);
+    if (pts.length < 3) {
+      ctx.moveTo(pts[0].x, pts[0].y);
+      ctx.lineTo((pts[0].x + p.x) / 2, (pts[0].y + p.y) / 2);
+    } else {
+      var a = pts[0], b = pts[1], c = pts[2];
+      ctx.moveTo((a.x + b.x) / 2, (a.y + b.y) / 2);
+      ctx.quadraticCurveTo(b.x, b.y, (b.x + c.x) / 2, (b.y + c.y) / 2);
+    }
     ctx.stroke();
-    this._last = p;
-    this._lastTime = p.t;
     this._lastVelocity = v;
     this._lastWidth = width;
     this._empty = false;
   };
 
   SignaturePad.prototype._onUp = function () {
+    if (this._drawing && this._pts && this._pts.length > 1) {
+      // finish the last half-segment to where the pen lifted
+      var pts = this._pts, b = pts[pts.length - 2], c = pts[pts.length - 1], ctx = this.ctx;
+      ctx.beginPath();
+      ctx.lineWidth = this._lastWidth;
+      ctx.moveTo((b.x + c.x) / 2, (b.y + c.y) / 2);
+      ctx.lineTo(c.x, c.y);
+      ctx.stroke();
+    }
     this._drawing = false;
-    this._last = null;
+    this._pts = null;
   };
 
   SignaturePad.prototype.clear = function () {

@@ -10,6 +10,29 @@
       p: {}, error: '', errors: [],
       form: { date: '', due_date: '', interest_rate: '', waive_penalty: false, notes: '' },
       defaults: { due_date: '' },
+      _pickBook: false,
+      // Booked on: the last due date, today, or a date picked on the calendar
+      bookChoices() {
+        const due = this.p && this.p.current_due_date_raw, start = this.p && this.p.cycle_start_date_raw;
+        const dueOk = due && due <= this.today && (!start || due >= start);
+        return [
+          { key: 'due', label: 'Last due date' + (due ? ' · ' + this.day(due) : ''), date: due, off: !dueOk,
+            why: dueOk ? '' : 'The due date has not passed yet, so the extension can be booked today at the earliest.' },
+          { key: 'today', label: 'Today · ' + this.day(this.today), date: this.today, off: false },
+          { key: 'pick', label: 'Another date', date: null, off: false },
+        ];
+      },
+      bookMode() {
+        if (this._pickBook) return 'pick';
+        if (this.p && this.form.date === this.p.current_due_date_raw) return 'due';
+        return this.form.date === this.today ? 'today' : 'pick';
+      },
+      pickBook(c) {
+        this._pickBook = c.key === 'pick';
+        if (c.date) { this.form.date = c.date; this.changed(); return; }
+        // open the calendar on the visible date field
+        this.$nextTick(() => { const el = document.getElementById('ro-date'); const fp = el && el._azPicker; fp ? fp.open() : (el && el.focus()); });
+      },
       today: new Date().toLocaleDateString('en-CA'),
       timer: null,
       init() {
@@ -20,6 +43,7 @@
         if (!loanId) return;
         this.loanId = loanId; this.p = {}; this.error = ''; this.errors = [];
         this.form = { date: this.today, due_date: '', interest_rate: '', waive_penalty: false, notes: '' };
+        this._pickBook = false;
         this.open = true;
         document.body.style.overflow = 'hidden';
         this.preview(true);
@@ -112,9 +136,19 @@
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-date">Booked on</label>
+              {{-- the three usual choices (owner, 25 Oct 2026): the last due date, today, or a day picked on the calendar --}}
+              <div class="mb-2 flex flex-wrap gap-2" role="group" aria-label="Booked on">
+                <template x-for="c in bookChoices()" :key="c.key">
+                  <button type="button" @click="pickBook(c)" :disabled="!!c.off" :title="c.why || ''"
+                          :class="bookMode() === c.key ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300' : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5'"
+                          class="rounded-full border px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40">
+                    <span x-text="c.label"></span>
+                  </button>
+                </template>
+              </div>
               <input id="ro-date" type="date" x-model="form.date" @change="changed()" :min="p.cycle_start_date_raw" :max="today"
                      class="h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Today unless it was agreed earlier. What is owed is worked out to this day.</p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">What is owed is worked out to this day, and the new cycle starts from it.</p>
             </div>
             <div>
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-due">New due date</label>

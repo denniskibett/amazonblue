@@ -151,6 +151,11 @@ return [
     */
     'notifications' => [
         'enabled' => (bool) env('NOTIFICATIONS_ENABLED', false),
+        // late-payment emails with the penalty breakdown (owner, 25 Oct 2026). With NOTIFICATIONS_ENABLED they go by email
+        // and SMS; NOTIFICATIONS_OVERDUE_EMAILS=true sends just these emails even while the other notifications are off.
+        'overdue_emails' => (bool) env('NOTIFICATIONS_OVERDUE_EMAILS', false),
+        // days late on which the reminder goes; after 30 days it is worded as a final notice
+        'overdue_days' => array_map('intval', array_filter(explode(',', (string) env('NOTIFICATIONS_OVERDUE_DAYS', '1,3,7,14,21,30,45,60')))),
         'sms' => [
             // log (writes to the log only) | africastalking | kenyasms
             'driver' => env('SMS_DRIVER', 'log'),

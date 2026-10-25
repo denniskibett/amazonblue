@@ -55,9 +55,40 @@ class CustomerEventsTest extends TestCase
         Notification::assertSentTimes(CustomerEvent::class, 1);
         Carbon::setTestNow(Carbon::parse('2026-10-21 09:00', 'Africa/Nairobi'));           // 1 day late
         $this->artisan('notifications:reminders')->assertSuccessful();
-        Notification::assertSentTo(User::findOrFail(Loan::findOrFail(1301)->user_id), CustomerEvent::class, fn ($n) => $n->event === 'overdue' && str_contains($n->sms, 'Paybill 600100'));
+        // the late reminder is the branded notice with the penalty breakdown (owner, 25 Oct 2026)
+        Notification::assertSentTo(User::findOrFail(Loan::findOrFail(1301)->user_id), \App\Notifications\CollectionNotice::class,
+            fn ($n) => $n->kind === 'overdue' && str_contains($n->sms, 'Paybill 600100') && in_array('sms', $n->channels, true)
+                && collect($n->email['panel']['rows'])->contains(fn ($r) => $r[0] === 'Late penalty so far')
+                && collect($n->email['panel']['rows'])->contains(fn ($r) => $r[0] === 'Each further day adds'));
+        Carbon::setTestNow(Carbon::parse('2026-10-22 09:00', 'Africa/Nairobi'));           // day 2: not a reminder day
+        $this->artisan('notifications:reminders')->assertSuccessful();
+        Notification::assertSentTimes(\App\Notifications\CollectionNotice::class, 1);
+        Carbon::setTestNow(Carbon::parse('2026-10-23 09:00', 'Africa/Nairobi'));           // day 3
+        $this->artisan('notifications:reminders')->assertSuccessful();
+        Notification::assertSentTimes(\App\Notifications\CollectionNotice::class, 2);
         Carbon::setTestNow(Carbon::parse('2026-10-27 22:00', 'Africa/Nairobi'));
         $this->artisan('notifications:reminders')->expectsOutputToContain('Quiet hours')->assertSuccessful();
+    }
+
+    public function test_late_emails_alone_go_by_email_with_the_penalty_and_nothing_else(): void
+    {
+        Notification::fake();
+        config(['lending.notifications.enabled' => false, 'lending.notifications.overdue_emails' => true]);
+        Carbon::setTestNow(Carbon::parse('2026-10-17 09:00', 'Africa/Nairobi'));           // due in 3 days: not sent
+        $this->artisan('notifications:reminders')->assertSuccessful();
+        Notification::assertNothingSent();
+        Carbon::setTestNow(Carbon::parse('2026-10-27 09:00', 'Africa/Nairobi'));           // 7 days late
+        $this->artisan('notifications:reminders')->assertSuccessful();
+        $user = User::findOrFail(Loan::findOrFail(1301)->user_id);
+        Notification::assertSentTo($user, \App\Notifications\CollectionNotice::class, function ($n) use ($user) {
+            $penalty = collect($n->email['panel']['rows'])->firstWhere(0, 'Late penalty so far');
+
+            return $n->channels === ['email'] && $n->via($user) === ['database', 'mail'] && $penalty && $penalty[1] !== 'KES 0.00'
+                && str_contains($n->email['paragraphs'][0], 'in late penalties');
+        });
+        Carbon::setTestNow(Carbon::parse('2026-11-25 09:00', 'Africa/Nairobi'));           // 36 days: not a reminder day
+        $this->artisan('notifications:reminders')->assertSuccessful();
+        Notification::assertSentTimes(\App\Notifications\CollectionNotice::class, 1);
     }
 
     public function test_the_sms_goes_to_africas_talking_when_chosen(): void

@@ -79,7 +79,7 @@ class SendBatchItem implements ShouldQueue
             return;
         }
         try {
-            $email = $notices->email($batch->kind, $user, $loan, $row->owed, $row->days_late, $row->due_date);
+            $email = $notices->email($batch->kind, $user, $loan, $row->owed, $row->days_late, $row->due_date, $row->penalty ?? null);
             $sms = $notices->sms($batch->kind, $loan, $row->owed, $row->days_late, $row->due_date);
             $user->notifyNow(new CollectionNotice($batch->kind, $email, $sms, explode(',', $batch->channels), route('account.loan', $loan)));
             DB::table('message_batch_items')->where('id', $item->id)->update(['owed' => $row->owed, 'days_late' => $row->days_late]);

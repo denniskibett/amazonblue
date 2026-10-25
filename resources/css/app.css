@@ -214,6 +214,10 @@
 .flatpickr-calendar {
   @apply mt-2 !rounded-xl !p-5 !text-gray-500 dark:!bg-gray-dark dark:!text-gray-400 dark:!shadow-theme-xl 2xsm:!w-auto;
 }
+/* calendars open above the side sheets (z-index 100000) and the backdrop (owner, 25 Oct 2026) */
+.flatpickr-calendar.open {
+  z-index: 100010 !important;
+}
 
 .flatpickr-months .flatpickr-prev-month:hover svg,
 .flatpickr-months .flatpickr-next-month:hover svg {

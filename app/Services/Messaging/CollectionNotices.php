@@ -89,7 +89,8 @@ class CollectionNotices
         if (! $cycle || ! $loan->user) {
             return null;
         }
-        $owed = round((float) (CycleBalance::at($cycle)['final_outstanding'] ?? 0), 2);
+        $balance = CycleBalance::at($cycle);
+        $owed = round((float) ($balance['final_outstanding'] ?? 0), 2);
         if ($owed <= 0) {
             return null;
         }
@@ -101,6 +102,8 @@ class CollectionNotices
             'days_late' => $due->lt($today) ? (int) $due->diffInDays($today) : 0,
             'due_in' => $due->gte($today) ? (int) $today->diffInDays($due) : null,
             'due_date' => $due, 'status' => $loan->status, 'last_sent' => null, 'skip' => null,
+            // the penalty breakdown shown in overdue and final notices (owner, 25 Oct 2026)
+            'penalty' => \App\Support\PenaltySummary::from($balance),
         ];
     }
 
@@ -172,8 +175,10 @@ class CollectionNotices
     }
 
     /** The branded email for one recipient (Support\Emails layout). */
-    public function email(string $kind, User $user, Loan $loan, float $owed, int $daysLate, Carbon $due): array
+    public function email(string $kind, User $user, Loan $loan, float $owed, int $daysLate, Carbon $due, ?array $penalty = null): array
     {
+        $penaltyRows = $penalty ? \App\Support\PenaltySummary::rows($penalty) : [];
+        $perDay = $penalty && $penalty['per_day'] > 0 ? ' Each further day adds about KES ' . number_format($penalty['per_day'], 2) . '.' : '';
         $first = Emails::firstName($user->name);
         $kes = 'KES ' . number_format($owed, 2);
         $ref = 'Loan #' . $loan->id;
@@ -205,11 +210,12 @@ class CollectionNotices
                 'badge' => [$daysLate . ' ' . ($daysLate === 1 ? 'day' : 'days') . ' overdue', 'danger'],
                 'heading' => 'Your repayment is overdue',
                 'paragraphs' => [
-                    "Dear {$first}, our records show that your {$ref} was due on {$dueText} and {$kes} remains unpaid.",
-                    'A penalty is added for every day the balance stays unpaid. Clear the full amount now to stop further charges and protect your borrowing record with us.',
+                    "Dear {$first}, our records show that your {$ref} was due on {$dueText} and {$kes} remains unpaid"
+                        . ($penalty && $penalty['penalty'] > 0 ? ', including KES ' . number_format($penalty['penalty'], 2) . ' in late penalties.' : '.'),
+                    'A penalty is added for every day the balance stays unpaid.' . $perDay . ' Clear the full amount now to stop further charges and protect your borrowing record with us.',
                     'If you cannot pay in full, log in today and request a payment plan. Contact us before the balance grows further.',
                 ],
-                'panel' => ['label' => 'Amount outstanding today', 'amount' => $kes, 'rows' => [...$rows, ['Days overdue', (string) $daysLate]]],
+                'panel' => ['label' => 'Amount outstanding today', 'amount' => $kes, 'rows' => [...$rows, ['Days overdue', (string) $daysLate], ...$penaltyRows]],
                 'info' => [...$payBy, ['', 'Already paid? Reply with your M-Pesa code so we can match it to your loan.']],
                 'buttons' => [['Pay now', $loanUrl, true], ['Request a payment plan', $planUrl, false]],
                 'signoff' => ['Regards,', 'Credit Control, AIMZONE Ventures'],
@@ -224,7 +230,7 @@ class CollectionNotices
                     'Within 7 days of this notice, please either clear the balance in full, or log in to your account and set up a payment plan that we can agree with you.',
                     'If we do not hear from you within that time, your account will be passed to our recovery team and we will take further steps to recover the amount owed in line with your loan agreement. This will also affect your ability to borrow from us in future.',
                 ],
-                'panel' => ['label' => 'Amount outstanding today', 'amount' => $kes, 'rows' => [...$rows, ['Days in arrears', (string) $daysLate]]],
+                'panel' => ['label' => 'Amount outstanding today', 'amount' => $kes, 'rows' => [...$rows, ['Days in arrears', (string) $daysLate], ...$penaltyRows]],
                 'info' => [...$payBy, ['', 'Already paid, or disputing this amount? Contact us with your M-Pesa code or details so we can review it.']],
                 'buttons' => [['Set up a payment plan', $planUrl, true], ['Pay now', $loanUrl, false]],
                 'signoff' => ['Yours faithfully,', 'Credit Control, AIMZONE Ventures'],
@@ -241,7 +247,7 @@ class CollectionNotices
 
         return match ($kind) {
             'due_soon' => "Aimzone: {$kes} on loan {$loan->id} is due " . ($due->isToday() ? 'TODAY' : 'on ' . $due->format('j M')) . ". Pay on time to avoid penalty.{$pay}",
-            'overdue' => "Aimzone: loan {$loan->id} is {$daysLate} days overdue. {$kes} due now; penalty is added daily. Pay today or log in to request a plan.{$pay}",
+            'overdue' => "Aimzone: loan {$loan->id} is {$daysLate} days overdue. {$kes} due now incl. penalties; more is added daily. Pay today or log in to request a plan.{$pay}",
             'final_notice' => "Aimzone FINAL NOTICE: {$kes} unpaid on loan {$loan->id}. Clear it or log in to set up a payment plan within 7 days, or it goes to recovery.",
         };
     }

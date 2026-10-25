@@ -306,3 +306,17 @@ KENYASMS_PHONE_FORMAT=254       # 254 (2547...), +254, or 0 (07...)
 ```
 
 Confirm the values against their "Send SMS" example before switching. Quiet hours (no SMS 20:00 to 08:00) apply as before.
+
+### Late-payment emails with penalties (25 October 2026)
+
+`NOTIFICATIONS_OVERDUE_EMAILS=true` emails borrowers who haven't paid, at 09:00 on days 1, 3, 7, 14, 21 and 30 late (and
+45 and 60, worded as a final notice), even while the other notifications are off. Each email shows what was due on the
+due date, the late penalty so far, the total due today and roughly what each further day adds. Change the days with
+`NOTIFICATIONS_OVERDUE_DAYS=1,3,7,14,21,30,45,60`. With `NOTIFICATIONS_ENABLED=true` the same reminder also goes by SMS.
+A loan that got a notice from Messages in the last two days is skipped. The same penalty lines are now in the overdue
+and final notices sent from Messages. Turn it on only after SPF/DKIM pass, or the emails land in spam.
+
+```bash
+switch_on NOTIFICATIONS_OVERDUE_EMAILS true
+php artisan notifications:reminders --dry-run     # lists who would get one today, sends nothing
+```

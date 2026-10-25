@@ -68,7 +68,7 @@ class MessagesController extends Controller
         }
         $loan = Loan::with(['user', 'loanType:id,name'])->findOrFail((int) $request->query('loan'));
         $row = $notices->current($kind, $loan, 30) ?? (object) ['owed' => 0.0, 'days_late' => 0, 'due_date' => now()];
-        $email = $notices->email($kind, $loan->user, $loan, $row->owed, $row->days_late, $row->due_date);
+        $email = $notices->email($kind, $loan->user, $loan, $row->owed, $row->days_late, $row->due_date, $row->penalty ?? null);
         $sms = $notices->sms($kind, $loan, $row->owed, $row->days_late, $row->due_date);
         $html = (string) Emails::mail($email)->render();
 

@@ -122,10 +122,13 @@
     } else {
       watchValue(el, function (v) { if (!same(v)) fp.setDate(v || null, false); });
     }
-    // disabled / required changes made by Alpine follow onto the visible field
-    if (fp.altInput && window.MutationObserver) {
-      new MutationObserver(function () { fp.altInput.disabled = el.disabled; fp.altInput.required = el.required; })
-        .observe(el, { attributes: true, attributeFilter: ['disabled', 'required'] });
+    // disabled / required changes made by Alpine follow onto the visible field, and min / max onto the calendar
+    if (window.MutationObserver) {
+      new MutationObserver(function () {
+        if (fp.altInput) { fp.altInput.disabled = el.disabled; fp.altInput.required = el.required; }
+        if ((fp.config.minDate ? fp.formatDate(fp.config.minDate, 'Y-m-d') : '') !== (el.min || '')) fp.set('minDate', el.min || null);
+        if ((fp.config.maxDate ? fp.formatDate(fp.config.maxDate, 'Y-m-d') : '') !== (el.max || '')) fp.set('maxDate', el.max || null);
+      }).observe(el, { attributes: true, attributeFilter: ['disabled', 'required', 'min', 'max'] });
     }
   }
 
