@@ -70,6 +70,16 @@ class CustomerEventsTest extends TestCase
         $this->artisan('notifications:reminders')->expectsOutputToContain('Quiet hours')->assertSuccessful();
     }
 
+    public function test_a_dry_run_lists_late_reminders_with_the_switches_off_and_sends_nothing(): void
+    {
+        Notification::fake();
+        config(['lending.notifications.enabled' => false, 'lending.notifications.overdue_emails' => false]);
+        Carbon::setTestNow(Carbon::parse('2026-10-27 23:00', 'Africa/Nairobi'));           // 7 days late, at night
+        $this->artisan('notifications:reminders --dry-run')->expectsOutputToContain('loan 1301: overdue, 7 day(s) late')->assertSuccessful();
+        Notification::assertNothingSent();
+        $this->artisan('notifications:reminders')->expectsOutputToContain('Off:')->assertSuccessful();
+    }
+
     public function test_late_emails_alone_go_by_email_with_the_penalty_and_nothing_else(): void
     {
         Notification::fake();

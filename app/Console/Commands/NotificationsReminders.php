@@ -26,6 +26,11 @@ class NotificationsReminders extends Command
     {
         $all = CustomerEvents::enabled();
         $lateOnly = ! $all && (bool) config('lending.notifications.overdue_emails');
+        // a dry run sends nothing, so it lists the late reminders even while the switches are off (owner, 26 Oct 2026)
+        if (! $all && ! $lateOnly && $this->option('dry-run')) {
+            $lateOnly = true;
+            $this->line('Switches are off; showing who would get a late-payment email if NOTIFICATIONS_OVERDUE_EMAILS were on.');
+        }
         if ((! $all && ! $lateOnly) || ! \App\Services\LoanCalculator::v2()) {
             $this->line('Off: needs NOTIFICATIONS_ENABLED (or NOTIFICATIONS_OVERDUE_EMAILS) and engine v2.');
 
@@ -34,7 +39,7 @@ class NotificationsReminders extends Command
         $notices = app(\App\Services\Messaging\CollectionNotices::class);
         $lateDays = (array) config('lending.notifications.overdue_days', [1, 7]);
         $hour = (int) now('Africa/Nairobi')->format('G');
-        if ($hour < 8 || $hour >= 20) {
+        if (($hour < 8 || $hour >= 20) && ! $this->option('dry-run')) {
             $this->line('Quiet hours (20:00-08:00 Nairobi): nothing sent.');
 
             return self::SUCCESS;
