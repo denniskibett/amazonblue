@@ -69,4 +69,33 @@ class ProductChangeTest extends TestCase
         $this->assertSame('2026-10-06', $c1->due_date->toDateString(), 'earlier cycles stay as booked');
         $this->assertMoney(2400, $c1->interest_capitalized);
     }
+
+    public function test_edit_current_cycle_sets_a_due_date_and_rate(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin)->post(route('loans.cycle.edit', 529), ['due_date' => '2026-10-20', 'interest_rate' => 15, 'reason' => 'agreed with borrower'])
+            ->assertRedirect()->assertSessionHas('success');
+
+        $c2 = LoanCycle::findOrFail(606);
+        $this->assertSame('2026-10-20', $c2->due_date->toDateString());
+        $this->assertMoney(15, $c2->interest_rate);
+        $this->assertMoney(2160, $c2->interest_capitalized);
+        $this->assertSame(1, (int) Loan::findOrFail(529)->loan_type_id, 'no product chosen: the product stays');
+
+        $this->actingAs($admin)->post(route('loans.cycle.edit', 529), ['due_date' => '2026-10-01', 'reason' => 'typo'])
+            ->assertSessionHasErrors('due_date');
+    }
+
+    public function test_rollover_into_a_shorter_product(): void
+    {
+        Carbon::setTestNow('2026-10-16 10:00');
+        $r = app(\App\Services\Loans\Rollover::class)->execute(Loan::findOrFail(529), ['loan_type_id' => 14]);
+
+        $this->assertSame('2026-10-16', $r['start_date']);
+        $this->assertSame('2026-10-21', $r['due_date'], 'five days, the new product');
+        $this->assertMoney(10, $r['interest_rate']);
+        $this->assertMoney(7.5, $r['created']->penalty_rate);
+        $this->assertSame(14, (int) Loan::findOrFail(529)->loan_type_id);
+    }
 }

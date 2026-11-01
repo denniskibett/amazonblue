@@ -1340,6 +1340,7 @@ class LoanController extends Controller
             'waive_penalty' => 'nullable|boolean',
             'rollover_date' => 'nullable|date|before_or_equal:today',
             'due_date' => 'nullable|date',
+            'loan_type_id' => 'nullable|exists:loan_types,id',
         ]);
 
         if ($validator->fails()) {
@@ -1370,6 +1371,8 @@ class LoanController extends Controller
                 // dates set in the modal (owner, 23 Oct 2026): the day it is booked, and a due date other than one period on
                 'date' => $request->rollover_date ?: null,
                 'due_date' => $request->due_date ?: null,
+                // roll into another product, e.g. 10 days → 5 days (owner, 1 Nov 2026)
+                'loan_type_id' => $request->loan_type_id ?: null,
             ]);
 
             // Log the result
@@ -1414,6 +1417,7 @@ class LoanController extends Controller
             'due_date' => ['nullable', 'date'],
             'interest_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'waive_penalty' => ['nullable', 'boolean'],
+            'loan_type_id' => ['nullable', 'exists:loan_types,id'],
         ]);
         try {
             $previewData = $this->loanCalculator->getRolloverPreview($loan, $options);
@@ -1582,16 +1586,62 @@ class LoanController extends Controller
         return back()->with('success', 'KES ' . number_format((float) $row->amount, 2) . ' booked as a discount; the cycle is paid in full.');
     }
 
-    /** What moving a sent loan to another product does to its open cycle, before saving (Edit loan). */
+    /**
+     * What a new product, due date or rate does to the open cycle, before saving: Edit loan (product only) and
+     * "Edit current cycle" on the loan page (owner, 1 Nov 2026).
+     */
     public function productChangePreview(Loan $loan, Request $request)
     {
         $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
-        $type = LoanType::findOrFail($request->validate(['loan_type_id' => 'required|exists:loan_types,id'])['loan_type_id']);
-        $preview = (int) $type->id !== (int) $loan->loan_type_id && LoanCalculator::v2()
-            ? \App\Services\Loans\ProductChange::preview($loan, $type)
-            : null;
+        [$type, $set] = $this->cycleEditInput($request, $loan);
+        if (! LoanCalculator::v2() || (! $type && ! $set)) {
+            return response()->json(['success' => true, 'data' => null]);
+        }
+        try {
+            $preview = \App\Services\Loans\ProductChange::preview($loan, $type, $set);
+        } catch (\DomainException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
 
         return response()->json(['success' => true, 'data' => $preview]);
+    }
+
+    /** Edit current cycle: a new product and/or a due date and rate set by staff, on the open cycle only. */
+    public function editCurrentCycle(Loan $loan, Request $request)
+    {
+        $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
+        [$type, $set] = $this->cycleEditInput($request, $loan);
+        $request->validate(['reason' => 'required|string|min:3|max:300']);
+        if (! LoanCalculator::v2() || (! $type && ! $set) || ! \App\Services\Loans\ProductChange::cycleFor($loan)) {
+            return back()->withErrors(['reason' => 'Nothing to change on this loan\'s current cycle.']);
+        }
+        $old = ['loan_type_id' => $loan->loan_type_id, 'reason' => $request->input('reason')];
+        try {
+            \App\Services\Loans\ProductChange::preview($loan, $type, $set); // checks the dates before anything is saved
+            DB::transaction(function () use ($loan, $type, $set, $old) {
+                if ($type) {
+                    $loan->forceFill(['loan_type_id' => $type->id])->save();
+                }
+                \App\Services\Loans\ProductChange::apply($loan->fresh(), $old, $set, (bool) $type);
+            });
+        } catch (\DomainException $e) {
+            return back()->withErrors(['due_date' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'The current cycle was updated.');
+    }
+
+    /** [new product or null, [due_date?, interest_rate?]] from an Edit current cycle request. */
+    private function cycleEditInput(Request $request, Loan $loan): array
+    {
+        $in = $request->validate([
+            'loan_type_id' => 'nullable|exists:loan_types,id',
+            'due_date' => 'nullable|date',
+            'interest_rate' => 'nullable|numeric|min:0|max:100',
+        ]);
+        $type = ! empty($in['loan_type_id']) && (int) $in['loan_type_id'] !== (int) $loan->loan_type_id ? LoanType::find($in['loan_type_id']) : null;
+
+        return [$type, array_filter(['due_date' => $in['due_date'] ?? null, 'interest_rate' => $in['interest_rate'] ?? null], fn ($v) => $v !== null && $v !== '')];
     }
 
     public function endForbearance(Loan $loan, Request $request)

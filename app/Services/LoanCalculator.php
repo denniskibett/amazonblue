@@ -1429,7 +1429,7 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, ?Carbon $cal
     private function executeRolloverV2(Loan $loan, array $options): array
     {
         $r = app(Rollover::class)->execute($loan, $options);
-        $type = $loan->loanType;
+        $type = $r['product'] ?? $loan->loanType;
 
         return [
             'success' => true,
@@ -1475,14 +1475,18 @@ public function calculateCycleBalance(Loan $loan, LoanCycle $cycle, ?Carbon $cal
         }
         $b = $p['balance'];
         $cycle = $p['cycle'];
-        $type = $loan->loanType;
+        $type = $p['product'] ?? $loan->loanType; // the product the new cycle runs on (owner, 1 Nov 2026: may change)
 
         return [
-            'loan_type_id' => $loan->loan_type_id,
+            'loan_type_id' => $type->id,
+            'current_loan_type_id' => $loan->loan_type_id,
             'loan_type_name' => $type->name,
             'period' => (int) $type->period,
             'period_unit' => $type->unit,
-            'period_display' => $this->getPeriodDisplay($loan),
+            'period_display' => $type->period . ' ' . $type->unit,
+            'products' => \App\Models\LoanType::orderBy('name')->get(['id', 'name', 'period', 'unit', 'interest_rate'])
+                ->map(fn ($t) => ['id' => $t->id, 'name' => $t->name, 'period' => $t->period . ' ' . $t->unit, 'n' => (int) $t->period,
+                    'unit' => (string) $t->unit, 'interest_rate' => (float) $t->interest_rate])->all(),
             'interest_rate' => $p['interest_rate'],
             'current_cycle' => $cycle->cycle_number,
             'current_due_date' => Carbon::parse($cycle->due_date)->format('M d, Y'),

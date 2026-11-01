@@ -189,5 +189,17 @@
   }
   theme();
   window.azDates = { scan: scan };
+  // a product period added to a Y-m-d date, like App\Services\Loans\Period (31 Jan + 1 month = 28 Feb)
+  window.azAddPeriod = function (ymd, n, unit) {
+    if (!ymd) return '';
+    var d = new Date(ymd + 'T00:00:00'), u = String(unit || 'days').toLowerCase().replace(/s$/, ''), day = d.getDate();
+    n = Number(n) || 0;
+    if (u === 'week') d.setDate(day + 7 * n);
+    else if (u === 'month' || u === 'year') {
+      d.setDate(1); d.setMonth(d.getMonth() + (u === 'year' ? 12 * n : n));
+      d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+    } else d.setDate(day + n);
+    return d.toLocaleDateString('en-CA');
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

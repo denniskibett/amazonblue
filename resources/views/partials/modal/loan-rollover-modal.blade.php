@@ -2,13 +2,14 @@
      (loans.rollover.preview, the same rules the booking uses) and lets staff set the dates when needed:
        - Booked on: the day the extension is recorded (today, or an earlier day inside the cycle);
        - New due date: one product period on by default, or any later date.
-     The rate is kept for cycles 2–4; from cycle 5 a new rate is required. Open with window.openRolloverModal(loanId). --}}
+     The rate is kept for cycles 2–4 unless staff change it; from cycle 5 a rate is required. Staff may also roll into
+     another product (owner, 1 Nov 2026: e.g. 10 days → 5 days), which sets the period and rate. Open with window.openRolloverModal(loanId). --}}
 <script>
   window.rolloverModal = window.rolloverModal || function () {
     return {
       open: false, loading: false, saving: false, loanId: null,
       p: {}, error: '', errors: [],
-      form: { date: '', due_date: '', interest_rate: '', waive_penalty: false, notes: '' },
+      form: { date: '', due_date: '', interest_rate: '', waive_penalty: false, notes: '', loan_type_id: '' },
       defaults: { due_date: '' },
       _pickBook: false,
       // Booked on: the last due date, today, or a date picked on the calendar
@@ -42,8 +43,8 @@
       show(loanId) {
         if (!loanId) return;
         this.loanId = loanId; this.p = {}; this.error = ''; this.errors = [];
-        this.form = { date: this.today, due_date: '', interest_rate: '', waive_penalty: false, notes: '' };
-        this._pickBook = false;
+        this.form = { date: this.today, due_date: '', interest_rate: '', waive_penalty: false, notes: '', loan_type_id: '' };
+        this._pickBook = false; this._pickDue = false;
         this.open = true;
         document.body.style.overflow = 'hidden';
         this.preview(true);
@@ -57,6 +58,7 @@
         if (this.form.due_date && this.form.due_date !== this.defaults.due_date) q.set('due_date', this.form.due_date);
         if (this.form.interest_rate !== '' && this.form.interest_rate !== null) q.set('interest_rate', this.form.interest_rate);
         if (this.form.waive_penalty) q.set('waive_penalty', 1);
+        if (this.productChanged()) q.set('loan_type_id', this.form.loan_type_id);
         try {
           const res = await fetch(`/loans/${this.loanId}/rollover-preview?${q}`, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
           const body = await res.json().catch(() => ({}));
@@ -70,11 +72,49 @@
             this.defaults.due_date = this.p.new_due_date_raw;
             this.form.due_date = this.p.new_due_date_raw;
           }
-          if (first && this.form.interest_rate === '') this.form.interest_rate = this.p.interest_rate;
+          if (this.form.interest_rate === '') this.form.interest_rate = this.p.interest_rate;
+          if (!this.form.loan_type_id) this.form.loan_type_id = String(this.p.current_loan_type_id || '');
         } catch (e) {
           this.error = 'Could not reach the server. Nothing was saved.';
         } finally { this.loading = false; }
       },
+      // quick picks (owner, 1 Nov 2026): product pills "5 days · 10%", and the new due date counted from the due date or today
+      _pickDue: false,
+      product() { return (this.p.products || []).find(t => String(t.id) === String(this.form.loan_type_id)) || null; },
+      productPills() {
+        const seen = {}, out = [];
+        (this.p.products || []).forEach(t => {
+          const label = t.period + ' · ' + t.interest_rate + '%';
+          if (seen[label] && String(t.id) !== String(this.p.current_loan_type_id)) return;
+          if (seen[label]) out.splice(out.indexOf(seen[label]), 1);
+          seen[label] = { id: String(t.id), label, name: t.name };
+          out.push(seen[label]);
+        });
+        return out;
+      },
+      choosePill(t) { if (String(this.form.loan_type_id) === t.id) return; this.form.loan_type_id = t.id; this._pickDue = false; this.pickProduct(); },
+      dueChoices() {
+        const t = this.product(), n = t ? t.n : this.p.period, u = t ? t.unit : this.p.period_unit;
+        const fromDue = window.azAddPeriod(this.p.current_due_date_raw, n, u), fromToday = window.azAddPeriod(this.today, n, u);
+        return [
+          { key: 'due', label: 'From due date · ' + this.day(fromDue), date: fromDue, off: fromDue <= (this.p.new_start_date_raw || '') },
+          { key: 'today', label: 'From today · ' + this.day(fromToday), date: fromToday, off: fromToday <= (this.p.new_start_date_raw || '') },
+          { key: 'pick', label: 'Pick a date', date: null },
+        ];
+      },
+      dueMode() {
+        if (this._pickDue) return 'pick';
+        const c = this.dueChoices().find(c => c.date && c.date === this.form.due_date);
+        return c ? c.key : (this.form.due_date === this.defaults.due_date ? '' : 'pick');
+      },
+      pickDue(c) {
+        this._pickDue = c.key === 'pick';
+        if (c.date) { this.form.due_date = c.date; this.changed(); return; }
+        this.$nextTick(() => { const el = document.getElementById('ro-due'); const fp = el && el._azPicker; fp ? fp.open() : (el && el.focus()); });
+      },
+      productChanged() { return !!this.form.loan_type_id && String(this.form.loan_type_id) !== String(this.p.current_loan_type_id || ''); },
+      // a new product brings its own period and rate: the due date and rate follow it until staff type their own
+      pickProduct() { this.form.due_date = ''; this.defaults.due_date = ''; this.form.interest_rate = ''; this.changed(); },
       needsRate() { return (this.p.new_cycle || 0) > (this.p.same_rate_cycles || 4); },
       async submit() {
         if (this.saving) return;
@@ -83,6 +123,7 @@
         if (this.form.date && this.form.date !== this.today) body.rollover_date = this.form.date;
         if (this.form.due_date && this.form.due_date !== this.defaults.due_date) body.due_date = this.form.due_date;
         if (this.needsRate() || (this.form.interest_rate !== '' && Number(this.form.interest_rate) !== Number(this.p.interest_rate))) body.interest_rate = this.form.interest_rate;
+        if (this.productChanged()) body.loan_type_id = this.form.loan_type_id;
         try {
           const res = await fetch(`/loans/${this.loanId}/rollover`, { method: 'POST', credentials: 'same-origin',
             headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json', 'Content-Type': 'application/json' },
@@ -132,7 +173,24 @@
 
         {{-- the dates --}}
         <div class="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
-          <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Dates</p>
+          <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Product and dates</p>
+          <div class="mb-4">
+            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-product">Product for the new cycle</label>
+            <div class="mb-2 flex flex-wrap gap-2" role="group" aria-label="Product">
+              <template x-for="t in productPills()" :key="t.id">
+                <button type="button" @click="choosePill(t)" :title="t.name"
+                        :class="String(form.loan_type_id) === t.id ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300' : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5'"
+                        class="rounded-full border px-3 py-1.5 text-xs font-medium" x-text="t.label"></button>
+              </template>
+            </div>
+            <select id="ro-product" x-model="form.loan_type_id" @change="pickProduct()"
+                    class="h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+              <template x-for="t in (p.products || [])" :key="t.id">
+                <option :value="String(t.id)" :selected="String(t.id) === String(form.loan_type_id)" x-text="t.name + ' · ' + t.period + ' · ' + t.interest_rate + '%' + (String(t.id) === String(p.current_loan_type_id) ? ' (current)' : '')"></option>
+              </template>
+            </select>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="productChanged() ? 'The new cycle and the loan move to this product: its period, rate and penalty apply. You can still set your own due date or rate below.' : 'Same product as now. Pick another to shorten or lengthen the cycle (e.g. 10 days → 5 days).'"></p>
+          </div>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-date">Booked on</label>
@@ -152,6 +210,13 @@
             </div>
             <div>
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-due">New due date</label>
+              <div class="mb-2 flex flex-wrap gap-2" role="group" aria-label="New due date">
+                <template x-for="c in dueChoices()" :key="c.key">
+                  <button type="button" @click="pickDue(c)" :disabled="!!c.off" :title="c.off ? 'Falls on or before the new cycle start' : ''"
+                          :class="dueMode() === c.key ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300' : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5'"
+                          class="rounded-full border px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40" x-text="c.label"></button>
+                </template>
+              </div>
               <input id="ro-due" type="date" x-model="form.due_date" @change="changed()" :min="p.new_start_date_raw"
                      class="h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
               <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -170,10 +235,9 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-rate">Interest rate (%)</label>
-            <input id="ro-rate" type="number" step="0.01" min="0" max="100" x-model="form.interest_rate" @input="changed()" :readonly="!needsRate()"
-                   :class="!needsRate() ? 'bg-gray-100 text-gray-500 dark:bg-gray-800' : 'bg-gray-50/70'"
-                   class="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white">
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="needsRate() ? 'Cycle ' + p.new_cycle + ': set the rate for this cycle (or use a payment plan).' : 'Cycles 2 to ' + p.same_rate_cycles + ' keep the previous rate.'"></p>
+            <input id="ro-rate" type="number" step="0.01" min="0" max="100" x-model="form.interest_rate" @input="changed()"
+                   class="bg-gray-50/70 h-11 w-full rounded-xl border border-gray-200 px-4 text-sm focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white">
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="needsRate() ? 'Cycle ' + p.new_cycle + ': set the rate for this cycle (or use a payment plan).' : (productChanged() ? 'The product\'s rate; change it if agreed otherwise.' : 'The previous rate; change it if agreed otherwise.')"></p>
           </div>
           <label class="flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50/60 p-4 text-sm dark:border-amber-500/20 dark:bg-amber-500/5">
             <input type="checkbox" x-model="form.waive_penalty" @change="changed()" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600">

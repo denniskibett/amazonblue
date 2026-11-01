@@ -4,6 +4,7 @@ namespace App\Services\Loans;
 
 use App\Models\Loan;
 use App\Models\LoanCycle;
+use App\Models\LoanType;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -15,8 +16,10 @@ use Illuminate\Support\Facades\DB;
  *    including that day, after that day's payments.
  *  - The new cycle starts on the rollover day if the cycle is late (the last penalty day), otherwise on the due
  *    date, and is due one product period later (or after a custom number of days, or on a custom date).
- *  - Rate: cycles 2 to lending.rollover.same_rate_cycles (4) keep the previous cycle's rate. From the next cycle
- *    staff must set a rate (or use a payment plan).
+ *  - Rate: cycles 2 to lending.rollover.same_rate_cycles (4) keep the previous cycle's rate unless staff set one; from
+ *    the next cycle staff must set a rate (or use a payment plan). Owner, 1 Nov 2026: staff may also roll into another
+ *    product ('loan_type_id', e.g. 10 days → 5 days): its period, rate and penalty apply to the new cycle and the loan
+ *    moves to that product; a rate or due date typed by staff still wins.
  *  - The old cycle is closed (completed, closed_on, balance cache); it can never be rolled again.
  *  - Runs in one transaction with the loan and the cycle locked.
  *
@@ -37,6 +40,10 @@ class Rollover
         $loan->loadMissing('loanType');
         $type = $loan->loanType ?? throw new \DomainException('Loan type not found for loan #' . $loan->id);
         $isPlan = (bool) ($options['plan'] ?? false);
+        $product = ! empty($options['loan_type_id']) && (int) $options['loan_type_id'] !== (int) $type->id
+            ? (LoanType::find($options['loan_type_id']) ?? throw new \DomainException('That product was not found.'))
+            : null;
+        $terms = $product ?? $type;
         // a loan already on a plan (forbearance) can be moved to a new plan, not extended
         if (! in_array($loan->status, $isPlan ? [...self::ROLLABLE, Loan::STATUS_FORBEARANCE] : self::ROLLABLE, true)) {
             throw new \DomainException('This loan is not eligible for an extension (status ' . $loan->status . ').');
@@ -67,10 +74,11 @@ class Rollover
         $sameRateUpTo = (int) config('lending.rollover.same_rate_cycles', 4);
         if ($isPlan) {
             $rate = $askedRate ?? throw new \DomainException('A payment plan needs a rate (0 for none).');
+        } elseif ($askedRate !== null) {
+            $rate = $askedRate;
+        } elseif ($product) {
+            $rate = (float) $product->interest_rate;
         } elseif ($number <= $sameRateUpTo) {
-            if ($askedRate !== null && abs($askedRate - $previousRate) > 0.0001) {
-                throw new \DomainException("Cycles 2 to {$sameRateUpTo} keep the previous rate ({$previousRate}%).");
-            }
             $rate = $previousRate;
         } else {
             $rate = $askedRate ?? throw new \DomainException("Cycle {$number}: set a new rate, or start a payment plan.");
@@ -83,7 +91,7 @@ class Rollover
         } elseif (! empty($options['period_days'])) {
             $newDue = $start->copy()->addDays((int) $options['period_days']);
         } else {
-            $newDue = Period::add($start, (int) $type->period, (string) $type->unit);
+            $newDue = Period::add($start, (int) $terms->period, (string) $terms->unit);
         }
         if ($newDue->lte($start)) {
             throw new \DomainException('The new due date must be after the new start date.');
@@ -113,12 +121,15 @@ class Rollover
             'start_date' => $start->toDateString(),
             'due_date' => $newDue->toDateString(),
             'waive_penalty' => $waive,
-            'penalty_rate' => (float) $type->penalty_rate,
-            'grace_days' => (int) ($type->grace_period_days ?? 0),
-            'threshold_days' => (int) ($loan->npl_trigger_threshold ?: ($type->default_threshold_days ?? 30)),
+            'penalty_rate' => (float) $terms->penalty_rate,
+            'grace_days' => (int) ($terms->grace_period_days ?? 0),
+            'threshold_days' => (int) ($loan->npl_trigger_threshold ?: ($terms->default_threshold_days ?? 30)),
+            'loan_type_id' => $product?->id,
+            'product' => $terms,
             'plan' => $isPlan,
             'written_down' => round($balance['final_outstanding'] - $principal, 2),
             'notes' => trim(($options['notes'] ?? '') ?: (($isPlan ? 'Payment plan' : 'Extension') . ': cycle ' . $number))
+                . ($product ? ' - product ' . $product->name : '')
                 . ($waive ? ' - PENALTIES WAIVED (this cycle)' : '')
                 . ($balance['final_outstanding'] - $principal > 0.004 ? ' - written down by KES ' . number_format($balance['final_outstanding'] - $principal, 2) : ''),
         ];
@@ -177,7 +188,7 @@ class Rollover
                 'capitalized_interest' => (float) ($locked->capitalized_interest ?? 0) + $plan['interest'],
                 'days_overdue' => 0,
                 'is_non_performing' => false,
-            ])->save();
+            ] + ($plan['loan_type_id'] ? ['loan_type_id' => $plan['loan_type_id']] : []))->save();
             LoanSync::fromCycles($locked);
 
             return $plan + ['created' => $new];

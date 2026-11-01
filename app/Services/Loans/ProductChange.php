@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\Log;
  * charges the new product's interest and penalty rates. Earlier cycles, disbursements and repayments stay as booked;
  * the repayments on the open cycle are re-allocated by CycleBalance, and the ledger and partner split follow the save.
  * A loan that has moved no money is rebuilt from scratch instead (LoanCalculator::rebuildInitialCycle).
+ *
+ * "Edit current cycle" on the loan page (owner, 1 Nov 2026) uses the same path with $set: a due date and/or interest
+ * rate typed by staff, with or without a new product ($type null = keep the cycle's own terms).
  */
 class ProductChange
 {
@@ -30,7 +33,7 @@ class ProductChange
     }
 
     /** Before and after for the open cycle, worked out today; null when the change does not touch a cycle. */
-    public static function preview(Loan $loan, LoanType $type): ?array
+    public static function preview(Loan $loan, ?LoanType $type, array $set = []): ?array
     {
         $cycle = self::cycleFor($loan);
         if (! $cycle) {
@@ -39,7 +42,7 @@ class ProductChange
         $today = now()->toDateString();
         $terms = CycleBalance::termsFor($cycle);
         $payments = CycleBalance::paymentsFor($cycle);
-        $new = self::newTerms($cycle, $type);
+        $new = self::newTerms($cycle, $type, $set);
         $before = CycleBalance::compute($terms, $payments, $today);
         $after = CycleBalance::compute(array_merge($terms, [
             'due' => $new['due_date'], 'interest_rate' => $new['interest_rate'], 'penalty_rate' => $new['penalty_rate'],
@@ -56,22 +59,23 @@ class ProductChange
             'principal' => $cycle->lentPrincipal(),
             'before' => $side(['product' => $loan->loanType->name ?? '', 'due_date' => $terms['due'],
                 'interest_rate' => (float) $terms['interest_rate'], 'penalty_rate' => (float) $terms['penalty_rate']], $before),
-            'after' => $side(['product' => $type->name] + $new, $after),
+            'after' => $side(['product' => ($type ?? $loan->loanType)->name ?? ''] + $new, $after),
         ];
     }
 
     /** Re-price the open cycle with the loan's (already saved) product. Returns the preview it applied, or null. */
-    public static function apply(Loan $loan, ?array $old = null): ?array
+    public static function apply(Loan $loan, ?array $old = null, array $set = [], bool $product = true): ?array
     {
         $loan->load('loanType');
         $cycle = self::cycleFor($loan);
         if (! $cycle || ! $loan->loanType) {
             return null;
         }
-        $preview = self::preview($loan, $loan->loanType);
-        $new = self::newTerms($cycle, $loan->loanType);
+        $type = $product ? $loan->loanType : null;
+        $preview = self::preview($loan, $type, $set);
+        $new = self::newTerms($cycle, $type, $set);
 
-        DB::transaction(function () use ($loan, $cycle, $new, $old, $preview) {
+        DB::transaction(function () use ($loan, $cycle, $new, $old, $preview, $type) {
             $cycle = LoanCycle::whereKey($cycle->id)->lockForUpdate()->firstOrFail();
             $principal = $cycle->lentPrincipal();
             $interest = round($principal * $new['interest_rate'] / 100, 2);
@@ -83,7 +87,8 @@ class ProductChange
                 'new_balance' => round($principal + $interest, 2),
                 'due_date' => $new['due_date'],
             ]);
-            $cycle->notes = trim($cycle->notes . ' | Product changed to ' . $loan->loanType->name . ' on ' . now()->toDateString(), ' |');
+            $what = $type ? 'Product changed to ' . $type->name : 'Cycle terms changed';
+            $cycle->notes = trim($cycle->notes . ' | ' . $what . ' (due ' . $new['due_date'] . ', ' . $new['interest_rate'] . '%) on ' . now()->toDateString(), ' |');
             $cycle->save();
 
             $loan->forceFill(['due_date' => $new['due_date']])->save();
@@ -104,14 +109,26 @@ class ProductChange
         return $preview;
     }
 
-    private static function newTerms(LoanCycle $cycle, LoanType $type): array
+    /** The open cycle's new due date and rates: the product's (or the cycle's own), then what staff typed. */
+    private static function newTerms(LoanCycle $cycle, ?LoanType $type, array $set = []): array
     {
         $start = Carbon::parse($cycle->start_date)->startOfDay();
-
-        return [
+        $now = CycleBalance::termsFor($cycle);
+        $t = $type ? [
             'due_date' => Period::add($start, (int) $type->period, (string) $type->unit)->toDateString(),
             'interest_rate' => (float) $type->interest_rate,
             'penalty_rate' => (float) ($type->penalty_rate ?? 0),
-        ];
+        ] : ['due_date' => $now['due'], 'interest_rate' => (float) $now['interest_rate'], 'penalty_rate' => (float) $now['penalty_rate']];
+        if (! empty($set['due_date'])) {
+            $t['due_date'] = Carbon::parse($set['due_date'])->toDateString();
+        }
+        if (isset($set['interest_rate']) && $set['interest_rate'] !== '') {
+            $t['interest_rate'] = (float) $set['interest_rate'];
+        }
+        if ($t['due_date'] <= $start->toDateString()) {
+            throw new \DomainException('The due date must be after the cycle start (' . $start->format('j M Y') . ').');
+        }
+
+        return $t;
     }
 }

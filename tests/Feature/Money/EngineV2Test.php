@@ -159,12 +159,9 @@ class EngineV2Test extends TestCase
         Carbon::setTestNow('2026-10-17 10:00');
         $roll = app(\App\Services\Loans\Rollover::class);
 
-        try {
-            $roll->preview(Loan::findOrFail(529), ['interest_rate' => 30]);
-            $this->fail('cycle 3 must keep the previous rate');
-        } catch (\DomainException $e) {
-            $this->assertStringContainsString('keep the previous rate', $e->getMessage());
-        }
+        // cycle 3 keeps the previous rate by default; staff may set another (owner, 1 Nov 2026)
+        $this->assertSame(20.0, (float) $roll->preview(Loan::findOrFail(529))['interest_rate']);
+        $this->assertSame(30.0, (float) $roll->preview(Loan::findOrFail(529), ['interest_rate' => 30])['interest_rate']);
 
         LoanCycle::whereKey(606)->update(['status' => 'completed']);
         $this->expectException(\DomainException::class);

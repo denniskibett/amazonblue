@@ -287,6 +287,11 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('product-change.preview')
             ->middleware('permission:edit loans');
 
+        // Edit current cycle: product, due date and rate of the open cycle (owner, 1 Nov 2026)
+        Route::post('/cycle-edit', [LoanController::class, 'editCurrentCycle'])
+            ->name('cycle.edit')
+            ->middleware('permission:edit loans');
+
         // a short payment accepted as paid in full, the gap booked as a discount (owner, 1 Nov 2026)
         Route::post('/accept-shortfall', [LoanController::class, 'acceptShortfall'])
             ->name('shortfall.accept')

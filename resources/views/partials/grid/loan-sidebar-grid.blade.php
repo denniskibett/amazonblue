@@ -238,6 +238,104 @@
             </button>
             @endif
 
+            <!-- Edit current cycle: another product, or a due date and rate set by staff; open cycle only (owner, 1 Nov 2026) -->
+            @can('edit loans')
+            @php $editCycle = \App\Services\LoanCalculator::v2() && in_array($loan->status, ['active', 'overdue', 'disbursed', 'forbearance']) ? \App\Services\Loans\ProductChange::cycleFor($loan) : null; @endphp
+            @if($editCycle)
+            @php
+                $cycleTypes = \App\Models\LoanType::orderBy('name')->get();
+                $cycleTypesJs = $cycleTypes->map(fn ($lt) => ['id' => (string) $lt->id, 'name' => $lt->name, 'n' => (int) $lt->period, 'unit' => (string) $lt->unit,
+                    'label' => $lt->period . ' ' . $lt->unit . ' · ' . (float) $lt->interest_rate . '%'])->values();
+            @endphp
+            <details class="rounded-lg border border-gray-300 dark:border-gray-700"
+                     x-data="{ t: '{{ $loan->loan_type_id }}', due: '', rate: '', p: null, err: '', busy: false, timer: null, pickDue: false,
+                               types: @js($cycleTypesJs), cur: '{{ $loan->loan_type_id }}',
+                               start: '{{ \Illuminate\Support\Carbon::parse($editCycle->start_date)->toDateString() }}',
+                               curDue: '{{ \Illuminate\Support\Carbon::parse($editCycle->due_date)->toDateString() }}',
+                               today: new Date().toLocaleDateString('en-CA'),
+                               day(d) { return d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''; },
+                               {{-- quick picks (owner, 1 Nov 2026): one pill per period and rate, and the due date counted from the start, the due date or today --}}
+                               pills() { const seen = {}; this.types.forEach(x => { if (!seen[x.label] || x.id === this.cur) seen[x.label] = x; }); return Object.values(seen); },
+                               choose(x) { this.t = x.id; this.due = ''; this.rate = ''; this.pickDue = false; this.go(); },
+                               dueChoices() {
+                                 const x = this.types.find(x => x.id === String(this.t)), add = d => window.azAddPeriod(d, x.n, x.unit);
+                                 return [['start', 'From cycle start', add(this.start)], ['due', 'From due date', add(this.curDue)], ['today', 'From today', add(this.today)]]
+                                   .map(([key, label, date]) => ({ key, label: label + ' · ' + this.day(date), date, off: date <= this.start })).concat([{ key: 'pick', label: 'Pick a date', date: null }]);
+                               },
+                               dueMode() { if (this.pickDue) return 'pick'; const c = this.dueChoices().find(c => c.date && c.date === this.due); return c ? c.key : (this.due ? 'pick' : ''); },
+                               setDue(c) {
+                                 this.pickDue = c.key === 'pick';
+                                 if (c.date) { this.due = c.date; this.go(); return; }
+                                 this.$nextTick(() => { const fp = this.$refs.due && this.$refs.due._azPicker; fp ? fp.open() : this.$refs.due.focus(); });
+                               },
+                               kes(n) { return 'KES ' + Number(n || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+                               go() { clearTimeout(this.timer); this.timer = setTimeout(() => this.load(), 300); },
+                               async load() {
+                                 const q = new URLSearchParams();
+                                 if (this.t !== '{{ $loan->loan_type_id }}') q.set('loan_type_id', this.t);
+                                 if (this.due) q.set('due_date', this.due);
+                                 if (this.rate !== '') q.set('interest_rate', this.rate);
+                                 this.err = ''; if (![...q.keys()].length) { this.p = null; return; }
+                                 this.busy = true;
+                                 try {
+                                   const r = await fetch('{{ route('loans.product-change.preview', $loan) }}?' + q, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                                   const b = await r.json().catch(() => ({}));
+                                   this.p = r.ok ? b.data : null; this.err = r.ok ? '' : (b.message || (b.errors ? Object.values(b.errors).flat().join(' ') : 'Could not work it out.'));
+                                 } catch (e) { this.err = 'Could not reach the server.'; } finally { this.busy = false; }
+                               } }">
+                <summary class="flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300">Edit current cycle</summary>
+                <form method="POST" action="{{ route('loans.cycle.edit', $loan) }}" class="space-y-2 p-3">
+                    @csrf
+                    <div class="flex flex-wrap gap-1.5" role="group" aria-label="Product">
+                        <template x-for="x in pills()" :key="x.id">
+                            <button type="button" @click="choose(x)" :title="x.name" x-text="x.label"
+                                    :class="String(t) === x.id ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300' : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300'"
+                                    class="rounded-full border px-2.5 py-1 text-xs font-medium"></button>
+                        </template>
+                    </div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Product
+                        <select name="loan_type_id" x-model="t" @change="due = ''; rate = ''; pickDue = false; go()" class="mt-1 w-full rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                            @foreach($cycleTypes as $lt)
+                                <option value="{{ $lt->id }}">{{ $lt->name }} · {{ $lt->period }} {{ $lt->unit }} · {{ (float) $lt->interest_rate }}%{{ $lt->id === $loan->loan_type_id ? ' (current)' : '' }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <div class="flex flex-wrap gap-1.5" role="group" aria-label="Due date">
+                        <template x-for="c in dueChoices()" :key="c.key">
+                            <button type="button" @click="setDue(c)" :disabled="!!c.off" x-text="c.label"
+                                    :class="dueMode() === c.key ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300' : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300'"
+                                    class="rounded-full border px-2.5 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40"></button>
+                        </template>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Due date
+                            <input type="date" name="due_date" x-ref="due" x-model="due" @change="go()" min="{{ \Illuminate\Support\Carbon::parse($editCycle->start_date)->addDay()->toDateString() }}" placeholder="{{ \Illuminate\Support\Carbon::parse($editCycle->due_date)->format('j M Y') }}" class="mt-1 w-full rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                        </label>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Interest %
+                            <input type="number" name="interest_rate" x-model="rate" @input="go()" step="0.01" min="0" max="100" placeholder="{{ (float) ($editCycle->interest_rate ?? $loan->loanType?->interest_rate) }}" class="mt-1 w-full rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-500">Cycle {{ $editCycle->cycle_number }} started {{ \Illuminate\Support\Carbon::parse($editCycle->start_date)->format('j M Y') }}, due {{ \Illuminate\Support\Carbon::parse($editCycle->due_date)->format('j M Y') }}. Leave a field empty to keep it (or take the product's).</p>
+                    <p x-show="err" x-text="err" class="rounded bg-red-50 px-2 py-1 text-xs text-red-700"></p>
+                    <template x-if="p">
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-gray-500"><tr><th></th><th>Now</th><th>After</th></tr></thead>
+                            <tbody class="text-gray-800 dark:text-gray-200">
+                                <tr><td class="text-gray-500">Due</td><td x-text="p.before.due_date"></td><td class="font-semibold" x-text="p.after.due_date"></td></tr>
+                                <tr><td class="text-gray-500">Rate</td><td x-text="p.before.interest_rate + '%'"></td><td class="font-semibold" x-text="p.after.interest_rate + '%'"></td></tr>
+                                <tr><td class="text-gray-500">Interest</td><td x-text="kes(p.before.interest)"></td><td class="font-semibold" x-text="kes(p.after.interest)"></td></tr>
+                                <tr><td class="text-gray-500">Penalty</td><td x-text="kes(p.before.penalty)"></td><td class="font-semibold" x-text="kes(p.after.penalty)"></td></tr>
+                                <tr><td class="text-gray-500">Owed today</td><td x-text="kes(p.before.owed_today)"></td><td class="font-semibold" x-text="kes(p.after.owed_today)"></td></tr>
+                            </tbody>
+                        </table>
+                    </template>
+                    <x-staff.field name="reason" label="Reason" :value="old('reason')" placeholder="Agreed 5 days instead of 10" required />
+                    <button :disabled="busy || !!err || !p" class="w-full rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50">Save cycle changes</button>
+                </form>
+            </details>
+            @endif
+            @endcan
+
             <!-- Short payment accepted as paid in full: the gap is booked as a discount (owner, 1 Nov 2026) -->
             @can('edit loans')
             @php $short = \App\Services\Loans\ShortfallDiscount::check($loan); @endphp
