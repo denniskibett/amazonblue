@@ -27,6 +27,8 @@ trait PartnerSelfService
     {
         $partner = $account->partnerFor($request->user());
 
+        $request->session()->forget('account_area'); // back to the default landing (HomeController@account)
+
         return view('home.account.partner', [
             'user' => $request->user(),
             'portfolio' => $partner ? $portfolio->summary($partner) : null,
@@ -71,8 +73,13 @@ trait PartnerSelfService
         $status = $request->query('status');
         $groups = ['open' => ['disbursed', 'active', 'overdue', 'forbearance', 'defaulted', 'recovery'], 'repaid' => ['repaid'], 'closed' => ['written_off', 'rejected']];
         // G6: loans funded through an investment and loans brought in as a broker are separate lists
-        $list = $request->query('list') === 'brokered' ? 'brokered' : 'funded';
-        $query = fn () => $list === 'brokered' ? $account->brokeredLoans($partner) : $account->fundedLoans($partner);
+        // owner, 1 Nov 2026: plus loans not sent yet (pending/approved) as their own list
+        $list = in_array($request->query('list'), ['brokered', 'pending'], true) ? $request->query('list') : 'funded';
+        $query = fn () => match ($list) {
+            'brokered' => $account->brokeredLoans($partner),
+            'pending' => $account->pendingLoans($partner),
+            default => $account->fundedLoans($partner),
+        };
 
         return view('home.account.partner.loans', [
             'partner' => $partner,
@@ -82,7 +89,7 @@ trait PartnerSelfService
                 ->when(array_key_exists((string) $status, $groups), fn ($q) => $q->whereIn('status', $groups[$status]))
                 ->with('user')->latest('id')->paginate(20)->withQueryString(),
             'total' => $query()->count(),
-            'counts' => ['funded' => $account->fundedLoans($partner)->count(), 'brokered' => $account->brokeredLoans($partner)->count()],
+            'counts' => ['funded' => $account->fundedLoans($partner)->count(), 'brokered' => $account->brokeredLoans($partner)->count(), 'pending' => $account->pendingLoans($partner)->count()],
         ]);
     }
 

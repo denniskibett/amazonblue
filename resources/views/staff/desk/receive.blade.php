@@ -169,10 +169,22 @@
                 <span class="text-gray-500 dark:text-gray-400" title="Includes penalty charged up to the date received">Cycle owes today</span>
                 <span class="font-outfit tabular-nums"><span x-text="kes(r.owed_before)"></span> <span class="text-gray-400">→</span> <b class="text-gray-800 dark:text-white/90" x-text="kes(r.owed_after)"></b></span>
               </div>
+              {{-- part funded (owner, 1 Nov 2026): who put in what, and their slice of this payment --}}
+              <div x-show="(r.funders || []).length">
+                <p class="mb-2 text-theme-xs font-medium text-gray-500 dark:text-gray-400">Funded by</p>
+                <ul class="space-y-1">
+                  <template x-for="(f, i) in (r.funders || [])" :key="'f' + i">
+                    <li class="flex items-start justify-between gap-3 text-theme-sm">
+                      <span><span class="text-gray-800 dark:text-white/90" x-text="f.name + ' · ' + f.pct + '%'"></span><span class="block text-theme-xs text-gray-500 dark:text-gray-400" x-text="'Put in ' + kes(f.amount) + (f.line ? ' · ' + f.line : '')"></span></span>
+                      <span class="text-right text-theme-xs tabular-nums text-gray-500 dark:text-gray-400"><span x-text="'Interest ' + kes(f.interest)"></span><span class="block" x-text="'Principal ' + kes(f.principal)"></span></span>
+                    </li>
+                  </template>
+                </ul>
+              </div>
               <div x-show="r.shares.length">
                 <p class="mb-2 text-theme-xs font-medium text-gray-500 dark:text-gray-400">Interest and penalty shared</p>
                 <ul class="space-y-2">
-                  <template x-for="sh in r.shares" :key="sh.partner + sh.type">
+                  <template x-for="(sh, i) in r.shares" :key="i">
                     <li class="flex items-start justify-between gap-3 text-theme-sm">
                       <span><span class="text-gray-800 dark:text-white/90" x-text="sh.house ? sh.partner + ' (house)' : sh.partner"></span><span class="block text-theme-xs text-gray-500 dark:text-gray-400" x-text="sh.why"></span></span>
                       <span class="font-outfit tabular-nums text-gray-800 dark:text-white/90" x-text="kes(sh.amount)"></span>

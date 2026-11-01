@@ -524,6 +524,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         // partner money and links: read an M-Pesa SMS, record a partner line, per-loan broker/funder with a dry run (owner, 23 Oct 2026)
         Route::post('mpesa/read-sms', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'parseSms'])->name('mpesa.read-sms');
         Route::post('partners/{partner}/lines', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'storeLine'])->name('partners.lines.store')->middleware('permission:edit partners');
+        // portal login for a partner: link an existing user or create one (owner, 1 Nov 2026)
+        Route::post('partners/{partner}/login', [\App\Http\Controllers\Staff\PartnerLoginController::class, 'store'])->name('partners.login.store')->middleware('permission:edit partners');
         Route::get('loans/{loan}/partner-options', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'options'])->name('loans.partner-options')->middleware('permission:create disbursements');
         Route::get('loans/{loan}/partners', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'show'])->name('loans.partners')->middleware('permission:edit partners');
         Route::post('loans/{loan}/partners', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'apply'])->name('loans.partners.apply')->middleware('permission:edit partners');

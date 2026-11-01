@@ -27,7 +27,7 @@
     </section>
   @else
     <section class="a-hero">
-      <p class="label">Available balance</p>
+      <p class="label">To be paid out · available now</p>
       <p class="big"><x-az.money :amount="$portfolio['available']" /></p>
       <p class="sub"><x-az.money :amount="$portfolio['earned_this_month']" /> earned this month · <x-az.money :amount="$portfolio['earned']" /> all time</p>
       @if ($portfolio['lent_out'] > 0)
@@ -45,14 +45,56 @@
     </section>
 
     <div class="a-stats p-three">
-      <a class="a-stat" href="{{ route('account.statement', ['wallet' => 'principal']) }}" style="text-decoration:none"><span>Capital (principal)</span><b><x-az.money :amount="$portfolio['wallets']['principal']['balance']" /></b></a>
-      <a class="a-stat" href="{{ route('account.partner.earnings') }}" style="text-decoration:none"><span>Interest earned</span><b><x-az.money :amount="$home['interest_earned']" /></b></a>
+      {{-- owner, 1 Nov 2026: earnings split three ways (brokers earn mostly fees and penalty share) --}}
       <a class="a-stat" href="{{ route('account.partner.earnings') }}" style="text-decoration:none"><span>Broker fees earned</span><b><x-az.money :amount="$home['broker_fees']" /></b></a>
+      <a class="a-stat" href="{{ route('account.partner.earnings') }}" style="text-decoration:none"><span>Penalty share earned</span><b><x-az.money :amount="$home['penalty_share']" /></b></a>
+      <a class="a-stat" href="{{ route('account.partner.earnings') }}" style="text-decoration:none"><span>Interest share earned</span><b><x-az.money :amount="$home['interest_share']" /></b></a>
+    </div>
+
+    {{-- owner, 1 Nov 2026: partners asked what is to be paid out and what was paid out --}}
+    <div class="a-grid two">
+      <section class="a-card" id="to-be-paid">
+        <div class="a-sec-h"><h2>To be paid out</h2><a href="{{ route('account.partner.withdraw') }}">Withdraw</a></div>
+        <dl class="a-dl">
+          @foreach ($home['withdrawable'] as $slug => $w)
+            <div><dt>{{ $w['label'] }}</dt><dd><x-az.money :amount="$w['balance']" /></dd></div>
+          @endforeach
+          <div><dt><b>Total you can withdraw now</b></dt><dd><b><x-az.money :amount="collect($home['withdrawable'])->sum('balance')" /></b></dd></div>
+        </dl>
+        @if ($home['withdrawable']['principal']['lent_out'] > 0)
+          <p class="muted" style="font-size:12.5px;margin:8px 0 0"><x-az.money :amount="$home['withdrawable']['principal']['lent_out']" /> of your capital is lent out and comes back as borrowers repay.</p>
+        @endif
+        @if ($home['requested']->isNotEmpty())
+          <p style="font-size:14px;margin:12px 0 4px"><b>Requested, being paid</b></p>
+          <div class="a-list">
+            @foreach ($home['requested'] as $r)
+              <div class="a-row"><span class="t"><b>{{ \App\Services\PartnerPortfolio::WALLETS[$r->wallet_slug] ?? 'Withdrawal' }}</b><span>Asked {{ \Illuminate\Support\Carbon::parse($r->created_at)->format('j M Y') }}</span></span><span class="amt"><x-az.money :amount="$r->amount" /></span></div>
+            @endforeach
+          </div>
+        @endif
+      </section>
+
+      <section class="a-card" id="paid-out">
+        <div class="a-sec-h"><h2>Paid out</h2><a href="{{ route('account.statement') }}">Statement</a></div>
+        <p class="muted" style="font-size:14px;margin:0 0 8px">Total paid to you: <b><x-az.money :amount="$home['paid_out_total']" /></b></p>
+        @if ($home['paid_out']->isEmpty())
+          <p class="a-empty">Nothing has been paid out to you yet. When we pay a withdrawal it shows here with the date and amount.</p>
+        @else
+          <div class="a-list">
+            @foreach ($home['paid_out'] as $entry)
+              <div class="a-row">
+                <span class="t"><b>{{ \App\Services\PartnerPortfolio::label($entry) }}</b><span>{{ \App\Services\PartnerPortfolio::WALLETS[$entry->wallet_slug] ?? ucfirst(str_replace('_', ' ', $entry->wallet_slug)) }}{{ $entry->reference ? ' · ' . $entry->reference : '' }}</span></span>
+                <span class="amt"><x-az.money :amount="abs((float) $entry->amount)" /><small>{{ \Illuminate\Support\Carbon::parse($entry->transaction_date)->format('j M Y') }}</small></span>
+              </div>
+            @endforeach
+          </div>
+        @endif
+      </section>
     </div>
 
     <nav class="a-actions" aria-label="Partner shortcuts">
       <a class="a-action" href="{{ route('account.partner.investments') }}">{!! $tile('M4 20V10M10 20V4M16 20v-7M22 20H2') !!}Investments</a>
-      <a class="a-action" href="{{ route('account.partner.loans') }}">{!! $tile('M12 8c4 0 7-1 7-2.5S16 3 12 3 5 4 5 5.5 8 8 12 8zM5 5.5v6C5 13 8 14 12 14s7-1 7-2.5v-6') !!}Funded loans</a>
+      <a class="a-action" href="{{ route('account.partner.loans') }}">{!! $tile('M12 8c4 0 7-1 7-2.5S16 3 12 3 5 4 5 5.5 8 8 12 8zM5 5.5v6C5 13 8 14 12 14s7-1 7-2.5v-6') !!}Loans</a>
       <a class="a-action" href="{{ route('account.partner.earnings') }}">{!! $tile('M4 19h16M7 15l4-4 3 3 5-6') !!}Earnings</a>
       <a class="a-action" href="{{ route('account.statement') }}">{!! $tile('M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6') !!}Statement</a>
     </nav>
@@ -100,7 +142,11 @@
             <div><dt>Returned</dt><dd>—</dd></div>{{-- S-P3: not recorded yet (Phase 3) --}}
             <div><dt>Funded loans open now</dt><dd>{{ $home['open_loans'] }} of {{ $home['loans'] }}</dd></div>
             @if ($home['brokered_loans'] > 0)<div><dt>Brokered loans</dt><dd><a href="{{ route('account.partner.loans', ['list' => 'brokered']) }}">{{ $home['brokered_loans'] }}</a></dd></div>@endif
+            <div><dt>Pending loans (not sent yet)</dt><dd><a href="{{ route('account.partner.loans', ['list' => 'pending']) }}">{{ $home['pending_loans'] }}</a></dd></div>
           </dl>
+          @if ($home['investments'] === 0)
+            <p class="muted" style="font-size:12.5px;margin:8px 0 0">Your capital hasn't been recorded as an investment yet — <a href="https://wa.me/254701607959" target="_blank" rel="noopener">contact us</a>.</p>
+          @endif
         </section>
       </div>
     </div>

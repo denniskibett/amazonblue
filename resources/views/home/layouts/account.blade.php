@@ -28,7 +28,7 @@
     : ['home' => ['Home', route('account.home')], 'profile' => ['Profile', route('account.profile')]]);
   // borrower + partner: switch between the two homes
   $switch = $isBorrower && $isPartner
-    ? '<div class="acct-switch" role="group" aria-label="Account type"><a href="' . route('account.home') . '"' . ($partnerArea ? '' : ' aria-current="true"') . '>Borrowing</a><a href="' . route('account.partner.home') . '"' . ($partnerArea ? ' aria-current="true"' : '') . '>Partner</a></div>'
+    ? '<div class="acct-switch" role="group" aria-label="Account type"><a href="' . route('account.home', ['as' => 'borrower']) . '"' . ($partnerArea ? '' : ' aria-current="true"') . '>Borrowing</a><a href="' . route('account.partner.home') . '"' . ($partnerArea ? ' aria-current="true"' : '') . '>Partner</a></div>'
     : '';
   $icon = fn ($key) => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="' . $icons[$key] . '" /></svg>';
   $initials = collect(explode(' ', trim($me->name)))->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('');

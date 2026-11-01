@@ -8,9 +8,11 @@
 
   @if ($fundings->isEmpty())
     <section class="a-card">
+      {{-- owner, 1 Nov 2026: say plainly why it's empty (capital not recorded as a line yet) --}}
       <x-az.empty title="No investments yet"
-        message="When our team places your capital in a lending line, it shows here with what was committed, lent out and returned.">
-        <a class="btn btn-primary" href="{{ route('account.partner.funds') }}">Add funds</a>
+        message="Your capital hasn't been recorded as an investment yet — contact us and we'll set it up. Once it is, each line shows what was committed, lent out, returned and what is free.">
+        <a class="btn btn-primary" href="https://wa.me/254701607959" target="_blank" rel="noopener">Contact us</a>
+        <a class="btn btn-ghost" href="{{ route('account.partner.loans', ['list' => 'brokered']) }}">Loans you brought in</a>
       </x-az.empty>
     </section>
   @else
@@ -24,6 +26,7 @@
             <div><dt>Committed</dt><dd><x-az.money :amount="$funding->amount_committed" /></dd></div>
             <div><dt>Lent to borrowers</dt><dd><x-az.money :amount="$funding->amount_disbursed" /></dd></div>
             <div><dt>Paid back to the line</dt><dd><x-az.money :amount="$funding->amount_returned" /></dd></div>
+            <div><dt>Available (not lent out)</dt><dd><x-az.money :amount="max(0, (float) $funding->amount_committed - (float) $funding->amount_disbursed + (float) $funding->amount_returned)" /></dd></div>
             <div><dt>Loans</dt><dd>{{ $loanCounts[$inv->id] ?? 0 }}</dd></div>
             {{-- partner lines (owner, 23 Oct 2026): what it earned and when it comes back --}}
             @if ($inv->return_type === 'loan_share')

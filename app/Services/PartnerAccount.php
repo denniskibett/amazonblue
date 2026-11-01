@@ -41,8 +41,49 @@ class PartnerAccount
             'interest_earned' => (float) $partner->ledgerEntries()->whereIn('type', ['profit_distribution', 'interest', 'penalty_share'])->sum('amount'),
             'broker_fees' => (float) $partner->ledgerEntries()->where('type', 'broker_fee_earned')->sum('amount'),
             'principal_in' => (float) $partner->ledgerEntries()->where('type', 'contribution')->sum('amount'),
+            // owner, 1 Nov 2026: partners asked what is paid, what is to be paid and what is pending
+            'interest_share' => (float) $partner->ledgerEntries()->whereIn('type', ['profit_distribution', 'interest'])->sum('amount'),
+            'penalty_share' => (float) $partner->ledgerEntries()->where('type', 'penalty_share')->sum('amount'),
+            'withdrawable' => $this->withdrawable($partner),
+            'paid_out_total' => $this->paidOutTotal($partner),
+            'paid_out' => $this->paidOut($partner)->limit(5)->get(),
+            'requested' => $this->payoutRequests($partner),
+            'pending_loans' => $this->pendingLoans($partner)->count(),
         ];
     }
+
+    // journal types that are money paid out to the partner (stored negative)
+    public const PAYOUT_TYPES = ['withdrawal', 'payout', 'broker_fee_paid'];
+
+    /** Payouts already made, newest first (owner, 1 Nov 2026). */
+    public function paidOut(Partner $partner): HasMany
+    {
+        return $partner->ledgerEntries()->whereIn('type', self::PAYOUT_TYPES)->latest('transaction_date')->latest('id');
+    }
+
+    public function paidOutTotal(Partner $partner): float
+    {
+        return round(abs((float) $partner->ledgerEntries()->whereIn('type', self::PAYOUT_TYPES)->sum('amount')), 2);
+    }
+
+    /** Withdrawals the partner asked for that staff have not paid or declined yet. */
+    public function payoutRequests(Partner $partner): Collection
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('partner_requests')) {
+            return collect();
+        }
+
+        return \Illuminate\Support\Facades\DB::table('partner_requests')->where('partner_id', $partner->id)
+            ->where('type', 'withdrawal')->whereIn('status', ['pending', 'prepared'])->latest('id')->get(['id', 'amount', 'wallet_slug', 'status', 'created_at']);
+    }
+
+    /** Loans not sent yet (pending/approved) that the partner brought in (owner, 1 Nov 2026). */
+    public function pendingLoans(Partner $partner): Builder
+    {
+        return Loan::query()->where('partner_id', $partner->id)->whereIn('status', self::PENDING_STATUSES);
+    }
+
+    public const PENDING_STATUSES = [Loan::STATUS_PENDING, Loan::STATUS_APPROVED];
 
     /** The partner's funding rows (one per investment line they fund), newest first. */
     public function fundings(Partner $partner): HasMany
@@ -75,7 +116,9 @@ class PartnerAccount
      */
     public function brokeredLoans(Partner $partner): Builder
     {
-        return Loan::query()->where('partner_id', $partner->id)->whereNotIn('id', $this->viaInvestment($partner));
+        // not-yet-sent loans are listed under Pending (owner, 1 Nov 2026)
+        return Loan::query()->where('partner_id', $partner->id)->whereNotIn('status', self::PENDING_STATUSES)
+            ->whereNotIn('id', $this->viaInvestment($partner));
     }
 
     /** Every loan the partner may open: funded or brokered. */
@@ -88,7 +131,11 @@ class PartnerAccount
     {
         $investmentIds = $investmentId ? collect([$investmentId]) : $this->investmentIds($partner);
 
-        return Disbursement::query()->whereIn('investment_id', $investmentIds->all() ?: [0])->select('loan_id');
+        $ids = $investmentIds->all() ?: [0];
+
+        // and loans part funded by the partner's lines (owner, 1 Nov 2026)
+        return Disbursement::query()->select('loan_id')->where(fn ($q) => $q->whereIn('investment_id', $ids)
+            ->when(\App\Services\Loans\LoanFundings::ready(), fn ($q) => $q->orWhereIn('loan_id', \Illuminate\Support\Facades\DB::table('loan_fundings')->whereIn('investment_id', $ids)->select('loan_id'))));
     }
 
     /** Borrower as the partner may see them: initials and @handle, never ID number or phone. */

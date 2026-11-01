@@ -18,7 +18,8 @@ abstract class TestCase extends BaseTestCase
 
         $connection = $app['config']->get('database.default');
         $database = $app['config']->get("database.connections.{$connection}.database");
-        if ($database !== 'loans_testing') {
+        // loans_testing or a per-agent copy such as loans_testing_b (never the live / local data)
+        if (! is_string($database) || ! preg_match('/^loans_testing(_[a-z0-9]+)?$/', $database)) {
             throw new RuntimeException(
                 "Tests must run against the 'loans_testing' database, not '{$database}'. Run `php artisan config:clear` first."
             );

@@ -97,8 +97,8 @@
                         <div>
                             <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Funded by</span>
                             <div class="flex flex-wrap gap-2 text-sm">
-                                <template x-for="[k, l] in (editId ? [['house', 'Our money'], ['line', 'A partner line']] : [['house', 'Our money'], ['line', 'A partner line'], ['new', 'New partner money']])" :key="k">
-                                    <button type="button" @click="fund = k" :disabled="(k === 'line' && opts.lines.length === 0) || (editId && opts.has_repayments)"
+                                <template x-for="[k, l] in (editId ? [['house', 'Our money'], ['line', 'A partner line']] : [['house', 'Our money'], ['line', 'A partner line'], ['new', 'New partner money'], ['split', 'Several sources']])" :key="k">
+                                    <button type="button" @click="fund = k; if (k === 'split' && !parts.length) parts = [{ id: opts.house || '', amount: '' }, { id: opts.lines.length ? opts.lines[0].id : '', amount: '' }]" :disabled="(['line', 'split'].includes(k) && opts.lines.length === 0) || (editId && opts.has_repayments)"
                                         :class="fund === k ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'"
                                         class="rounded-lg border px-3 py-2 font-medium disabled:opacity-40" x-text="l"></button>
                                 </template>
@@ -110,6 +110,24 @@
                         <select x-model="lineId" :disabled="editId && opts.has_repayments" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
                             <template x-for="l in opts.lines" :key="l.id"><option :value="l.id" x-text="l.label"></option></template>
                         </select>
+                    </div>
+                    <div x-show="fund === 'split' && !editId" class="mt-4">
+                        <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Funding lines</span>
+                        <template x-for="(p, i) in parts" :key="i">
+                            <div class="mb-2 flex flex-wrap items-center gap-2">
+                                <select x-model="p.id" class="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                    <option x-show="opts.house" :value="opts.house" :selected="String(p.id) === String(opts.house)">House (our money)</option>
+                                    <template x-for="l in opts.lines" :key="l.id"><option :value="l.id" x-text="l.label" :selected="String(p.id) === String(l.id)"></option></template>
+                                </select>
+                                <input type="number" step="0.01" min="0.01" x-model="p.amount" placeholder="KES" aria-label="Amount from this source" class="w-36 rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                <span class="w-16 text-right text-xs tabular-nums text-gray-500 dark:text-gray-400" x-text="partPct(p)"></span>
+                                <button type="button" x-show="parts.length > 1" @click="parts.splice(i, 1)" class="text-xs text-red-600 hover:underline">Remove</button>
+                            </div>
+                        </template>
+                        <button type="button" @click="parts.push({ id: opts.house || '', amount: '' })" class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">+ Add a source</button>
+                        <p class="mt-1 text-xs" :class="Math.abs(partsTotal() - (Number(form.amount) || 0)) < 0.005 ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'"
+                            x-text="'Lines add up to KES ' + partsTotal().toLocaleString('en-KE', { minimumFractionDigits: 2 }) + ' of KES ' + (Number(form.amount) || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 }) + ' sent.'"></p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Each source earns its share of the interest and gets its share of the principal back, by what it put in. The broker's penalty share stays on the whole penalty.</p>
                     </div>
                     <div x-show="fund === 'new'" class="mt-4 space-y-4">
                         <div>
@@ -249,6 +267,10 @@ function disbursementModal() {
         broker: 0,
         fund: 'house',
         lineId: '',
+        // part funding (owner, 1 Nov 2026): [{ id, amount }], House or partner lines, adding up to the amount sent
+        parts: [],
+        partsTotal() { return this.parts.reduce((t, p) => t + (Number(p.amount) || 0), 0); },
+        partPct(p) { const a = Number(this.form.amount) || 0; return a > 0 ? ((Number(p.amount) || 0) / a * 100).toFixed(2) + '%' : ''; },
         np: { sms: '', msg: '', ok: false, partner: '', amount: '', code: '', date: '', term: 'short_term', maturity: '' },
         readMsg: '',
         readOk: false,
@@ -615,7 +637,7 @@ function disbursementModal() {
                 payment_date: '',
                 funding_source: 'internal'
             };
-            this.broker = 0; this.fund = 'house'; this.lineId = ''; this.errors = []; this.readMsg = ''; this.readOk = false;
+            this.broker = 0; this.fund = 'house'; this.lineId = ''; this.parts = []; this.errors = []; this.readMsg = ''; this.readOk = false;
             this.np = { sms: '', msg: '', ok: false, partner: '', amount: '', code: '', date: '', term: 'short_term', maturity: '' };
             this.message = '';
             this.parsedData = {};
@@ -834,6 +856,12 @@ function disbursementModal() {
                     formData.append('funding_mode', this.fund);
                     if (this.fund === 'house' && this.opts.house) formData.append('investment_id', this.opts.house);
                     if (this.fund === 'line') formData.append('investment_id', this.lineId || '');
+                    if (this.fund === 'split') {
+                        this.parts.forEach((p, i) => {
+                            formData.append(`fundings[${i}][investment_id]`, p.id || '');
+                            formData.append(`fundings[${i}][amount]`, p.amount || '');
+                        });
+                    }
                     if (this.fund === 'new') {
                         formData.append('new_partner_id', this.np.partner || '');
                         formData.append('new_amount', this.np.amount || '');

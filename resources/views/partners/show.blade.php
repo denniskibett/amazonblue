@@ -41,10 +41,16 @@
                             {{ ucfirst($partner->type) }}
                         </span>
                         <span class="text-sm text-gray-500 dark:text-gray-400">{{ $partner->email }}</span>
+                        {{-- owner, 1 Nov 2026: whether the partner can sign in to the portal --}}
+                        @if ($partner->user)<x-staff.pill tone="green" dot>Portal login: {{ $partner->user->email }}</x-staff.pill>
+                        @else<a href="#portal-login"><x-staff.pill tone="amber" dot>No portal login</x-staff.pill></a>@endif
                     </div>
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                @can('edit partners')
+                <a href="#record-capital" class="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/5">Record capital as investment</a>
+                @endcan
                 <button @click="window.dispatchEvent(new CustomEvent('edit-partner', { detail: { partner: @json($data) } }))"
                         class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/25">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -230,6 +236,7 @@
         </div>
     </div>
 
+    @include('partners._login')
     @include('partners._lines')
 
     <!-- Transactions Table -->

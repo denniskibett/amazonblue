@@ -62,8 +62,15 @@ class PartnerLinks
             }
 
             $oldLines = [];
+            $fundings = app(\App\Services\Loans\LoanFundings::class);
+            if ($lineId !== null && $fundings->isPartFunded($loan->id)) {
+                throw new \DomainException('This loan is part funded from several sources, so its funding can\'t be moved to one line here.');
+            }
             if ($lineId !== null) {
                 $line = Investment::findOrFail($lineId);
+                // a recorded single funder (e.g. a past loan's frozen funding) follows the move
+                $fundings::ready() && \Illuminate\Support\Facades\DB::table('loan_fundings')->where('loan_id', $loan->id)
+                    ->update(['investment_id' => $line->id, 'partner_id' => $fundings::partnerOf($line), 'updated_at' => now()]);
                 foreach (Disbursement::where('loan_id', $loan->id)->where('kind', 'cash')->orderBy('id')->get() as $d) {
                     if ((int) $d->investment_id === $line->id) {
                         continue;

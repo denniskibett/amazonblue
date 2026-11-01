@@ -122,6 +122,16 @@ class HomeController extends Controller
         if ($user->hasRole('borrower')) {
             $openLoan = $eligibility->openLoan($user);
 
+            // owner, 1 Nov 2026: borrower + partner lands on the partner home unless a loan or application is open;
+            // the Borrowing | Partner switch remembers the choice for the session
+            if ($request->query('as') === 'borrower') {
+                $request->session()->put('account_area', 'borrower');
+            }
+            if (! $openLoan && $user->hasRole('partner') && $request->session()->get('account_area') !== 'borrower'
+                && Partner::where('user_id', $user->id)->exists()) {
+                return redirect()->route('account.partner.home');
+            }
+
             return view('home.account.borrower', $this->borrowContext($user, $eligibility) + [
                 'progress' => $openLoan ? $progress->for($openLoan) : null,
                 'kycSteps' => $this->sections($user),

@@ -57,9 +57,9 @@
                 <span class="mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400">Funded by</span>
                 <div class="flex flex-wrap gap-2 text-theme-sm">
                   <input type="hidden" name="funding_mode" :value="mode">
-                  @foreach (['house' => 'Our money', 'line' => 'A partner line', 'new' => 'New partner money'] as $k => $l)
+                  @foreach (['house' => 'Our money', 'line' => 'A partner line', 'new' => 'New partner money', 'split' => 'Several sources'] as $k => $l)
                     <button type="button" @click="mode = '{{ $k }}'" :class="mode === '{{ $k }}' ? 'border-brand-500 bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400' : 'border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300'"
-                      class="rounded-lg border px-3 py-2 font-medium" @if ($k === 'line' && ! $lineOpts) disabled title="No partner line has money free" @endif>{{ $l }}</button>
+                      class="rounded-lg border px-3 py-2 font-medium" @if (in_array($k, ['line', 'split'], true) && ! $lineOpts) disabled title="No partner line has money free" @endif>{{ $l }}</button>
                   @endforeach
                 </div>
                 <input type="hidden" name="investment_id" :value="house" :disabled="mode !== 'house'">
@@ -71,6 +71,31 @@
               <select id="f-line" name="investment_id" :disabled="mode !== 'line'" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-theme-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                 @foreach ($lineOpts as $id => $label)<option value="{{ $id }}">{{ $label }}</option>@endforeach
               </select>
+            </div>
+
+            {{-- part funding (owner, 1 Nov 2026): each source's share of the interest and principal follows what it put in --}}
+            <div x-show="mode === 'split'" x-cloak class="mt-4"
+              x-data="{ rows: [{ id: '{{ $houseId }}', amount: '' }, { id: '{{ array_key_first($lineOpts) }}', amount: '' }], sent: 0,
+                total() { return this.rows.reduce((t, r) => t + (Number(r.amount) || 0), 0) },
+                pct(r) { return this.sent > 0 ? ((Number(r.amount) || 0) / this.sent * 100).toFixed(2) + '%' : '' } }"
+              x-init="const f = $el.closest('form').querySelector('[name=amount]'); sent = Number(f.value) || 0; f.addEventListener('input', e => sent = Number(e.target.value) || 0)">
+              <span class="mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400">Funding lines</span>
+              <template x-for="(r, i) in rows" :key="i">
+                <div class="mb-2 flex flex-wrap items-center gap-2">
+                  <select :name="`fundings[${i}][investment_id]`" x-model="r.id" :disabled="mode !== 'split'" class="h-11 min-w-0 flex-1 rounded-lg border border-gray-300 bg-transparent px-4 text-theme-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    @if ($houseId)<option value="{{ $houseId }}">House (our money)</option>@endif
+                    @foreach ($lineOpts as $id => $label)<option value="{{ $id }}">{{ $label }}</option>@endforeach
+                  </select>
+                  <input type="number" step="0.01" min="0.01" :name="`fundings[${i}][amount]`" x-model="r.amount" :disabled="mode !== 'split'" placeholder="KES" aria-label="Amount from this source"
+                    class="h-11 w-36 rounded-lg border border-gray-300 bg-transparent px-4 text-theme-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                  <span class="w-16 text-right text-theme-xs tabular-nums text-gray-500 dark:text-gray-400" x-text="pct(r)"></span>
+                  <button type="button" x-show="rows.length > 1" @click="rows.splice(i, 1)" class="text-theme-xs text-error-600 hover:underline">Remove</button>
+                </div>
+              </template>
+              <button type="button" @click="rows.push({ id: '{{ $houseId }}', amount: '' })" class="text-theme-sm font-medium text-brand-600 hover:underline dark:text-brand-400">+ Add a source</button>
+              <p class="mt-1 text-theme-xs" :class="Math.abs(total() - sent) < 0.005 ? 'text-success-600' : 'text-amber-700 dark:text-amber-400'"
+                x-text="'Lines add up to KES ' + total().toLocaleString('en-KE', { minimumFractionDigits: 2 }) + ' of KES ' + sent.toLocaleString('en-KE', { minimumFractionDigits: 2 }) + ' sent.'"></p>
+              <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Each source earns its share of the interest and gets its share of the principal back, by what it put in. The broker's penalty share stays on the whole penalty.</p>
             </div>
 
             <div x-show="mode === 'new'" x-cloak class="mt-4 space-y-4">

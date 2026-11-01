@@ -61,6 +61,10 @@ class TopUp
         if ($cycle && $total > 0 && $paid < $total * self::PAID_SHARE - 0.005) {
             $why[] = 'Pay at least half of this cycle first (KES ' . number_format($total * self::PAID_SHARE, 2) . '; paid KES ' . number_format($paid, 2) . ').';
         }
+        // a part-funded loan's shares follow what each funder put in; a top-up from one line would skew them (owner, 1 Nov 2026)
+        if (app(LoanFundings::class)->isPartFunded($loan->id)) {
+            $why[] = 'This loan is part funded from several sources, so it can\'t be topped up. Ask us about a new loan.';
+        }
         $profile = BorrowerAnalytics::profileFor((int) $loan->user_id);
         if ($profile && (int) $profile->bad_loans > 0) {
             $why[] = 'A previous loan went unpaid, so top-ups are not available.';

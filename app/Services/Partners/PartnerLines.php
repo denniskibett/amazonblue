@@ -111,10 +111,10 @@ class PartnerLines
         return $line->maturity_date && Carbon::parse($line->maturity_date)->endOfDay()->isPast();
     }
 
-    /** Loans a line lent to (its cash disbursements). */
+    /** Loans a line lent to (its cash disbursements, and loans it part funds: owner, 1 Nov 2026). */
     public function loanIds(Investment $line): Collection
     {
-        return Disbursement::where('investment_id', $line->id)->where('kind', 'cash')->distinct()->pluck('loan_id');
+        return app(\App\Services\Loans\LoanFundings::class)->loanIdsFor($line->id);
     }
 
     /** Where a line stands: lent, back, at risk, earned, and whether it can close. */
@@ -196,7 +196,8 @@ class PartnerLines
     /** Close every line a loan drew on (after a repayment, write-off or status change). */
     public function closeForLoan(int $loanId): void
     {
-        $ids = Disbursement::where('loan_id', $loanId)->where('kind', 'cash')->whereNotNull('investment_id')->distinct()->pluck('investment_id');
+        $ids = Disbursement::where('loan_id', $loanId)->where('kind', 'cash')->whereNotNull('investment_id')->distinct()->pluck('investment_id')
+            ->merge(app(\App\Services\Loans\LoanFundings::class)->rows($loanId)->pluck('investment_id')->filter())->unique();
         foreach (Investment::whereIn('id', $ids)->where('status', 'active')->where('return_type', 'loan_share')->get() as $line) {
             $this->closeIfDone($line);
         }

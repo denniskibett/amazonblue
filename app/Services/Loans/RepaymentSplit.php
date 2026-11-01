@@ -66,24 +66,30 @@ class RepaymentSplit
     /** The shares of one allocation [penalty, interest, principal] on a loan: [ [partner_id, type, wallet, amount, why], ... ]. */
     public function shares(Loan $loan, array $a): array
     {
-        [$funder, $line] = $this->funder($loan);
         $out = [];
         $interestOut = 0.0;   // what others take of this repayment's interest / penalty; the house keeps the rest
         $penaltyOut = 0.0;
-        if ($loan->broker_status && $loan->partner_id) {
-            $broker = (int) $loan->partner_id;
-            $interestRate = $funder === $broker && $line?->return_type === 'loan_share'
-                ? 100 - (float) (DB::table('brokers as b')->join('partners as p', 'p.user_id', '=', 'b.user_id')->where('p.id', $broker)->value('b.interest_broker') ?? 40)
-                : (float) $loan->broker_rate;
+        $brokered = $loan->broker_status && $loan->partner_id;
+        $broker = $brokered ? (int) $loan->partner_id : null;
+        // part funding (owner, 1 Nov 2026): each funder's slice of the interest follows the single-funder rules
+        foreach ($this->slices($loan, (float) $a['interest']) as [$funder, $line, $interest, $of]) {
+            if ($brokered) {
+                $interestRate = $funder === $broker && $line?->return_type === 'loan_share'
+                    ? 100 - (float) (DB::table('brokers as b')->join('partners as p', 'p.user_id', '=', 'b.user_id')->where('p.id', $broker)->value('b.interest_broker') ?? 40)
+                    : (float) $loan->broker_rate;
+                $out[] = [$broker, 'broker_fee_earned', 'broker_fee', $i = round($interest * $interestRate / 100, 2), "{$interestRate}% of interest{$of}"];
+                $interestOut += $i;
+            } elseif ($funder && $line?->return_type === 'loan_share') {
+                $rate = (float) Partner::whereKey($funder)->value('profit_share_rate');
+                $out[] = [$funder, 'profit_distribution', 'interest', $i = round($interest * $rate / 100, 2), "{$rate}% of interest (funder{$of})"];
+                $interestOut += $i;
+            }
+        }
+        // penalty stays whole: the broker's rate of all of it (owner, 1 Nov 2026), not pro rata
+        if ($brokered) {
             $penaltyRate = (float) ($loan->broker_penalty_rate ?? config('lending.split.default_broker_penalty_rate', 50));
-            $out[] = [$broker, 'broker_fee_earned', 'broker_fee', $i = round($a['interest'] * $interestRate / 100, 2), "{$interestRate}% of interest"];
             $out[] = [$broker, 'penalty_share', 'broker_fee', $p = round($a['penalty'] * $penaltyRate / 100, 2), "{$penaltyRate}% of penalty"];
-            $interestOut += $i;
             $penaltyOut += $p;
-        } elseif ($funder && $line?->return_type === 'loan_share') {
-            $rate = (float) Partner::whereKey($funder)->value('profit_share_rate');
-            $out[] = [$funder, 'profit_distribution', 'interest', $i = round($a['interest'] * $rate / 100, 2), "{$rate}% of interest (funder)"];
-            $interestOut += $i;
         }
         if ($house = $this->house()) {
             $out[] = [$house, 'profit_distribution', 'interest', round($a['interest'] - $interestOut, 2), 'AC: interest after partners'];
@@ -91,6 +97,49 @@ class RepaymentSplit
         }
 
         return array_values(array_filter($out, fn ($s) => abs($s[3]) >= 0.005));
+    }
+
+    /**
+     * Who funded the loan and their slice of $interest: [ [partner_id|null, line|null, interest, label], ... ].
+     * One funder (recorded or read from the first cash disbursement): the whole interest, no label, as before.
+     */
+    private function slices(Loan $loan, float $interest): array
+    {
+        $rows = app(LoanFundings::class)->rows($loan->id);
+        if ($rows->isEmpty()) {
+            [$funder, $line] = $this->funder($loan);
+
+            return [[$funder, $line, $interest, '']];
+        }
+        $many = $rows->count() > 1;
+        $slices = [];
+        foreach (app(LoanFundings::class)->split($rows, $interest) as [$row, $part]) {
+            $line = $row->investment_id ? Investment::find($row->investment_id) : null;
+            $funder = $row->is_house ? null : (int) $row->partner_id;
+            $label = $many ? ', ' . ($row->is_house ? 'house' : (Partner::whereKey($funder)->value('name') ?? 'partner')) . ' ' . round((float) $row->share * 100, 2) . '% of the loan' : '';
+            $slices[] = [$funder, $line, $part, $label];
+        }
+
+        return $slices;
+    }
+
+    /** Who put in what of a part-funded loan, with their slice of an allocation (for the preview). Empty for one funder. */
+    public function funders(Loan $loan, array $a): array
+    {
+        $rows = app(LoanFundings::class)->rows($loan->id);
+        if ($rows->count() < 2) {
+            return [];
+        }
+        $fundings = app(LoanFundings::class);
+        $interest = $fundings->split($rows, (float) $a['interest']);
+        $principal = $fundings->split($rows, (float) $a['principal']);
+
+        return $rows->values()->map(fn ($r, $i) => [
+            'name' => $r->is_house ? 'House' : (Partner::whereKey($r->partner_id)->value('name') ?? 'Partner'),
+            'line' => $r->investment_id ? Investment::whereKey($r->investment_id)->value('name') : null,
+            'amount' => (float) $r->amount, 'pct' => round((float) $r->share * 100, 2),
+            'interest' => $interest[$i][1], 'principal' => $principal[$i][1],
+        ])->all();
     }
 
     /**
@@ -113,6 +162,7 @@ class RepaymentSplit
         $a = $after['allocations'][$fake] ?? ['penalty' => 0.0, 'interest' => 0.0, 'principal' => 0.0, 'overpaid' => 0.0];
         $loan = Loan::withTrashed()->find($cycle->loan_id);
         $shares = $loan ? $this->shares($loan, $a) : [];
+        $funders = $loan ? $this->funders($loan, $a) : [];
         $names = Partner::whereIn('id', array_column($shares, 0))->pluck('name', 'id');
 
         return [
@@ -121,6 +171,7 @@ class RepaymentSplit
             'owed_after' => (float) ($after['final_outstanding'] ?? 0),
             'shares' => array_map(fn ($sh) => ['partner' => $names[$sh[0]] ?? '#' . $sh[0], 'house' => $sh[0] === $this->house(),
                 'type' => $sh[1], 'amount' => $sh[3], 'why' => $sh[4]], $shares),
+            'funders' => $funders,
             'split_on' => self::enabled(),
         ];
     }
@@ -186,6 +237,17 @@ class RepaymentSplit
      */
     public function syncReturns(int $loanId): void
     {
+        // part funded: every partner line on it gets its share of the principal back
+        $fundings = app(LoanFundings::class);
+        if ($fundings->isPartFunded($loanId)) {
+            foreach ($fundings->rows($loanId)->reject(fn ($r) => $r->is_house || ! $r->investment_id) as $row) {
+                if ($line = Investment::find($row->investment_id)) {
+                    $this->syncLineReturns($line, (int) $row->partner_id);
+                }
+            }
+
+            return;
+        }
         [$funder, $line] = $this->funder(Loan::withTrashed()->find($loanId));
         if (! $funder || ! $line || ! in_array($line->return_type, ['loan_share', 'fixed_rate'], true)) {
             return;
@@ -201,12 +263,27 @@ class RepaymentSplit
         if (! $funder || ! in_array($line->return_type, ['loan_share', 'fixed_rate'], true)) {
             return;
         }
-        $loanIds = Disbursement::where('investment_id', $line->id)->where('kind', 'cash')->distinct()->pluck('loan_id');
+        $fundings = app(LoanFundings::class);
+        $loanIds = $fundings->loanIdsFor($line->id);
+        $partFunded = $fundings->partFundedLoanIds($line->id)->all();
         $principal = 0.0;
+        $byLoan = [];
         foreach (LoanCycle::whereIn('loan_id', $loanIds)->get() as $cycle) {
             foreach (CycleBalance::at($cycle)['allocations'] as $repaymentId => $a) {
                 if (CustomerWallets::kindOf(Repayment::withTrashed()->find($repaymentId)) === 'cash') {
-                    $principal += $a['principal'];
+                    if (in_array($cycle->loan_id, $partFunded)) {
+                        $byLoan[$cycle->loan_id] = ($byLoan[$cycle->loan_id] ?? 0) + $a['principal'];
+                    } else {
+                        $principal += $a['principal'];
+                    }
+                }
+            }
+        }
+        // part-funded loans (owner, 1 Nov 2026): this line's pro-rata slice of the principal paid back
+        foreach ($byLoan as $loanId => $paid) {
+            foreach ($fundings->split($fundings->rows($loanId), round($paid, 2)) as [$row, $part]) {
+                if ((int) $row->investment_id === $line->id) {
+                    $principal += $part;
                 }
             }
         }

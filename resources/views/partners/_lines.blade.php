@@ -53,7 +53,7 @@
   </div>
 
   @can('edit partners')
-    <form method="POST" action="{{ route('staff.partners.lines.store', $partner) }}" class="space-y-4 border-t border-gray-200 p-4 dark:border-gray-700"
+    <form id="record-capital" method="POST" action="{{ route('staff.partners.lines.store', $partner) }}" class="space-y-4 border-t border-gray-200 p-4 dark:border-gray-700"
       x-data="disburseFunding(@js(['house' => null, 'mode' => 'new', 'maturity' => '', 'read' => route('staff.mpesa.read-sms'), 'amount' => old('amount', ''), 'code' => old('code', ''), 'date' => old('date', ''), 'term' => old('term', 'short_term')]))">
       @csrf
       <p class="text-theme-sm font-semibold text-gray-800 dark:text-white/90">Record money {{ $partner->name }} sent</p>

@@ -137,7 +137,11 @@ class DisbursementController extends Controller
         // who brought the client and whose money it is (owner, 23 Oct 2026)
         $links = $request->validate([
             'broker_partner_id' => ['nullable', 'integer', 'min:0'],
-            'funding_mode' => ['nullable', 'in:house,line,new'],
+            'funding_mode' => ['nullable', 'in:house,line,new,split'],
+            // part funding (owner, 1 Nov 2026): several sources, House or partner lines, adding up to the amount sent
+            'fundings' => ['nullable', 'required_if:funding_mode,split', 'array', 'max:10'],
+            'fundings.*.investment_id' => ['required', 'integer', 'exists:investments,id'],
+            'fundings.*.amount' => ['required', 'numeric', 'min:0.01'],
             'new_partner_id' => ['nullable', 'required_if:funding_mode,new', 'integer', 'exists:partners,id'],
             'new_amount' => ['nullable', 'required_if:funding_mode,new', 'numeric', 'min:1'],
             'new_code' => ['nullable', 'required_if:funding_mode,new', 'string', 'max:40'],
@@ -153,11 +157,20 @@ class DisbursementController extends Controller
         if (($links['funding_mode'] ?? null) === 'line' && empty($validated['investment_id'])) {
             throw \Illuminate\Validation\ValidationException::withMessages(['investment_id' => 'Choose the partner line this loan is funded from.']);
         }
+        $split = ($links['funding_mode'] ?? null) === 'split' ? $this->fundingLines($links['fundings'] ?? [], (float) $validated['amount'], (int) $validated['loan_id']) : null;
+        if ($split && count($split) === 1) {
+            // one source: today's single-funder disbursement
+            $validated['investment_id'] = $split[0][0];
+            $split = null;
+        } elseif ($split) {
+            $validated['investment_id'] = $split[0][0];
+            $validated['funding_source'] = 'mixed';
+        }
         if (! empty($links['broker_partner_id']) && \App\Models\Partner::whereKey($links['broker_partner_id'])->where('is_house_account', false)->doesntExist()) {
             throw \Illuminate\Validation\ValidationException::withMessages(['broker_partner_id' => 'Choose a partner, or nobody.']);
         }
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $validated, $links) {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $validated, $links, $split) {
             // new partner money: open its line first, so the loan draws on it (the whole disbursement rolls back together)
             if (($links['funding_mode'] ?? null) === 'new') {
                 try {
@@ -250,13 +263,20 @@ class DisbursementController extends Controller
                 ? \App\Models\PartnerTransaction::find($validated['partner_transaction_id'])?->partner_id
                 : null;
             try {
-                $investment?->assertCanDisburse((float) $validated['amount'], $fundingPartnerId);
+                if ($split) {
+                    // each partner line is still capped by what it has free
+                    foreach ($split as [$lineId, $part]) {
+                        Investment::findOrFail($lineId)->assertCanDisburse($part);
+                    }
+                } else {
+                    $investment?->assertCanDisburse((float) $validated['amount'], $fundingPartnerId);
+                }
             } catch (\DomainException $e) {
                 throw \Illuminate\Validation\ValidationException::withMessages(['amount' => $e->getMessage()]);
             }
 
             // disbursement, its investment link and the funding draw succeed or fail together
-            $disbursement = \Illuminate\Support\Facades\DB::transaction(function () use ($loan, $validated, $cycle, $investment, $fundingPartnerId) {
+            $disbursement = \Illuminate\Support\Facades\DB::transaction(function () use ($loan, $validated, $cycle, $investment, $fundingPartnerId, $split) {
                 $disbursement = $this->disbursementService->createDisbursement($loan, $validated, $cycle);
 
                 // Attach investment_id and funding
@@ -267,8 +287,15 @@ class DisbursementController extends Controller
                         'funding_source' => $validated['funding_source'],
                     ]);
 
-                    // Track against pivot
-                    $investment->recordFundingDisbursement((float) $validated['amount'], $fundingPartnerId);
+                    // Track against pivot (part funded: each line draws its own amount)
+                    if ($split) {
+                        foreach ($split as [$lineId, $part]) {
+                            Investment::findOrFail($lineId)->recordFundingDisbursement($part);
+                        }
+                        app(\App\Services\Loans\LoanFundings::class)->record($loan, $disbursement, $split);
+                    } else {
+                        $investment->recordFundingDisbursement((float) $validated['amount'], $fundingPartnerId);
+                    }
                 }
 
                 return $disbursement;
@@ -296,6 +323,39 @@ class DisbursementController extends Controller
                 'data' => $disbursement->fresh()
             ], 201);
         });
+    }
+
+    /**
+     * Part funding lines from the form, checked: [[investment_id, amount], ...]. Each source once, House or an active
+     * line, adding up to the amount sent; only on a loan's first cash (owner, 1 Nov 2026).
+     */
+    private function fundingLines(array $rows, float $amount, int $loanId): array
+    {
+        $fail = fn (string $m) => throw \Illuminate\Validation\ValidationException::withMessages(['fundings' => $m]);
+        $lines = [];
+        foreach ($rows as $row) {
+            $id = (int) $row['investment_id'];
+            if (isset($lines[$id])) {
+                $fail('Each source can appear only once.');
+            }
+            $line = Investment::find($id);
+            if (! $line || ($line->status !== 'active' && ! $line->isHouseLine())) {
+                $fail('Choose an open line for every funding line.');
+            }
+            $lines[$id] = round((float) $row['amount'], 2);
+        }
+        if (! $lines) {
+            $fail('Add at least one funding line.');
+        }
+        if (abs(array_sum($lines) - round($amount, 2)) >= 0.005) {
+            $fail(sprintf('The funding lines add up to KES %s, not the KES %s sent.', number_format(array_sum($lines), 2), number_format($amount, 2)));
+        }
+        if (count($lines) > 1 && (Loan::whereKey($loanId)->value('status') !== Loan::STATUS_APPROVED || Disbursement::where('loan_id', $loanId)->exists()
+            || (\App\Services\Loans\LoanFundings::ready() && \Illuminate\Support\Facades\DB::table('loan_fundings')->where('loan_id', $loanId)->exists()))) {
+            $fail('Part funding is set on the loan\'s first disbursement only.');
+        }
+
+        return array_map(fn ($id, $a) => [$id, $a], array_keys($lines), $lines);
     }
 
     public function update(Request $request, Disbursement $disbursement)
@@ -337,6 +397,12 @@ class DisbursementController extends Controller
                 $links = [$brokerChange, $lineChange];
             }
             unset($validated['investment_id'], $validated['funding_source']);
+        }
+
+        // a part-funded loan's amounts are what each funder put in; changing the total would skew the shares (owner, 1 Nov 2026)
+        if ($disbursement->loan_id && round((float) $validated['amount'], 2) !== round((float) $disbursement->amount, 2)
+            && app(\App\Services\Loans\LoanFundings::class)->isPartFunded((int) $disbursement->loan_id)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['amount' => 'This loan is part funded from several sources, so the amount sent can\'t be changed here.']);
         }
 
         // Recalculate processing fee for loan disbursements
