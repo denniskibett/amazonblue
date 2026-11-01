@@ -75,5 +75,15 @@
       </main>
     </div>
     @include('home.partials.toast')
+    <script>
+      // phones bring this tab back from memory hours later with an expired form token (419): reload it first
+      (function () {
+        var opened = Date.now(), maxAge = {{ max(1, (int) config('session.lifetime') - 5) }} * 60000;
+        window.addEventListener('pageshow', function (e) { if (e.persisted) location.reload(); });
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'visible' && Date.now() - opened > maxAge) location.reload();
+        });
+      })();
+    </script>
   </body>
 </html>

@@ -95,6 +95,13 @@
           fp.altInput.classList.add('az-date');
         }
         fp.calendarContainer.classList.add('az-cal');
+        // the calendar hangs off <body>, so a click on a day would count as "outside" a modal (Alpine
+        // @click.outside / .away) and close it: clicks stay inside the calendar
+        fp.calendarContainer.addEventListener('click', function (e) { e.stopPropagation(); });
+        // Escape closes the calendar only, not the modal around the field (@keydown.escape.window)
+        (fp.altInput || target).addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && fp.isOpen) { e.stopPropagation(); fp.close(); }
+        });
       },
       onChange: function (dates, str, fp) {
         if (k === 'range') {

@@ -471,7 +471,10 @@ class DashboardController extends Controller
                 $loan->new_balance = $activeCycle->new_balance;
                 
                 if ($remainingDays < 0) {
-                    $loan->status = 'overdue';
+                    // a loan in forbearance (or defaulted) keeps its own status, so it still shows as such
+                    if (! in_array($loan->status, ['forbearance', 'defaulted'], true)) {
+                        $loan->status = 'overdue';
+                    }
                     $loan->overdue_days = abs($remainingDays);
                     $interval = $today->diff($dueDate);
                     $loan->overdue_period = [
@@ -508,7 +511,10 @@ class DashboardController extends Controller
                 $loan->cycle_number = 1;
                 
                 if ($remainingDays < 0) {
-                    $loan->status = 'overdue';
+                    // a loan in forbearance (or defaulted) keeps its own status, so it still shows as such
+                    if (! in_array($loan->status, ['forbearance', 'defaulted'], true)) {
+                        $loan->status = 'overdue';
+                    }
                     $loan->overdue_days = abs($remainingDays);
                     $interval = $today->diff($dueDate);
                     $loan->overdue_period = [

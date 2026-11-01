@@ -65,7 +65,12 @@ class HomeController extends Controller
 
     public function index(): View
     {
-        return view('welcome');
+        // real borrower testimonials, approved by staff; none = the section is hidden (owner, 1 Nov 2026)
+        $testimonials = rescue(fn () => \Illuminate\Support\Facades\Cache::remember(\App\Models\Testimonial::CACHE_KEY, 600,
+            fn () => \App\Models\Testimonial::approved()->latest('approved_at')->take(6)
+                ->get(['id', 'rating', 'body', 'display_name', 'display_role'])), collect(), false);
+
+        return view('welcome', ['testimonials' => $testimonials]);
     }
 
     public function page(string $page): View

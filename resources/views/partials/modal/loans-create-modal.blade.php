@@ -140,7 +140,7 @@
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Loan Type <span class="text-red-500">*</span>
                         </label>
-                        <select x-model="form.loan_type_id" @change="calculateDueDate()"
+                        <select x-model="form.loan_type_id" @change="calculateDueDate(); previewProduct()"
                             class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"
                             required>
                             <option value="">-- Select Loan Type --</option>
@@ -161,6 +161,31 @@
                         <p class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-white" 
                            x-text="dueDateDisplay || 'Select loan type to calculate'"></p>
                         <input type="hidden" name="due_date" x-model="form.due_date">
+                    </div>
+
+                    {{-- a sent loan moved to another product: the open cycle before and after, from the server (owner, 1 Nov 2026) --}}
+                    <div x-show="editId && (productPreview || productPreviewLoading)" x-cloak class="md:col-span-2 rounded-2xl border border-brand-100 bg-brand-50/60 p-4 text-sm dark:border-brand-500/20 dark:bg-brand-500/5">
+                        <p class="font-semibold text-gray-800 dark:text-white">
+                            Cycle <span x-text="productPreview && productPreview.cycle_number"></span> will be recalculated
+                            <span x-show="productPreviewLoading" class="ml-1 text-xs font-normal text-gray-400">working out…</span>
+                        </p>
+                        <template x-if="productPreview">
+                            <div>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Starts <span x-text="day(productPreview.start_date)"></span> on <span x-text="kes(productPreview.principal)"></span>. Earlier cycles, disbursements and payments stay as they are; payments on this cycle are re-applied to the new figures.</p>
+                                <table class="mt-3 w-full text-left text-xs">
+                                    <thead class="text-gray-500"><tr><th class="py-1"></th><th class="py-1">Now</th><th class="py-1">After saving</th></tr></thead>
+                                    <tbody class="text-gray-800 dark:text-gray-200">
+                                        <template x-for="row in [['Product', 'product', 't'], ['Due date', 'due_date', 'd'], ['Interest rate', 'interest_rate', 'p'], ['Interest', 'interest', 'k'], ['Principal + interest', 'full_balance', 'k'], ['Penalty to date', 'penalty', 'k'], ['Paid on this cycle', 'paid', 'k'], ['Owed today', 'owed_today', 'k']]" :key="row[1]">
+                                            <tr class="border-t border-brand-100/70 dark:border-white/5">
+                                                <td class="py-1 pr-2 text-gray-500" x-text="row[0]"></td>
+                                                <td class="py-1 pr-2" x-text="fmtCell(productPreview.before[row[1]], row[2])"></td>
+                                                <td class="py-1 font-semibold" :class="productPreview.before[row[1]] !== productPreview.after[row[1]] ? 'text-brand-700 dark:text-brand-300' : ''" x-text="fmtCell(productPreview.after[row[1]], row[2])"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
                     </div>
 
                     <!-- Status (Admin/Teller only) -->
@@ -435,6 +460,9 @@ function loansCreateModal() {
         brokerStatus: '0',
         dueDateDisplay: '',
         showConsentError: false,
+        originalTypeId: '',
+        productPreview: null,
+        productPreviewLoading: false,
 
         // Signature
         signaturePad: null,
@@ -655,6 +683,8 @@ function loansCreateModal() {
 
         openModal(data = null) {
             this.resetForm();
+            this.productPreview = null;
+            this.originalTypeId = data && data.edit ? String(data.edit.loan_type_id || '') : '';
             this.open = true;
             document.body.style.overflow = 'hidden';
 
@@ -859,6 +889,23 @@ function loansCreateModal() {
                 this.signaturePad.clear();
             }
         },
+
+        // Edit loan on a sent loan: what the new product does to the open cycle, before saving
+        async previewProduct() {
+            this.productPreview = null;
+            if (!this.editId || !this.form.loan_type_id || String(this.form.loan_type_id) === this.originalTypeId) return;
+            this.productPreviewLoading = true;
+            try {
+                const res = await fetch(`/loans/${this.editId}/product-change-preview?loan_type_id=${encodeURIComponent(this.form.loan_type_id)}`, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                const body = await res.json().catch(() => ({}));
+                this.productPreview = res.ok && body.data ? body.data : null;
+            } catch (e) {
+                this.productPreview = null;
+            } finally { this.productPreviewLoading = false; }
+        },
+        kes(n) { return 'KES ' + Number(n || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+        day(d) { return d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; },
+        fmtCell(v, kind) { return kind === 'k' ? this.kes(v) : kind === 'd' ? this.day(v) : kind === 'p' ? Number(v || 0) + '%' : (v || '—'); },
 
         calculateDueDate() {
             const borrowDate = new Date(this.form.borrow_date);

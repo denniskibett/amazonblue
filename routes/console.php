@@ -85,3 +85,9 @@ Schedule::command('audit:prune')
     ->timezone('Africa/Nairobi')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/audit-prune.log'));
+
+// site analytics: page views older than lending.analytics.keep_days (180) go (owner, 1 Nov 2026)
+Schedule::command('analytics:prune-views')
+    ->dailyAt('03:30')
+    ->timezone('Africa/Nairobi')
+    ->withoutOverlapping();

@@ -562,82 +562,35 @@
       </div>
     </div>
   </section>
+  {{-- real borrower testimonials, approved by staff (owner, 1 Nov 2026: no made-up quotes); hidden when there are none --}}
+  @if (($testimonials ?? collect())->isNotEmpty())
   <section class="section section-tint">
     <div class="wrap">
       <div class="section-head reveal">
         <h2>What our clients say</h2>
-        <p class="lead">Businesses and individuals across East Africa.</p>
+        <p class="lead">In their own words, from people who borrowed with us.</p>
       </div>
       <div class="grid g3 quotes" data-carousel aria-label="Client testimonials">
+        @foreach ($testimonials as $t)
         <figure class="quote">
-          <div class="stars" aria-label="5 out of 5">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+          <div class="stars" aria-label="{{ $t->rating }} out of 5">
+            @for ($i = 0; $i < $t->rating; $i++)<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" />
-            </svg>
+            </svg>@endfor
           </div>
           <blockquote>
-            “Aimzone Ventures delivered emergency funding within 12 hours when we needed it most.”
+            “{{ $t->body }}”
           </blockquote>
           <figcaption>
-            <span class="avatar">JM</span
-            ><span><b>James Mwangi</b><br /><span class="muted text-xs">CEO, Nairobi Logistics</span></span>
+            <span class="avatar">{{ $t->initials() }}</span
+            ><span><b>{{ $t->display_name }}</b>@if ($t->display_role)<br /><span class="muted text-xs">{{ $t->display_role }}</span>@endif</span>
           </figcaption>
         </figure>
-        <figure class="quote">
-          <div class="stars" aria-label="5 out of 5">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" />
-            </svg>
-          </div>
-          <blockquote>
-            “They cleared my CRB listing in just 48 hours. It completely changed my financial standing.”
-          </blockquote>
-          <figcaption>
-            <span class="avatar">SK</span
-            ><span><b>Sarah Kariuki</b><br /><span class="muted text-xs">Entrepreneur</span></span>
-          </figcaption>
-        </figure>
-        <figure class="quote">
-          <div class="stars" aria-label="5 out of 5">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg
-            ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" />
-            </svg>
-          </div>
-          <blockquote>
-            “Asset financing helped us expand our fleet without tying up our working capital.”
-          </blockquote>
-          <figcaption>
-            <span class="avatar">MO</span
-            ><span><b>Michael Ochieng</b><br /><span class="muted text-xs">Transport manager</span></span>
-          </figcaption>
-        </figure>
+        @endforeach
       </div>
     </div>
   </section>
+  @endif
   <section class="section">
     <div class="wrap">
       <div class="section-head center reveal"><h2>Questions, answered</h2></div>

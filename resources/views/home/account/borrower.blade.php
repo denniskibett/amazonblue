@@ -212,6 +212,21 @@
         </section>
         @include('home.account.repay._claims', ['loan' => $loan])
       @endif
+
+      {{-- testimonial (owner, 1 Nov 2026): only once money was actually sent on one of their loans --}}
+      @if (\Illuminate\Support\Facades\Schema::hasTable('testimonials') && \App\Models\Testimonial::qualifyingLoan($user))
+        @php $said = \App\Models\Testimonial::where('user_id', $user->id)->first(); @endphp
+        <section class="a-card" id="testimonial">
+          <div class="rp-cta">
+            <span class="chip sand"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z" /></svg></span>
+            <span class="t">
+              <b>{{ $said ? 'Your words about Aimzone' : 'Share your experience' }}</b>
+              <span>{{ $said ? ['approved' => 'On our website. Thank you.', 'pending' => 'Waiting for our team to read it.', 'hidden' => 'Not on our website. You can change it.'][$said->status] ?? '' : 'A few words help others decide. Our team reads it before it goes on the website.' }}</span>
+            </span>
+          </div>
+          <a class="btn btn-ghost btn-block" style="margin-top:14px" href="{{ route('account.testimonial') }}">{{ $said ? 'Edit' : 'Write a few words' }}</a>
+        </section>
+      @endif
     </div>
   </div>
 

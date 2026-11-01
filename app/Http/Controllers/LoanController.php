@@ -518,11 +518,17 @@ class LoanController extends Controller
         $termsChanged = collect(['amount', 'loan_type_id', 'borrow_date'])
             ->contains(fn ($field) => array_key_exists($field, $validated) && $this->loanFieldChanged($loan, $field, $validated[$field]));
 
+        $productChanged = $this->loanFieldChanged($loan, 'loan_type_id', $validated['loan_type_id']);
+        $oldProduct = ['loan_type_id' => $loan->loan_type_id, 'due_date' => $loan->due_date instanceof \Carbon\Carbon ? $loan->due_date->toDateString() : $loan->due_date];
+
         $loan->update($validated);
 
         // G5: new terms on a loan that has moved no money (e.g. a rejected loan reopened with a new amount) → rebuild cycle 1
-        if ($termsChanged) {
-            $this->loanCalculator->rebuildInitialCycle($loan->fresh());
+        $rebuilt = $termsChanged && $this->loanCalculator->rebuildInitialCycle($loan->fresh());
+
+        // a sent loan moved to another product: the open cycle takes the new period and rates (owner, 1 Nov 2026)
+        if ($productChanged && ! $rebuilt && LoanCalculator::v2()) {
+            \App\Services\Loans\ProductChange::apply($loan->fresh(), $oldProduct);
         }
 
         // If loan status changed to defaulted, create recovery case
@@ -1516,6 +1522,76 @@ class LoanController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Grace days on the current cycle (owner, 1 Nov 2026): a borrower who pays a day or two late gets that many days
+     * with no penalty. The due date stays as it is; the cycle's penalty, status and partner split follow at once.
+     */
+    public function setGraceDays(Loan $loan, Request $request)
+    {
+        $data = $request->validate([
+            'grace_days' => 'required|integer|min:0|max:60',
+            'reason' => 'required|string|min:3|max:300',
+        ]);
+
+        $cycle = $loan->getCurrentCycle() ?? $loan->cycles()->orderByDesc('cycle_number')->first();
+        if (! $cycle) {
+            return back()->withErrors(['grace_days' => 'This loan has no cycle to give grace days on.']);
+        }
+
+        DB::transaction(function () use ($loan, $cycle, $data) {
+            $cycle = LoanCycle::whereKey($cycle->id)->lockForUpdate()->firstOrFail();
+            $old = ['status' => $loan->status, 'grace_days' => $cycle->grace_days];
+            $by = auth()->user()->name ?? ('user #' . auth()->id());
+
+            $cycle->grace_days = (int) $data['grace_days'];
+            $cycle->notes = trim($cycle->notes . " | Grace {$data['grace_days']} day(s) by {$by} on " . now()->toDateString() . ": {$data['reason']}", ' |');
+            $cycle->save();
+
+            $d = \App\Services\Loans\LoanStatus::apply($loan->fresh());
+            \App\Services\AuditTrail::record('loans', $loan->id, 'update', $old, [
+                'status' => $d['status'] ?? $loan->status, 'grace_days' => $cycle->grace_days,
+                'cycle_id' => $cycle->id, 'note' => $data['reason'],
+            ]);
+        });
+
+        // the broker/funder split follows the new penalty
+        if (\App\Services\Loans\RepaymentSplit::enabled()) {
+            try {
+                app(\App\Services\Loans\RepaymentSplit::class)->syncCycle((int) $cycle->id);
+            } catch (\Throwable $e) {
+                Log::error("Repayment split failed for cycle #{$cycle->id}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return back()->with('success', "Cycle {$cycle->cycle_number} now has {$data['grace_days']} grace day(s).");
+    }
+
+    /** A short payment accepted as paid in full: the small gap is booked as a discount (owner, 1 Nov 2026). */
+    public function acceptShortfall(Loan $loan, Request $request)
+    {
+        $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
+        $data = $request->validate(['reason' => 'required|string|min:3|max:300']);
+        try {
+            $row = \App\Services\Loans\ShortfallDiscount::accept($loan, $data['reason'], $request->user());
+        } catch (\DomainException $e) {
+            return back()->withErrors(['reason' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'KES ' . number_format((float) $row->amount, 2) . ' booked as a discount; the cycle is paid in full.');
+    }
+
+    /** What moving a sent loan to another product does to its open cycle, before saving (Edit loan). */
+    public function productChangePreview(Loan $loan, Request $request)
+    {
+        $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
+        $type = LoanType::findOrFail($request->validate(['loan_type_id' => 'required|exists:loan_types,id'])['loan_type_id']);
+        $preview = (int) $type->id !== (int) $loan->loan_type_id && LoanCalculator::v2()
+            ? \App\Services\Loans\ProductChange::preview($loan, $type)
+            : null;
+
+        return response()->json(['success' => true, 'data' => $preview]);
     }
 
     public function endForbearance(Loan $loan, Request $request)

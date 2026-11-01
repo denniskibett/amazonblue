@@ -13,6 +13,7 @@
     ['My inbox', 'staff.inbox', 'inbox', $u->isStaff(), ['staff.inbox'], null],
     ['Reports & Analytics', 'reports.index', 'chart', $u->can('view reports'), ['reports.*', 'disbursements.index'], null],
     ['Lending analytics', 'staff.analytics', 'pie', $u->can('view reports'), ['staff.analytics'], null],
+    ['Site analytics', 'staff.site-analytics', 'trending-up', $u->can('view reports'), ['staff.site-analytics'], null],
   ];
   if ($staff) {
     $groups['Lending'] = [
@@ -36,6 +37,7 @@
       ['Borrowers', 'staff.borrowers', 'user', $u->can('view users'), ['staff.borrowers'], null],
       ['KYC Reviews', 'kyc-reviews.index', 'user-check', $u->can('edit users'), ['kyc-reviews.*'], $count(fn () => \App\Models\User::where('kyc_status', 'submitted')->count())],
       ['Business Reviews', 'business-reviews.index', 'building', $u->can('view users'), ['business-reviews.*'], $count(fn () => \App\Models\Business::where('status', 'submitted')->count())],
+      ['Testimonials', 'staff.testimonials', 'star', $u->can('edit users'), ['staff.testimonials*'], $count(fn () => \Illuminate\Support\Facades\Schema::hasTable('testimonials') ? \App\Models\Testimonial::where('status', 'pending')->count() : 0)],
       ['Sanctions lists', 'aml.lists', 'shield', $u->can('view kyc documents'), ['aml.*'], null],
     ];
     $groups['Finance'] = [

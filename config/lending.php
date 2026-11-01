@@ -219,6 +219,12 @@ return [
         'same_rate_cycles' => 4,
     ],
 
+    // short payments (owner, 1 Nov 2026): when a borrower pays all but a little of a cycle, staff may accept it as paid
+    // in full; the gap (principal + interest still unpaid, up to this many KES) is booked as a discount, no cash
+    'shortfall' => [
+        'max' => (float) env('LENDING_SHORTFALL_MAX', 2000),
+    ],
+
     /*
     | The ledger (Stage 4 Phase 1): double entry kept in bavix wallets. Every account is a wallet with a
     | 'gl-' slug and 4 decimal places, held by the loan, the partner or the house partner (AC). Every
@@ -292,5 +298,16 @@ return [
             'debt_recovery_cases', 'payment_claims', 'system'],
         'kyc_tables' => ['users' => 'users', 'businesses' => 'businesses'],
         'access_tables' => ['roles', 'permissions', 'model_has_roles'],
+    ],
+
+    /*
+    | Site analytics (owner, 1 Nov 2026): first-party page views (TrackPageView), no IPs, no third-party scripts.
+    | keep_days: `analytics:prune-views` (daily) deletes older rows. slow_ms: a page slower than this on average
+    | shows up under "How to improve".
+    */
+    'analytics' => [
+        'enabled' => (bool) env('ANALYTICS_ENABLED', true),
+        'keep_days' => (int) env('ANALYTICS_KEEP_DAYS', 180),
+        'slow_ms' => 1500,
     ],
 ];

@@ -101,3 +101,4 @@ Last updated: 17 Oct 2026 · Code changed so far: **none**
 | Date | Change | Files |
 |---|---|---|
 | 2026-10-17 | Review docs + tree + this tracker created | `docs/*` |
+| 2026-11-01 | Owner batch: 419 on sign-in → back to a fresh form (bootstrap/app.php) + login reloads when restored; sessions 12 h (`SESSION_LIFETIME=720`); flatpickr clicks/Escape no longer close modals (dates.js); due list keeps forbearance/defaulted status; borrower extension page shows real figures; grace days per cycle (`loans.grace`); short payment accepted as discount up to `LENDING_SHORTFALL_MAX` (`loans.shortfall.accept`, `ShortfallDiscount`); product change on Edit loan re-prices the open cycle only, with preview (`ProductChange`, `loans.product-change.preview`); testimonials from DB (`2026_11_01_testimonials.sql`); site analytics; part funding pro-rata | see commit |

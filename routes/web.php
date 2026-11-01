@@ -127,6 +127,9 @@ Route::middleware('auth')->prefix('account')->name('account.')->group(function (
             Route::get('/notifications', 'accountNotifications')->name('notifications');
             Route::get('/help', 'accountHelp')->name('help');
             Route::post('/help', 'sendHelp')->middleware('throttle:5,10')->name('help.send');
+            // testimonial for the website (owner, 1 Nov 2026): once a loan was sent; staff approve it first
+            Route::get('/testimonial', [\App\Http\Controllers\TestimonialController::class, 'edit'])->name('testimonial');
+            Route::post('/testimonial', [\App\Http\Controllers\TestimonialController::class, 'store'])->middleware('throttle:5,10')->name('testimonial.save');
         });
 
         // partner self-service (Concerns\PartnerSelfService): own data only; requests = audit row + staff email, no posting
@@ -278,6 +281,21 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::patch('/forbearance/end', [LoanController::class, 'endForbearance'])
             ->name('forbearance.end')
             ->middleware('permission:end forbearance');
+
+        // Edit loan: what a new product does to the open cycle, before saving (owner, 1 Nov 2026)
+        Route::get('/product-change-preview', [LoanController::class, 'productChangePreview'])
+            ->name('product-change.preview')
+            ->middleware('permission:edit loans');
+
+        // a short payment accepted as paid in full, the gap booked as a discount (owner, 1 Nov 2026)
+        Route::post('/accept-shortfall', [LoanController::class, 'acceptShortfall'])
+            ->name('shortfall.accept')
+            ->middleware('permission:edit loans');
+
+        // grace days on the current cycle: no penalty for a short delay (owner, 1 Nov 2026)
+        Route::post('/grace', [LoanController::class, 'setGraceDays'])
+            ->name('grace')
+            ->middleware('permission:grant forbearance');
         
         // Recovery Routes
         Route::patch('/recovery/start', [LoanController::class, 'startRecovery'])
@@ -508,6 +526,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('borrowers', [\App\Http\Controllers\Staff\BorrowersController::class, 'index'])->name('borrowers')->middleware('permission:view users');
         // lending analytics: amount heatmaps and borrower behaviour (owner, 23 Oct 2026)
         Route::get('analytics', [\App\Http\Controllers\Staff\AnalyticsController::class, 'index'])->name('analytics')->middleware('permission:view reports');
+        // site analytics: visits, pages, funnel, a person's journey and what to improve (owner, 1 Nov 2026)
+        Route::get('site-analytics', [\App\Http\Controllers\Staff\SiteAnalyticsController::class, 'index'])->name('site-analytics')->middleware('permission:view reports');
         // email and SMS manager: reminders and collection notices in batches a person checks and sends (23 Oct 2026)
         Route::controller(\App\Http\Controllers\Staff\MessagesController::class)->prefix('messages')->name('messages.')->group(function () {
             Route::get('/', 'index')->name('index');
@@ -550,6 +570,12 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('requests.topup')->middleware('permission:create disbursements');
         Route::post('requests/partner/{id}', [\App\Http\Controllers\Staff\RequestsController::class, 'partner'])
             ->name('requests.partner')->middleware('permission:edit partners');
+
+        // borrower testimonials to approve before they show on the website (owner, 1 Nov 2026)
+        Route::get('testimonials', [\App\Http\Controllers\Staff\TestimonialsController::class, 'index'])
+            ->name('testimonials')->middleware('permission:edit users');
+        Route::post('testimonials/{testimonial}', [\App\Http\Controllers\Staff\TestimonialsController::class, 'decide'])
+            ->name('testimonials.decide')->middleware('permission:edit users');
 
         // M-Pesa payments queue (Stage 4 Phase 4)
         Route::get('payments', [\App\Http\Controllers\Staff\PaymentsController::class, 'index'])

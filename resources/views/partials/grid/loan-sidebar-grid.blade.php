@@ -238,6 +238,48 @@
             </button>
             @endif
 
+            <!-- Short payment accepted as paid in full: the gap is booked as a discount (owner, 1 Nov 2026) -->
+            @can('edit loans')
+            @php $short = \App\Services\Loans\ShortfallDiscount::check($loan); @endphp
+            @if($short && $short['ok'])
+            <details class="rounded-lg border border-amber-300 dark:border-amber-500/40">
+                <summary class="flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-amber-800 dark:text-amber-300">
+                    Short by KES {{ number_format($short['owed'], 2) }} · accept as paid
+                </summary>
+                <form method="POST" action="{{ route('loans.shortfall.accept', $loan) }}" class="space-y-2 p-3">
+                    @csrf
+                    <x-staff.field name="reason" label="Reason" :value="old('reason')" placeholder="Paid 6,800 of 7,000; M-Pesa charges" required />
+                    <button class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700">Book KES {{ number_format($short['owed'], 2) }} as a discount</button>
+                    <p class="text-xs text-gray-500">Cycle {{ $short['cycle']->cycle_number }}: KES {{ number_format($short['cash'], 2) }} paid in cash; KES {{ number_format($short['gap'], 2) }} of principal and interest unpaid{{ $short['owed'] > $short['gap'] + 0.004 ? ', plus KES ' . number_format($short['owed'] - $short['gap'], 2) . ' penalty' : '' }}. No cash moves; it shows as a discount on the loan and in the audit log. Limit KES {{ number_format(\App\Services\Loans\ShortfallDiscount::limit()) }}.</p>
+                </form>
+            </details>
+            @endif
+            @endcan
+
+            <!-- Grace days on the current cycle: no penalty for a short delay (owner, 1 Nov 2026) -->
+            @can('grant forbearance')
+            @if(in_array($loan->status, ['active', 'overdue', 'disbursed', 'forbearance', 'defaulted', 'repaid']))
+            @php
+                $graceCycle = $loan->getCurrentCycle() ?? $loan->cycles()->orderByDesc('cycle_number')->first();
+                $graceLate = $graceCycle && $graceCycle->due_date ? max(0, (int) \Illuminate\Support\Carbon::parse($graceCycle->due_date)->startOfDay()->diffInDays(now()->startOfDay(), false)) : 0;
+            @endphp
+            @if($graceCycle)
+            <details class="rounded-lg border border-gray-300 dark:border-gray-700">
+                <summary class="flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Grace days{{ $graceCycle->grace_days ? ' · ' . $graceCycle->grace_days . ' now' : '' }}
+                </summary>
+                <form method="POST" action="{{ route('loans.grace', $loan) }}" class="space-y-2 p-3">
+                    @csrf
+                    <x-staff.field name="grace_days" type="number" label="Days with no penalty after the due date" :value="old('grace_days', $graceCycle->grace_days ?: $graceLate)" min="0" max="60" step="1" required />
+                    <x-staff.field name="reason" label="Reason" :value="old('reason')" placeholder="Paid a day late (M-Pesa delay)" required />
+                    <button class="w-full rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600">Save grace days</button>
+                    <p class="text-xs text-gray-500">Cycle {{ $graceCycle->cycle_number }}, due {{ \Illuminate\Support\Carbon::parse($graceCycle->due_date)->format('j M Y') }}{{ $graceLate ? ', ' . $graceLate . ' day(s) late today' : '' }}. Penalty starts only after these days; the due date stays the same.</p>
+                </form>
+            </details>
+            @endif
+            @endif
+            @endcan
+
             <!-- End Forbearance -->
             @if($loan->isInForbearance())
             <button type="button" data-confirm="End forbearance for this loan?" data-confirm-submit="end-forbearance-form" 

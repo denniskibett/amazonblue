@@ -1,6 +1,7 @@
 @extends('home.layouts.account', ['title' => 'Ask for more time', 'tab' => 'loans'])
 
-{{-- Extension (rollover) request. Preview: LoanCalculator::getRolloverPreview, read-only and indicative.
+{{-- Extension (rollover) request. Preview: LoanCalculator::getRolloverPreview, read-only: the same figures a
+     rollover booked today would use (owner, 1 Nov 2026: real amounts, not an example).
      Sending = audit row + staff email (Concerns\BorrowerJourneys::requestExtension). --}}
 @php
   $loan = $progress['loan'];
@@ -42,28 +43,33 @@
 
   <div class="a-grid two">
     <section class="a-card">
-      <div class="a-sec-h"><h2>What an extension costs</h2><span class="badge-s st-pending">Indicative</span></div>
+      <div class="a-sec-h"><h2>What an extension costs</h2><span class="badge-s st-active">As of today</span></div>
       @if ($preview)
-        <p class="muted" style="font-size:13.5px">If our team agrees, the amount still owed moves into a new repayment period and interest for that period is added.</p>
-        {{-- v1: the preview differs from what an extension books (S-B3), so only the rate is shown.
-             v2 (Stage 4 Phase 2): preview and booking are the same calculation, so the figures are shown. --}}
+        @php
+          $kes = fn ($n) => 'KES ' . number_format((float) $n, 2);
+          $b = $preview['cycle_calculation'] ?? [];
+          $rate = rtrim(rtrim(number_format((float) $preview['interest_rate'], 2), '0'), '.');
+          $carried = $preview['new_principal'] ?? $preview['final_outstanding'];
+        @endphp
+        <p class="muted" style="font-size:13.5px">If our team agrees today, what you still owe on this loan moves into a new period and that period's interest is added.</p>
         <dl class="a-break" style="margin-top:12px">
-          @if (($preview['engine'] ?? null) === 'v2')
-            <dt>Still owed today</dt><dd>KES {{ number_format((float) $preview['new_principal'], 2) }}</dd>
-            <dt>Interest for the new period ({{ rtrim(rtrim(number_format((float) $preview['interest_rate'], 2), '0'), '.') }}%)</dt><dd>KES {{ number_format((float) $preview['interest_to_capitalize'], 2) }}</dd>
-            <dt>New amount to repay</dt><dd>KES {{ number_format((float) $preview['new_balance'], 2) }}</dd>
-            <dt>New due date</dt><dd>{{ $preview['new_due_date'] }}</dd>
-          @else
-            <dt>Interest for the new period</dt><dd>{{ rtrim(rtrim(number_format((float) $preview['interest_rate'], 2), '0'), '.') }}% of the amount still owed</dd>
+          @if (isset($b['unpaid_principal']))
+            <dt>Principal still owed</dt><dd>{{ $kes($b['unpaid_principal']) }}</dd>
+            <dt>Interest still owed</dt><dd>{{ $kes($b['unpaid_interest']) }}</dd>
+            @if ((float) ($b['unpaid_penalty'] ?? 0) > 0)
+              <dt>Late charges</dt><dd>{{ $kes($b['unpaid_penalty']) }}</dd>
+            @endif
           @endif
+          <dt><b>Carried into the new period</b></dt><dd><b>{{ $kes($carried) }}</b></dd>
+          <dt>Interest for the new period ({{ $rate }}%)</dt><dd>{{ $kes($preview['interest_to_capitalize']) }}</dd>
+          <dt><b>New amount to repay</b></dt><dd><b>{{ $kes($preview['new_balance']) }}</b></dd>
+          <dt>New due date</dt><dd>{{ $preview['new_due_date'] }}</dd>
         </dl>
-        <x-az.alert type="warn" title="We'll confirm the cost before anything changes" style="margin-top:14px">
-          Our team works out the exact amount and the new due date and agrees them with you before anything changes on your loan.
-        </x-az.alert>
+        <p class="muted" style="font-size:12.5px;margin-top:12px">These are today's figures for this loan. They go down if you pay part of it first, and late charges add up each day it stays unpaid. Nothing changes until our team confirms with you.</p>
       @else
-        <x-az.placeholder dependency="rollover pricing rework" title="Cost preview not available for this loan">
-          Our team will tell you the cost and new due date when they call.
-        </x-az.placeholder>
+        <x-az.alert type="info" title="We'll tell you the cost when we call">
+          Our team works out the amount and the new due date with you.
+        </x-az.alert>
       @endif
       <p class="muted" style="font-size:12.5px;margin-top:12px">Extending costs more than paying on time and does not count as an on-time repayment for your limit.</p>
     </section>

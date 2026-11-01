@@ -35,11 +35,33 @@ return Application::configure(basePath: dirname(__DIR__))
         // sysadmin "view as": a preview answers as the chosen role or account and keeps nothing (owner, 23 Oct 2026)
         $middleware->web(append: \App\Http\Middleware\PreviewAs::class);
 
+        // site analytics: one row per page opened, written after the page has gone out (owner, 1 Nov 2026)
+        $middleware->web(append: \App\Http\Middleware\TrackPageView::class);
+
         // Safaricom's Daraja callbacks carry no session or CSRF token; they are protected by a secret path
         // segment and an IP allowlist instead (MpesaCallbackController)
         $middleware->validateCsrfTokens(except: ['mpesa/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // 419 on the sign-in pages (owner, 1 Nov 2026): a phone keeps the sign-in tab open for hours, so its form
+        // token has expired by the time it is sent. Back to a fresh form with the email kept, instead of an error;
+        // signing out with an expired token just goes home (the session is already gone).
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, \Illuminate\Http\Request $request) {
+            if ($e->getStatusCode() !== 419 || $request->expectsJson()) {
+                return null;
+            }
+            if ($request->is('logout')) {
+                return redirect('/');
+            }
+            if ($request->is('login', 'register', 'forgot-password', 'reset-password', 'confirm-password')) {
+                return redirect()->back()
+                    ->withInput($request->except('password', 'password_confirmation', '_token'))
+                    ->with('status', 'The page had been open a while and expired. Please try again.');
+            }
+
+            return null;
+        });
+
         // HTML errors use the branded pages in resources/views/errors. API / AJAX callers get JSON with
         // only a message and the status: never a trace or exception details, whatever APP_DEBUG says.
         // Validation errors (422) keep Laravel's {message, errors} shape for the forms that read it.
