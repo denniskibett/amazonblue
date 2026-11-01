@@ -1572,18 +1572,22 @@ class LoanController extends Controller
         return back()->with('success', "Cycle {$cycle->cycle_number} now has {$data['grace_days']} grace day(s).");
     }
 
-    /** A short payment accepted as paid in full: the small gap is booked as a discount (owner, 1 Nov 2026). */
+    /**
+     * A short payment accepted as the cycle's full amount (owner, 1 Nov 2026): the cycle's interest is cut to fit the cash
+     * received; nothing is written to repayments (only real cash is ever booked).
+     */
     public function acceptShortfall(Loan $loan, Request $request)
     {
         $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
         $data = $request->validate(['reason' => 'required|string|min:3|max:300']);
         try {
-            $row = \App\Services\Loans\ShortfallDiscount::accept($loan, $data['reason'], $request->user());
+            $plan = \App\Services\Loans\ShortfallFit::apply($loan, $data['reason'], $request->user());
         } catch (\DomainException $e) {
             return back()->withErrors(['reason' => $e->getMessage()]);
         }
 
-        return back()->with('success', 'KES ' . number_format((float) $row->amount, 2) . ' booked as a discount; the cycle is paid in full.');
+        return back()->with('success', 'Cycle ' . $plan['cycle']->cycle_number . ' closed at KES ' . number_format($plan['cash'], 2)
+            . ': interest now KES ' . number_format($plan['new_interest'], 2) . '.');
     }
 
     /**

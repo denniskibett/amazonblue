@@ -82,6 +82,7 @@ class ProductChange
             $cycle->fill([
                 'principal' => $principal,
                 'interest_rate' => $new['interest_rate'],
+                'interest_amount' => null,   // new terms: interest is rate × principal again
                 'penalty_rate' => $new['penalty_rate'],
                 'interest_capitalized' => $interest,
                 'new_balance' => round($principal + $interest, 2),

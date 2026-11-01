@@ -336,19 +336,27 @@
             @endif
             @endcan
 
-            <!-- Short payment accepted as paid in full: the gap is booked as a discount (owner, 1 Nov 2026) -->
+            <!-- Short payment accepted as the cycle's full amount: the cycle is fitted to the cash, no repayment row (owner, 1 Nov 2026) -->
             @can('edit loans')
-            @php $short = \App\Services\Loans\ShortfallDiscount::check($loan); @endphp
+            @php $short = \App\Services\Loans\ShortfallFit::check($loan); @endphp
             @if($short && $short['ok'])
             <details class="rounded-lg border border-amber-300 dark:border-amber-500/40">
                 <summary class="flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-amber-800 dark:text-amber-300">
-                    Short by KES {{ number_format($short['owed'], 2) }} · accept as paid
+                    Short by KES {{ number_format($short['gap'], 2) }} · close at amount paid
                 </summary>
                 <form method="POST" action="{{ route('loans.shortfall.accept', $loan) }}" class="space-y-2 p-3">
                     @csrf
-                    <x-staff.field name="reason" label="Reason" :value="old('reason')" placeholder="Paid 6,800 of 7,000; M-Pesa charges" required />
-                    <button class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700">Book KES {{ number_format($short['owed'], 2) }} as a discount</button>
-                    <p class="text-xs text-gray-500">Cycle {{ $short['cycle']->cycle_number }}: KES {{ number_format($short['cash'], 2) }} paid in cash; KES {{ number_format($short['gap'], 2) }} of principal and interest unpaid{{ $short['owed'] > $short['gap'] + 0.004 ? ', plus KES ' . number_format($short['owed'] - $short['gap'], 2) . ' penalty' : '' }}. No cash moves; it shows as a discount on the loan and in the audit log. Limit KES {{ number_format(\App\Services\Loans\ShortfallDiscount::limit()) }}.</p>
+                    <dl class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                        <dt class="text-gray-500">Cash paid</dt><dd class="text-right font-medium">KES {{ number_format($short['cash'], 2) }}</dd>
+                        <dt class="text-gray-500">Interest now</dt><dd class="text-right">KES {{ number_format($short['old_interest'], 2) }}</dd>
+                        <dt class="text-gray-500">Interest after</dt><dd class="text-right font-semibold text-amber-700 dark:text-amber-300">KES {{ number_format($short['new_interest'], 2) }}</dd>
+                        @if($short['grace_days'] > (int) $short['cycle']->grace_days)
+                            <dt class="text-gray-500">Grace days</dt><dd class="text-right">{{ $short['grace_days'] }} (paid late; no penalty)</dd>
+                        @endif
+                    </dl>
+                    <x-staff.field name="reason" label="Reason" :value="old('reason')" placeholder="Paid 25,000 of 25,200; agreed" required />
+                    <button class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700">Close cycle {{ $short['cycle']->cycle_number }} at KES {{ number_format($short['cash'], 2) }}</button>
+                    <p class="text-xs text-gray-500">Worked backwards from the cash received: the cycle's interest is lowered by the shortfall. No repayment or discount is recorded; only real cash stays on the loan. Limit KES {{ number_format(\App\Services\Loans\ShortfallFit::limit()) }}.</p>
                 </form>
             </details>
             @endif

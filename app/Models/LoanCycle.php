@@ -12,7 +12,7 @@ class LoanCycle extends Model
 
     protected $fillable = [
         'loan_id', 'cycle_number', 'previous_balance',
-        'interest_capitalized', 'new_balance', 'interest_rate',
+        'interest_capitalized', 'new_balance', 'interest_rate', 'interest_amount',
         'start_date', 'due_date', 'status', 'notes',
         // Stage 4 Phase 2: the cycle's own terms and its balance cache (see the 2026_10_20_000201 migration)
         'principal', 'penalty_rate', 'grace_days', 'default_threshold_days', 'penalty_waived_until',
@@ -24,6 +24,7 @@ class LoanCycle extends Model
         'interest_capitalized' => 'decimal:2',
         'new_balance' => 'decimal:2',
         'interest_rate' => 'decimal:2',
+        'interest_amount' => 'decimal:2',
         'start_date' => 'date',
         'due_date' => 'date',
         'principal' => 'decimal:2',

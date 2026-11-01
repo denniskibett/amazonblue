@@ -957,7 +957,9 @@ function userTable() {
                     throw new Error(data.message || 'Something went wrong');
                 }
                 
-                // Success - reload page
+                // refresh the list in the background and say so (owner, 1 Nov 2026)
+                this.closeDeleteModal && this.closeDeleteModal();
+                window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: data.message || 'User deleted.' } }));
                 (window.azRefresh ? window.azRefresh() : location.reload());
                 
             } catch (error) {

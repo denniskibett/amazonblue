@@ -39,7 +39,10 @@ class CycleBalance
         $penaltyUntil = ! empty($terms['penalty_until']) ? Carbon::parse($terms['penalty_until'])->startOfDay() : null;
 
         $principal = self::cents($terms['principal']);
-        $interest = (int) round($principal * (float) $terms['interest_rate'] / 100);
+        // an exact amount set on the cycle (a short payment accepted as its full amount) wins over rate × principal
+        $interest = isset($terms['interest_amount']) && $terms['interest_amount'] !== null
+            ? self::cents($terms['interest_amount'])
+            : (int) round($principal * (float) $terms['interest_rate'] / 100);
 
         // one net amount per day, up to the as-of day (and the rows behind it, for per-payment allocation)
         $byDay = [];
@@ -196,6 +199,7 @@ class CycleBalance
             'due' => Carbon::parse($cycle->due_date)->toDateString(),
             'penalty_rate' => $cycle->penalty_rate !== null ? (float) $cycle->penalty_rate : (float) ($type->penalty_rate ?? 0),
             'grace_days' => $cycle->grace_days ?? (int) ($type->grace_period_days ?? 0),
+            'interest_amount' => $cycle->interest_amount !== null ? (float) $cycle->interest_amount : null,
             'threshold_days' => $cycle->default_threshold_days
                 ?? (int) ($loan?->npl_trigger_threshold ?: ($type->default_threshold_days ?? 30)),
             'waived_until' => $cycle->penalty_waived_until?->toDateString() ?? ($legacyPlan ? '9999-12-31' : null),

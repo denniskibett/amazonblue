@@ -81,7 +81,8 @@
     if (! el) return;
     e.preventDefault(); e.stopImmediatePropagation();
     if (! await window.uiConfirm(el.dataset.confirm, {danger: 'confirmDanger' in el.dataset})) return;
-    if (el.dataset.confirmSubmit) { const f = document.getElementById(el.dataset.confirmSubmit); f && f.submit(); }
+    // requestSubmit, not submit(): the form goes through the submit listeners, so it is sent in the background (owner, 1 Nov 2026)
+    if (el.dataset.confirmSubmit) { const f = document.getElementById(el.dataset.confirmSubmit); f && (f.requestSubmit ? f.requestSubmit() : f.submit()); }
     else if (el.href) { window.location = el.href; }
   }, true);
 </script>

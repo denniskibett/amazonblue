@@ -6,6 +6,9 @@
        If the server sends you to another page, the browser simply goes there.
      - Links to other pages start loading as soon as the pointer rests on them (speculation rules), so they open fast.
      Opt out with data-no-swap on a link or form. Downloads and new tabs are never touched.
+     - Deletes (owner, 1 Nov 2026): when the server answers a delete with another page (e.g. the list), you stay where
+       you are; this page is refreshed in the background and the server's message shows as a notification. Only when
+       this page no longer exists (you deleted the record you were looking at) does the browser go to the other page.
      - window.azRefresh() (owner, 23 Oct 2026): after a modal saves, the cards, tables and counts on screen are fetched
        again in the background instead of reloading the page.
      - <a data-drawer href="..."> opens that page in a side drawer over the current one. Forms in the drawer are sent in
@@ -90,6 +93,13 @@
       if (res.redirected && final.pathname.startsWith('/login')) { location.assign(final.href); return; }
       if (!type.includes('text/html') || res.status === 419) {                   // a file, JSON or an expired session
         if (opts.method === 'POST') location.reload(); else location.assign(final.href);
+        return;
+      }
+      if (!samePage(final) && opts.stay) {                                        // a delete: stay here, refresh, notify
+        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        const here = await fetch(location.href, {credentials: 'same-origin', headers: {'X-Requested-With': 'AzSwap', 'Accept': 'text/html'}});
+        if (!here.ok || here.redirected || !apply(await here.text(), location.href, 'none')) { location.assign(final.href); return; }
+        try { JSON.parse((doc.getElementById('az-flash') || {}).textContent || '[]').forEach(t => window.dispatchEvent(new CustomEvent('toast', {detail: t}))); } catch (e) {}
         return;
       }
       if (!samePage(final)) { location.assign(final.href); return; }            // the server moved us on: go there
@@ -219,7 +229,7 @@
     }
     e.preventDefault();
     if (submitter) { submitter.disabled = true; setTimeout(() => { submitter.disabled = false; }, 4000); }
-    load(action.href, {method: 'POST', body: data});
+    load(action.href, {method: 'POST', body: data, stay: String(data.get('_method') || '').toUpperCase() === 'DELETE'});
   });
 
   window.addEventListener('popstate', (e) => { if (e.state && e.state.az) load(location.href, {}, 'none'); });
