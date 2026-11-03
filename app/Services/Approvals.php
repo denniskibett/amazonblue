@@ -26,6 +26,9 @@ class Approvals
         // owner, 24 Oct 2026
         'approve_business' => ['permission' => 'edit users', 'label' => 'Approve a business and its limit'],
         'mpesa_b2c' => ['permission' => 'disburse loans', 'label' => 'Send a disbursement by M-Pesa'],
+        // a discount and a deleted payout both take money off the books (owner, 3 Nov 2026)
+        'accept_shortfall' => ['permission' => 'approve loans', 'label' => 'Accept a shortfall (discount)'],
+        'delete_disbursement' => ['permission' => 'delete disbursements', 'label' => 'Delete a disbursement'],
     ];
 
     public static function enabled(): bool

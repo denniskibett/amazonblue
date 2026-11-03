@@ -557,9 +557,9 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('repayments.split-preview')->middleware('permission:create repayments|delete repayments');
         // second sign-offs (Stage 4 Phase 5); each decision checks the action's own permission
         Route::get('sign-offs', [\App\Http\Controllers\Staff\SignOffsController::class, 'index'])
-            ->name('sign-offs')->middleware('permission:approve loans|delete repayments|write off loan|edit partners|edit users|disburse loans');
+            ->name('sign-offs')->middleware('permission:approve loans|delete repayments|write off loan|edit partners|edit users|disburse loans|delete disbursements');
         Route::post('sign-offs/{approval}', [\App\Http\Controllers\Staff\SignOffsController::class, 'decide'])
-            ->name('sign-offs.decide')->middleware('permission:approve loans|delete repayments|write off loan|edit partners|edit users|disburse loans');
+            ->name('sign-offs.decide')->middleware('permission:approve loans|delete repayments|write off loan|edit partners|edit users|disburse loans|delete disbursements');
 
         // portfolio on the ledger (Stage 4 Phase 7)
         Route::get('portfolio', [\App\Http\Controllers\Staff\PortfolioController::class, 'index'])->name('portfolio')->middleware('permission:view reports');
@@ -598,7 +598,7 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::post('end-of-day/close', [\App\Http\Controllers\Staff\CashDeskController::class, 'closeDay'])
             ->name('end-of-day.close')->middleware('permission:create repayments|create disbursements');
         Route::post('end-of-day/{close}/approve', [\App\Http\Controllers\Staff\CashDeskController::class, 'approveDay'])
-            ->name('end-of-day.approve')->middleware('permission:view reports');
+            ->name('end-of-day.approve')->middleware('permission:reconcile wallets|approve loans');
         Route::get('end-of-day', [\App\Http\Controllers\Staff\CashDeskController::class, 'endOfDay'])
             ->name('end-of-day')->middleware('permission:create repayments|create disbursements|view reports');
         Route::get('collections', [\App\Http\Controllers\Staff\CollectionsController::class, 'index'])

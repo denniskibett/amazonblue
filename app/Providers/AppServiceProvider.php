@@ -208,9 +208,18 @@ class AppServiceProvider extends ServiceProvider
         // Audit trail (audit_logs): who changed what, old/new values, IP. Never blocks the action.
         foreach ([Loan::class, Repayment::class, Disbursement::class, \App\Models\Partner::class,
                   \App\Models\PartnerTransaction::class, \App\Models\Investment::class, \App\Models\User::class,
-                  \App\Models\DebtRecoveryCase::class, \App\Models\Business::class] as $audited) {
+                  \App\Models\DebtRecoveryCase::class, \App\Models\Business::class,
+                  // recovery calls/visits/notes, raw M-Pesa rows and system settings (owner, 3 Nov 2026)
+                  \App\Models\RecoveryAction::class, \App\Models\RecoveryCaseNote::class, \App\Models\MpesaTransaction::class,
+                  \App\Models\System::class] as $audited) {
             $audited::observe(\App\Observers\AuditObserver::class);
         }
+        // sign-in, sign-out, failed sign-in and password reset (owner, 3 Nov 2026)
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Login::class, fn ($e) => \App\Services\AuditTrail::record('users', $e->user->getAuthIdentifier(), 'update', null, ['event' => 'login']));
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Logout::class, fn ($e) => $e->user ? \App\Services\AuditTrail::record('users', $e->user->getAuthIdentifier(), 'update', null, ['event' => 'logout']) : null);
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Failed::class, fn ($e) => \App\Services\AuditTrail::record('users', $e->user?->getAuthIdentifier() ?? 0, 'update', null,
+            ['event' => 'login_failed', 'login' => mb_substr((string) ($e->credentials['email'] ?? $e->credentials['phone'] ?? ''), 0, 120)]));
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\PasswordReset::class, fn ($e) => \App\Services\AuditTrail::record('users', $e->user->getAuthIdentifier(), 'update', null, ['event' => 'password_reset']));
         // Spatie role changes on users (needs permission.events_enabled = true)
         \Illuminate\Support\Facades\Event::listen(\Spatie\Permission\Events\RoleAttachedEvent::class, function ($event) {
             \App\Services\AuditTrail::record($event->model->getTable(), $event->model->getKey(), 'update', null,

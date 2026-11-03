@@ -9,6 +9,7 @@
 
   @php $labels = \App\Services\Approvals::ACTIONS; $subject = fn ($a) => match ($a->subject_type) {
     'loans' => 'Loan #' . $a->subject_id, 'repayments' => 'Repayment #' . $a->subject_id,
+    'disbursements' => 'Disbursement #' . $a->subject_id . ' on loan #' . \Illuminate\Support\Facades\DB::table('disbursements')->where('id', $a->subject_id)->value('loan_id'),
     'debt_recovery_cases' => 'Case #' . $a->subject_id, 'partner_requests' => 'Partner request #' . $a->subject_id,
     'businesses' => (\App\Models\Business::find($a->subject_id)?->legal_name ?? 'Business') . ' (KYB-' . str_pad((string) $a->subject_id, 6, '0', STR_PAD_LEFT) . ')',
     'mpesa_transactions' => 'M-Pesa payout #' . $a->subject_id . ' for loan #' . \Illuminate\Support\Facades\DB::table('mpesa_transactions')->where('id', $a->subject_id)->value('loan_id'), default => $a->subject_type . ' #' . $a->subject_id }; @endphp

@@ -20,6 +20,9 @@ class AuditObserver
     /** For users only these columns are audited (role, account status, KYC decisions). */
     private const USER_FIELDS = ['role', 'status', 'kyc_status', 'kyc_reviewed_by', 'kyc_reviewed_at', 'kyc_review_notes', 'kyc_submitted_at'];
 
+    /** System columns whose values are never copied into the trail. */
+    private const SYSTEM_OPAQUE = ['settings', 'custom_css', 'custom_js'];
+
     public function created(Model $model): void
     {
         $this->safely(function () use ($model) {
@@ -71,6 +74,18 @@ class AuditObserver
         if ($model instanceof User) {
             $keep = $wholeRecord ? array_merge(self::USER_FIELDS, ['name', 'email']) : self::USER_FIELDS;
             $values = array_intersect_key($values, array_flip($keep));
+        }
+        // the raw M-Pesa callback stays in mpesa_transactions only
+        if ($model instanceof \App\Models\MpesaTransaction) {
+            unset($values['payload']);
+        }
+        // system settings can hold integration keys: record that they changed, not what to
+        if ($model instanceof \App\Models\System) {
+            foreach (self::SYSTEM_OPAQUE as $key) {
+                if (array_key_exists($key, $values)) {
+                    $values[$key] = '[changed]';
+                }
+            }
         }
 
         return $values;

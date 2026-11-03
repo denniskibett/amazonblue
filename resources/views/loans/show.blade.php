@@ -460,6 +460,10 @@
                 </div>
             </div>
 
+            @unless (auth()->user()->hasAnyRole(['borrower', 'broker', 'partner']))
+                @include('loans._journey')
+            @endunless
+
             <!-- Print Button -->
             <div class="flex items-center justify-end gap-3">
                 <button onclick="window.print()"
