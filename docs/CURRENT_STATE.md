@@ -90,7 +90,8 @@ loan they approved themselves (`LENDING_SELF_DISBURSE_ROLES`); each such disburs
     slice are the house's. Both have Preview (journal rows, nothing saved). Changes re-split by difference: new
     journal rows, nothing edited.
     **Payouts already made:** Requests › prepare › "Already paid" records the day and the bank or M-Pesa reference;
-    the payout posts on that day once signed off (`Requests::recordPaidPayout`).
+    the payout posts on that day straight away, with no second sign-off (`Requests::recordPaidPayout`; owner,
+    4 Nov 2026). `partners:post-paid` posts already-paid payouts still waiting on /staff/sign-offs.
 11. **Ledger** (`LENDING_LEDGER_ENABLED`). Double-entry postings to `gl-*` wallets, posted after commit, accrued nightly
     (`ledger:accrue`). The chart of accounts is in `config/lending.php › ledger.accounts`.
 

@@ -199,7 +199,8 @@ class Requests
 
     /**
      * Withdrawal: one person prepares it (the amount must still be available); with maker-checker on, a second
-     * person approves on /staff/sign-offs and the payout is posted then; with it off, it is paid now.
+     * person approves on /staff/sign-offs and the payout is posted then; with it off, or when the payout was already
+     * made, it is posted now.
      */
     public function prepareWithdrawal(int $id, User $by, bool $pay, ?string $note): void
     {
@@ -219,7 +220,9 @@ class Requests
             }
             DB::table('partner_requests')->where('id', $id)->update(['status' => 'prepared', 'prepared_by' => $by->id, 'decision_note' => $note, 'updated_at' => now()]);
             $approvals = app(Approvals::class);
-            if ($approvals->needsSecond($by, 'partner_withdrawal', (float) $r->amount)) {
+            // a payout already made (day + bank reference) is a record of the past: no second sign-off (owner, 4 Nov 2026)
+            $alreadyPaid = $r->paid_on && $r->bank_reference;
+            if (! $alreadyPaid && $approvals->needsSecond($by, 'partner_withdrawal', (float) $r->amount)) {
                 $approvals->request($by, 'partner_withdrawal', 'partner_requests', $id, (float) $r->amount, ['reason' => $note]);
             } else {
                 app(ApprovalActions::class)->run((object) ['action' => 'partner_withdrawal', 'subject_id' => $id, 'requested_by' => $by->id, 'payload' => '{}'], $by);

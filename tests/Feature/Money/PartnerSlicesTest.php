@@ -160,6 +160,19 @@ class PartnerSlicesTest extends TestCase
         app(Requests::class)->recordPaidPayout($this->buosti, 'principal', 20000, '2026-10-30', '019605362653', $this->admin);
     }
 
+    public function test_a_payout_already_made_posts_without_a_second_sign_off(): void
+    {
+        config(['lending.approvals.enabled' => true]);
+        Carbon::setTestNow('2026-11-03 10:00');
+        $this->buosti->addContribution(20000, 'MPESA-UJK6OAKZ64', 'money back on the account', null, null, '2026-10-20');
+        $id = app(Requests::class)->recordPaidPayout($this->buosti, 'principal', 20000, '2026-10-30', '019605362653', $this->admin);
+
+        $this->assertSame(0, DB::table('approvals')->where('subject_id', $id)->count());
+        $this->assertSame('done', DB::table('partner_requests')->where('id', $id)->value('status'));
+        $this->assertSame(0.0, round((float) $this->buosti->getWallet('principal')->refresh()->balanceFloat, 2));
+        $this->assertSame('2026-10-30', substr((string) PartnerTransaction::where('partner_id', $this->buosti->id)->where('type', 'withdrawal')->value('transaction_date'), 0, 10));
+    }
+
     public function test_partners_check_reconciles_a_clean_book(): void
     {
         $this->houseLoan(912);
