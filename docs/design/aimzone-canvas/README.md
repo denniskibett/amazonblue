@@ -1,6 +1,6 @@
 # AIMZONE design file (imported 3 Nov 2026)
 
-A copy of the design canvas "AIMZONE Ventures Logos" (claude.ai/artifact/2JAjByGcGyBxbALNTnFMX9, version 1793720506-83ad): 244 artboards. It is the reference for how every screen should look. The app's tokens in `resources/design/tokens.cjs` already use its colours and fonts.
+A copy of the design canvas "AIMZONE Ventures Logos" (claude.ai/artifact/2JAjByGcGyBxbALNTnFMX9, version 1793726628-a2d1): 246 artboards. It is the reference for how every screen should look. The app's tokens in `resources/design/tokens.cjs` already use its colours and fonts.
 
 Each `.dc.html` file is one artboard: the markup is in `<x-dc>`, its data in the `<script type="text/x-dc">` block. `canvas.json` is the index (positions, titles, pages).
 
