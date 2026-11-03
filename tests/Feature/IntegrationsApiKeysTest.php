@@ -102,11 +102,16 @@ class IntegrationsApiKeysTest extends TestCase
         $this->assertNotNull($borrower);
     }
 
-    public function test_pages_need_their_permission(): void
+    public function test_admins_may_open_both_pages_and_others_may_not(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        $this->actingAs($admin)->get(route('staff.integrations'))->assertForbidden();
-        $this->actingAs($admin)->get(route('staff.api-keys'))->assertForbidden();
+        $this->actingAs($admin)->get(route('staff.integrations'))->assertOk()->assertSee('M-Pesa (Daraja)');
+        $this->actingAs($admin)->get(route('staff.api-keys'))->assertOk();
+
+        $teller = User::factory()->create();
+        $teller->assignRole('teller');
+        $this->actingAs($teller)->get(route('staff.integrations'))->assertForbidden();
+        $this->actingAs($teller)->get(route('staff.api-keys'))->assertForbidden();
     }
 }

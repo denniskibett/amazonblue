@@ -62,7 +62,7 @@ class NavMenu
             ['Operations review', 'staff.operations-review', 'refresh', $u->canAny(['view logs', 'view ledger']), ['staff.operations-review'], null],
             ['Audit Log', 'audit-log.index', 'list', $u->can('view audit log'), ['audit-log.*'], null],
             ['Roles & permissions', 'staff.roles', 'key', $u->canAny(['manage roles', 'view audit log']), ['staff.roles'], null],
-            ['Integrations', 'staff.integrations', 'layers', $u->can('access system settings'), ['staff.integrations*'], null],
+            ['Integrations', 'staff.integrations', 'layers', $u->canAny(['manage integrations', 'access system settings']), ['staff.integrations*'], null],
           ['API keys', 'staff.api-keys', 'key', $u->can('manage API tokens'), ['staff.api-keys*'], null],
           ['Loan products', 'staff.products', 'file', $u->canAny(['manage loan types', 'view reports']), ['staff.products'], null],
           ];

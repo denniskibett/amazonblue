@@ -92,6 +92,7 @@ class RoleSeeder extends Seeder
         'manage notifications',
         'manage backups',
         'manage API tokens',
+        'manage integrations',
         'impersonate users',
         'view system health',
         'manage feature flags',
@@ -174,6 +175,9 @@ class RoleSeeder extends Seeder
             'manage loan types',
             'manage loan cycles',
             'manage notifications',
+            // the Integrations and API keys pages (owner, 3 Nov 2026)
+            'manage integrations',
+            'manage API tokens',
         ],
         'borrower' => [
             'view loans',

@@ -517,7 +517,7 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('approvals', [\App\Http\Controllers\Staff\LoanDeskController::class, 'approvals'])
             ->name('approvals')->middleware('permission:view loans');
         // integrations and API keys (owner, 3 Nov 2026)
-        Route::middleware('permission:access system settings')->group(function () {
+        Route::middleware('permission:manage integrations|access system settings')->group(function () {
             Route::get('integrations', [\App\Http\Controllers\Staff\IntegrationsController::class, 'index'])->name('integrations');
             Route::post('integrations/{slug}', [\App\Http\Controllers\Staff\IntegrationsController::class, 'update'])->name('integrations.update');
             Route::post('integrations/{slug}/toggle', [\App\Http\Controllers\Staff\IntegrationsController::class, 'toggle'])->name('integrations.toggle');
