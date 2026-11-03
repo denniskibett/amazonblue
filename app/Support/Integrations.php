@@ -79,6 +79,8 @@ class Integrations
             'description' => 'Outgoing email: sign-in codes, KYC, receipts, money sent, reminders and staff alerts.',
             'fields' => [
                 'MAIL_MAILER' => ['Mailer', 'mail.default', 'select', ['smtp', 'log', 'sendmail']],
+                // when set it wins over host, port, username and password (live: the server's own relay)
+                'MAIL_URL' => ['SMTP URL (overrides the fields below when set)', 'mail.mailers.smtp.url', 'secret'],
                 'MAIL_HOST' => ['SMTP host', 'mail.mailers.smtp.host', 'text'],
                 'MAIL_PORT' => ['SMTP port', 'mail.mailers.smtp.port', 'text'],
                 'MAIL_SCHEME' => ['Scheme (smtps for 465, blank for 587)', 'mail.mailers.smtp.scheme', 'text'],

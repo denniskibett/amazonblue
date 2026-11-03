@@ -51,6 +51,19 @@ class IntegrationsApiKeysTest extends TestCase
         $this->assertSame('hunter2-very-secret', Integration::where('slug', 'mail')->first()->settings['MAIL_PASSWORD']);
     }
 
+    public function test_mail_url_is_imported_masked_and_applied(): void
+    {
+        config(['mail.mailers.smtp.url' => 'smtp://relay-user:relay-pass@127.0.0.1:25']);
+        $this->artisan('integrations:import-env')->assertSuccessful();
+        $this->assertSame('smtp://relay-user:relay-pass@127.0.0.1:25', Integration::where('slug', 'mail')->first()->settings['MAIL_URL']);
+        $this->actingAs($this->super)->get(route('staff.integrations'))->assertOk()->assertDontSee('relay-pass');
+
+        config(['mail.mailers.smtp.url' => null]);
+        Integrations::forget();
+        Integrations::apply();
+        $this->assertSame('smtp://relay-user:relay-pass@127.0.0.1:25', config('mail.mailers.smtp.url'));
+    }
+
     public function test_the_bank_account_is_read_only_here(): void
     {
         $this->actingAs($this->super)->post(route('staff.integrations.update', 'imbank'), ['fields' => []])->assertForbidden();
