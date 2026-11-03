@@ -379,13 +379,10 @@ function partnerTable() {
             });
         },
 
+        // View opens the partner's own page (owner, 3 Nov 2026); the old modal looked itself up with Alpine 2's
+        // el.__x, which Alpine 3 doesn't have, so it never opened
         showPartner(id) {
-            const partner = this.allData.find(item => item.id === id);
-            if (partner) {
-                window.dispatchEvent(new CustomEvent('show-partner', {
-                    detail: { partner }
-                }));
-            }
+            window.location.href = @js(route('partners.show', ['partner' => '__ID__'])).replace('__ID__', id);
         },
 
         editPartner(id) {

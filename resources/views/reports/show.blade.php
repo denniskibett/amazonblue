@@ -248,7 +248,9 @@ function reportDisplay() {
             const url = new URL('{{ route("reports.export") }}', window.location.origin);
             url.searchParams.append('report_type', '{{ $reportType }}');
             url.searchParams.append('format', format);
-            const filters = this.$root.querySelector('[x-data="reportFilters()"]')?.__x?.$data?.filters || {};
+            // Alpine 3: Alpine.$data(el) (the old el.__x lookup always came back empty, so exports ignored the filters)
+            const el = this.$root.querySelector('[x-data="reportFilters()"]');
+            const filters = (el && window.Alpine ? window.Alpine.$data(el)?.filters : null) || {};
             Object.entries(filters).forEach(([key, value]) => {
                 if (value) url.searchParams.append('filters[' + key + ']', value);
             });
