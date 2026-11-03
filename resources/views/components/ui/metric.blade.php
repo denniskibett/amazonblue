@@ -31,7 +31,7 @@
 @endphp
 <{{ $tag }} @if ($href) href="{{ $href }}" @endif {{ $attributes->merge(['class' => 'block min-w-0 rounded-2xl border border-gray-200 bg-white font-outfit ' . ($size === 'sm' ? 'p-3.5 sm:p-4' : 'p-3.5 sm:p-5') . ' dark:border-gray-800 dark:bg-white/[0.03]' . ($href ? ' transition hover:border-brand-300 dark:hover:border-brand-800' : '')]) }}>
   <p class="mb-0.5 text-[11px] font-medium uppercase leading-none tracking-wide text-gray-400 {{ $isKes ? '' : 'invisible' }}" aria-hidden="{{ $isKes ? 'false' : 'true' }}">KES</p>
-  <h4 class="truncate font-bold tabular-nums text-gray-800 dark:text-white/90 {{ $figure }}" title="{{ strip_tags((string) $value) }}">{!! $shown !!}</h4>
+  <h4 class="truncate font-outfit font-bold tabular-nums text-gray-800 dark:text-white/90 {{ $figure }}" title="{{ strip_tags((string) $value) }}">{!! $shown !!}</h4>
   <p class="mt-2 flex items-center gap-1.5 text-theme-xs font-medium text-gray-500 dark:text-gray-400">
     <span class="flex size-5 shrink-0 items-center justify-center rounded-md {{ $accent['chip'] }}"><x-ui.icon :name="$icon" class="size-3" /></span>
     <span class="line-clamp-2 leading-snug" title="{{ $label }}">{{ $label }}</span>

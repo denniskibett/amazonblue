@@ -2,367 +2,110 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
-    <!-- Back Button -->
-    <div class="mb-4">
-        <a href="{{ route('partners.index') }}"
-           class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Partners
-        </a>
-    </div>
+@php
+  // the partner page (owner, 3 Nov 2026): who they are, their four wallets, then one tabbed card for money and loans,
+  // the journal, details and banking, and the portal login
+  $short = \Illuminate\Support\Facades\DB::table('brokers')->where('user_id', $partner->user_id)->exists() && $partner->user_id;
+  $long = \App\Models\Investment::whereHas('fundings', fn ($q) => $q->where('partner_id', $partner->id))->exists();
+  $words = collect(preg_split('/\s+/', trim($partner->name)))->filter();
+  $initials = mb_strtoupper($words->take(2)->map(fn ($w) => mb_substr($w, 0, 1))->implode('')) ?: '?';
+  $tx = collect($data['transactions'] ?? []);
+  $typeTone = fn ($t) => match ($t) { 'contribution', 'broker_fee_earned' => 'green', 'withdrawal', 'payout', 'broker_fee_paid' => 'red', 'profit_distribution' => 'purple', 'penalty_share', 'bonus' => 'amber', default => 'blue' };
+  $ghost = 'inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  $primary = 'inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600';
+  $actions = '<a href="' . route('partners.index') . '" class="' . $ghost . '">Back to partners</a>';
+@endphp
+  @include('staff.desk._header', ['title' => $partner->name, 'sub' => 'Partner #' . $partner->id . ' · since ' . ($partner->created_at?->format('j M Y') ?? '—'), 'metrics' => false, 'actions' => $actions])
 
-    <!-- Partner Header -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-                <div class="flex-shrink-0 h-16 w-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <span class="text-2xl font-semibold text-blue-600 dark:text-blue-400">
-                        {{ ucfirst(substr($partner->name, 0, 1)) }}
-                    </span>
-                </div>
-                <div>
-                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $partner->name }}</h1>
-                    <div class="flex flex-wrap items-center gap-2 mt-1">
-                        @php
-                            $statusClasses = match($partner->status) {
-                                'active'    => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-                                'inactive'  => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-                                'suspended' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-                                default     => 'bg-gray-100 text-gray-800',
-                            };
-                        @endphp
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClasses }}">
-                            {{ ucfirst($partner->status) }}
-                        </span>
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                            {{ ucfirst($partner->type) }}
-                        </span>
-                        <span class="text-sm text-gray-500 dark:text-gray-400">{{ $partner->email }}</span>
-                        {{-- owner, 1 Nov 2026: whether the partner can sign in to the portal --}}
-                        @if ($partner->user)<x-staff.pill tone="green" dot>Portal login: {{ $partner->user->email }}</x-staff.pill>
-                        @else<a href="#portal-login"><x-staff.pill tone="amber" dot>No portal login</x-staff.pill></a>@endif
-                    </div>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                @can('edit partners')
-                <a href="#record-capital" class="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/5">Record capital as investment</a>
-                @endcan
-                <button @click="window.dispatchEvent(new CustomEvent('edit-partner', { detail: { partner: @json($data) } }))"
-                        class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/25">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Edit Partner
-                </button>
-                <button @click="window.dispatchEvent(new CustomEvent('delete-partner', { detail: { id: {{ $partner->id }}, name: '{{ addslashes($partner->name) }}' } }))"
-                        class="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete
-                </button>
-            </div>
+  {{-- profile --}}
+  <section class="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+    <div class="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
+      <span class="flex size-16 shrink-0 items-center justify-center rounded-full bg-brand-50 font-outfit text-xl font-semibold text-brand-500 dark:bg-brand-500/15">{{ $initials }}</span>
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ $partner->name }}</h2>
+          <x-staff.pill :tone="['active' => 'green', 'suspended' => 'red'][$partner->status] ?? 'gray'" dot>{{ ucfirst($partner->status) }}</x-staff.pill>
+          <x-staff.pill tone="gray">{{ ucfirst($partner->type) }}</x-staff.pill>
+          @if ($long)<x-staff.pill tone="brand">Long-term · funds lines</x-staff.pill>@endif
+          @if ($short)<x-staff.pill tone="purple">Short-term · introduces borrowers</x-staff.pill>@endif
         </div>
+        <p class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-theme-sm text-gray-500 dark:text-gray-400">
+          <span>{{ $partner->email }}</span>@if ($partner->phone)<span>{{ $partner->phone }}</span>@endif
+          @if ($partner->user)<span class="text-success-600">Portal login: {{ $partner->user->email }}</span>@else<span class="text-warning-600">No portal login</span>@endif
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        @can('edit partners')<a href="?tab=money#record-capital" class="{{ $ghost }}">Record money</a>@endcan
+        <button type="button" @click="window.dispatchEvent(new CustomEvent('edit-partner', { detail: { partner: @js($data) } }))" class="{{ $primary }}">Edit partner</button>
+        <button type="button" @click="window.dispatchEvent(new CustomEvent('delete-partner', { detail: { id: {{ $partner->id }}, name: @js($partner->name) } }))"
+          class="inline-flex items-center rounded-lg border border-error-300 px-4 py-2.5 text-theme-sm font-medium text-error-600 hover:bg-error-50 dark:border-error-500/40 dark:hover:bg-error-500/10">Delete</button>
+      </div>
     </div>
-
-    <!-- Wallets as the standard cards -->
-    <x-ui.metrics :items="[
-      ['label' => 'Principal wallet', 'value' => 'KES ' . number_format($data['principal_balance'] ?? 0, 2), 'icon' => 'wallet'],
-      ['label' => 'Interest wallet', 'value' => 'KES ' . number_format($data['interest_balance'] ?? 0, 2), 'icon' => 'percent'],
-      ['label' => 'Introducer fee wallet', 'value' => 'KES ' . number_format($data['broker_fee_balance'] ?? 0, 2), 'icon' => 'coins'],
-      ['label' => 'Investment tracker', 'value' => 'KES ' . number_format($data['tracker_balance'] ?? 0, 2), 'icon' => 'layers'],
-    ]" />
-
-    <!-- Main Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Left Column - Partner Details -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- Partner Information -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Partner Information</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->name }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->email }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->phone ?? 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Company</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->company_name ?? 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Registration Number</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->registration_number ?? 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tax ID</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->tax_id ?? 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Associated User</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->user?->name ?? 'No User Assigned' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Joined</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->created_at?->format('F j, Y') ?? 'N/A' }}</p>
-                    </div>
-                </div>
-                @if($partner->notes)
-                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Notes</p>
-                    <p class="text-gray-900 dark:text-white mt-1">{{ $partner->notes }}</p>
-                </div>
-                @endif
-            </div>
-
-            <!-- Financial Settings -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Financial Settings</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Introducer rate</p>
-                        <p class="text-gray-900 dark:text-white font-semibold">{{ $data['broker_rate'] ?? 40 }}%</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Profit Share Rate</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->profit_share_rate ?? 0 }}%</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Max LTV</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->max_loan_to_value ?? 75 }}%</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Risk Tolerance</p>
-                        <p class="text-gray-900 dark:text-white">{{ ucfirst($partner->risk_tolerance ?? 'moderate') }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Banking Details -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Banking Details</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Account Name</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->bank_account_name ?? 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Account Number</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->bank_account_number ?? 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Bank Name</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->bank_name ?? 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">SWIFT Code</p>
-                        <p class="text-gray-900 dark:text-white">{{ $partner->swift_code ?? 'N/A' }}</p>
-                    </div>
-                </div>
-            </div>
+    <dl class="grid grid-cols-2 border-t border-gray-100 dark:border-gray-800 sm:grid-cols-5">
+      @foreach ([['Introducer rate', ($data['broker_rate'] ?? 40) . '%'], ['Profit share', ($partner->profit_share_rate ?? 0) . '%'], ['Max loan to value', ($partner->max_loan_to_value ?? 75) . '%'], ['Risk tolerance', ucfirst($partner->risk_tolerance ?? 'moderate')], ['Bank', $partner->bank_name ?: '—']] as $i => [$k, $v])
+        <div class="px-5 py-4 sm:px-6 {{ $i ? 'border-l border-gray-100 dark:border-gray-800' : '' }}">
+          <dt class="text-theme-xs text-gray-500 dark:text-gray-400">{{ $k }}</dt>
+          <dd class="mt-1 font-outfit text-theme-sm font-semibold text-gray-800 dark:text-white/90">{{ $v }}</dd>
         </div>
+      @endforeach
+    </dl>
+  </section>
 
-        <!-- Right Column -->
-        <div class="space-y-6">
-            <!-- Wallets Overview -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Wallets Overview</h4>
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Principal</span>
-                        <span class="text-sm font-medium text-gray-900 dark:text-white">
-                            KES {{ number_format($data['principal_balance'] ?? 0, 2) }}
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Interest</span>
-                        <span class="text-sm font-medium text-gray-900 dark:text-white">
-                            KES {{ number_format($data['interest_balance'] ?? 0, 2) }}
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Introducer fee</span>
-                        <span class="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                            KES {{ number_format($data['broker_fee_balance'] ?? 0, 2) }}
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Investment Tracker</span>
-                        <span class="text-sm font-medium text-blue-600 dark:text-blue-400">
-                            KES {{ number_format($data['tracker_balance'] ?? 0, 2) }}
-                        </span>
-                    </div>
-                </div>
-            </div>
+  {{-- the four wallets --}}
+  <x-ui.metrics :items="[
+    ['label' => 'Principal wallet', 'value' => 'KES ' . number_format($data['principal_balance'] ?? 0, 2), 'icon' => 'wallet', 'hint' => 'capital put in, not lent'],
+    ['label' => 'Interest wallet', 'value' => 'KES ' . number_format($data['interest_balance'] ?? 0, 2), 'icon' => 'percent', 'hint' => 'earned on lines'],
+    ['label' => 'Introducer fee wallet', 'value' => 'KES ' . number_format($data['broker_fee_balance'] ?? 0, 2), 'icon' => 'coins', 'hint' => 'from clients they brought'],
+    ['label' => 'Investment tracker', 'value' => 'KES ' . number_format($data['tracker_balance'] ?? 0, 2), 'icon' => 'layers', 'hint' => 'lent out on loans'],
+  ]" />
 
-            <!-- Quick Actions -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Quick Actions</h4>
-                <div class="space-y-2">
-                    <button @click="window.dispatchEvent(new CustomEvent('open-contribution-modal', { detail: { partnerId: {{ $partner->id }} } }))"
-                            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Add Contribution
-                    </button>
-                    <button @click="window.dispatchEvent(new CustomEvent('open-withdraw-modal', { detail: { partnerId: {{ $partner->id }} } }))"
-                            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-yellow-700 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
-                        </svg>
-                        Process Withdrawal
-                    </button>
-                    <button @click="window.dispatchEvent(new CustomEvent('open-profit-modal', { detail: { partnerId: {{ $partner->id }} } }))"
-                            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                        </svg>
-                        Distribute Profit
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+  <x-staff.tabs :tabs="['money' => 'Money, clients and loans', 'journal' => ['Journal', $tx->count()], 'details' => 'Details and banking', 'login' => ['Portal login', $partner->user ? 'on' : 'none']]">
+    <x-staff.tab name="money">
+      @include('partners._lines')
+    </x-staff.tab>
 
-    @include('partners._login')
-    @include('partners._lines')
+    <x-staff.tab name="journal">
+      <x-staff.table title="Every wallet posting, newest first" caption="Partner journal" :headers="['Date', 'Wallet', 'Type', ['Amount', 'num'], ['Balance after', 'num'], 'Reference']">
+        @forelse ($tx as $t)
+          <tr>
+            <td data-sort-value="{{ $t['transaction_date'] ?? $t['created_at'] }}">{{ \Illuminate\Support\Carbon::parse($t['transaction_date'] ?? $t['created_at'])->format('j M Y') }}</td>
+            <td><x-staff.pill tone="gray">{{ ['broker_fee' => 'introducer fee', 'investment_tracker' => 'tracker'][$t['wallet_slug']] ?? str_replace('_', ' ', $t['wallet_slug'] ?: 'principal') }}</x-staff.pill></td>
+            <td data-filter-value="{{ ucfirst(str_replace('_', ' ', $t['type'])) }}"><x-staff.pill :tone="$typeTone($t['type'])">{{ \App\Services\PartnerPortfolio::TYPES[$t['type']] ?? ucfirst(str_replace('_', ' ', $t['type'])) }}</x-staff.pill></td>
+            <td class="num" data-sort-value="{{ $t['amount'] }}"><x-staff.money :amount="$t['amount']" tone="auto" /></td>
+            <td class="num"><x-staff.money :amount="$t['balance_after']" /></td>
+            <td class="max-w-[260px] !whitespace-normal text-theme-xs text-gray-500 dark:text-gray-400">{{ $t['reference'] ?: '—' }}@if ($t['loan_id']) · loan #{{ $t['loan_id'] }}@endif</td>
+          </tr>
+        @empty
+          <tr data-table-skip><td colspan="6"><x-staff.empty title="No postings yet" message="Money in, payouts and earnings show here as they are booked." /></td></tr>
+        @endforelse
+      </x-staff.table>
+    </x-staff.tab>
 
-    <!-- Transactions Table -->
-    <div class="mt-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Journal Entries</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Every wallet posting for this partner, in order</p>
-            </div>
-            <div class="overflow-x-auto" x-data="partnerTransactionsTable()" x-init="init({{ \Illuminate\Support\Js::from($data['transactions'] ?? []) }})">
-                <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div class="relative flex-1 min-w-[150px]">
-                            <input type="text"
-                                   x-model="searchTerm"
-                                   @input="filterTable()"
-                                   placeholder="Search transactions..."
-                                   class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 pl-10 text-sm text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-                            <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <select x-model="filterType" @change="filterTable()"
-                                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-                                <option value="">All Types</option>
-                                <option value="contribution">Contribution</option>
-                                <option value="withdrawal">Withdrawal</option>
-                                <option value="broker_fee_earned">Broker Fee Earned</option>
-                                <option value="penalty_share">Penalty Share</option>
-                                <option value="profit_distribution">Profit Distribution</option>
-                                <option value="principal_deployed">Principal Deployed</option>
-                                <option value="principal_returned">Principal Returned</option>
-                                <option value="bonus">Bonus</option>
-                                <option value="repayment">Repayment</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+    <x-staff.tab name="details">
+      <div class="grid grid-cols-1 gap-x-8 gap-y-0 p-5 sm:p-6 lg:grid-cols-2">
+        @foreach ([
+          'Who' => [['Full name', $partner->name], ['Email', $partner->email], ['Phone', $partner->phone], ['Company', $partner->company_name], ['Registration number', $partner->registration_number], ['Tax ID', $partner->tax_id], ['Linked user', $partner->user?->name]],
+          'Banking' => [['Account name', $partner->bank_account_name], ['Account number', $partner->bank_account_number], ['Bank', $partner->bank_name], ['SWIFT code', $partner->swift_code]],
+        ] as $heading => $rows)
+          <div>
+            <h3 class="mb-2 text-base font-semibold text-gray-800 dark:text-white/90">{{ $heading }}</h3>
+            <dl class="divide-y divide-gray-100 dark:divide-gray-800">
+              @foreach ($rows as [$k, $v])
+                <div class="flex justify-between gap-4 py-2.5 text-theme-sm"><dt class="text-gray-500 dark:text-gray-400">{{ $k }}</dt><dd class="text-right font-medium text-gray-800 dark:text-white/90">{{ $v ?: '—' }}</dd></div>
+              @endforeach
+            </dl>
+          </div>
+        @endforeach
+        @if ($partner->notes)
+          <div class="lg:col-span-2"><h3 class="mb-1 mt-4 text-base font-semibold text-gray-800 dark:text-white/90">Notes</h3><p class="text-theme-sm text-gray-600 dark:text-gray-400">{{ $partner->notes }}</p></div>
+        @endif
+      </div>
+    </x-staff.tab>
 
-                <table data-table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-700/50">
-                        <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Wallet</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Balance After</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reference</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        <template x-for="transaction in paginatedData" :key="transaction.id">
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300" x-text="transaction.transaction_date || transaction.created_at"></td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                                          x-text="(transaction.wallet_slug || 'principal').replace('_', ' ')"></span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                          :class="{
-                                              'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': transaction.type === 'contribution' || transaction.type === 'broker_fee_earned',
-                                              'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300': transaction.type === 'withdrawal',
-                                              'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300': transaction.type === 'profit_distribution',
-                                              'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300': transaction.type === 'penalty_share' || transaction.type === 'bonus',
-                                              'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300': transaction.type === 'repayment' || transaction.type === 'principal_returned'
-                                          }">
-                                        <span x-text="transaction.type ? transaction.type.replace(/_/g, ' ').toUpperCase() : 'N/A'"></span>
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <span class="font-medium"
-                                          :class="transaction.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                                        <span x-text="formatCurrency(transaction.amount)"></span>
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300" x-text="formatCurrency(transaction.balance_after)"></td>
-                                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300" x-text="transaction.reference || 'N/A'"></td>
-                            </tr>
-                        </template>
-                        <tr x-show="filteredData.length === 0">
-                            <td colspan="6" class="px-4 py-8 text-center">
-                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                                </svg>
-                                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No journal entries found</h3>
-                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria</p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <!-- Pagination -->
-                <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div class="text-sm text-gray-500 dark:text-gray-400">
-                            Showing <span x-text="filteredData.length === 0 ? 0 : startIndex + 1"></span>
-                            to <span x-text="endIndex"></span>
-                            of <span x-text="filteredData.length"></span> entries
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button @click="prevPage()" :disabled="currentPage === 1"
-                                    class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                Previous
-                            </button>
-                            <template x-for="page in totalPages" :key="page">
-                                <button @click="goToPage(page)"
-                                        class="px-3 py-1 rounded text-sm transition-colors"
-                                        :class="currentPage === page ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
-                                        x-text="page">
-                                </button>
-                            </template>
-                            <button @click="nextPage()" :disabled="currentPage === totalPages || totalPages === 0"
-                                    class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                Next
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+    <x-staff.tab name="login">
+      @include('partners._login')
+    </x-staff.tab>
+  </x-staff.tabs>
 
 <!-- Edit Modal -->
 @include('partials.modal.partners-create-modal', ['users' => $users ?? []])
@@ -373,91 +116,7 @@
 <!-- Alert Modal -->
 @include('partials.modal.alert-modal')
 
-@push('scripts')
-<script>
-document.addEventListener('alpine:init', function() {
-    Alpine.data('partnerTransactionsTable', function() {
-        return {
-            allData: [],
-            filteredData: [],
-            paginatedData: [],
-            searchTerm: '',
-            filterType: '',
-            perPage: 10,
-            currentPage: 1,
 
-            get startIndex() {
-                return (this.currentPage - 1) * this.perPage;
-            },
-            get endIndex() {
-                return Math.min(this.startIndex + this.perPage, this.filteredData.length);
-            },
-            get totalPages() {
-                return Math.max(1, Math.ceil(this.filteredData.length / this.perPage));
-            },
-
-            init(transactions) {
-                this.allData = transactions;
-                this.filteredData = [...this.allData];
-                this.updateTable();
-            },
-
-            updateTable() {
-                this.paginatedData = this.filteredData.slice(this.startIndex, this.endIndex);
-            },
-
-            filterTable() {
-                let data = [...this.allData];
-
-                if (this.searchTerm.trim()) {
-                    const term = this.searchTerm.toLowerCase().trim();
-                    data = data.filter(item =>
-                        Object.values(item).some(value =>
-                            String(value).toLowerCase().includes(term)
-                        )
-                    );
-                }
-
-                if (this.filterType) {
-                    data = data.filter(item => item.type === this.filterType);
-                }
-
-                this.filteredData = data;
-                this.currentPage = 1;
-                this.updateTable();
-            },
-
-            prevPage() {
-                if (this.currentPage > 1) {
-                    this.currentPage--;
-                    this.updateTable();
-                }
-            },
-
-            nextPage() {
-                if (this.currentPage < this.totalPages) {
-                    this.currentPage++;
-                    this.updateTable();
-                }
-            },
-
-            goToPage(page) {
-                this.currentPage = page;
-                this.updateTable();
-            },
-
-            formatCurrency(value) {
-                const num = parseFloat(value || 0);
-                return 'KES ' + num.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
-            }
-        };
-    });
-});
-</script>
-@endpush
 
 <style>
 [x-cloak] { display: none !important; }

@@ -11,7 +11,7 @@
   <div @class(['px-4 pb-3 pt-4 sm:px-6' => ! $bare])>
     @if ($title)<div class="mb-4"><h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ $title }}</h3></div>@endif
     <div class="max-w-full overflow-x-auto" tabindex="0" @if ($caption) aria-label="{{ $caption }}" @endif>
-      <table @if ($list) data-table @endif {{ $attributes->class(['w-full min-w-[640px] text-left text-theme-sm text-gray-700 dark:text-gray-300 [&_td]:whitespace-nowrap [&_td]:py-3 [&_td]:pr-4 [&_td:last-child]:pr-0 [&_td.num]:text-right [&_td.num]:tabular-nums']) }}>
+      <table @if ($list) data-table @endif {{ $attributes->class(['w-full min-w-[640px] text-left text-theme-sm text-gray-700 dark:text-gray-300 [&_td]:whitespace-nowrap [&_td]:py-3 [&_td]:pr-4 [&_td:last-child]:pr-0 [&_td.num]:text-right [&_td.num]:font-outfit [&_td.num]:tabular-nums']) }}>
         @if ($caption)<caption class="sr-only">{{ $caption }}</caption>@endif
         <thead class="border-y border-gray-100 dark:border-gray-800">
           @isset($head)

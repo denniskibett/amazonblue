@@ -13,7 +13,7 @@
   $kes = fn ($n) => number_format((float) $n, 2);
 @endphp
 @include('partials.ui.partner-funding-js')
-<div class="mt-6 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+<div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
   <div class="border-b border-gray-200 p-4 dark:border-gray-700">
     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Money, clients and own loans</h3>
     <p class="text-sm text-gray-500 dark:text-gray-400">
