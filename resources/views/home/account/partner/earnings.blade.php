@@ -25,7 +25,7 @@
   @if ($total == 0)
     <section class="a-card">
       <x-az.empty title="No earnings yet{{ $year ? ' in ' . $year : '' }}"
-        message="Profit share, interest, penalty share and broker fees show here, month by month, once our team records them on your account." />
+        message="Profit share, interest, penalty share and fees for clients you introduced show here, month by month, once our team records them on your account." />
     </section>
   @else
     <section class="a-hero">

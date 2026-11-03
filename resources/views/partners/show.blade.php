@@ -73,7 +73,7 @@
     <x-ui.metrics :items="[
       ['label' => 'Principal wallet', 'value' => 'KES ' . number_format($data['principal_balance'] ?? 0, 2), 'icon' => 'wallet'],
       ['label' => 'Interest wallet', 'value' => 'KES ' . number_format($data['interest_balance'] ?? 0, 2), 'icon' => 'percent'],
-      ['label' => 'Broker fee wallet', 'value' => 'KES ' . number_format($data['broker_fee_balance'] ?? 0, 2), 'icon' => 'coins'],
+      ['label' => 'Introducer fee wallet', 'value' => 'KES ' . number_format($data['broker_fee_balance'] ?? 0, 2), 'icon' => 'coins'],
       ['label' => 'Investment tracker', 'value' => 'KES ' . number_format($data['tracker_balance'] ?? 0, 2), 'icon' => 'layers'],
     ]" />
 
@@ -131,7 +131,7 @@
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Financial Settings</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Broker Rate</p>
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Introducer rate</p>
                         <p class="text-gray-900 dark:text-white font-semibold">{{ $data['broker_rate'] ?? 40 }}%</p>
                     </div>
                     <div>
@@ -192,7 +192,7 @@
                         </span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Broker Fee</span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">Introducer fee</span>
                         <span class="text-sm font-medium text-emerald-600 dark:text-emerald-400">
                             KES {{ number_format($data['broker_fee_balance'] ?? 0, 2) }}
                         </span>

@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Models\Borrower;
 use App\Models\Loan;
 use App\Models\User;
 use App\Services\CustomerWallets;
@@ -48,19 +47,6 @@ class PageMetrics
     public function pageDashboard(): array
     {
         $u = $this->user;
-        if ($u->hasRole('broker')) {
-            $ids = $this->brokerBorrowers();
-            $open = Loan::whereIn('user_id', $ids)->whereIn('status', self::OPEN);
-
-            return [
-                $this->card('Your clients', self::n(count($ids)), 'users', 'borrowers linked to you'),
-                $this->card('Open loans', self::n((clone $open)->count()), 'briefcase', 'disbursed and not repaid'),
-                $this->card('Owed by your clients', self::kes($this->owedFor((clone $open)->pluck('id')->all())), 'wallet', 'principal + interest + penalty today'),
-                $this->card('Overdue', self::n((clone $open)->whereIn('status', [Loan::STATUS_OVERDUE, Loan::STATUS_DEFAULTED])->count()), 'alert', 'call them before it grows', null, 'warn'),
-                $this->card('Fees earned', self::kes($this->brokerEarned()), 'coins', 'your share of interest and penalty'),
-                $this->card('Repaid loans', self::n(Loan::whereIn('user_id', $ids)->where('status', Loan::STATUS_REPAID)->count()), 'check-circle', 'closed in full'),
-            ];
-        }
         if ($u->hasRole('teller') && ! $u->hasAnyRole(User::BACK_OFFICE_ROLES)) {
             return $this->pageReceivePayment() + [];
         }
@@ -473,30 +459,14 @@ class PageMetrics
         return round(collect($ids)->sum(fn ($id) => (float) ($r->balance((int) $id)['final_outstanding'] ?? 0)), 2);
     }
 
-    /** Loans this user may see: a broker only their borrowers', a borrower only their own. */
+    /** Loans this user may see: staff all, anyone else only their own. */
     private function scopedLoans()
     {
         $q = Loan::query();
-        if ($this->user->hasRole('broker') && ! $this->user->hasAnyRole(User::BACK_OFFICE_ROLES)) {
-            $q->whereIn('user_id', $this->brokerBorrowers());
-        } elseif (! $this->user->isStaff()) {
+        if (! $this->user->isStaff()) {
             $q->where('user_id', $this->user->id);
         }
 
         return $q;
-    }
-
-    private function brokerBorrowers(): array
-    {
-        $broker = $this->user->broker()->first();
-
-        return $broker ? Borrower::where('broker_id', $broker->id)->pluck('user_id')->all() : [];
-    }
-
-    private function brokerEarned(): float
-    {
-        $partnerId = DB::table('partners')->where('user_id', $this->user->id)->value('id');
-
-        return $partnerId ? round((float) DB::table('partner_transactions')->where('partner_id', $partnerId)->whereIn('type', ['broker_fee_earned', 'penalty_share'])->sum('amount'), 2) : 0.0;
     }
 }

@@ -3,7 +3,7 @@
 
 @section('content')
 <div>
-    <x-ui.page-header title="Partners" sub="Investors and brokers, their capital and what they have earned.">
+    <x-ui.page-header title="Partners" sub="Long-term partners (funding lines) and short-term partners (introduce borrowers), their capital and what they have earned.">
             <button @click="window.dispatchEvent(new CustomEvent('refresh-partners'))" 
                     class="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

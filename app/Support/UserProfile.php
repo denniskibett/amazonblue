@@ -32,7 +32,7 @@ class UserProfile
         if ($u->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller']) || $u->isStaff()) {
             return 'staff';
         }
-        if ($u->hasRole('broker') || $u->hasRole('partner') || $this->partner()) {
+        if ($u->hasRole('partner') || $this->partner()) {
             return $u->hasRole('borrower') && $u->loans()->exists() ? 'borrower' : 'partner';
         }
 

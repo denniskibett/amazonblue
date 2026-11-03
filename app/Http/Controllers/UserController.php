@@ -176,14 +176,18 @@ class UserController extends Controller
     
         // Handle role-specific data
         switch ($validatedData['role']) {
-            case 'broker':
+            case 'partner':
+                // short-term partner terms (was the "broker" role): only when the rates were filled in
+                if (! filled($validatedData['interest_broker'] ?? null)) {
+                    break;
+                }
                 Broker::create([
                     'user_id' => $user->id,
                     'penalty_client' => $validatedData['penalty_client'],
                     'penalty_broker' => $validatedData['penalty_broker'],
                     'interest_client' => $validatedData['interest_client'],
                     'interest_broker' => $validatedData['interest_broker'],
-                    'cert_no' => $validatedData['cert_no'],
+                    'cert_no' => $validatedData['cert_no'] ?? null,
                 ]);
                 break;
     
@@ -235,47 +239,14 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
-        // Debug logging
-        Log::info('=== USER UPDATE DEBUG START ===');
-        Log::info('User ID: ' . $user->id);
-        Log::info('User current data:', [
-            'name' => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'nationality' => $user->nationality,
-            'gender' => $user->gender,
-            'dob' => $user->dob,
-            'marital_status' => $user->marital_status,
-            'religion' => $user->religion,
-            'education' => $user->education,
-        ]);
-        
-        if ($user->borrower) {
-            Log::info('Borrower current data:', [
-                'client_type' => $user->borrower->client_type,
-                'income_type' => $user->borrower->income_type,
-                'job_title' => $user->borrower->job_title,
-                'employer_name' => $user->borrower->employer_name,
-            ]);
-        }
-        
-        Log::info('Request ALL data:', $request->all());
-        Log::info('Request FILES:', $request->allFiles());
-        
+        $this->guardTarget($user);
+
         try {
-            // Test database connection
-            DB::connection()->getPdo();
-            Log::info('Database connection OK');
-            
             // Validate the request data
-            Log::info('Starting validation...');
             $validatedData = $this->validateUserData($request, $user);
-            Log::info('Validation passed. Validated data keys:', array_keys($validatedData));
             
             // Handle file uploads
-            Log::info('Handling file uploads...');
             $filePaths = $this->handleFileUploads($request);
-            Log::info('File paths generated:', $filePaths);
             
             // Update user
             $userData = [
@@ -285,13 +256,10 @@ class UserController extends Controller
                 'role' => $validatedData['role'],
                 'status' => $request->input('status', $user->status),
             ];
-            
-            Log::info('User basic data to update:', $userData);
-            
+
             // Update password if provided
             if ($request->filled('password')) {
                 $userData['password'] = Hash::make($validatedData['password']);
-                Log::info('Password updated');
             }
             
             // Add optional personal fields
@@ -305,28 +273,18 @@ class UserController extends Controller
             foreach ($optionalFields as $field) {
                 if ($request->has($field)) {
                     $userData[$field] = $request->input($field);
-                    Log::info("Field {$field} value: " . $request->input($field));
                 }
             }
             
             // Add file paths
             $userData = array_merge($userData, $filePaths);
-            
-            Log::info('Final user data with files:', $userData);
-            
+
             // Update the user
-            $updateResult = $user->update($userData);
+            $user->update($userData);
             $this->assignRoleFrom($user, $validatedData['role']);
-            Log::info('User update result: ' . ($updateResult ? 'SUCCESS' : 'FAILED'));
-            Log::info('User updated successfully. New data:', [
-                'name' => $user->fresh()->name,
-                'email' => $user->fresh()->email,
-                'nationality' => $user->fresh()->nationality,
-            ]);
         
             // Update related model
             if ($user->hasRole('borrower')) {
-                Log::info('Updating borrower data...');
                 $borrowerData = [
                     'client_type' => $validatedData['client_type'] ?? null,
                     'status' => $request->input('borrower_status', $user->borrower->status ?? 1),
@@ -341,21 +299,17 @@ class UserController extends Controller
                 foreach ($borrowerOptionalFields as $field) {
                     if ($request->has($field)) {
                         $borrowerData[$field] = $request->input($field);
-                        Log::info("Borrower field {$field} value: " . $request->input($field));
                     }
                 }
-                
-                Log::info('Borrower data to update:', $borrowerData);
-                
+
                 if ($user->borrower) {
-                    $borrowerUpdateResult = $user->borrower->update($borrowerData);
-                    Log::info('Borrower update result: ' . ($borrowerUpdateResult ? 'SUCCESS' : 'FAILED'));
+                    $user->borrower->update($borrowerData);
                 } else {
                     $borrowerData['user_id'] = $user->id;
                     Borrower::create($borrowerData);
-                    Log::info('Borrower created');
                 }
-            } elseif ($user->hasRole('broker')) {
+            } elseif ($user->hasRole('partner') && ($user->broker || filled($validatedData['interest_broker'] ?? null))) {
+                // short-term partner terms (was the "broker" role)
                 $brokerData = [
                     'penalty_client' => $validatedData['penalty_client'] ?? null,
                     'penalty_broker' => $validatedData['penalty_broker'] ?? null,
@@ -385,7 +339,6 @@ class UserController extends Controller
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error:', $e->errors());
-            Log::error('Validation failed fields:', $request->all());
             
             if ($request->ajax()) {
                 return response()->json([
@@ -419,6 +372,10 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
+        $this->guardTarget($user);
+        if ((int) $user->id === (int) auth()->id()) {
+            abort(403, 'You cannot delete your own account.');
+        }
         $user->delete();
         
         // Return JSON response for AJAX
@@ -432,6 +389,24 @@ class UserController extends Controller
         return redirect()->route('users.index');
     }
     
+    /**
+     * Only a super-admin may change or delete a super-admin, and only an admin or super-admin may change or delete an
+     * admin. `edit users` alone (manager) is not enough to reset their password or take their role away.
+     */
+    private function guardTarget(User $target): void
+    {
+        $actor = auth()->user();
+        if ($target->hasRole('super-admin') && ! $actor?->hasRole('super-admin')) {
+            abort(403, 'Only a super-admin can change a super-admin.');
+        }
+        if ($target->hasRole('admin') && ! $actor?->hasAnyRole(['super-admin', 'admin'])) {
+            abort(403, 'Only an admin can change an admin.');
+        }
+        if ($actor && (int) $target->id === (int) $actor->id && request()->filled('role') && request('role') !== $target->primaryRole()) {
+            abort(403, 'You cannot change your own role.');
+        }
+    }
+
     /**
      * Roles the signed-in user may hand out: every role in the roles table, except that only a
      * super-admin can grant super-admin and only an admin/super-admin can grant admin.
@@ -480,11 +455,12 @@ class UserController extends Controller
             'password' => $userId ? 'nullable|min:6' : 'required|min:6',
             
             // Broker-specific fields
-            'cert_no' => 'required_if:role,broker|unique:brokers,cert_no,' . $brokerId . '|nullable',
-            'penalty_client' => 'required_if:role,broker|numeric|nullable',
-            'penalty_broker' => 'required_if:role,broker|numeric|nullable',
-            'interest_client' => 'required_if:role,broker|numeric|nullable',
-            'interest_broker' => 'required_if:role,broker|numeric|nullable',
+            // short-term partner terms (optional, on a partner; was the "broker" role)
+            'cert_no' => 'nullable|unique:brokers,cert_no,' . $brokerId,
+            'penalty_client' => 'required_with:interest_broker|numeric|nullable',
+            'penalty_broker' => 'required_with:interest_broker|numeric|nullable',
+            'interest_client' => 'required_with:interest_broker|numeric|nullable',
+            'interest_broker' => 'numeric|nullable',
             
             // Borrower-specific fields
             'client_type' => 'nullable|in:individual,non_individual',

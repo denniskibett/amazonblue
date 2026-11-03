@@ -98,7 +98,6 @@
                                 >
                                     <option value="admin" {{ $user->hasRole('admin') ? 'selected' : '' }}>Admin</option>
                                     <option value="borrower" {{ $user->hasRole('borrower') ? 'selected' : '' }}>Borrower</option>
-                                    <option value="broker" {{ $user->hasRole('broker') ? 'selected' : '' }}>Broker</option>
                                     <option value="teller" {{ $user->hasRole('teller') ? 'selected' : '' }}>Teller</option>
                                 </select>
                                 <span class="pointer-events-none absolute top-1/2 right-4 z-30 -translate-y-1/2 text-gray-500 dark:text-gray-400">
@@ -141,8 +140,8 @@
                 </div>
 
                 <!-- Broker Fields -->
-                <div id="brokerFields" class="mt-6 space-y-6" style="display: {{ $user->hasRole('broker') ? 'block' : 'none' }};">
-                    <h3 class="text-base font-medium text-gray-800 dark:text-white/90 mb-4">Broker Information</h3>
+                <div id="brokerFields" class="mt-6 space-y-6" style="display: {{ $user->hasRole('partner') ? 'block' : 'none' }};">
+                    <h3 class="text-base font-medium text-gray-800 dark:text-white/90 mb-4">Short-term partner terms (optional)</h3>
                     
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <!-- Penalty Client Field -->
@@ -166,7 +165,7 @@
                         <!-- Penalty Broker Field -->
                         <div>
                             <label for="penalty_broker" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                Penalty Broker (%)
+                                Penalty share, short-term partner (%)
                             </label>
                             <input 
                                 type="number" 
@@ -202,7 +201,7 @@
                         <!-- Interest Broker Field -->
                         <div>
                             <label for="interest_broker" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                Interest Broker (%)
+                                Interest share, short-term partner (%)
                             </label>
                             <input 
                                 type="number" 
@@ -315,7 +314,7 @@
                         <!-- Broker Field -->
                         <div>
                             <label for="broker_id" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                                Broker (if applicable)
+                                Introduced by (short-term partner, if any)
                             </label>
                             <div x-data="{ isOptionSelected: false }" class="relative z-20 bg-transparent">
                                 <select 
@@ -325,7 +324,7 @@
                                     :class="isOptionSelected && 'text-gray-800 dark:text-white/90'"
                                     @change="isOptionSelected = true"
                                 >
-                                    <option value="">Select a broker</option>
+                                    <option value="">Nobody (direct client)</option>
                                     @foreach($brokers as $broker)
                                         <option value="{{ $broker->id }}" 
                                             {{ optional($user->borrower)->broker_id == $broker->id ? 'selected' : '' }}>
@@ -367,7 +366,7 @@
             const brokerFields = document.getElementById('brokerFields');
             const borrowerFields = document.getElementById('borrowerFields');
 
-            brokerFields.style.display = role === 'broker' ? 'block' : 'none';
+            brokerFields.style.display = role === 'partner' ? 'block' : 'none';
             borrowerFields.style.display = role === 'borrower' ? 'block' : 'none';
         }
     </script>

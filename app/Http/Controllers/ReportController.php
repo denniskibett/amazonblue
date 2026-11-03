@@ -336,7 +336,7 @@ class ReportController extends Controller
                 'total_customers' => $users->count(),
                 'active_customers' => $users->where('status', 0)->count(),
                 'borrowers' => $users->filter(fn ($u) => $u->hasRole('borrower'))->count(),
-                'brokers' => $users->filter(fn ($u) => $u->hasRole('broker'))->count(),
+                'brokers' => $users->filter(fn ($u) => $u->hasRole('partner') && $u->broker)->count(), // short-term partners
             ],
             'customers' => $users->map(function ($user) {
                 return [

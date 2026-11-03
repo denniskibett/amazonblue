@@ -67,12 +67,6 @@ class NavMenu
           ['Loan products', 'staff.products', 'file', $u->canAny(['manage loan types', 'view reports']), ['staff.products'], null],
           ];
         }
-        if ($u->hasRole('broker') && ! $staff) {
-          $groups['Your book'] = [
-            ['Your loans', 'loans.index', 'briefcase', true, ['loans.*'], null],
-            ['Repayments', 'repayments.index', 'hand-coins', true, ['repayments.*'], null],
-          ];
-        }
         if ($u->hasRole('borrower') && ! $u->isStaff()) {
           $groups['My account'] = [
             ['My loans', 'loans.index', 'briefcase', true, ['loans.*'], null],

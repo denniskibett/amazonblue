@@ -91,7 +91,9 @@ class AppServiceProvider extends ServiceProvider
                     try {
                         app(Ledger::class)->{$method}($model);
                     } catch (\Throwable $e) {
-                        Log::error("Ledger posting failed for {$method} #{$model->id}", ['error' => $e->getMessage()]);
+                        \App\Support\StaffAlarm::raise('ledger-posting', 'Ledger posting failed',
+                            'A ledger posting ({$method}) failed after the record was saved, so the books are behind. Run php artisan ledger:backfill --dry-run on the server.',
+                            ['record' => $model->id, 'error' => $e->getMessage()]);
                     }
                 });
             };
@@ -175,7 +177,9 @@ class AppServiceProvider extends ServiceProvider
                         try {
                             app(\App\Services\Loans\RepaymentSplit::class)->syncCycle((int) $id);
                         } catch (\Throwable $e) {
-                            Log::error("Repayment split failed for cycle #{$id}", ['error' => $e->getMessage()]);
+                            \App\Support\StaffAlarm::raise('repayment-split', 'Repayment split failed',
+                                "Splitting a repayment between broker, funder and house failed for loan cycle #{$id}, so partner balances are behind.",
+                                ['cycle' => $id, 'error' => $e->getMessage()]);
                         }
                     }
                 });

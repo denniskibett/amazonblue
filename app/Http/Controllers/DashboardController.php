@@ -113,7 +113,7 @@ class DashboardController extends Controller
             'newBorrowersThisMonth' => User::role('borrower')
                                         ->where('created_at', '>=', $currentMonthStart)
                                         ->count(),
-            'brokerCount' => User::role('broker')->count(),
+            'brokerCount' => User::brokers()->count(), // short-term partners
             'tellerCount' => User::role('teller')->count(),
 
             // Additional Data

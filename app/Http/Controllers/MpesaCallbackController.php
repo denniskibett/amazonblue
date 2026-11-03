@@ -3,15 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Services\Mpesa\PaymentRecorder;
+use App\Support\StaffAlarm;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Safaricom Daraja callbacks (Stage 4 Phase 4): /mpesa/{secret}/c2b/validation, /c2b/confirmation, /stk.
  * No session or CSRF; a wrong secret is a 404, an IP outside MPESA_ALLOWED_IPS (when set) is a 403.
  *
- * A confirmed payment is always stored (nothing Safaricom reports is lost). With MPESA_ENABLED it is matched
+ * A confirmed payment is always stored (nothing Safaricom reports is lost): when it can't be saved, the answer is
+ * non-zero so Safaricom sends it again, and admins are alerted. With MPESA_ENABLED it is matched
  * and recorded straight away; with it off it waits in the staff payments queue.
  */
 class MpesaCallbackController extends Controller
@@ -35,7 +36,17 @@ class MpesaCallbackController extends Controller
                 $this->storeOnly($p);
             }
         } catch (\Throwable $e) {
-            Log::error('M-Pesa C2B confirmation not stored', ['error' => $e->getMessage(), 'trans_id' => $request->input('TransID')]);
+            $transId = strtoupper(trim((string) ($p['TransID'] ?? $request->input('TransID', ''))));
+            $stored = $transId !== '' && rescue(fn () => \App\Models\MpesaTransaction::where('trans_id', $transId)->exists(), false, false);
+            StaffAlarm::raise('mpesa-c2b', 'M-Pesa payment not ' . ($stored ? 'matched' : 'stored'),
+                'An M-Pesa payment (' . ($transId ?: 'no receipt') . ') came in but ' . ($stored
+                    ? 'could not be matched to a loan. It waits in the payments queue.'
+                    : 'could not be saved. Safaricom was asked to send it again; check the M-Pesa statement.'),
+                ['trans_id' => $transId, 'error' => $e->getMessage()]);
+            if (! $stored) {
+                // not saved: a non-zero answer asks Safaricom to send it again
+                return response()->json(['ResultCode' => 1, 'ResultDesc' => 'Not stored, please retry']);
+            }
         }
 
         return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
@@ -47,7 +58,11 @@ class MpesaCallbackController extends Controller
         try {
             $recorder->receiveStk($request->json()->all() ?: $request->all());
         } catch (\Throwable $e) {
-            Log::error('M-Pesa STK callback not stored', ['error' => $e->getMessage()]);
+            StaffAlarm::raise('mpesa-stk', 'M-Pesa STK payment not recorded',
+                'A borrower\'s STK payment result came in but could not be recorded. Check the M-Pesa statement and the payments queue.',
+                ['error' => $e->getMessage()]);
+
+            return response()->json(['ResultCode' => 1, 'ResultDesc' => 'Not stored, please retry']);
         }
 
         return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);

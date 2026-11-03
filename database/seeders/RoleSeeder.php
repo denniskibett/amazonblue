@@ -184,18 +184,6 @@ class RoleSeeder extends Seeder
             'view repayments',
             'view dashboard',
         ],
-        'broker' => [
-            'view loans',
-            'create loans',
-            'edit loans',
-            'view disbursements',
-            'view repayments',
-            'view dashboard',
-            'view wallets',
-            'view ledger',
-            'view broker fees',
-            'view partner statements',
-        ],
         'teller' => [
             'view loans',
             'create loans',

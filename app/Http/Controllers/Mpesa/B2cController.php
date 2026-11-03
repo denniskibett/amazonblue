@@ -42,7 +42,16 @@ class B2cController extends Controller
     public function result(Request $request, string $secret): JsonResponse
     {
         $this->guard($request, $secret);
-        $this->payouts->result($request->json()->all());
+        try {
+            $this->payouts->result($request->json()->all());
+        } catch (\Throwable $e) {
+            \App\Support\StaffAlarm::raise('mpesa-b2c-result', 'M-Pesa payout result not recorded',
+                'Safaricom reported on a loan payout but it could not be recorded. Check the M-Pesa statement before doing anything else.',
+                ['conversation' => $request->input('Result.ConversationID'), 'error' => $e->getMessage()]);
+
+            // the result is idempotent (the row is locked and checked), so asking Safaricom to resend is safe
+            return response()->json(['ResultCode' => 1, 'ResultDesc' => 'Not recorded, please retry']);
+        }
 
         return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
     }

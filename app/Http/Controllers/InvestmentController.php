@@ -81,8 +81,6 @@ class InvestmentController extends Controller
      */
     public function store(Request $request)
     {
-        \Log::info('Investment store request:', $request->all());
-
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:commodity,equity,bond,real_estate,startup,infrastructure,technology,agriculture,energy,other',

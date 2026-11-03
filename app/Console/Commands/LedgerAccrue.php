@@ -30,16 +30,35 @@ class LedgerAccrue extends Command
         $cycles = LoanCycle::whereIn('loan_id', $open)->where('status', 'active')->get();
         $minor = 0;
         $posted = 0;
+        $failed = [];
         foreach ($cycles as $cycle) {
-            $steps = $ledger->sync('loan_cycle', $cycle->id, $ledger->planLoanCycle($cycle)['legs'],
-                ['loan_id' => $cycle->loan_id, 'date' => now()->toDateString(), 'source' => 'ledger', 'reference' => 'Cycle ' . $cycle->cycle_number],
-                (bool) $this->option('dry-run'));
+            // one bad cycle is reported and skipped; it doesn't stop the rest of the book
+            try {
+                $steps = $ledger->sync('loan_cycle', $cycle->id, $ledger->planLoanCycle($cycle)['legs'],
+                    ['loan_id' => $cycle->loan_id, 'date' => now()->toDateString(), 'source' => 'ledger', 'reference' => 'Cycle ' . $cycle->cycle_number],
+                    (bool) $this->option('dry-run'));
+            } catch (\Throwable $e) {
+                $failed[] = 'cycle #' . $cycle->id . ' (loan #' . $cycle->loan_id . '): ' . mb_substr($e->getMessage(), 0, 200);
+
+                continue;
+            }
             $posted += count($steps);
             $minor += array_sum(array_column($steps, 'minor'));
         }
 
         $this->line(sprintf('%d open cycle(s); %d posting(s) %s, net KES %s.', $cycles->count(), $posted,
             $this->option('dry-run') ? 'to make' : 'made', number_format($minor / (10 ** Ledger::dp()), 2)));
+
+        if ($failed) {
+            foreach ($failed as $line) {
+                $this->error('Failed: ' . $line);
+            }
+            \App\Support\StaffAlarm::raise('ledger-accrue', 'Ledger accrual: ' . count($failed) . ' cycle(s) failed',
+                'The nightly ledger:accrue skipped ' . count($failed) . ' cycle(s) it could not book; the rest were booked. First: ' . $failed[0] . '.',
+                ['failed' => $failed]);
+
+            return self::FAILURE;
+        }
 
         return self::SUCCESS;
     }

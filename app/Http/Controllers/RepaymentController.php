@@ -55,7 +55,7 @@ class RepaymentController extends Controller
             abort(403, 'Unauthorized action.');
         }
         
-        if ($user->hasRole('broker') && $loan->broker_id !== $user->id) {
+        if (! $user->brokerMaySee($loan)) {
             abort(403, 'Unauthorized action.');
         }
         
@@ -82,8 +82,8 @@ class RepaymentController extends Controller
         // bank ↔ M-Pesa keeps both references; the same money can't go on a loan twice (owner, 23 Oct 2026)
         $validated = array_merge($validated, \App\Support\PaymentModes::fromRequest($request, 'in', 'repayments', (int) $validated['loan_id']));
 
-        // Create repayment
-        $repayment = Repayment::create($validated);
+        // Create repayment (under the receipt's lock, so the M-Pesa callback can't record the same receipt meanwhile)
+        $repayment = \App\Services\Mpesa\PaymentRecorder::onReceipt($validated['transaction'] ?? null, fn () => Repayment::create($validated));
 
         // v2 (Stage 4 Phase 2): status follows the cycle balance, never totals of all repayments
         if (\App\Services\LoanCalculator::v2()) {
@@ -170,7 +170,7 @@ class RepaymentController extends Controller
             abort(403, 'Unauthorized action.');
         }
         
-        if ($user->hasRole('broker') && $loan->broker_id !== $user->id) {
+        if (! $user->brokerMaySee($loan)) {
             abort(403, 'Unauthorized action.');
         }
         
@@ -183,7 +183,7 @@ class RepaymentController extends Controller
         $user = auth()->user();
         $loan = $repayment->loan;
         
-        if ($user->hasRole('broker') && $loan->broker_id !== $user->id) {
+        if (! $user->brokerMaySee($loan)) {
             abort(403, 'Unauthorized action.');
         }
         
@@ -202,7 +202,7 @@ class RepaymentController extends Controller
         
         // with maker-checker on, the permission plus a second person replaces the admin-role check (Stage 4 Phase 5)
         if (! \App\Services\Approvals::enabled()) {
-            if ($user->hasRole('broker') && $loan->broker_id !== $user->id) {
+            if (! $user->brokerMaySee($loan)) {
                 abort(403, 'Unauthorized action.');
             }
             if (!$user->hasAnyRole(['admin', 'broker'])) {

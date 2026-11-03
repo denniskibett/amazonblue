@@ -261,6 +261,7 @@ class PartnerController extends Controller
             'status' => 'sometimes|required|in:active,inactive,suspended',
             'profit_share_rate' => 'nullable|numeric|min:0|max:100',
             'max_loan_to_value' => 'nullable|numeric|min:0|max:100',
+            'broker_rate' => 'nullable|numeric|min:0|max:100',
             'risk_tolerance' => 'sometimes|required|in:conservative,moderate,aggressive',
             'bank_account_name' => 'nullable|string|max:255',
             'bank_account_number' => 'nullable|string|max:100',
@@ -278,7 +279,8 @@ class PartnerController extends Controller
         }
 
         try {
-            $partner->update($request->all());
+            // only the fields validated above: balances, house flags, wallet slugs and links change through the ledger
+            $partner->update($validator->validated());
 
             return response()->json([
                 'success' => true,

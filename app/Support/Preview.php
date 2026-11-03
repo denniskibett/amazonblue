@@ -31,7 +31,6 @@ class Preview
         'teller' => 'Cash desk: receives payments, sends money, closes the day.',
         'recovery-officer' => 'Collections and debt recovery cases.',
         'auditor' => 'Reads everything, changes nothing.',
-        'broker' => 'Their own clients and fees (a customer-side login).',
     ];
 
     public static function active(): ?array

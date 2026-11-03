@@ -108,7 +108,6 @@
                       required>
                 <option value="">Select Role</option>
                 <option value="admin">Admin</option>
-                <option value="broker">Broker</option>
                 <option value="borrower">Borrower</option>
                 <option value="teller">Teller</option>
               </select>
@@ -126,23 +125,23 @@
                      :required="!isEdit" />
             </div>
 
-            <!-- Broker Fields -->
-            <template x-if="formData.role === 'broker'">
+            <!-- Short-term partner terms (optional; was the broker role) -->
+            <template x-if="formData.role === 'partner'">
               <div class="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
                 <div class="col-span-1">
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Certificate Number *
+                    Certificate Number
                   </label>
                   <input type="text"
                          x-model="formData.cert_no"
                          placeholder="e.g., CERT12345"
                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
+                         />
                 </div>
 
                 <div class="col-span-1">
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Client Interest Rate (%) *
+                    Client Interest Rate (%)
                   </label>
                   <input type="number"
                          x-model="formData.interest_client"
@@ -150,12 +149,12 @@
                          step="0.01"
                          min="0"
                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
+                         />
                 </div>
 
                 <div class="col-span-1">
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Broker Interest Rate (%) *
+                    Interest share, short-term partner (%)
                   </label>
                   <input type="number"
                          x-model="formData.interest_broker"
@@ -163,12 +162,12 @@
                          step="0.01"
                          min="0"
                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
+                         />
                 </div>
 
                 <div class="col-span-1">
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Client Penalty Rate (%) *
+                    Client Penalty Rate (%)
                   </label>
                   <input type="number"
                          x-model="formData.penalty_client"
@@ -176,12 +175,12 @@
                          step="0.01"
                          min="0"
                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
+                         />
                 </div>
 
                 <div class="col-span-1 sm:col-span-2">
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Broker Penalty Rate (%) *
+                    Penalty share, short-term partner (%)
                   </label>
                   <input type="number"
                          x-model="formData.penalty_broker"
@@ -189,7 +188,7 @@
                          step="0.01"
                          min="0"
                          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                         required />
+                         />
                 </div>
               </div>
             </template>
@@ -998,11 +997,11 @@ function userTable() {
             }
             
             // Role-specific validation
-            if (this.formData.role === 'broker') {
+            if (this.formData.role === 'partner' && this.formData.interest_broker) { // short-term partner terms
                 const brokerFields = ['cert_no', 'interest_client', 'interest_broker', 'penalty_client', 'penalty_broker'];
                 for (const field of brokerFields) {
                     if (!this.formData[field] && this.formData[field] !== 0) {
-                        this.message = `Please fill in the ${field.replace('_', ' ')} field for broker`;
+                        this.message = `Please fill in the ${field.replace('_', ' ')} field for the short-term partner terms`;
                         this.messageType = 'error';
                         return false;
                     }

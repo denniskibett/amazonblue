@@ -46,7 +46,7 @@
 
     <div class="a-stats p-three">
       {{-- owner, 1 Nov 2026: earnings split three ways (brokers earn mostly fees and penalty share) --}}
-      <a class="a-stat" href="{{ route('account.partner.earnings') }}" style="text-decoration:none"><span>Broker fees earned</span><b><x-az.money :amount="$home['broker_fees']" /></b></a>
+      <a class="a-stat" href="{{ route('account.partner.earnings') }}" style="text-decoration:none"><span>Introducer fees earned</span><b><x-az.money :amount="$home['broker_fees']" /></b></a>
       <a class="a-stat" href="{{ route('account.partner.earnings') }}" style="text-decoration:none"><span>Penalty share earned</span><b><x-az.money :amount="$home['penalty_share']" /></b></a>
       <a class="a-stat" href="{{ route('account.partner.earnings') }}" style="text-decoration:none"><span>Interest share earned</span><b><x-az.money :amount="$home['interest_share']" /></b></a>
     </div>
@@ -129,7 +129,7 @@
               <div class="a-progress" style="margin-top:6px"><i style="width: {{ $share }}%"></i></div>
             </div>
           @empty
-            <p class="a-empty">Profit share, interest, penalty share and broker fees appear here once they are paid to you.</p>
+            <p class="a-empty">Profit share, interest, penalty share and fees for clients you introduced appear here once they are paid to you.</p>
           @endforelse
         </section>
 

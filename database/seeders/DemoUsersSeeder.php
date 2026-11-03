@@ -62,8 +62,9 @@ class DemoUsersSeeder extends Seeder
             'general_notes' => 'Demo borrower profile',
         ]);
 
-        $broker = $this->account('broker', 'broker', [
-            'name' => 'Test Broker',
+        // short-term partner (was the broker role): partner role plus introducer terms
+        $broker = $this->account('partner', 'partner', [
+            'name' => 'Test Short-term Partner',
             'email' => 'broker@amazonblue.com',
             'phone' => '+254733333333',
         ]);

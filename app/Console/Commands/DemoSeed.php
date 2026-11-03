@@ -51,7 +51,7 @@ class DemoSeed extends Command
                 'rejected' => ['Grace Muthoni', 'borrower', 'verified borrower, rejected application'],
                 'new' => ['Peter Kamau', 'borrower', 'new borrower, KYC not started'],
                 'partner' => ['Lake Capital Partners', 'partner', 'partner with a KES 250,000.00 contribution'],
-                'broker' => ['Joseph Mwangi', 'broker', 'broker'],
+                'broker' => ['Joseph Mwangi', 'partner', 'short-term partner: introduces borrowers (was broker)'],
                 'admin' => ['Demo Admin', 'admin', 'staff: admin'],
                 'teller' => ['Demo Teller', 'teller', 'staff: teller'],
                 'manager' => ['Demo Manager', 'manager', 'staff: manager'],
@@ -111,7 +111,12 @@ class DemoSeed extends Command
                 $partner->addContribution(250000, 'DEMO-CONTRIB-1', 'Demo contribution');
             }
 
-            // broker profile
+            // short-term partner (was the broker role): a partner row plus introducer terms
+            Partner::firstOrCreate(['user_id' => $users['broker']->id], [
+                'name' => $users['broker']->name, 'email' => $users['broker']->email, 'phone' => $users['broker']->phone,
+                'type' => 'individual', 'status' => 'active', 'profit_share_rate' => 0, 'risk_tolerance' => 'moderate',
+                'notes' => 'Demo short-term partner (demo:seed).',
+            ]);
             Broker::firstOrCreate(['user_id' => $users['broker']->id], [
                 'interest_client' => 20, 'interest_broker' => 40, 'penalty_client' => 50, 'penalty_broker' => 50, 'cert_no' => 'DEMO-01',
             ]);

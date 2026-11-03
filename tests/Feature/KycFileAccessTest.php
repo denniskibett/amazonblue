@@ -38,14 +38,15 @@ class KycFileAccessTest extends TestCase
         $this->docId = $this->business->documents()->create(['type' => 'cr12', 'path' => 'business/cr12.pdf'])->id;
     }
 
-    public function test_broker_gets_404_on_user_and_business_files(): void
+    public function test_a_short_term_partner_gets_404_on_user_and_business_files(): void
     {
-        $broker = $this->staff('broker');
+        $broker = $this->staff('partner');
+        \App\Models\Broker::create(['user_id' => $broker->id, 'cert_no' => 'BRK-K', 'interest_client' => 20, 'interest_broker' => 40, 'penalty_client' => 50, 'penalty_broker' => 50]);
 
         $this->assertFalse($broker->can('view users'));
         $this->actingAs($broker)->get("/files/users/{$this->borrower->id}/id-front")->assertNotFound();
         $this->actingAs($broker)->get("/files/businesses/{$this->business->id}/{$this->docId}")->assertNotFound();
-        $this->actingAs($broker)->get('/business-reviews')->assertForbidden();
+        $this->actingAs($broker)->get('/business-reviews')->assertRedirect(route('account.home'));
     }
 
     public function test_teller_with_view_loans_only_gets_404(): void

@@ -88,6 +88,8 @@ class DisbursementController extends Controller
     public function show($id)
     {
         $disbursement = Disbursement::with(['loan', 'loanCycle'])->findOrFail($id);
+        abort_unless(! $disbursement->loan || auth()->user()->brokerMaySee($disbursement->loan), 403, 'This loan is not one of your clients\'.');
+
         return view('disbursements.show', compact('disbursement'));
     }
 
@@ -245,7 +247,14 @@ class DisbursementController extends Controller
             }
 
             // ============ LOAN DISBURSEMENT ============
-            $loan = Loan::find($validated['loan_id']);
+            // locked until this disbursement commits: a double submit waits here, then finds the first one below
+            $loan = Loan::lockForUpdate()->findOrFail($validated['loan_id']);
+            if (in_array($loan->status, [...Loan::STATUS_FINAL_LIST, Loan::STATUS_PENDING], true)) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['loan_id' => 'Loan #' . $loan->id . ' is ' . $loan->status . ': money can\'t be sent on it.']);
+            }
+            if (Disbursement::where('loan_id', $loan->id)->where('transaction', $validated['transaction'])->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['transaction' => 'This loan already has a disbursement with reference ' . $validated['transaction'] . '.']);
+            }
 
             // maker-checker (G8, decision 14): the person who approved the loan doesn't also send the money
             if (\App\Services\Approvals::enabled()) {

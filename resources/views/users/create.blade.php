@@ -30,7 +30,6 @@
             <label for="role" class="block text-gray-700">Role</label>
             <select name="role" id="role" class="w-full px-4 py-2 border rounded-lg" required onchange="toggleRoleFields()">
                 <option value="admin">Admin</option>
-                <option value="broker">Broker</option>
                 <option value="borrower">Borrower</option>
             </select>
         </div>
@@ -49,7 +48,7 @@
                 <input type="number" name="penalty_client" id="penalty_client" class="w-full px-4 py-2 border rounded-lg" step="0.01">
             </div>
             <div class="mb-4">
-                <label for="penalty_broker" class="block text-gray-700">Penalty Broker</label>
+                <label for="penalty_broker" class="block text-gray-700">Penalty share, short-term partner (%)</label>
                 <input type="number" name="penalty_broker" id="penalty_broker" class="w-full px-4 py-2 border rounded-lg" step="0.01">
             </div>
             <div class="mb-4">
@@ -57,7 +56,7 @@
                 <input type="number" name="interest_client" id="interest_client" class="w-full px-4 py-2 border rounded-lg" step="0.01">
             </div>
             <div class="mb-4">
-                <label for="interest_broker" class="block text-gray-700">Interest Broker</label>
+                <label for="interest_broker" class="block text-gray-700">Interest share, short-term partner (%)</label>
                 <input type="number" name="interest_broker" id="interest_broker" class="w-full px-4 py-2 border rounded-lg" step="0.01">
             </div>
             <div class="mb-4">
@@ -76,7 +75,7 @@
                 <label for="client_type" class="block text-gray-700">Client Type</label>
                 <select name="client_type" id="client_type" class="w-full px-4 py-2 border rounded-lg">
                     <option value="0">Our Client</option>
-                    <option value="1">Broker Client</option>
+                    <option value="1">Introduced client</option>
                 </select>
             </div>
             <div class="mb-4">
@@ -87,9 +86,9 @@
                 </select>
             </div>
             <div class="mb-4">
-                <label for="broker_id" class="block text-gray-700">Select Broker (Optional)</label>
+                <label for="broker_id" class="block text-gray-700">Introduced by (short-term partner, optional)</label>
                 <select name="broker_id" id="broker_id" class="w-full px-4 py-2 border rounded-lg">
-                    <option value="">Select a broker</option>
+                    <option value="">Nobody (direct client)</option>
                     @foreach($brokers as $broker)
                         <option value="{{ $broker->id }}">{{ $broker->user->name }}</option>
                     @endforeach
@@ -107,7 +106,7 @@
         const brokerFields = document.getElementById('brokerFields');
         const borrowerFields = document.getElementById('borrowerFields');
 
-        brokerFields.style.display = role === 'broker' ? 'block' : 'none';
+        brokerFields.style.display = role === 'partner' ? 'block' : 'none';
         borrowerFields.style.display = role === 'borrower' ? 'block' : 'none';
     }
 

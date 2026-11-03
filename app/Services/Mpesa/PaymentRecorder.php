@@ -12,6 +12,7 @@ use App\Services\LoanCalculator;
 use App\Services\Loans\CycleBalance;
 use App\Services\Loans\LoanStatus;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -28,6 +29,20 @@ class PaymentRecorder
 {
     public const PAYABLE = [Loan::STATUS_DISBURSED, Loan::STATUS_ACTIVE, Loan::STATUS_OVERDUE, Loan::STATUS_FORBEARANCE,
         Loan::STATUS_DEFAULTED, Loan::STATUS_RECOVERY];
+
+    /**
+     * Runs $fn while holding a lock on one M-Pesa receipt, so the callback and a teller typing the same receipt
+     * can't both pass the "already recorded?" check and record it twice. Anything that isn't a receipt runs as is.
+     */
+    public static function onReceipt(?string $code, callable $fn): mixed
+    {
+        $code = strtoupper(trim((string) $code));
+        if (! preg_match('/^[A-Z0-9]{10}$/', $code)) {
+            return $fn();
+        }
+
+        return Cache::lock('mpesa-receipt:' . $code, 30)->block(15, $fn);
+    }
 
     /** A C2B confirmation body (TransID, TransAmount, BillRefNumber, MSISDN, TransTime, BusinessShortCode...). */
     public function receiveC2b(array $p): MpesaTransaction
@@ -86,7 +101,7 @@ class PaymentRecorder
     /** Matches a received transaction to its loan and records the repayment, or leaves it for staff. */
     public function match(MpesaTransaction $t): MpesaTransaction
     {
-        return DB::transaction(function () use ($t) {
+        return self::onReceipt($t->trans_id, fn () => DB::transaction(function () use ($t) {
             $t = MpesaTransaction::whereKey($t->id)->lockForUpdate()->firstOrFail();
             if (in_array($t->status, ['matched', 'duplicate', 'reversed'], true)) {
                 return $t;
@@ -110,13 +125,13 @@ class PaymentRecorder
             $t->update(['status' => 'matched', 'loan_id' => $loan->id, 'repayment_id' => $repayment->id, 'note' => $why]);
 
             return $t;
-        });
+        }));
     }
 
     /** Staff assigns an unmatched transaction to a loan (the payer typed a wrong account number). */
     public function assign(MpesaTransaction $t, Loan $loan, User $by): Repayment
     {
-        return DB::transaction(function () use ($t, $loan, $by) {
+        return self::onReceipt($t->trans_id, fn () => DB::transaction(function () use ($t, $loan, $by) {
             $t = MpesaTransaction::whereKey($t->id)->lockForUpdate()->firstOrFail();
             if (! in_array($t->status, ['unmatched', 'received'], true)) {
                 throw new \DomainException('This payment is already ' . $t->status . '.');
@@ -126,7 +141,7 @@ class PaymentRecorder
                 'note' => 'Assigned by ' . $by->name]);
 
             return $repayment;
-        });
+        }));
     }
 
     /** A claim's code is a receipt we hold but couldn't match: the borrower's own claim decides the loan. */

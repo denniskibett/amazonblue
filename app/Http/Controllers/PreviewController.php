@@ -20,7 +20,7 @@ class PreviewController extends Controller
     {
         $this->guard($request);
         $q = trim((string) $request->query('q', ''));
-        $customers = User::role(['borrower', 'partner', 'broker'])->whereNull('deleted_at')
+        $customers = User::role(['borrower', 'partner'])->whereNull('deleted_at')
             ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%")->orWhere('phone', 'like', "%{$q}%")))
             ->with('roles:id,name')->withCount('loans')->orderByDesc('loans_count')->limit(60)->get(['id', 'name', 'email', 'phone']);
 

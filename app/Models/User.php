@@ -74,6 +74,7 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
         'kyc_reviewed_at',
         'kyc_review_notes',
         'kyc_checks',
+        'utility_meters',
     ];
 
     protected $hidden = [
@@ -120,6 +121,7 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
             'kyc_submitted_at' => 'datetime',
             'kyc_reviewed_at' => 'datetime',
             'kyc_checks' => 'array',
+            'utility_meters' => 'array',
         ];
     }
 
@@ -152,11 +154,13 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
     }
 
     /**
-     * Check if user is a broker (legacy compatibility)
+     * Short-term partner (owner, 3 Nov 2026; was the "broker" role): a partner who brings borrowers and can fund them
+     * loan by loan. Not a role: the partner's introducer terms live in `brokers`, and brokered loans point at the
+     * partner (loans.partner_id, broker_status). They use the partner portal, not the back office.
      */
-    public function isBroker(): bool
+    public function isShortTermPartner(): bool
     {
-        return $this->hasRole('broker');
+        return $this->hasRole('partner') && $this->broker()->exists();
     }
 
     /**
@@ -187,7 +191,8 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
      * Check if user is active
      */
     // roles that work in the dashboard; everyone else is a customer
-    public const STAFF_ROLES = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'teller', 'broker'];
+    // "broker" was retired on 3 Nov 2026: brokers are short-term partners (isShortTermPartner) on the partner portal
+    public const STAFF_ROLES = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'teller'];
 
     /**
      * Borrowers and partners (without any staff role) use the customer account area, not the dashboard.
@@ -209,7 +214,7 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
     public const BACK_OFFICE_ROLES = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor'];
 
     // most senior first: the first one a user holds is mirrored into users.role
-    public const ROLE_PRIORITY = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'teller', 'broker', 'partner', 'borrower'];
+    public const ROLE_PRIORITY = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'teller', 'partner', 'borrower'];
 
     /**
      * The user's main Spatie role (by ROLE_PRIORITY), or null when they have none.
@@ -283,6 +288,20 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
     public function broker()
     {
         return $this->hasOne(Broker::class);
+    }
+
+    /**
+     * False only for a broker (not also back office or a teller) looking at a loan that isn't one of their clients'.
+     * Role and permission checks stay with the caller.
+     */
+    public function brokerMaySee(Loan $loan): bool
+    {
+        if (! $this->hasRole('broker') || $this->hasAnyRole([...self::BACK_OFFICE_ROLES, 'teller'])) {
+            return true;
+        }
+        $loan->loadMissing('user.borrower');
+
+        return $loan->user?->borrower && $this->broker && $loan->user->borrower->broker_id === $this->broker->id;
     }
 
     public function teller()
@@ -450,11 +469,10 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
         });
     }
 
+    /** Short-term partners: partners with introducer terms (was the "broker" role). */
     public function scopeBrokers($query)
     {
-        return $query->whereHas('roles', function ($q) {
-            $q->where('name', 'broker');
-        });
+        return $query->role('partner')->whereHas('broker');
     }
 
     public function scopeTellers($query)

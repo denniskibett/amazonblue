@@ -6,8 +6,9 @@ office.
 
 - **Borrowers** register, pass KYC, borrow up to a scored limit, repay by M-Pesa, and ask for top-ups, extensions and
   payment plans. A borrower can add a business (KYB) and borrow through it.
-- **Partners** fund lines, see the loans they funded and their earnings, add funds and withdraw.
-- **Staff** (teller, loan officer, recovery, accountant, auditor, manager, admin, super-admin, broker) run origination,
+- **Partners** fund lines (long-term) or introduce borrowers and fund them loan by loan (short-term, formerly
+  "broker"), see their loans and earnings, add funds and withdraw.
+- **Staff** (teller, loan officer, recovery, accountant, auditor, manager, admin, super-admin) run origination,
   disbursements, repayments, rollovers, recovery, approvals, reports and settings.
 
 ## Start here

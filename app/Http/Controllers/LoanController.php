@@ -150,8 +150,6 @@ class LoanController extends Controller
                 ->with('alert', ['type' => 'info', 'title' => 'Apply from your account', 'message' => 'Apply from the Borrow page in your account.']);
         }
         
-        Log::debug('Loan Store Request Data:', $request->all());
-        
         $requestData = $request->all();
         
         // Determine which user to save signature for
@@ -608,6 +606,7 @@ class LoanController extends Controller
 
                 $loan = $loanQuery
                     ->findOrFail($loanId);
+                $this->authorizeLoanView($user, $loan);
 
             } elseif ($user->hasRole('borrower')) {
 
@@ -1174,6 +1173,9 @@ class LoanController extends Controller
 
     public function getPaymentPlanPreview(Loan $loan, Request $request)
     {
+        abort_unless(auth()->user()->can('view loans'), 403, 'Unauthorized action.');
+        $this->authorizeLoanView(auth()->user(), $loan);
+
         try {
             $activeCycle = $this->loanCalculator->getActiveCycle($loan);
             
@@ -1410,6 +1412,7 @@ class LoanController extends Controller
                 'message' => 'Unauthorized action.'
             ], 403);
         }
+        $this->authorizeLoanView(auth()->user(), $loan);
 
         // the modal can ask "what if": booked on another day, a different due date, rate or penalty waiver
         $options = $request->validate([
@@ -1445,6 +1448,7 @@ class LoanController extends Controller
         if (! auth()->user()->can('view loans')) {
             abort(403, 'Unauthorized action.');
         }
+        $this->authorizeLoanView(auth()->user(), $loan);
 
         $statement = $loan->getRolloverStatement();
         
@@ -1459,6 +1463,7 @@ class LoanController extends Controller
         if (! auth()->user()->can('view loans')) {
             abort(403, 'Unauthorized action.');
         }
+        $this->authorizeLoanView(auth()->user(), $loan);
 
         $cycles = $loan->cycles()->orderBy('cycle_number', 'asc')->get();
         
@@ -1799,6 +1804,7 @@ class LoanController extends Controller
                         ->firstOrFail();
         } elseif ($user->hasAnyRole(['broker', 'teller'])) {
             $loan = $loanQuery->findOrFail($loanId);
+            $this->authorizeLoanView($user, $loan);
         } elseif ($user->hasRole('borrower')) {
             $loan = $loanQuery->where('id', $loanId)
                         ->where('user_id', $user->id)
@@ -1965,8 +1971,11 @@ class LoanController extends Controller
         
         if (!$user->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller']) && 
             $loan->user_id !== $user->id && 
-            !($user->hasRole('broker') && $loan->broker_status == 1)) {
+            !$user->hasRole('broker')) {
             abort(403, 'Unauthorized');
+        }
+        if ($loan->user_id !== $user->id) {
+            $this->authorizeLoanView($user, $loan);
         }
 
         // the frozen signed copy when there is one; otherwise generated (and frozen if consented)
@@ -1985,8 +1994,11 @@ class LoanController extends Controller
         
         if (!$user->hasAnyRole([...User::BACK_OFFICE_ROLES, 'teller']) && 
             $loan->user_id !== $user->id && 
-            !($user->hasRole('broker') && $loan->broker_status == 1)) {
+            !$user->hasRole('broker')) {
             abort(403, 'Unauthorized');
+        }
+        if ($loan->user_id !== $user->id) {
+            $this->authorizeLoanView($user, $loan);
         }
 
         // the frozen signed copy when there is one; otherwise generated (and frozen if consented)
@@ -2381,6 +2393,12 @@ class LoanController extends Controller
         }
 
         return (string) $value !== (string) $current;
+    }
+
+    /** A broker (who isn't also back office or a teller) sees only their own clients' loans. */
+    private function authorizeLoanView(User $user, Loan $loan): void
+    {
+        abort_unless($user->brokerMaySee($loan), 403, 'This loan is not one of your clients\'.');
     }
 
     private function authorizeLoanChange(User $user, Loan $loan, string $permission): void

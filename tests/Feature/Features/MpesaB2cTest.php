@@ -140,5 +140,57 @@ class MpesaB2cTest extends TestCase
         }
         $this->assertSame('pending', DB::table('approvals')->value('status'));
         $this->assertNull(DB::table('mpesa_transactions')->value('conversation_id'));
+        // ...and the row is free to be approved again
+        $this->assertArrayNotHasKey('dispatched_at', json_decode(DB::table('mpesa_transactions')->value('payload'), true));
+    }
+
+    public function test_nothing_is_sent_when_the_approval_rolls_back_after_send(): void
+    {
+        $this->safaricomAccepts();
+        $this->actingAs($this->maker)->post(route('mpesa.payouts.store', 700), ['phone' => '0712345678', 'amount' => 10000]);
+        $id = (int) DB::table('mpesa_transactions')->value('id');
+        try {
+            DB::transaction(function () use ($id) {
+                app(\App\Services\Mpesa\B2cPayouts::class)->send($id, $this->checker);
+                throw new \RuntimeException('something after send failed');
+            });
+        } catch (\RuntimeException) {
+        }
+        Http::assertNothingSent();
+        $this->assertNull(DB::table('mpesa_transactions')->value('conversation_id'));
+        $this->assertArrayNotHasKey('dispatched_at', json_decode(DB::table('mpesa_transactions')->value('payload'), true));
+    }
+
+    public function test_no_answer_from_safaricom_never_sends_again(): void
+    {
+        $calls = 0;
+        Http::fake([
+            '*/oauth/v1/generate*' => Http::response(['access_token' => 'tok', 'expires_in' => 3599]),
+            '*/mpesa/b2c/v1/paymentrequest' => function () use (&$calls) {
+                $calls++;
+                throw new \Illuminate\Http\Client\ConnectionException('timed out');
+            },
+        ]);
+        $this->actingAs($this->maker)->post(route('mpesa.payouts.store', 700), ['phone' => '0712345678', 'amount' => 10000]);
+        $approval = DB::table('approvals')->value('id');
+        try {
+            app(Approvals::class)->decide($approval, $this->checker, true);
+            $this->fail('should have said Safaricom did not answer');
+        } catch (\DomainException $e) {
+            $this->assertStringContainsString('check the M-Pesa statement', $e->getMessage());
+        }
+        $row = DB::table('mpesa_transactions')->first();
+        $this->assertArrayHasKey('dispatched_at', json_decode($row->payload, true));
+        $this->assertSame('approved', DB::table('approvals')->value('status'));
+
+        // a second try never reaches Safaricom
+        app(\App\Services\Mpesa\B2cPayouts::class)->dispatch($row->id);
+        $this->assertSame(1, $calls);
+    }
+
+    public function test_a_payout_is_blocked_while_previewing(): void
+    {
+        config(['lending.mpesa.b2c_enabled' => false]); // what PreviewAs sets
+        $this->assertFalse(\App\Services\Mpesa\B2cPayouts::enabled());
     }
 }

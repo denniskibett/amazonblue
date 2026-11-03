@@ -43,6 +43,7 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+            RateLimiter::hit($this->ipThrottleKey(), 15 * 60);
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -59,13 +60,17 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        // 5 tries per email from one address, and 20 failed tries per address across all emails in 15 minutes
+        // (one address guessing many accounts)
+        $key = RateLimiter::tooManyAttempts($this->throttleKey(), 5) ? $this->throttleKey()
+            : (RateLimiter::tooManyAttempts($this->ipThrottleKey(), 20) ? $this->ipThrottleKey() : null);
+        if ($key === null) {
             return;
         }
 
         event(new Lockout($this));
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
+        $seconds = RateLimiter::availableIn($key);
 
         throw ValidationException::withMessages([
             'email' => trans('auth.throttle', [
@@ -81,5 +86,11 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+    }
+
+    /** Failed sign-ins from one address, whatever the email. */
+    public function ipThrottleKey(): string
+    {
+        return 'login-ip|'.$this->ip();
     }
 }

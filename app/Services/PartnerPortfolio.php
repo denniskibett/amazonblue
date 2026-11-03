@@ -16,7 +16,7 @@ class PartnerPortfolio
     public const WALLETS = [
         'principal' => 'Capital',
         'interest' => 'Interest',
-        'broker_fee' => 'Broker fees',
+        'broker_fee' => 'Introducer fees',
     ];
 
     // partner_transactions.type => label
@@ -25,7 +25,7 @@ class PartnerPortfolio
         'withdrawal' => 'Withdrawal',
         'repayment' => 'Capital returned',
         'profit_distribution' => 'Profit share',
-        'broker_fee_earned' => 'Broker fee',
+        'broker_fee_earned' => 'Introducer fee',
         'penalty_share' => 'Penalty share',
         'interest' => 'Interest',
     ];

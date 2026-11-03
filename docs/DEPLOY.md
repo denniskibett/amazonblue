@@ -57,7 +57,7 @@ Other details:
 
 - **Never** run `git stash -u`, `git clean`, `git reset --hard` or `git checkout -f` in the live folder.
 - `loans:repair-cycles` was removed (21 Oct); its successor `loans:fix-cycles` refuses to run under engine v2.
-- Use `scripts/deploy-live.sh` only. The older `deploy.sh` at the repo root runs `migrate --force` and should not be used.
+- Use `scripts/deploy-live.sh` only. The older root `deploy.sh`, which ran `migrate --force`, was removed on 3 Nov 2026.
 - Keep `APP_DEBUG=false` on live.
 - Secrets live only in the server `.env`. Never paste them into chats or commits.
 

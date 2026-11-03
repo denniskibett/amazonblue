@@ -31,8 +31,7 @@ Staff roles are in `User::STAFF_ROLES`; anyone else who signs in goes to `/accou
 | Role | Can do |
 |---|---|
 | borrower | KYC, borrow, repay (STK), top-up/extension/plan requests, statements, businesses, testimonial |
-| partner | Partner portal: lines, funded loans, earnings (paid out / to be paid out / pending), add funds, withdraw, subscriptions |
-| broker | Staff role outside the back office: their clients' loans, broker fees |
+| partner | Partner portal: lines, funded loans, earnings (paid out / to be paid out / pending), add funds, withdraw, subscriptions. Two kinds, one role: **long-term** partners fund lines (fixed rate or loan share); **short-term** partners (the old "broker") introduce borrowers and can fund them loan by loan. A short-term partner has introducer terms in `brokers` (`User::isShortTermPartner()`); their loans carry `loans.partner_id` + `broker_status`, listed as "brokered" in the portal |
 | teller | Create and disburse loans, take repayments, cash-up |
 | loan-officer | Origination and loan changes |
 | recovery-officer | Collections, recovery cases, notices |
@@ -114,7 +113,7 @@ only, once per event. Not sent for book entries, console entries or money dated 
 | API keys and `/api/v1` | On; only `GET /api/v1/ping` so far | `ApiKey`, `AuthenticateApiKey` |
 | Site analytics (first-party) | On (`ANALYTICS_ENABLED`), kept 180 days | `SiteAnalytics`, `TrackPageView` |
 | Header search | On: menu pages, loans by number, people by name/phone/ID (back office only) | `Support/NavMenu`, `Staff/SearchController` |
-| Preview ("view as") | On, super-admin only; mail, SMS and STK are blocked while previewing | `Middleware/PreviewAs` |
+| Preview ("view as") | On, super-admin only; mail, SMS, STK and B2C payouts are blocked while previewing | `Middleware/PreviewAs` |
 
 ## 5. Switches
 
@@ -142,6 +141,8 @@ change it, then `php artisan config:cache`. Switch order and checks: [stage4/SWI
 | `LENDING_BEHAVIOUR_LIMITS` | false | not recorded | Limits from borrower behaviour profiles |
 | `LENDING_SHORTFALL_MAX` | 2000 | not recorded | Largest short payment accepted as paid |
 | `ANALYTICS_ENABLED` | true | not recorded | First-party page views |
+| `MPESA_ALLOWED_IPS` | empty (any address) | not recorded | Safaricom callback addresses; set before M-Pesa goes on |
+| `WALLET_LOCK_DRIVER` | `array` | not recorded | Wallet balance locks; `database` or `redis` on live (see §9) |
 
 "Not recorded" means no runbook has written down the live value since that switch shipped. Read it with
 `scripts/server-tidy.sh` and update this table.
@@ -187,39 +188,36 @@ then deploy ([DEPLOY.md](DEPLOY.md)). Permission-only and data-only fixes have a
 fixes are also mirrored in `RoleSeeder`.
 
 Latest twins: `2026_11_01_cycle_interest_amount`, `2026_11_01_site_analytics`, `2026_11_01_testimonials`,
-`2026_11_02_part_funding`, `2026_11_03_integrations_api_keys`, `2026_11_03_integrations_permission`.
+`2026_11_02_part_funding`, `2026_11_03_integrations_api_keys`, `2026_11_03_integrations_permission`,
+`2026_11_03_users_utility_meters`, `2026_11_03_retire_broker_role`.
 
-## 9. Known issues (code audit, 3 November 2026)
+## 9. Known issues
 
-Found in a read-only audit and not fixed yet. Remove each line when it is fixed.
+From the code audit of 3 November 2026. The code fixes for the rest of that audit are in the change log (§11).
+Remove each line when it is done.
 
-**Fix first**
-- A live database dump (`loans_main.sql`: users, password hashes, borrowers, loans) is tracked in git. Untrack it,
-  purge it from history, and invalidate sessions and reset tokens.
-- `UserController.php:262` logs `$request->all()`, which includes plaintext passwords. `LoanController.php:153` and
-  `InvestmentController.php:84` log whole requests too.
-- `UserController::update` / `destroy` need only `edit users` and don't check the target's rank, so a manager can reset
-  a super-admin's password or change their role.
-- M-Pesa B2C (`Services/Mpesa/B2cPayouts.php`): the result callback checks the row's status without a lock (a repeated
-  callback can record the disbursement twice). The Safaricom call runs inside the DB transaction (a rollback after
-  Safaricom accepts allows a second payout). Preview doesn't switch B2C off.
-- `DisbursementController.php:248` loads the loan with no lock and no status check: double submits, or disbursing a
-  repaid or written-off loan, go through.
+**Needs action on live (not code)**
+- A live database dump (`loans_main.sql`: users, password hashes, borrowers, loans) is tracked in git and the GitHub repo
+  was public. Untrack it, purge it from history, and invalidate sessions and reset tokens. (The owner keeps the file
+  locally to compare live and local.)
+- Passwords were written to `storage/logs` by the old user-edit logging (removed 3 Nov). Clear the live logs.
+- Old agreements and ID images sit in `storage/app/public` under guessable names. Run
+  `php artisan files:make-private --dry-run`, then `--apply`, on live. Only after that remove the `public` fallback in
+  `Support/PrivateFiles::absolute`.
+- Wallet locks: `WALLET_LOCK_DRIVER` is still `array` (one process only), so two requests can race on a partner's
+  balance. Set it to `database` (or `redis`) on live after a test on a copy of live.
+- M-Pesa callbacks: set `MPESA_ALLOWED_IPS` to Safaricom's callback addresses before switching M-Pesa on.
+- Eight M-Pesa receipts are on two repayments each in the copy of live (`repayments.mpesa_ref` TD14WWGMI4, TDA87V3XFY,
+  TE89Y1GGWP, TJV4A8Z943, UB9PX665CY, UD76BBT9AX, UE4BM391CB, UELD84YB8S). Owner to check whether each is a double
+  count or one payment split across cycles. A unique index on the receipt can follow once they are resolved; until then
+  a per-receipt lock stops new doubles.
 
-**Next**
-- Brokers can open loans that aren't their clients' (`LoanController::show`, PDF and agreement views,
-  `DisbursementController::show`).
-- `PartnerController.php:281` calls `$partner->update($request->all())` (balances and flags can be overwritten).
-- Old agreements and ID images in `storage/app/public` under guessable names; confirm `files:make-private` ran on live.
-- bavix wallet locks use the `array` driver (`config/wallet.php`), so concurrent postings can lose a balance update.
-- M-Pesa callbacks always answer "Accepted" (Safaricom never retries); no unique index on the receipt in
-  `repayments`; the callback IP allowlist is empty by default.
-- Split and ledger postings after commit only log failures; one bad cycle stops `ledger:accrue`.
-- No 2FA for staff; no throttle on forgot-password.
+**Still open in code**
+- No 2FA for staff.
 - Penalty carried into a rollover's principal restarts the in-duplum cap: confirm with legal.
-- Two deploy paths: `deploy.sh` (runs `migrate --force`) and `scripts/deploy-live.sh` (refuses pending migrations).
-  Keep the second.
-- `RepaymentController::show:173` compares `$loan->broker_id`, which loans don't have, so brokers are always refused.
+- `Investment::recordFundingDisbursement` checks a line's free capacity before taking its lock, so two draws at the same
+  moment can exceed a partner line.
+- `partners:accrue-fixed` can credit months after a fixed-rate partner left (it reads `updated_at`).
 
 ## 10. Open items (owner and server)
 
@@ -238,6 +236,9 @@ Newest first. One line per change that alters a rule, switch, role or module.
 
 | Date | Change |
 |---|---|
+| 2026-11-03 | Broker role retired: brokers are short-term partners (partner role + `brokers` terms) on the partner portal, out of the staff app. The migration moves anyone with the role to partner (adding a partner row) and deletes the role; `brokers`, `borrowers.broker_id`, `loans.broker_*` and the `broker_fee*` ledger types are unchanged. User forms set introducer terms on a partner; labels say "introducer fee". Old `hasRole('broker')` branches in legacy loan/repayment/case screens are now dead code, still to be removed |
+| 2026-11-03 | `users.utility_meters` (JSON): KPLC meter or account numbers a borrower gives as proof of address, with consent; not shared with collection agencies |
+| 2026-11-03 | Audit fixes: no request bodies or passwords in logs; only a super-admin changes a super-admin (and only an admin an admin), no self role change or self delete; M-Pesa B2C sent only after the approval commits, at most once, result recorded under a lock, off while previewing; staff disbursement locks the loan, refuses pending/closed loans and a repeated reference; brokers see only their clients' loans (loan, PDF, agreement, cycles, previews, disbursement, repayment pages); partner edit writes only validated fields; M-Pesa callbacks answer non-zero when a payment can't be saved and alert admins; per-receipt lock between callback and teller; failed ledger/split postings and `ledger:accrue` cycles alert admins (`StaffAlarm`), accrual skips a bad cycle; per-address login limit and forgot-password throttle; root `deploy.sh` removed |
 | 2026-11-03 | `manage integrations` permission for admin and super-admin; admin gets `manage API tokens` |
 | 2026-11-03 | Integrations page, API keys + `/api/v1/ping`, money emails, admin self-disbursement, header search |
 | 2026-11-02 | Part funding across house and partners (`loan_fundings`), backfill; partner portal shows paid out / to be paid out / pending; staff link a partner login |

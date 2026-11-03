@@ -19,7 +19,7 @@ class SearchController extends Controller
     {
         $user = $request->user();
         $q = trim((string) $request->input('q', ''));
-        if (mb_strlen($q) < 2 || ($user->hasRole('broker') && ! $user->hasAnyRole(User::BACK_OFFICE_ROLES))) {
+        if (mb_strlen($q) < 2 || ! $user->isStaff()) {
             return response()->json(['results' => []]);
         }
         $results = [];

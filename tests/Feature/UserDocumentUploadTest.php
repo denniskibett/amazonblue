@@ -58,7 +58,7 @@ class UserDocumentUploadTest extends TestCase
             ->postJson("/users/{$customer->id}/documents/signature", ['file' => UploadedFile::fake()->create('sig.pdf', 10, 'application/pdf')])
             ->assertStatus(422)->assertJsonValidationErrors('file');
 
-        foreach (['teller', 'broker', 'borrower'] as $role) {
+        foreach (['teller', 'partner', 'borrower'] as $role) {
             $this->actingAs($this->user($role))
                 ->postJson("/users/{$customer->id}/documents/signature", ['file' => UploadedFile::fake()->image('s.png')])
                 ->assertForbidden();

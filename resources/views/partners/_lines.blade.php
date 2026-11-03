@@ -19,7 +19,7 @@
     <p class="text-sm text-gray-500 dark:text-gray-400">
       {{ $lines->where('line.status', 'active')->count() }} open line(s) ·
       {{ $clients }} client loan(s) brought in ·
-      {{ $ownLoans->count() }} own loan(s){{ $ownLoans->count() ? ', ' . $ownBack . ' getting the broker share back' : '' }}
+      {{ $ownLoans->count() }} own loan(s){{ $ownLoans->count() ? ', ' . $ownBack . ' getting the introducer share back' : '' }}
       @if ($ownLoans->count() > $ownBack)<span class="text-amber-700 dark:text-amber-400"> (run <code>partners:own-loans --partner={{ $partner->id }}</code> for the rest)</span>@endif
     </p>
   </div>
