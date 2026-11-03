@@ -39,7 +39,8 @@ Staff roles are in `User::STAFF_ROLES`; anyone else who signs in goes to `/accou
 | auditor | Read-only |
 | manager | Nearly everything an admin has, including `edit users` and API tokens |
 | admin | Adds Integrations (`manage integrations`) and API keys |
-| super-admin | Everything (`*`). Only role with `/system` (settings, backups), `manage roles` and Preview ("view as") |
+| super-admin | Everything (`*`). Only role with `/system` (settings, backups), `manage roles` and Preview ("view as"): a stand-in for a role, or any real account but another super-admin, staff included; every preview request is rolled back and nothing is sent |
+| collector | Outside debt collection agency staff. Not staff: they sign in to `/collect` and see only the loans placed with their agency while the placement is open (forbearance included). Contact details unlock `LENDING_AGENCY_NOTICE_DAYS` (7) days after the borrower was told. No ID photos, selfies or meters |
 
 Maker-checker (second sign-off) applies only when `LENDING_APPROVALS_ENABLED=true`. Admin and super-admin may disburse a
 loan they approved themselves (`LENDING_SELF_DISBURSE_ROLES`); each such disbursement is audited as `self_disbursed`.
@@ -108,6 +109,8 @@ only, once per event. Not sent for book entries, console entries or money dated 
 | AML / sanctions screening | Built, off (`LENDING_AML_SCREENING`) | `routes/features/aml.php` |
 | Debt recovery, NPL | On | `CaseController`, `NplDetectionService` |
 | Reports, dashboard, operations review | On | `Reports*`, `staff/operations-review` |
+| Collection agencies (outside collectors) | On (since 3 Nov). Staff with `manage collection agencies` (admin, manager, recovery officer) add agencies and collector logins on `/staff/agencies` and place overdue, defaulted, recovery and forbearance loans until an end date. The old empty `recovery_agencies` / `agency_*` tables are not used | `Staff/CollectionAgenciesController`, `Collect/PortalController`, `Services/Collections/AgencyPlacements` |
+| Cash and growth | On (since 3 Nov). `/staff/cash-forecast` (`view reports`): cash per the ledger, a 12-week cash forecast from the loan book (weighted by lateness, `lending.forecast`) with and without lending at the recent pace, and lending, collections and new-loan interest by month with a 3-month projection. Partner payouts and running costs are not in it yet | `Services/CashForecast` |
 | Agreements and signature pad | On | `LoanAgreementService`, `SignatureService` |
 | Integrations page | On (since 3 Nov). M-Pesa, SMS, SMTP/`MAIL_URL`, Google Analytics, S3, Slack. Values are encrypted in `integrations` and **override `.env` at boot** | `Support/Integrations`, `Staff/IntegrationsController` |
 | API keys and `/api/v1` | On; only `GET /api/v1/ping` so far | `ApiKey`, `AuthenticateApiKey` |
@@ -189,7 +192,7 @@ fixes are also mirrored in `RoleSeeder`.
 
 Latest twins: `2026_11_01_cycle_interest_amount`, `2026_11_01_site_analytics`, `2026_11_01_testimonials`,
 `2026_11_02_part_funding`, `2026_11_03_integrations_api_keys`, `2026_11_03_integrations_permission`,
-`2026_11_03_users_utility_meters`, `2026_11_03_retire_broker_role`.
+`2026_11_03_users_utility_meters`, `2026_11_03_retire_broker_role`, `2026_11_03_collection_agencies`.
 
 ## 9. Known issues
 
@@ -236,6 +239,9 @@ Newest first. One line per change that alters a rule, switch, role or module.
 
 | Date | Change |
 |---|---|
+| 2026-11-03 | Collection agencies: `collector` role and `/collect` portal, `/staff/agencies`, permission `manage collection agencies`; tables `collection_agencies`, `collection_agency_users`, `collection_placements`, `collection_contacts` |
+| 2026-11-03 | Cash and growth page (`/staff/cash-forecast`), `lending.forecast` assumptions |
+| 2026-11-03 | Preview ("view as") opens any real account but a super-admin, staff included |
 | 2026-11-03 | Broker role retired: brokers are short-term partners (partner role + `brokers` terms) on the partner portal, out of the staff app. The migration moves anyone with the role to partner (adding a partner row) and deletes the role; `brokers`, `borrowers.broker_id`, `loans.broker_*` and the `broker_fee*` ledger types are unchanged. User forms set introducer terms on a partner; labels say "introducer fee". Old `hasRole('broker')` branches in legacy loan/repayment/case screens are now dead code, still to be removed |
 | 2026-11-03 | `users.utility_meters` (JSON): KPLC meter or account numbers a borrower gives as proof of address, with consent; not shared with collection agencies |
 | 2026-11-03 | Audit fixes: no request bodies or passwords in logs; only a super-admin changes a super-admin (and only an admin an admin), no self role change or self delete; M-Pesa B2C sent only after the approval commits, at most once, result recorded under a lock, off while previewing; staff disbursement locks the loan, refuses pending/closed loans and a repeated reference; brokers see only their clients' loans (loan, PDF, agreement, cycles, previews, disbursement, repayment pages); partner edit writes only validated fields; M-Pesa callbacks answer non-zero when a payment can't be saved and alert admins; per-receipt lock between callback and teller; failed ledger/split postings and `ledger:accrue` cycles alert admins (`StaffAlarm`), accrual skips a bad cycle; per-address login limit and forgot-password throttle; root `deploy.sh` removed |

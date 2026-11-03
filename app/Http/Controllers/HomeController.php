@@ -118,6 +118,9 @@ class HomeController extends Controller
         if (! $user->isCustomer()) {
             return redirect()->route('dashboard');
         }
+        if ($user->hasRole('collector')) {
+            return redirect()->route('collect.index');
+        }
 
         if ($user->hasRole('borrower')) {
             $openLoan = $eligibility->openLoan($user);

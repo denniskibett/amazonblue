@@ -33,6 +33,7 @@ class NavMenu
             ['Requests', 'staff.requests', 'mail', $u->canAny(['rollover loans', 'edit partners']), ['staff.requests'], $count(fn () => \Illuminate\Support\Facades\DB::table('borrower_requests')->where('status', 'open')->count())],
             ['Collections', 'staff.collections', 'alert', $u->can('view recovery cases'), ['staff.collections'], null],
             ['Debt Recovery', 'cases.index', 'shield', $u->can('view recovery cases'), ['cases.*'], $count(fn () => \App\Models\DebtRecoveryCase::open()->count())],
+            ['Collection agencies', 'staff.agencies', 'users', $u->can('manage collection agencies'), ['staff.agencies*'], null],
 
             ['Messages', 'staff.messages.index', 'mail', $u->hasAnyRole(['super-admin', 'admin', 'manager']), ['staff.messages.*'], null],
           ];
@@ -52,6 +53,7 @@ class NavMenu
           ];
           $groups['Finance'] = [
             ['Portfolio', 'staff.portfolio', 'pie', $u->can('view reports'), ['staff.portfolio'], null],
+            ['Cash and growth', 'staff.cash-forecast', 'chart', $u->can('view reports'), ['staff.cash-forecast'], null],
             ['Wallets & reconciliation', 'staff.wallets', 'scale', $u->canAny(['reconcile wallets', 'view house reconciliation']), ['staff.wallets'], null],
             ['Partner payouts', 'staff.partner-payouts', 'coins', $u->can('view partner statements'), ['staff.partner-payouts'], null],
             ['Partners', 'partners.index', 'briefcase', $u->can('view partners'), ['partners.*'], null],

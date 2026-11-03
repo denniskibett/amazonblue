@@ -42,9 +42,9 @@ class PartnerLoanListsTest extends TestCase
         $stranger = $this->loan(['amount' => 9333]);
 
         $this->actingAs($user)->get('/account/partner/loans')
-            ->assertOk()->assertSee('Funded · 1')->assertSee('Brokered · 1')->assertSee('5,111.00')->assertDontSee('7,222.00');
+            ->assertOk()->assertSee('Funded · 1')->assertSee('Introduced · 1')->assertSee('5,111.00')->assertDontSee('7,222.00');
         $this->actingAs($user)->get('/account/partner/loans?list=brokered')
-            ->assertOk()->assertSee('Brokered loans')->assertSee('7,222.00')->assertDontSee('5,111.00');
+            ->assertOk()->assertSee('Clients you introduced')->assertSee('7,222.00')->assertDontSee('5,111.00');
 
         $this->actingAs($user)->get("/account/partner/loans/{$funded->id}")->assertOk();
         $this->actingAs($user)->get("/account/partner/loans/{$brokered->id}")->assertOk();

@@ -255,6 +255,10 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
 
     public function homeRoute(): string
     {
+        if ($this->hasRole('collector') && ! $this->isStaff()) {
+            return 'collect.index';   // outside debt collection agencies (3 Nov 2026)
+        }
+
         return $this->isCustomer() ? 'account.home' : 'dashboard';
     }
 

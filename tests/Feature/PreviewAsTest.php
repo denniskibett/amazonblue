@@ -66,9 +66,19 @@ class PreviewAsTest extends TestCase
         $borrower->assignRole('borrower');
         $this->actingAs($this->sysadmin)->post(route('preview.start'), ['kind' => 'user', 'user_id' => $borrower->id])->assertRedirect(route('account.home'));
         $this->get(route('account.home'))->assertOk()->assertSee('Wanjiku');
-        // a staff account can't be previewed as a customer
-        $staff = User::factory()->create();
-        $staff->assignRole('manager');
-        $this->post(route('preview.start'), ['kind' => 'user', 'user_id' => $staff->id])->assertSessionHas('error');
+    }
+
+    public function test_a_real_staff_account_can_be_previewed_but_not_a_super_admin(): void
+    {
+        $teller = User::factory()->create(['name' => 'Otieno Teller', 'email_verified_at' => now()]);
+        $teller->assignRole('teller');
+        $this->actingAs($this->sysadmin)->get(route('preview.index', ['role' => 'teller']))->assertOk()->assertSee('Otieno Teller');
+        $this->post(route('preview.start'), ['kind' => 'user', 'user_id' => $teller->id])->assertRedirect(route('dashboard'));
+        $this->get(route('staff.repayments.receive'))->assertOk()->assertSee('Otieno Teller');
+        $this->post(route('preview.stop'));
+
+        $other = User::factory()->create();
+        $other->assignRole('super-admin');
+        $this->post(route('preview.start'), ['kind' => 'user', 'user_id' => $other->id])->assertSessionHas('error');
     }
 }

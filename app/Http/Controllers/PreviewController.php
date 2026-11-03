@@ -20,11 +20,15 @@ class PreviewController extends Controller
     {
         $this->guard($request);
         $q = trim((string) $request->query('q', ''));
-        $customers = User::role(['borrower', 'partner'])->whereNull('deleted_at')
+        $roles = [...Preview::staffRoles(), 'borrower', 'partner'];
+        $only = in_array($request->query('role'), $roles, true) ? $request->query('role') : null;
+        // real accounts of every role except super-admin (owner, 3 Nov 2026): walk a journey as the person who does it
+        $accounts = User::role($only ? [$only] : $roles)->whereNull('deleted_at')
+            ->whereDoesntHave('roles', fn ($r) => $r->where('name', 'super-admin'))
             ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%")->orWhere('phone', 'like', "%{$q}%")))
-            ->with('roles:id,name')->withCount('loans')->orderByDesc('loans_count')->limit(60)->get(['id', 'name', 'email', 'phone']);
+            ->with('roles:id,name')->withCount('loans')->orderByDesc('loans_count')->limit(80)->get(['id', 'name', 'email', 'phone']);
 
-        return view('preview.index', ['roles' => Preview::staffRoles(), 'customers' => $customers, 'q' => $q, 'active' => Preview::active()]);
+        return view('preview.index', ['roles' => Preview::staffRoles(), 'customers' => $accounts, 'q' => $q, 'only' => $only, 'filterRoles' => $roles, 'active' => Preview::active()]);
     }
 
     public function start(Request $request): RedirectResponse
@@ -40,8 +44,8 @@ class PreviewController extends Controller
             return back()->with('error', 'That role cannot be previewed.');
         }
         $persona = Preview::persona($p);
-        if (! $persona || ($p['kind'] === 'user' && $persona->isStaff())) {
-            return back()->with('error', 'Pick a borrower, partner or broker account. Staff are previewed by role.');
+        if (! $persona || ($p['kind'] === 'user' && $persona->hasRole('super-admin'))) {
+            return back()->with('error', 'Pick an account other than a super-admin.');
         }
         session([Preview::SESSION => $p]);
         \App\Services\AuditTrail::record('users', $request->user()->id, 'update', null, ['event' => 'preview_started', 'as' => Preview::label($p)]);

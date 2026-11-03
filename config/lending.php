@@ -216,6 +216,26 @@ return [
 
     // AML screening (owner, 23 Oct 2026): staff checklist + the sanctions list staff upload. Required before a
     // business or a partner is approved when on.
+    // outside debt collection agencies (owner, 3 Nov 2026): an agency may contact a placed borrower this many days
+    // after the borrower was told which agency will call
+    'collections' => [
+        'agency_notice_days' => (int) env('LENDING_AGENCY_NOTICE_DAYS', 7),
+        'placeable_statuses' => ['overdue', 'defaulted', 'recovery', 'forbearance'],
+    ],
+
+    // cash and growth forecast (owner, 3 Nov 2026): the chance that what a loan owes today comes back, by how late it is
+    'forecast' => [
+        'collect' => [
+            'current' => (float) env('FORECAST_COLLECT_CURRENT', 0.9),
+            'late_1_30' => (float) env('FORECAST_COLLECT_1_30', 0.5),
+            'late_31_90' => (float) env('FORECAST_COLLECT_31_90', 0.25),
+            'late_90' => (float) env('FORECAST_COLLECT_90', 0.05),
+            'forbearance' => (float) env('FORECAST_COLLECT_FORBEARANCE', 0.4),
+        ],
+        'late_spread_weeks' => 4,   // late money is expected evenly over this many weeks
+        'return_lag_weeks' => 2,    // new lending comes back about this long after it goes out
+    ],
+
     'aml' => [
         'enabled' => (bool) env('LENDING_AML_SCREENING', false),
     ],

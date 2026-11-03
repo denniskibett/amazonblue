@@ -21,11 +21,14 @@
     'funded' => 'M12 8c4 0 7-1 7-2.5S16 3 12 3 5 4 5 5.5 8 8 12 8zM5 5.5v6C5 13 8 14 12 14s7-1 7-2.5v-6M5 11.5v6C5 19 8 20 12 20s7-1 7-2.5v-6',
     'signout' => 'M15 12H4M8 8l-4 4 4 4M13 4h6a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-6',
   ];
-  $nav = $partnerArea
+  // outside debt collection agencies (3 Nov 2026): their own two-page portal
+  $nav = $me->hasRole('collector')
+    ? ['home' => ['Accounts', route('collect.index')]]
+    : ($partnerArea
     ? ['home' => ['Home', route($isBorrower ? 'account.partner.home' : 'account.home')], 'investments' => ['Investments', route('account.partner.investments')], 'funded' => ['Loans', route('account.partner.loans')], 'statement' => ['Statement', route('account.statement')], 'profile' => ['Profile', route('account.profile')]]
     : ($isBorrower
     ? ['home' => ['Home', route('account.home')], 'borrow' => ['Borrow', route('account.borrow')], 'loans' => ['Loans', route('account.loans')], 'profile' => ['Profile', route('account.profile')]]
-    : ['home' => ['Home', route('account.home')], 'profile' => ['Profile', route('account.profile')]]);
+    : ['home' => ['Home', route('account.home')], 'profile' => ['Profile', route('account.profile')]]));
   // borrower + partner: switch between the two homes
   $switch = $isBorrower && $isPartner
     ? '<div class="acct-switch" role="group" aria-label="Account type"><a href="' . route('account.home', ['as' => 'borrower']) . '"' . ($partnerArea ? '' : ' aria-current="true"') . '>Borrowing</a><a href="' . route('account.partner.home') . '"' . ($partnerArea ? ' aria-current="true"' : '') . '>Partner</a></div>'

@@ -95,6 +95,14 @@ Route::middleware('auth')->prefix('preview')->name('preview.')->controller(\App\
     Route::post('/stop', 'stop')->name('stop');
 });
 
+// ============ COLLECTOR PORTAL (outside debt collection agencies, owner, 3 Nov 2026) ============
+Route::middleware(['auth', 'role:collector'])->prefix('collect')->name('collect.')->controller(\App\Http\Controllers\Collect\PortalController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/{placement}', 'show')->whereNumber('placement')->name('show');
+    Route::get('/{placement}/profile', 'profile')->whereNumber('placement')->name('profile');
+    Route::post('/{placement}/contacts', 'contact')->whereNumber('placement')->middleware('throttle:30,1')->name('contact');
+});
+
 // ============ CUSTOMER ACCOUNT (borrowers & partners; website design, mobile first) ============
 Route::middleware('auth')->prefix('account')->name('account.')->group(function () {
     Route::controller(HomeController::class)->group(function () {
@@ -516,6 +524,17 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('inbox', [\App\Http\Controllers\Staff\LoanDeskController::class, 'inbox'])->name('inbox');
         Route::get('approvals', [\App\Http\Controllers\Staff\LoanDeskController::class, 'approvals'])
             ->name('approvals')->middleware('permission:view loans');
+        // outside debt collection agencies (owner, 3 Nov 2026)
+        Route::middleware('permission:manage collection agencies')->controller(\App\Http\Controllers\Staff\CollectionAgenciesController::class)->group(function () {
+            Route::get('agencies', 'index')->name('agencies');
+            Route::post('agencies', 'store')->name('agencies.store');
+            Route::post('agencies/{agency}/toggle', 'toggle')->name('agencies.toggle');
+            Route::post('agencies/{agency}/collectors', 'storeCollector')->name('agencies.collectors.store');
+            Route::delete('agencies/{agency}/collectors/{user}', 'removeCollector')->name('agencies.collectors.destroy');
+            Route::post('agencies/{agency}/place', 'place')->name('agencies.place');
+            Route::post('placements/{placement}/notice', 'notice')->name('placements.notice');
+            Route::post('placements/{placement}/take-back', 'takeBack')->name('placements.take-back');
+        });
         // integrations and API keys (owner, 3 Nov 2026)
         Route::middleware('permission:manage integrations|access system settings')->group(function () {
             Route::get('integrations', [\App\Http\Controllers\Staff\IntegrationsController::class, 'index'])->name('integrations');
@@ -578,6 +597,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
 
         // portfolio on the ledger (Stage 4 Phase 7)
         Route::get('portfolio', [\App\Http\Controllers\Staff\PortfolioController::class, 'index'])->name('portfolio')->middleware('permission:view reports');
+        // cash and growth forecast (owner, 3 Nov 2026)
+        Route::get('cash-forecast', [\App\Http\Controllers\Staff\CashForecastController::class, 'index'])->name('cash-forecast')->middleware('permission:view reports');
         Route::get('portfolio.csv', [\App\Http\Controllers\Staff\PortfolioController::class, 'csv'])->name('portfolio.csv')->middleware('permission:view reports');
 
         // borrower and partner requests (Stage 4 Phase 5)

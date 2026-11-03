@@ -1,4 +1,4 @@
-{{-- Sysadmin "view as" (owner, 23 Oct 2026): pick a staff role, a new-borrower stand-in, or a customer's account. --}}
+{{-- Sysadmin "view as" (owner, 23 Oct 2026): pick a staff role, a new-borrower stand-in, or a real account of any role (3 Nov 2026). --}}
 @extends('layouts.app')
 
 @php
@@ -35,7 +35,7 @@
 
   <section class="{{ $card }} mb-6">
     <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Customers</h3>
-    <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">A brand-new borrower (stand-in), or a real borrower's, partner's or broker's own account exactly as they see it. Their data is shown but cannot be changed: every action is undone at the end of each page.</p>
+    <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">A brand-new borrower (stand-in), or below any real account (staff, borrower or partner) exactly as that person sees it. Every step of a journey works, but each page is undone when it finishes and nothing is emailed, texted or paid.</p>
     <form method="POST" action="{{ route('preview.start') }}" class="mt-4" data-no-swap>
       @csrf <input type="hidden" name="kind" value="new">
       <button class="{{ $btn }}">View as a new borrower (stand-in, no KYC, no loans)</button>
@@ -44,11 +44,15 @@
 
   <div id="pv-tools" class="hidden">
     <form method="GET" action="{{ route('preview.index') }}" class="flex items-center gap-2">
-      <input name="q" value="{{ $q }}" placeholder="Find by name, email or phone" class="h-10 rounded-lg border border-gray-300 bg-transparent px-3 text-theme-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" aria-label="Find a customer">
+      <select name="role" aria-label="Role" class="h-10 rounded-lg border border-gray-300 bg-transparent px-3 text-theme-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+        <option value="">Every role</option>
+        @foreach ($filterRoles as $r)<option value="{{ $r }}" @selected($only === $r)>{{ \Illuminate\Support\Str::headline($r) }}</option>@endforeach
+      </select>
+      <input name="q" value="{{ $q }}" placeholder="Find by name, email or phone" class="h-10 rounded-lg border border-gray-300 bg-transparent px-3 text-theme-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" aria-label="Find an account">
       <button class="h-10 rounded-lg border border-gray-300 px-3 text-theme-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300">Find</button>
     </form>
   </div>
-  <x-staff.table title="Customer accounts" caption="Customer accounts to preview" data-table-buttons="#pv-tools > *" :headers="['Customer', 'Role', ['Loans', 'num', 'mobile'], '']">
+  <x-staff.table title="Real accounts" caption="Real accounts to preview, every role but super-admin" data-table-buttons="#pv-tools > *" :headers="['Person', 'Role', ['Loans', 'num', 'mobile'], '']">
     @forelse ($customers as $c)
       <tr>
         <td data-sort-value="{{ $c->name }}"><x-staff.person :name="$c->name" :id="$c->id" :sub="$c->email ?: $c->phone" /></td>
@@ -60,7 +64,7 @@
         </td>
       </tr>
     @empty
-      <tr data-table-skip><td colspan="4"><x-staff.empty title="No customers found" /></td></tr>
+      <tr data-table-skip><td colspan="4"><x-staff.empty title="No accounts found" /></td></tr>
     @endforelse
   </x-staff.table>
 @endsection

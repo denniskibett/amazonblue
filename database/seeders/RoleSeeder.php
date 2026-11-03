@@ -93,6 +93,7 @@ class RoleSeeder extends Seeder
         'manage backups',
         'manage API tokens',
         'manage integrations',
+        'manage collection agencies',
         'impersonate users',
         'view system health',
         'manage feature flags',
@@ -104,6 +105,7 @@ class RoleSeeder extends Seeder
     public const ROLES = [
         'super-admin' => '*',
         'admin' => [
+            'manage collection agencies',
             'view loans',
             'create loans',
             'edit loans',
@@ -209,6 +211,7 @@ class RoleSeeder extends Seeder
             'view investment fundings',
         ],
         'manager' => [
+            'manage collection agencies',
             'view loans',
             'create loans',
             'edit loans',
@@ -317,6 +320,7 @@ class RoleSeeder extends Seeder
             'export financial data',
         ],
         'recovery-officer' => [
+            'manage collection agencies',
             'view loans',
             'edit loans',
             'view users',
@@ -359,6 +363,8 @@ class RoleSeeder extends Seeder
             'export financial data',
             'view system health',
         ],
+        // outside debt collection agencies (owner, 3 Nov 2026): their own portal (/collect), no staff permissions
+        'collector' => [],
     ];
 
     public function run(): void

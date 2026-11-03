@@ -10,7 +10,7 @@ use Spatie\Permission\Models\Role;
  *
  *   ['kind' => 'role', 'role' => 'teller']       a stand-in staff member with exactly that role, made in memory only
  *   ['kind' => 'new']                            a stand-in new borrower (no KYC, no loans), made in memory only
- *   ['kind' => 'user', 'user_id' => 123]         a real borrower, partner or broker's own account, read-only
+ *   ['kind' => 'user', 'user_id' => 123]         a real account of any role but super-admin (staff too, since 3 Nov 2026), read-only
  *
  * Stand-ins are never saved: they have no row in users, and their id points at nobody. Every request made while
  * previewing runs in a database transaction that is always rolled back (Http\Middleware\PreviewAs), with email,
