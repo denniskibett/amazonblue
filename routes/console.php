@@ -44,6 +44,8 @@ Schedule::command('loans:check-integrity --csv --notify')
 
 // partner lines: close finished ones and queue their payouts (owner, 23 Oct 2026)
 Schedule::command('partners:lines')->dailyAt('02:30')->timezone('Africa/Nairobi')->withoutOverlapping();
+// partner money reconciles: splits share out what was collected, lines add up, earnings payable = the ledger (owner, 3 Nov 2026)
+Schedule::command('partners:check --notify')->dailyAt('02:45')->timezone('Africa/Nairobi')->withoutOverlapping();
 
 // borrower behaviour profiles for analytics and limits, after the nightly status and NPL runs (owner, 23 Oct 2026)
 Schedule::command('analytics:profiles')

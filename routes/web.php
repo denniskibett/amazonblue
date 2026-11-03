@@ -558,6 +558,9 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         // partner money and links: read an M-Pesa SMS, record a partner line, per-loan broker/funder with a dry run (owner, 23 Oct 2026)
         Route::post('mpesa/read-sms', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'parseSms'])->name('mpesa.read-sms');
         Route::post('partners/{partner}/lines', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'storeLine'])->name('partners.lines.store')->middleware('permission:edit partners');
+        // which part of a loan a partner line paid for, and the house settling a partner's slice (owner, 3 Nov 2026)
+        Route::post('partners/{partner}/slices', [\App\Http\Controllers\Staff\PartnerSlicesController::class, 'fund'])->name('partners.slices.fund')->middleware('permission:edit partners');
+        Route::post('partners/{partner}/slices/{slice}/settle', [\App\Http\Controllers\Staff\PartnerSlicesController::class, 'settle'])->whereNumber('slice')->name('partners.slices.settle')->middleware('permission:edit partners');
         // portal login for a partner: link an existing user or create one (owner, 1 Nov 2026)
         Route::post('partners/{partner}/login', [\App\Http\Controllers\Staff\PartnerLoginController::class, 'store'])->name('partners.login.store')->middleware('permission:edit partners');
         Route::get('loans/{loan}/partner-options', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'options'])->name('loans.partner-options')->middleware('permission:create disbursements');

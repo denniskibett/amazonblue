@@ -79,6 +79,18 @@ loan they approved themselves (`LENDING_SELF_DISBURSE_ROLES`); each such disburs
     repayment go to broker share, funder share and house remainder, posted by `PartnerLedger` (journal + bavix
     wallet). Principal goes back to the funding line. On a part-funded loan the split is pro rata to the funders.
     Finished lines close and queue payouts (`partners:lines`).
+    **Partner shares (since 3 Nov 2026):** a partner line carries its own share of the interest
+    (`investments.partner_share_rate`, default the partner's profit share, else 60%) and of the penalty
+    (`partner_penalty_rate`, default 50%). Our money with a short-term partner's client: the partner gets their
+    introducer share (40%) and the house the rest. Lines with no rate keep the partner's profit share and no penalty
+    share, so older lines split as before.
+    **Slices** (`PartnerSlices`, partner page › Money): which part of a loan a line paid for, tied to its
+    disbursement. A slice earns nothing before its disbursement date. **House settles** pays a partner out of a
+    slice before the borrower repays (their interest share on the day, `SETTLE-LF{id}`); later repayments of that
+    slice are the house's. Both have Preview (journal rows, nothing saved). Changes re-split by difference: new
+    journal rows, nothing edited.
+    **Payouts already made:** Requests › prepare › "Already paid" records the day and the bank or M-Pesa reference;
+    the payout posts on that day once signed off (`Requests::recordPaidPayout`).
 11. **Ledger** (`LENDING_LEDGER_ENABLED`). Double-entry postings to `gl-*` wallets, posted after commit, accrued nightly
     (`ledger:accrue`). The chart of accounts is in `config/lending.php › ledger.accounts`.
 
@@ -163,6 +175,7 @@ Defined in `routes/console.php`, Africa/Nairobi time. The server runs `schedule:
 | 02:00 | `loans:check-integrity` | Read-only integrity report (CSV in `storage/app/private/reports/`) |
 | 02:15 | `analytics:profiles` | Borrower behaviour profiles |
 | 02:30 | `partners:lines` | Closes finished partner lines, queues payouts |
+| 02:45 | `partners:check --notify` | Partner money reconciles: each split shares out what was collected, lines add up, partner earnings payable equals the partners' earnings wallets, trial balance 0; alerts admins if not |
 | 1st of month, 02:30 | `partners:accrue-fixed` | Monthly interest for fixed-rate partners |
 | 03:30 | `analytics:prune-views` | Drops page views older than `ANALYTICS_KEEP_DAYS` |
 | 1st of month, 03:00 | `audit:prune` | Audit log retention ([stage4/RETENTION.md](stage4/RETENTION.md)) |
@@ -178,7 +191,7 @@ All in `app/Console/Commands`. Repairs and backfills dry-run by default and appl
 |---|---|
 | Checks (read-only) | `loans:check-integrity`, `wallets:check` |
 | Set-up | `roles:sync`, `users:super-admin`, `wallets:bootstrap`, `partners:link`, `risk:assess`, `mpesa:register-urls`, `integrations:import-env`, `demo:seed` (never on production) |
-| One-off data repairs (done on live; keep for history) | `loans:restate`, `loans:merge-chains`, `loans:rollover-cleanup`, `loans:credit-cleanup`, `loans:grace-fix`, `loans:owner-decisions`, `loans:write-off-repaid`, `loans:backfill-fundings`, `allocations:restate`, `ledger:backfill`, `money:backfill-columns`, `payments:refs`, `borrowers:fill-gaps`, `files:make-private`, `handles:backfill`, `loans:backfill-house-account`, `loans:balance`, `loans:balance-house-accounts`, `partners:backfill-broker-fees`, `partners:backfill-house-interest`, `partners:own-loans`, `investments:fix-house-funding`, `wallets:sync`, `wallets:fix-house`, `wallets:reconcile-from-journal` |
+| One-off data repairs (done on live; keep for history) | `loans:restate`, `loans:merge-chains`, `loans:rollover-cleanup`, `loans:credit-cleanup`, `loans:grace-fix`, `loans:owner-decisions`, `loans:write-off-repaid`, `loans:backfill-fundings`, `allocations:restate`, `ledger:backfill`, `money:backfill-columns`, `payments:refs`, `borrowers:fill-gaps`, `files:make-private`, `handles:backfill`, `loans:backfill-house-account`, `loans:balance`, `loans:balance-house-accounts`, `partners:backfill-broker-fees`, `partners:backfill-house-interest`, `partners:record-october` (Buosti's and Obiri's October money; dry run without `--apply`), `partners:own-loans`, `investments:fix-house-funding`, `wallets:sync`, `wallets:fix-house`, `wallets:reconcile-from-journal` |
 | Legacy (v1 only) | `loans:fix-cycles` refuses to run under engine v2; `loans:repair-cycles` was removed on 21 Oct |
 
 Check each command's exact name with `php artisan list` before running it.

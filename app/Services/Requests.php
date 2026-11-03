@@ -160,6 +160,44 @@ class Requests
     }
 
     /**
+     * A payout that was already sent (owner, 3 Nov 2026): the day it went and the bank or M-Pesa reference. On a request
+     * waiting on Requests or Second sign-offs, it is added to that request; with no request, one is made and prepared
+     * now. Either way it is posted (when approved) on $paidOn, not on the day it is approved.
+     */
+    public function recordPaidPayout(Partner $partner, string $wallet, float $amount, string $paidOn, string $reference, User $by, ?int $requestId = null, ?string $note = null): int
+    {
+        $paidOn = \Illuminate\Support\Carbon::parse($paidOn)->toDateString();
+        $reference = strtoupper(trim($reference));
+        if ($reference === '') {
+            throw new \DomainException('Enter the bank or M-Pesa reference of the payout.');
+        }
+        // one transfer can pay several lines (each their own request); a new request for the same wallet and reference is a double
+        if (! $requestId && DB::table('partner_requests')->where('bank_reference', $reference)->where('partner_id', $partner->id)->where('wallet_slug', $wallet)
+            ->whereIn('status', ['pending', 'prepared', 'done'])->exists()) {
+            throw new \DomainException($reference . ' is already recorded for ' . $partner->name . '\'s ' . $wallet . ' wallet.');
+        }
+        if ($requestId) {
+            $r = DB::table('partner_requests')->where('id', $requestId)->where('partner_id', $partner->id)->first();
+            if (! $r || ! in_array($r->status, ['pending', 'prepared'], true)) {
+                throw new \DomainException('That request is no longer waiting.');
+            }
+            DB::table('partner_requests')->where('id', $requestId)->update(['paid_on' => $paidOn, 'bank_reference' => $reference,
+                'decision_note' => trim(($r->decision_note ?? '') . ' Paid ' . $paidOn . ' · ' . $reference), 'updated_at' => now()]);
+            if ($r->status === 'pending') {
+                $this->prepareWithdrawal($requestId, $by, true, 'Already paid ' . $paidOn . ' · ' . $reference);
+            }
+
+            return $requestId;
+        }
+        $id = DB::table('partner_requests')->insertGetId(['type' => 'withdrawal', 'partner_id' => $partner->id, 'amount' => round($amount, 2), 'wallet_slug' => $wallet,
+            'reference' => 'PAID-' . $reference . '-' . strtoupper($wallet), 'note' => $note ?? ('Payout already made ' . $paidOn . ' · ' . $reference), 'status' => 'pending',
+            'paid_on' => $paidOn, 'bank_reference' => $reference, 'requested_by' => $by->id, 'created_at' => now(), 'updated_at' => now()]);
+        $this->prepareWithdrawal($id, $by, true, 'Already paid ' . $paidOn . ' · ' . $reference);
+
+        return $id;
+    }
+
+    /**
      * Withdrawal: one person prepares it (the amount must still be available); with maker-checker on, a second
      * person approves on /staff/sign-offs and the payout is posted then; with it off, it is paid now.
      */

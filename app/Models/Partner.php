@@ -203,7 +203,7 @@ class Partner extends Model implements Wallet, Customer
     /**
      * Capital paid in by the partner: principal wallet + journal 'contribution'.
      */
-    public function addContribution(float $amount, ?string $reference = null, ?string $notes = null, ?int $investmentId = null, ?int $investmentFundingId = null): PartnerTransaction
+    public function addContribution(float $amount, ?string $reference = null, ?string $notes = null, ?int $investmentId = null, ?int $investmentFundingId = null, ?string $date = null): PartnerTransaction
     {
         if ($amount <= 0) {
             throw new \InvalidArgumentException('Contribution must be more than zero.');
@@ -212,20 +212,20 @@ class Partner extends Model implements Wallet, Customer
         return app(PartnerLedger::class)->post(
             $this, 'principal', 'contribution', $amount,
             investmentId: $investmentId, investmentFundingId: $investmentFundingId,
-            reference: $reference ?: null, notes: $notes ?? 'Contribution'
+            reference: $reference ?: null, notes: $notes ?? 'Contribution', transactionDate: $date
         );
     }
 
     /**
      * Pay money out to the partner from one of its wallets; refused if the wallet doesn't hold enough.
      */
-    public function withdrawPartnerBalance(float $amount, ?string $reference = null, ?string $notes = null, string $walletSlug = 'principal'): PartnerTransaction
+    public function withdrawPartnerBalance(float $amount, ?string $reference = null, ?string $notes = null, string $walletSlug = 'principal', ?string $date = null): PartnerTransaction
     {
         if ($amount <= 0) {
             throw new \InvalidArgumentException('Withdrawal must be more than zero.');
         }
 
-        return DB::transaction(function () use ($amount, $reference, $notes, $walletSlug) {
+        return DB::transaction(function () use ($amount, $reference, $notes, $walletSlug, $date) {
             $wallet = $this->getWallet($walletSlug);
             $available = 0.0;
             if ($wallet) {
@@ -240,7 +240,7 @@ class Partner extends Model implements Wallet, Customer
 
             return app(PartnerLedger::class)->post(
                 $this, $walletSlug, 'withdrawal', -$amount,
-                reference: $reference ?: null, notes: $notes ?? 'Withdrawal'
+                reference: $reference ?: null, notes: $notes ?? 'Withdrawal', transactionDate: $date
             );
         });
     }

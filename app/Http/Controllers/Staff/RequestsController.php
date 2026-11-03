@@ -70,12 +70,20 @@ class RequestsController extends Controller
     public function partner(Request $request, int $id, Requests $requests): RedirectResponse
     {
         abort_unless($request->user()->can('edit partners'), 403);
-        $data = $request->validate(['decision' => 'required|in:yes,no', 'note' => 'required_if:decision,no|nullable|string|max:500']);
-        $type = DB::table('partner_requests')->where('id', $id)->value('type');
+        $data = $request->validate(['decision' => 'required|in:yes,no', 'note' => 'required_if:decision,no|nullable|string|max:500',
+            // a payout already sent (owner, 3 Nov 2026): the day and the bank or M-Pesa reference; it posts on that day
+            'paid_on' => 'nullable|date|before_or_equal:today|required_with:bank_reference', 'bank_reference' => 'nullable|string|max:60|required_with:paid_on']);
+        $row = DB::table('partner_requests')->where('id', $id)->first();
+        $type = $row?->type;
         try {
-            $type === 'funding'
-                ? $requests->confirmFunding($id, $request->user(), $data['decision'] === 'yes', $data['note'] ?? null)
-                : $requests->prepareWithdrawal($id, $request->user(), $data['decision'] === 'yes', $data['note'] ?? null);
+            if ($type === 'withdrawal' && $data['decision'] === 'yes' && ! empty($data['paid_on'])) {
+                $requests->recordPaidPayout(\App\Models\Partner::findOrFail($row->partner_id), $row->wallet_slug ?: 'principal', (float) $row->amount,
+                    $data['paid_on'], $data['bank_reference'], $request->user(), $id, $data['note'] ?? null);
+            } else {
+                $type === 'funding'
+                    ? $requests->confirmFunding($id, $request->user(), $data['decision'] === 'yes', $data['note'] ?? null)
+                    : $requests->prepareWithdrawal($id, $request->user(), $data['decision'] === 'yes', $data['note'] ?? null);
+            }
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }

@@ -93,9 +93,13 @@ class PartnerFundingController extends Controller
             'term' => ['required', Rule::in(array_keys(PartnerLines::TERMS))],
             'maturity' => ['nullable', 'required_if:term,long_term', 'date', 'after:today'],
             'note' => ['nullable', 'string', 'max:500'],
+            // their % of the interest and of the penalty on what this money funds (owner, 3 Nov 2026)
+            'share_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'penalty_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ], ['maturity.required_if' => 'A long-term line needs the date it is to be paid back.']);
         try {
-            $line = $lines->open($partner, (float) $data['amount'], $data['term'], $data['maturity'] ?? null, $data['code'], $data['date'] ?? null, $request->user(), $data['note'] ?? null);
+            $line = $lines->open($partner, (float) $data['amount'], $data['term'], $data['maturity'] ?? null, $data['code'], $data['date'] ?? null, $request->user(), $data['note'] ?? null,
+                isset($data['share_rate']) ? (float) $data['share_rate'] : null, isset($data['penalty_rate']) ? (float) $data['penalty_rate'] : null);
         } catch (\DomainException $e) {
             return back()->withInput()->withErrors(['code' => $e->getMessage()]);
         }

@@ -36,17 +36,26 @@ class LoanFundings
         self::$ready = null;
     }
 
-    /** The loan's funding rows, oldest first (each with is_house). Empty when none are recorded. */
-    public function rows(int $loanId): Collection
+    /**
+     * The loan's funding rows, oldest first (each with is_house). Empty when none are recorded.
+     * $asOf (a repayment's day, owner 3 Nov 2026): a slice the house settled before that day is the house's from then
+     * on, so the payments after it share nothing with that partner.
+     */
+    public function rows(int $loanId, ?string $asOf = null): Collection
     {
         if (! self::ready()) {
             return collect();
         }
         $house = Partner::where('is_house_account', true)->pluck('id')->all();
+        $settled = Schema::hasColumn('loan_fundings', 'settled_on');
 
-        return DB::table('loan_fundings')->where('loan_id', $loanId)->orderBy('id')->get()
-            ->each(function ($r) use ($house) {
-                $r->is_house = ! $r->partner_id || in_array((int) $r->partner_id, $house, true);
+        // a partner's slice counts from the day its disbursement went out: a repayment before that was the house's money
+        return DB::table('loan_fundings as f')->leftJoin('disbursements as d', 'd.id', '=', 'f.disbursement_id')->where('f.loan_id', $loanId)
+            ->orderBy('f.id')->get(['f.*', 'd.disburse_date as lent_on'])
+            ->each(function ($r) use ($house, $asOf, $settled) {
+                $r->is_house = ! $r->partner_id || in_array((int) $r->partner_id, $house, true)
+                    || ($settled && $asOf && $r->settled_on && $r->settled_on < $asOf)
+                    || ($asOf && $r->source === 'slices' && $r->lent_on && substr((string) $r->lent_on, 0, 10) > $asOf);
             });
     }
 
@@ -111,6 +120,16 @@ class LoanFundings
                 'amount' => round((float) $amount, 2), 'share' => $total > 0 ? round((float) $amount / $total, 6) : 1,
                 'disbursement_id' => $d->id, 'source' => $source, 'notes' => $notes, 'created_at' => now(), 'updated_at' => now()]);
         }
+    }
+
+    /** Slices of a line the house settled (owner, 3 Nov 2026). */
+    public function settledSlices(int $lineId): Collection
+    {
+        if (! self::ready() || ! Schema::hasColumn('loan_fundings', 'settled_on')) {
+            return collect();
+        }
+
+        return DB::table('loan_fundings')->where('investment_id', $lineId)->whereNotNull('settled_on')->get();
     }
 
     /** Loans part funded (several rows) by a line. */

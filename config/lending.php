@@ -86,6 +86,10 @@ return [
     // nothing is stored or posted from the partner side. Staff record the money through Partners / Investments.
     // Empty values = not confirmed yet: the screen shows a placeholder (owner decision).
     'partner_funding' => [
+        // a partner's share when the money is theirs and the client ours (owner, 3 Nov 2026): 60% of the interest,
+        // 50% of the penalty; each line keeps the rates it was recorded with (investments.partner_share_rate)
+        'line_share_rate' => (float) env('PARTNER_LINE_SHARE_RATE', 60),
+        'line_penalty_rate' => (float) env('PARTNER_LINE_PENALTY_RATE', 50),
         // confirmed by the owner, 19 Oct 2026 (env overrides)
         'bank_name' => env('PARTNER_FUNDING_BANK_NAME', 'I&M Bank'),
         'bank_account_name' => env('PARTNER_FUNDING_BANK_ACCOUNT_NAME', 'IMAGINE-NATION AGENCY LIMITED'),

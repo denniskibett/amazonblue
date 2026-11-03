@@ -15,6 +15,8 @@ class Investment extends Model
         'name', 'type', 'sector', 'sub_sector',
         'facility_type',
         'return_type',   // house | loan_share | fixed_rate (Stage 4 Phase 3)
+        'partner_share_rate',     // the partner's % of interest / penalty on what the line funds (owner, 3 Nov 2026)
+        'partner_penalty_rate',
         'duration_days',
         'interest_rate',
         'country', 'region', 'city', 'address',

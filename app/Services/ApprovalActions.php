@@ -50,7 +50,12 @@ class ApprovalActions
             throw new \DomainException('This withdrawal is not waiting for approval.');
         }
         $partner = Partner::findOrFail($r->partner_id);
-        $journal = $partner->withdrawPartnerBalance((float) $r->amount, 'PAYOUT-PR' . $r->id, 'Payout (request #' . $r->id . ')', $r->wallet_slug ?: 'principal');
+        // a payout already made (owner, 3 Nov 2026) is posted on the day it was paid, with its bank or M-Pesa reference
+        $paidOn = $r->paid_on ?? null;
+        $ref = $r->bank_reference ?? null;
+        $journal = $partner->withdrawPartnerBalance((float) $r->amount, 'PAYOUT-PR' . $r->id,
+            'Payout (request #' . $r->id . ')' . ($ref ? ' · ' . $ref : '') . ($paidOn ? ' · paid ' . \Illuminate\Support\Carbon::parse($paidOn)->format('j M Y') : ''),
+            $r->wallet_slug ?: 'principal', $paidOn);
         DB::table('partner_requests')->where('id', $r->id)->update(['status' => 'done', 'approved_by' => $checker->id,
             'partner_transaction_id' => $journal->id, 'updated_at' => now()]);
         $user = User::find($partner->user_id);
