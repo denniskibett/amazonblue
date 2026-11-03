@@ -292,7 +292,7 @@ Verified on a clone (`loans_wp_e`): write-off set loan 461 to `written_off` with
 
 ## Stage 2: staff journeys
 
-This section covers the new staff desk pages under `/staff/*`. The walkthrough with screenshots is [docs/stage2/walkthroughs/staff.md](../../stage2/walkthroughs/staff.md).
+This section covers the new staff desk pages under `/staff/*`. The walkthrough with screenshots is [docs/stage2/walkthroughs/staff.md](../../../stage2/walkthroughs/staff.md).
 
 What did not change:
 - No schema, calculation, wallet or status rule changed.

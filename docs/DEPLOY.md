@@ -56,38 +56,27 @@ Other details:
 ## Rules
 
 - **Never** run `git stash -u`, `git clean`, `git reset --hard` or `git checkout -f` in the live folder.
-- **Never** run `loans:repair-cycles` on live.
+- `loans:repair-cycles` was removed (21 Oct); its successor `loans:fix-cycles` refuses to run under engine v2.
+- Use `scripts/deploy-live.sh` only. The older `deploy.sh` at the repo root runs `migrate --force` and should not be used.
 - Keep `APP_DEBUG=false` on live.
 - Secrets live only in the server `.env`. Never paste them into chats or commits.
 
-## Live status (20 October 2026)
+## Live status
 
-**Live:** `stage-2-ui` (`f7a5ef4`, Stage 4 Phase 0) was deployed with `scripts/push-live.sh`. Smoke test 200/200. Previous release: `releases/laravel_20261020_013126`. Before that: `a2c9732` (Stage 2); old agreement URLs return 404.
+Current switches, modules and open server items: [CURRENT_STATE.md](CURRENT_STATE.md) (§5 and §10). Add a line to the
+deploy log below after every deploy.
 
-**Phase 0 on live (20 Oct):**
+| Date | Commit | What | Runbook |
+|---|---|---|---|
+| 2026-10-21 | `32b7c7f` | Stage 4 Phases 4–7 (deployed off) | [stage4/DEPLOY-PHASES-4-7.md](stage4/DEPLOY-PHASES-4-7.md) |
+| 2026-10-21 | `4136aee` | Phase 3 split; switched on 02:16 | [stage4/DEPLOY-PHASE3.md](stage4/DEPLOY-PHASE3.md) |
+| 2026-10-21 | | Phase 2 engine v2; switched on 01:33 | [stage4/DEPLOY-PHASE2.md](stage4/DEPLOY-PHASE2.md) |
+| 2026-10-20 | `f7a5ef4` | Stage 4 Phase 0 | [stage4/PHASE0.md](stage4/PHASE0.md) |
 
-- Both `2026_10_20_*.sql` scripts ran. The broker has no `view users`. Only sysadmin (#113) can open `/system`.
-- First `loans:check-integrity` run found 443 findings:
-  - 6 repaid loans that still owe (#7, 97, 164, 253, 344, 502);
-  - 434 repaid loans with an active cycle;
-  - 3 repayments dated before their cycle (#369, 370, 450).
-- The CSV is in `storage/app/private/reports/`.
-- Restore test passed ([RETENTION.md](stage4/RETENTION.md)).
+Deploys from 23 October to 3 November are described in [stage4/SWITCH-ON-PLAN.md](stage4/SWITCH-ON-PLAN.md) (23–25 Oct)
+and the git log (1–3 Nov), but their commits were not logged here. Fill them in from the server
+(`git -C /home/loans.sharet.africa/laravel log -1 --oneline`).
 
-**Confirmed on live:**
-
-- `APP_DEBUG=false`.
-- All SQL twins applied.
-- Stage 1 data repairs done.
-- `wallets:check` reconciles.
-- SSH key login from the Mac works.
-
-**Open (owner, then close Stage 2):**
-
-1. **Cron:** `crontab -u loans4537` is empty, so the nightly status/NPL jobs don't run. Add `* * * * * cd /home/loans.sharet.africa/laravel && php artisan schedule:run >> /dev/null 2>&1` for `loans4537`.
-2. **Email:** sent from `noreply@loans.sharet.africa`. Gmail accepts it but quarantines it (DMARC), because there is no SPF/DKIM. Add SPF, DKIM (CyberPanel › Email › DKIM Manager) and the `mail.loans` A record **at Olitt**, not CyberPanel DNS.
-3. **`.env`:** remove the duplicate `LOG_STACK=single` (the first value wins) and add `LOG_DAILY_DAYS=30`.
-4. **Secrets:** rotate `DB_PASSWORD`, which was pasted in chat.
-5. **sysadmin:** set a strong password and confirm `getRoleNames()` = `["super-admin"]`.
-6. **Browser checks:** `/system` funding card (sysadmin), Business Reviews in the staff sidebar, Repay for a borrower.
-7. **Later:** Ubuntu 20.04 is past standard support (enable Ubuntu Pro or upgrade); the server has 2 GB RAM with swap half used.
+The status recorded on 20 October (first integrity findings, restore test, the first open items) is kept in
+[archive/DEPLOY-live-status-2026-10-20.md](archive/DEPLOY-live-status-2026-10-20.md). The cron for `loans4537` was present
+at the 23 October server read.

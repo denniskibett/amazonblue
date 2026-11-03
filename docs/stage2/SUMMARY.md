@@ -9,7 +9,7 @@ Final checks: `php artisan test` gives 31 passed, 0 failed. All 232 routes resol
 | Journey | Who | Walkthrough and screenshots | Module notes |
 |---|---|---|---|
 | Foundation: one set of design tokens (including loan-status colours), components `x-az.*` (customers) and `x-staff.*` (staff), `demo:seed`, screenshot harness | all | [README](README.md), [DESIGN-TOKENS](DESIGN-TOKENS.md) | — |
-| A. Business onboarding: add a business (details, directors and owners, documents, financials, review), plus the staff business review | borrower with approved KYC; staff | [business.md](walkthroughs/business.md) | [E-business.md](../audit/modules/E-business.md) |
+| A. Business onboarding: add a business (details, directors and owners, documents, financials, review), plus the staff business review | borrower with approved KYC; staff | [business.md](walkthroughs/business.md) | [E-business.md](../archive/audit/modules/E-business.md) |
 | B. M-Pesa repayment: repay screen, "I've paid" code, receipts, facility closed, edge cases | borrower | [repay.md](walkthroughs/repay.md) | A-customer.md, Stage 2 section |
 | C. Partner self-service: portfolio, investments, funded loans, earnings, statement and CSV, add funds, withdrawal request, borrower/partner switcher | partner | [partner.md](walkthroughs/partner.md) | C-money.md, Stage 2 section |
 | D1. Borrower journeys: every loan state, extension request with preview, payment-plan acceptance, statement of account, notifications, help, loan terms, 5-step borrow | borrower | [borrower.md](walkthroughs/borrower.md) | A-customer.md, Stage 2 section |

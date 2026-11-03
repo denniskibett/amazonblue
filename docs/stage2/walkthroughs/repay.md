@@ -1,6 +1,6 @@
 # Walkthrough: borrower M-Pesa repayment (journey B)
 
-Server: `DB_DATABASE=loans_wp_s2 php artisan serve --port=8792`. Screens: `BASE=http://127.0.0.1:8792 OUT=docs/stage2/screens/repay DESKTOP_H=1500 PHONE_H=2900 scripts/walkthrough.sh <login> name=/path`. Every shot has a `-desktop.png` (1440 wide) and a `-phone.png` (390 wide). Details of routes, config and Stage 4 dependencies: [A-customer.md › Stage 2: repayment journey](../../audit/modules/A-customer.md#stage-2-repayment-journey).
+Server: `DB_DATABASE=loans_wp_s2 php artisan serve --port=8792`. Screens: `BASE=http://127.0.0.1:8792 OUT=docs/stage2/screens/repay DESKTOP_H=1500 PHONE_H=2900 scripts/walkthrough.sh <login> name=/path`. Every shot has a `-desktop.png` (1440 wide) and a `-phone.png` (390 wide). Details of routes, config and Stage 4 dependencies: [A-customer.md › Stage 2: repayment journey](../../archive/audit/modules/A-customer.md#stage-2-repayment-journey).
 
 Edge-case borrowers (repaid, recovery, pending) are not part of `demo:seed`. They were made for the shots with `scripts/repay-edge-demo.php` (see its header) and removed again; loan ids 548-550 in the shots no longer exist.
 

@@ -5,7 +5,7 @@
 - **Server:** `DB_DATABASE=loans_wp_s2 php artisan serve --port=8791`.
 - **Screenshots:** the GET-only pages can be retaken with `BASE=http://127.0.0.1:8791 OUT=docs/stage2/screens/business scripts/walkthrough.sh <login> name=/path`. The shots below were taken in one logged-in curl session per person, using the same Chrome and `sips` steps as the harness. That keeps flashed validation errors, which a fresh login would lose.
 - **Shots:** each has a `-desktop.png` (1440 wide) and a `-phone.png` (390 wide).
-- **Reference:** rules, routes and Stage 4 dependencies are in [E-business.md](../../audit/modules/E-business.md).
+- **Reference:** rules, routes and Stage 4 dependencies are in [E-business.md](../../archive/audit/modules/E-business.md).
 
 **Data**
 

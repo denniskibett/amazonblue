@@ -1,6 +1,6 @@
 # Walkthrough: borrower journeys (journey set D1)
 
-Server: `DB_DATABASE=loans_wp_s2 php artisan serve --port=8794`. Screens: `BASE=http://127.0.0.1:8794 OUT=docs/stage2/screens/borrower scripts/walkthrough.sh <login> name=/path`. Each shot has a `-desktop.png` (1440 wide) and a `-phone.png` (390 wide). Routes, rules and Stage 4 dependencies: [A-customer.md › Stage 2: borrower journeys](../../audit/modules/A-customer.md#stage-2-borrower-journeys).
+Server: `DB_DATABASE=loans_wp_s2 php artisan serve --port=8794`. Screens: `BASE=http://127.0.0.1:8794 OUT=docs/stage2/screens/borrower scripts/walkthrough.sh <login> name=/path`. Each shot has a `-desktop.png` (1440 wide) and a `-phone.png` (390 wide). Routes, rules and Stage 4 dependencies: [A-customer.md › Stage 2: borrower journeys](../../archive/audit/modules/A-customer.md#stage-2-borrower-journeys).
 
 `demo:seed` covers active, overdue, rejected and new. The other states were made with `DB_DATABASE=loans_wp_s2 php scripts/borrower-states-demo.php` (DemoSeed's own helpers + the Loan model's state methods; skips logins that already have loans). It adds `pending@`, `approved@`, `inrecovery@`, `plan@` and `writtenoff@demo.aimzone.test` (password `Demo12345!`), loans 551-556 in the shots.
 

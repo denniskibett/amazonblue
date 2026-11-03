@@ -1,6 +1,6 @@
 # Stage 4 plan (written 19 October 2026, Stage 3)
 
-*This is a plan only; no code was written. It builds on [REVIEW.md](REVIEW.md) (findings S-*, G-*), [AUDIT.md](../audit/AUDIT.md) and [SUMMARY.md](../stage2/SUMMARY.md).*
+*This is a plan only; no code was written. It builds on [REVIEW.md](REVIEW.md) (findings S-*, G-*), [AUDIT.md](../audit/AUDIT.md) and [SUMMARY.md](../../stage2/SUMMARY.md).*
 
 **Standing rules for every phase**
 
@@ -74,7 +74,7 @@ Tick off each step of `DEPLOY-2026-10-18.md` and the Stage 2 deploy (SUMMARY "To
 
 ## 1. Phase 1: ledger foundation (no figures change yet)
 
-> **Revised 20 October 2026 (owner):** the ledger is kept in **bavix wallets and transfers**, not in the three `ledger_*` tables below. There are no new tables. Each account is a `gl-` wallet; each entry is a transfer with a deterministic uuid. Partner contributions, earnings and payouts are posted too. What was built, and the runbook, are in [DEPLOY-PHASE1.md](../stage4/DEPLOY-PHASE1.md). The rest of this section is the original plan, kept for reference.
+> **Revised 20 October 2026 (owner):** the ledger is kept in **bavix wallets and transfers**, not in the three `ledger_*` tables below. There are no new tables. Each account is a `gl-` wallet; each entry is a transfer with a deterministic uuid. Partner contributions, earnings and payouts are posted too. What was built, and the runbook, are in [DEPLOY-PHASE1.md](../../stage4/DEPLOY-PHASE1.md). The rest of this section is the original plan, kept for reference.
 
 **Goal:** a double-entry ledger that every later phase posts to. It runs **in parallel** with today's records; nothing reads it for balances yet.
 
@@ -136,7 +136,7 @@ Tick off each step of `DEPLOY-2026-10-18.md` and the Stage 2 deploy (SUMMARY "To
 
 ## 2. Phase 2: cycle engine (rules 5, 6, 7, 8): the core money fix
 
-> **Built 21 October 2026** behind `LENDING_ENGINE=v2`, with the owner's decisions in §9. That includes the in-duplum cap (on until the lawyer says otherwise), the 4-cycle rate rule, and the rule that history keeps its booked carries (differences are reported and posted as rollover adjustments). Two departures from the text below: `loan_cycles` also gets `principal` and `balance_as_of`, and REPAID_BUT_OWES loans stay repaid unless the owner names them. Runbook and rehearsal results: [DEPLOY-PHASE2.md](../stage4/DEPLOY-PHASE2.md).
+> **Built 21 October 2026** behind `LENDING_ENGINE=v2`, with the owner's decisions in §9. That includes the in-duplum cap (on until the lawyer says otherwise), the 4-cycle rate rule, and the rule that history keeps its booked carries (differences are reported and posted as rollover adjustments). Two departures from the text below: `loan_cycles` also gets `principal` and `balance_as_of`, and REPAID_BUT_OWES loans stay repaid unless the owner names them. Runbook and rehearsal results: [DEPLOY-PHASE2.md](../../stage4/DEPLOY-PHASE2.md).
 
 **Blocking owner decisions:** 1 (penalty rate and cap), 2 (meaning of `loans.amount`, restate?), 6 (legacy chains), 11 (rollover rate, waivers), 12 (cycle-1 start, NPL threshold). See §9.
 
@@ -444,7 +444,7 @@ On apply it posts **difference** journals per partner and wallet, which reconcil
 
 Also: partner funding details are editable on `/system`, super-admin only, with a password check, audit row and admin email (SUMMARY addendum). Maker-checker on that change waits for Phase 5.
 
-**Decided 20 October 2026 (Phase 1; details in [DEPLOY-PHASE1.md](../stage4/DEPLOY-PHASE1.md)):**
+**Decided 20 October 2026 (Phase 1; details in [DEPLOY-PHASE1.md](../../stage4/DEPLOY-PHASE1.md)):**
 
 - **Ledger:** kept in bavix, using the existing tables; `loan_ledger` dropped.
 - **Decision 3:** `brokers.interest_broker` is the single source. AC funds the broker's client: the broker gets `interest_broker` (40%). The broker funds AC's client: the broker gets `100 − interest_broker` (60%).

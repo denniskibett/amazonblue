@@ -1,6 +1,6 @@
 # Retention and restore policy (Stage 4 Phase 0.14, 20 October 2026)
 
-These are the owner's defaults for decision 23 (STAGE4-PLAN §9). Change them in `config/lending.php` › `retention`.
+These are the owner's defaults for decision 23 ([STAGE4-PLAN §9](../archive/stage3/STAGE4-PLAN.md)). Change them in `config/lending.php` › `retention`.
 
 ## Audit log (`audit_logs`)
 

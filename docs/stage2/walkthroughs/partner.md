@@ -4,7 +4,7 @@
 
 - Server: `DB_DATABASE=loans_wp_s2 php artisan serve --port=8793`.
 - Screens: `BASE=http://127.0.0.1:8793 DESKTOP_H=1300 PHONE_H=2200 scripts/walkthrough.sh partner name=/path`. They are all in `docs/stage2/screens/partner/`. Each shot has a `-desktop.png` (1440 wide) and a `-phone.png` (390 wide).
-- Routes, config and Stage 4 dependencies are in [C-money.md › Stage 2: partner self-service](../../audit/modules/C-money.md#stage-2-partner-self-service).
+- Routes, config and Stage 4 dependencies are in [C-money.md › Stage 2: partner self-service](../../archive/audit/modules/C-money.md#stage-2-partner-self-service).
 
 **Demo data, clone only**
 

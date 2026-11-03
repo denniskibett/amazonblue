@@ -246,7 +246,7 @@ Tested on a clone of `loans_main` (dropped afterwards). Loan calculation, repaym
 
 ## Stage 2: partner self-service
 
-*2026-10-19, branch `stage-2-ui`. Walkthrough with screenshots: [docs/stage2/walkthroughs/partner.md](../../stage2/walkthroughs/partner.md). No schema change, no wallet posting from the partner side, no calculation change.*
+*2026-10-19, branch `stage-2-ui`. Walkthrough with screenshots: [docs/stage2/walkthroughs/partner.md](../../../stage2/walkthroughs/partner.md). No schema change, no wallet posting from the partner side, no calculation change.*
 
 **What partners can do now** (`auth` + `role:partner`, own data only; another partner's investment or an unlinked loan → 404)
 

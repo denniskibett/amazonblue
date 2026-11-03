@@ -245,7 +245,7 @@ Live deploy, in order:
 
 ## Stage 2: repayment journey
 
-Journey B (borrower M-Pesa repayment). Customer side only, website design, mobile first. The money path is unchanged: RepaymentController/RepaymentService, LoanCalculator, allocation, the "repaid" rule and `loans.amount` are not touched, and no schema changed. Amounts due, penalty and paid figures come only from `LoanProgress` (limit from `BorrowingEligibility`). Walkthrough with screenshots: [docs/stage2/walkthroughs/repay.md](../../stage2/walkthroughs/repay.md).
+Journey B (borrower M-Pesa repayment). Customer side only, website design, mobile first. The money path is unchanged: RepaymentController/RepaymentService, LoanCalculator, allocation, the "repaid" rule and `loans.amount` are not touched, and no schema changed. Amounts due, penalty and paid figures come only from `LoanProgress` (limit from `BorrowingEligibility`). Walkthrough with screenshots: [docs/stage2/walkthroughs/repay.md](../../../stage2/walkthroughs/repay.md).
 
 **Code:** `app/Http/Controllers/Concerns/BorrowerRepayment.php` (trait used by HomeController), views `resources/views/home/account/repay/{show,none,closed,receipt,_claims,_payments}.blade.php`, `rp-*` block in `public/assets/css/styles.css` (incl. print CSS), `CustomerNotifier::paymentClaimed`. Home (`borrower.blade.php`): the "How to repay" card is replaced by a "Repay" card + session claims; the hero button goes to the repay screen. Loan detail (`loan.blade.php`): Repay / "Loan closed" button, payments link to receipts with Received / Book entry badges, session claims.
 
@@ -275,7 +275,7 @@ Journey B (borrower M-Pesa repayment). Customer side only, website design, mobil
 
 ## Stage 2: borrower journeys
 
-Built 19 Oct 2026 on branch `stage-2-ui` (journey set D1). Walkthrough with screenshots: [docs/stage2/walkthroughs/borrower.md](../../stage2/walkthroughs/borrower.md). No schema, calculation or wallet changes.
+Built 19 Oct 2026 on branch `stage-2-ui` (journey set D1). Walkthrough with screenshots: [docs/stage2/walkthroughs/borrower.md](../../../stage2/walkthroughs/borrower.md). No schema, calculation or wallet changes.
 
 | Journey | Status now | Route (all `auth` + `role:borrower`, own loans only, 404 otherwise) | Records |
 |---|---|---|---|

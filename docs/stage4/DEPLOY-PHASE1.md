@@ -78,7 +78,7 @@ Debit-side accounts (asset, expense) carry positive balances. Credit-side accoun
    php artisan wallets:check
    ```
    - Borrower issues must be 0 before the ledger starts. If there are any, run `php artisan wallets:sync --dry-run`, then `php artisan wallets:sync`.
-   - If the House #6 principal issue (4,420,156.64) is still there, run `wallets:fix-house` ([DEPLOY-2026-10-18.md](../audit/DEPLOY-2026-10-18.md) §4).
+   - If the House #6 principal issue (4,420,156.64) is still there, run `wallets:fix-house` ([DEPLOY-2026-10-18.md](../archive/audit/DEPLOY-2026-10-18.md) §4).
 3. Dry-run the ledger:
    ```bash
    php artisan ledger:backfill --dry-run
