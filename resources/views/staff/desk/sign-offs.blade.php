@@ -18,7 +18,8 @@
     $ghost = 'inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300';
     $outTone = ['approved' => 'green', 'rejected' => 'red', 'cancelled' => 'gray', 'expired' => 'gray'];
   @endphp
-  <div class="space-y-6">
+  <x-staff.tabs :tabs="['waiting' => ['Waiting', count($waiting)], 'decided' => ['Recently decided', count($decided)]]">
+    <x-staff.tab name="waiting">
     <x-staff.table title="Waiting for a second person" caption="Waiting for a second person" :headers="['Asked by', 'What', ['Amount', 'num'], 'Note', 'When', '']">
       @forelse ($waiting as $a)
         @php $p = json_decode((string) $a->payload, true) ?: []; $own = (int) $a->requested_by === (int) auth()->id(); $at = \Illuminate\Support\Carbon::parse($a->created_at); @endphp
@@ -49,7 +50,9 @@
         <tr data-table-skip><td colspan="6"><x-staff.empty title="Nothing waiting for you" /></td></tr>
       @endforelse
     </x-staff.table>
+    </x-staff.tab>
 
+    <x-staff.tab name="decided">
     <x-staff.table title="Recently decided" caption="Decided sign-offs" :headers="['Asked by', 'What', ['Amount', 'num'], 'Decided by', 'Outcome']">
       @forelse ($decided as $a)
         <tr>
@@ -64,5 +67,6 @@
         <tr data-table-skip><td colspan="5"><x-staff.empty title="None yet" /></td></tr>
       @endforelse
     </x-staff.table>
-  </div>
+    </x-staff.tab>
+  </x-staff.tabs>
 @endsection

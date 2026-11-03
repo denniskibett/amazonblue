@@ -4,8 +4,8 @@
 @php
   $items = array_values(array_filter($items));
   $n = min(max(count($items), 1), 6);
-  $grid = [1 => '', 2 => 'grid-cols-2', 3 => 'sm:grid-cols-3', 4 => 'sm:grid-cols-2 xl:grid-cols-4',
-           5 => 'sm:grid-cols-3 xl:grid-cols-5', 6 => 'sm:grid-cols-3 xl:grid-cols-6'][$n];
+  $grid = [1 => '', 2 => 'grid-cols-2', 3 => 'sm:grid-cols-3', 4 => 'lg:grid-cols-4',   // four cards: one row on a laptop (owner, 3 Nov 2026)
+           5 => 'sm:grid-cols-3 xl:grid-cols-5', 6 => 'sm:grid-cols-3 xl:grid-cols-6 [&_.text-title-md]:!text-title-sm'][$n];
   $size = $n >= 5 ? 'sm' : 'md';
 @endphp
 @if ($items)

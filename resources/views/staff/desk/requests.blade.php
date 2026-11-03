@@ -13,7 +13,8 @@
     <x-staff.alert type="warn" class="mb-6">Stored requests are off (LENDING_REQUESTS_ENABLED): requests still arrive by email only.</x-staff.alert>
   @endunless
 
-  <div class="space-y-6">
+  <x-staff.tabs :tabs="['borrowers' => ['Borrower requests', count($borrower)], 'partners' => ['Partner requests', count($partner)]]" :active="count($borrower) === 0 && count($partner) > 0 ? 'partners' : 'borrowers'">
+    <x-staff.tab name="borrowers">
     <x-staff.table title="Borrower requests" caption="Open borrower requests" :headers="['Borrower', 'Request', 'Their words', 'Asked', '']">
       @forelse ($borrower as $r)
         @php $asked = \Illuminate\Support\Carbon::parse($r->created_at); @endphp
@@ -82,7 +83,9 @@
         <tr data-table-skip><td colspan="5"><x-staff.empty title="Nothing waiting" message="No borrower has an open request." /></td></tr>
       @endforelse
     </x-staff.table>
+    </x-staff.tab>
 
+    <x-staff.tab name="partners">
     <x-staff.table title="Partner requests" caption="Open partner requests" :headers="['Partner', 'Request', ['Amount', 'num'], 'Code / wallet', 'Status', 'Asked', '']">
       @forelse ($partner as $r)
         @php $asked = \Illuminate\Support\Carbon::parse($r->created_at); @endphp
@@ -137,6 +140,7 @@
         <tr data-table-skip><td colspan="7"><x-staff.empty title="Nothing waiting" message="No partner has an open request." /></td></tr>
       @endforelse
     </x-staff.table>
-  </div>
+    </x-staff.tab>
+  </x-staff.tabs>
   @includeIf('staff.desk._extend-modal')
 @endsection

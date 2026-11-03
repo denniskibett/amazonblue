@@ -15,7 +15,8 @@
     $field = 'h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-theme-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
   @endphp
 
-  <div class="space-y-6">
+  <x-staff.tabs :tabs="['unmatched' => ['Not matched', count($unmatched)], 'claims' => ['“I\'ve paid” claims', count($claims)], 'statement' => 'Statement check', 'matched' => 'Recently matched']" :active="$recon ? 'statement' : (count($unmatched) ? 'unmatched' : (count($claims) ? 'claims' : 'unmatched'))">
+    <x-staff.tab name="unmatched">
     {{-- 1. unmatched --}}
     <x-staff.table title="Not matched to a loan" caption="Unmatched M-Pesa payments" :headers="['Receipt', ['Amount', 'num'], 'Account no. · phone', 'Why', 'Record on loan']">
       @forelse ($unmatched as $t)
@@ -37,7 +38,9 @@
         <tr data-table-skip><td colspan="5"><x-staff.empty title="Nothing waiting" message="Every M-Pesa payment is matched to a loan." /></td></tr>
       @endforelse
     </x-staff.table>
+    </x-staff.tab>
 
+    <x-staff.tab name="claims">
     {{-- 2. claims --}}
     <x-staff.table title="Borrowers' “I've paid” claims" caption="Payment claims being checked" :headers="['Borrower', 'M-Pesa code', ['Amount', 'num'], 'Told us', '']">
       @forelse ($claims as $c)
@@ -64,7 +67,9 @@
         <tr data-table-skip><td colspan="5"><x-staff.empty title="No claims waiting" /></td></tr>
       @endforelse
     </x-staff.table>
+    </x-staff.tab>
 
+    <x-staff.tab name="statement">
     {{-- 3. the M-Pesa statement: upload and results in one card --}}
     @php
       $issues = collect();
@@ -126,7 +131,9 @@
         </div>
       @endif
     </section>
+    </x-staff.tab>
 
+    <x-staff.tab name="matched">
     {{-- 4. matched --}}
     <x-staff.table title="Recently matched" caption="Matched M-Pesa payments" :headers="['Receipt', 'Type', ['Amount', 'num'], 'Loan · repayment', 'How']">
       @forelse ($matched as $t)
@@ -141,5 +148,6 @@
         <tr data-table-skip><td colspan="5"><x-staff.empty title="None yet" /></td></tr>
       @endforelse
     </x-staff.table>
-  </div>
+    </x-staff.tab>
+  </x-staff.tabs>
 @endsection

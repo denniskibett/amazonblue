@@ -13,32 +13,45 @@
   @include('staff.desk._header', [
     'title' => 'End of day',
     'sub' => ($teller->name ?? 'Teller') . ' · ' . $date->format('l j F Y'),
+    'metrics' => false,   // one row of cards below (owner, 3 Nov 2026)
     'actions' => '<button type="button" onclick="window.print()" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">Print</button>',
   ])
 
-  <form method="GET" class="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-4 print:hidden dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
-    <x-staff.field name="date" label="Day" type="date" :value="$date->toDateString()" />
-    @if ($tellers->isNotEmpty())
-      <x-staff.field name="teller" label="Staff member" type="select" :options="$tellers->pluck('name', 'id')->all()" :value="$teller->id ?? null" />
-    @endif
-    <button class="h-11 rounded-lg bg-brand-500 px-5 text-theme-sm font-medium text-white hover:bg-brand-600">Show</button>
-  </form>
 
   @php
     $K = fn ($v) => \App\Support\PageMetrics::kes((float) $v);
     $modes = collect($byMode)->map(fn ($v, $m) => ucfirst(str_replace('_', ' ', $m)) . ' ' . number_format((float) $v, 2))->implode(' · ');
   @endphp
-  <x-ui.metrics :cols="4" :items="[
+  @php
+    $closes = \Illuminate\Support\Facades\DB::table('teller_day_closes');
+    $toApprove = (clone $closes)->where('status', 'closed')->count();
+    $variance = (float) (clone $closes)->where('day', '>=', now()->startOfMonth()->toDateString())->sum('variance');
+  @endphp
+  <x-ui.metrics :cols="6" :items="[
     ['label' => 'Cash received', 'value' => $K($totals['received_cash']), 'icon' => 'hand-coins', 'hint' => 'of ' . number_format((float) $totals['received_all'], 2) . ' recorded'],
     ['label' => 'Cash paid out', 'value' => $K($totals['disbursed_cash']), 'icon' => 'send', 'hint' => 'of ' . number_format((float) $totals['disbursed_all'], 2) . ' recorded'],
     ['label' => 'Net cash', 'value' => $K($net), 'icon' => 'scale', 'hint' => 'received less paid out', 'tone' => $net < 0 ? 'down' : 'neutral'],
     ['label' => 'Cash in by mode', 'value' => (string) count($byMode) . (count($byMode) === 1 ? ' mode' : ' modes'), 'icon' => 'phone', 'hint' => $modes ?: 'none today'],
+    ['label' => 'Closes to approve', 'value' => (string) $toApprove, 'icon' => 'inbox', 'hint' => 'tellers waiting'],
+    ['label' => 'Variance this month', 'value' => $K($variance), 'icon' => 'scale', 'hint' => 'counted minus expected', 'tone' => $variance < 0 ? 'down' : 'neutral'],
   ]" />
 
   @php
     $modeName = fn ($m) => ['mpesa' => 'M-Pesa', 'cash' => 'Cash', 'bank' => 'Bank', 'cheque' => 'Cheque'][$m] ?? ($m ? ucfirst(str_replace('_', ' ', $m)) : '—');
   @endphp
-  <div class="mb-6 space-y-6">
+  <x-staff.tabs class="mb-6" :tabs="['received' => ['Payments received', count($repayments)], 'sent' => ['Disbursements', count($disbursements)], 'close' => ['Close the day', $close ? ($close->status === 'approved' ? 'approved' : 'waiting') : null]]">
+    <x-slot:tools>
+      <form method="GET" class="flex flex-wrap items-center gap-3">
+        <input type="hidden" name="tab" :value="tab">
+        @php $ctl = 'h-10 rounded-lg border border-gray-300 bg-transparent px-3 text-theme-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90'; @endphp
+        <input type="date" name="date" aria-label="Day" value="{{ $date->toDateString() }}" class="{{ $ctl }}">
+        @if ($tellers->isNotEmpty())
+            <select name="teller" aria-label="Staff member" class="{{ $ctl }}">@foreach ($tellers as $t)<option value="{{ $t->id }}" @selected(($teller->id ?? null) === $t->id)>{{ $t->name }}</option>@endforeach</select>
+        @endif
+        <button class="h-10 rounded-lg bg-brand-500 px-4 text-theme-sm font-medium text-white hover:bg-brand-600">Show</button>
+      </form>
+    </x-slot:tools>
+    <x-staff.tab name="received">
     <x-staff.table title="Payments received" caption="Payments received" :headers="['Borrower', 'Payment', 'Mode · reference', 'Kind', ['Amount', 'num']]">
       @forelse ($repayments as $p)
         @php $k = $kind($p); @endphp
@@ -57,7 +70,9 @@
         <tr data-table-skip><td colspan="5"><x-staff.empty title="No payments entered" message="Nothing recorded by this person on this day." /></td></tr>
       @endforelse
     </x-staff.table>
+    </x-staff.tab>
 
+    <x-staff.tab name="sent">
     <x-staff.table title="Disbursements" caption="Disbursements" :headers="['Borrower', 'Disbursement', 'Mode · reference', 'Kind', ['Amount', 'num'], ['Sent (net)', 'num']]">
       @forelse ($disbursements as $d)
         @php $k = $kind($d); @endphp
@@ -73,9 +88,10 @@
         <tr data-table-skip><td colspan="6"><x-staff.empty title="No disbursements entered" /></td></tr>
       @endforelse
     </x-staff.table>
-  </div>
+    </x-staff.tab>
 
-  <p class="mb-6 text-theme-xs text-gray-500">“Entered by” is the person who recorded each row (older rows: the audit log’s create entry). Book entries (rollover, discount, write-off, broker fee …) are recorded but are not money.</p>
+    <x-staff.tab name="close">
+  <p class="px-4 pt-4 text-theme-xs text-gray-500 sm:px-6">“Entered by” is the person who recorded each row (older rows: the audit log’s create entry). Book entries (rollover, discount, write-off, broker fee …) are recorded but are not money.</p>
 
   {{-- Close the day (Stage 4 Phase 5): count, record the variance, a manager approves --}}
   <section class="rounded-2xl border border-gray-200 bg-white px-4 py-5 print:hidden dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
@@ -110,4 +126,6 @@
       <p class="text-theme-sm text-gray-500">Not closed yet. The teller closes their own day.</p>
     @endif
   </section>
+    </x-staff.tab>
+  </x-staff.tabs>
 @endsection

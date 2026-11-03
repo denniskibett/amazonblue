@@ -18,24 +18,29 @@ class NavMenu
 
         // [label, route, icon, visible, active patterns, badge]
         $groups = [];
+        // grouped by the job (owner, 3 Nov 2026): analytics together, then what we earn, then loans (from approval to recovery); the money side
+        // split into partners (money in and out) and books (do the accounts agree); people and their access together
         $groups['Overview'] = [
           ['Dashboard', 'dashboard', 'grid', true, ['dashboard'], null],
           ['My inbox', 'staff.inbox', 'inbox', $u->isStaff(), ['staff.inbox'], null],
-          ['Reports & Analytics', 'reports.index', 'chart', $u->can('view reports'), ['reports.*', 'disbursements.index'], null],
-          ['Lending analytics', 'staff.analytics', 'pie', $u->can('view reports'), ['staff.analytics'], null],
-          ['Site analytics', 'staff.site-analytics', 'trending-up', $u->can('view reports'), ['staff.site-analytics'], null],
         ];
         if ($staff) {
-          $groups['Lending'] = [
-            ['Loan Portfolio', 'loans.index', 'briefcase', $u->can('view loans'), ['loans.*', 'users.loans.*'], null],
+          $groups['Analytics'] = [
+            ['Reports', 'reports.index', 'chart', $u->can('view reports'), ['reports.*', 'disbursements.index'], null],
+            ['Lending analytics', 'staff.analytics', 'pie', $u->can('view reports'), ['staff.analytics'], null],
+            ['Site analytics', 'staff.site-analytics', 'trending-up', $u->can('view reports'), ['staff.site-analytics'], null],
+          ];
+          $groups['Revenue'] = [
+            ['Cash and growth', 'staff.cash-forecast', 'chart', $u->can('view reports'), ['staff.cash-forecast'], null],
+            ['Portfolio and income', 'staff.portfolio', 'pie', $u->can('view reports'), ['staff.portfolio'], null],
+          ];
+          $groups['Loans'] = [
+            ['Loans', 'loans.index', 'briefcase', $u->can('view loans'), ['loans.*', 'users.loans.*'], null],
             ['Loan approvals', 'staff.approvals', 'check-circle', $u->can('view loans'), ['staff.approvals'], $count(fn () => \App\Models\Loan::where('status', 'pending')->count())],
-            ['Disbursement queue', 'staff.disbursements.queue', 'send', $u->can('view disbursements'), ['staff.disbursements.*', 'disbursements.create', 'disbursements.show', 'disbursements.edit'], $count(fn () => \App\Models\Loan::where('status', 'approved')->count())],
+            ['Debt recovery', 'cases.index', 'shield', $u->can('view recovery cases'), ['cases.*'], $count(fn () => \App\Models\DebtRecoveryCase::open()->count())],
             ['Requests', 'staff.requests', 'mail', $u->canAny(['rollover loans', 'edit partners']), ['staff.requests'], $count(fn () => \Illuminate\Support\Facades\DB::table('borrower_requests')->where('status', 'open')->count())],
-            ['Collections', 'staff.collections', 'alert', $u->can('view recovery cases'), ['staff.collections'], null],
-            ['Debt Recovery', 'cases.index', 'shield', $u->can('view recovery cases'), ['cases.*'], $count(fn () => \App\Models\DebtRecoveryCase::open()->count())],
-            ['Collection agencies', 'staff.agencies', 'users', $u->can('manage collection agencies'), ['staff.agencies*'], null],
-
-            ['Messages', 'staff.messages.index', 'mail', $u->hasAnyRole(['super-admin', 'admin', 'manager']), ['staff.messages.*'], null],
+            ['Loan products', 'staff.products', 'file', $u->canAny(['manage loan types', 'view reports']), ['staff.products'], null],
+            ['Disbursements', 'staff.disbursements.queue', 'send', $u->can('view disbursements'), ['staff.disbursements.*', 'disbursements.create', 'disbursements.show', 'disbursements.edit'], $count(fn () => \App\Models\Loan::where('status', 'approved')->count())],
           ];
           $groups['Cash desk'] = [
             ['Receive payment', 'staff.repayments.receive', 'hand-coins', $u->canAny(['create repayments', 'delete repayments']), ['staff.repayments.*'], null],
@@ -43,30 +48,38 @@ class NavMenu
             ['M-Pesa payouts', 'mpesa.payouts', 'send', \App\Services\Mpesa\B2cPayouts::enabled() && $u->can('view disbursements'), ['mpesa.payouts'], null],
             ['End of day', 'staff.end-of-day', 'clock', $u->canAny(['create repayments', 'create disbursements', 'view reports']), ['staff.end-of-day'], null],
           ];
+          $groups['Collections'] = [
+            ['Collections', 'staff.collections', 'alert', $u->can('view recovery cases'), ['staff.collections'], null],
+            ['Collection agencies', 'staff.agencies', 'users', $u->can('manage collection agencies'), ['staff.agencies*'], null],
+            ['Messages to borrowers', 'staff.messages.index', 'mail', $u->hasAnyRole(['super-admin', 'admin', 'manager']), ['staff.messages.*'], null],
+          ];
           $groups['Customers'] = [
-            ['User Management', 'users.index', 'users', $u->can('view users'), ['users.index', 'users.show', 'users.edit', 'users.create'], null],
             ['Borrowers', 'staff.borrowers', 'user', $u->can('view users'), ['staff.borrowers'], null],
             ['KYC Reviews', 'kyc-reviews.index', 'user-check', $u->can('edit users'), ['kyc-reviews.*'], $count(fn () => \App\Models\User::where('kyc_status', 'submitted')->count())],
             ['Business Reviews', 'business-reviews.index', 'building', $u->can('view users'), ['business-reviews.*'], $count(fn () => \App\Models\Business::where('status', 'submitted')->count())],
-            ['Testimonials', 'staff.testimonials', 'star', $u->can('edit users'), ['staff.testimonials*'], $count(fn () => \Illuminate\Support\Facades\Schema::hasTable('testimonials') ? \App\Models\Testimonial::where('status', 'pending')->count() : 0)],
             ['Sanctions lists', 'aml.lists', 'shield', $u->can('view kyc documents'), ['aml.*'], null],
+            ['Testimonials', 'staff.testimonials', 'star', $u->can('edit users'), ['staff.testimonials*'], $count(fn () => \Illuminate\Support\Facades\Schema::hasTable('testimonials') ? \App\Models\Testimonial::where('status', 'pending')->count() : 0)],
           ];
-          $groups['Finance'] = [
-            ['Portfolio', 'staff.portfolio', 'pie', $u->can('view reports'), ['staff.portfolio'], null],
-            ['Cash and growth', 'staff.cash-forecast', 'chart', $u->can('view reports'), ['staff.cash-forecast'], null],
-            ['Wallets & reconciliation', 'staff.wallets', 'scale', $u->canAny(['reconcile wallets', 'view house reconciliation']), ['staff.wallets'], null],
-            ['Partner payouts', 'staff.partner-payouts', 'coins', $u->can('view partner statements'), ['staff.partner-payouts'], null],
+          $groups['Partners'] = [
             ['Partners', 'partners.index', 'briefcase', $u->can('view partners'), ['partners.*'], null],
             ['Investment Portfolio', 'investments.index', 'layers', $u->can('view investments'), ['investments.*'], null],
+            ['Partner payouts', 'staff.partner-payouts', 'coins', $u->can('view partner statements'), ['staff.partner-payouts'], null],
+          ];
+          $groups['Books'] = [
+            ['Wallets & reconciliation', 'staff.wallets', 'scale', $u->canAny(['reconcile wallets', 'view house reconciliation']), ['staff.wallets'], null],
+            ['Operations review', 'staff.operations-review', 'refresh', $u->canAny(['view logs', 'view ledger']), ['staff.operations-review'], null],
           ];
           $groups['Control'] = [
             ['Second sign-offs', 'staff.sign-offs', 'shield', $u->canAny(['approve loans', 'delete repayments', 'write off loan', 'edit partners', 'edit users', 'disburse loans']), ['staff.sign-offs'], $count(fn () => \Illuminate\Support\Facades\DB::table('approvals')->where('status', 'pending')->count())],
-            ['Operations review', 'staff.operations-review', 'refresh', $u->canAny(['view logs', 'view ledger']), ['staff.operations-review'], null],
             ['Audit Log', 'audit-log.index', 'list', $u->can('view audit log'), ['audit-log.*'], null],
+          ];
+          $groups['Users & access'] = [
+            ['User Management', 'users.index', 'users', $u->can('view users'), ['users.index', 'users.show', 'users.edit', 'users.create'], null],
             ['Roles & permissions', 'staff.roles', 'key', $u->canAny(['manage roles', 'view audit log']), ['staff.roles'], null],
+          ];
+          $groups['Settings'] = [
             ['Integrations', 'staff.integrations', 'layers', $u->canAny(['manage integrations', 'access system settings']), ['staff.integrations*'], null],
-          ['API keys', 'staff.api-keys', 'key', $u->can('manage API tokens'), ['staff.api-keys*'], null],
-          ['Loan products', 'staff.products', 'file', $u->canAny(['manage loan types', 'view reports']), ['staff.products'], null],
+            ['API keys', 'staff.api-keys', 'key', $u->can('manage API tokens'), ['staff.api-keys*'], null],
           ];
         }
         if ($u->hasRole('borrower') && ! $u->isStaff()) {

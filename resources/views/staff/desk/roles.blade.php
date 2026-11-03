@@ -12,7 +12,10 @@
 @section('content')
   @include('staff.desk._header', ['title' => 'Roles & permissions', 'sub' => $roles->count() . ' roles · ' . $permissions->count() . ' permissions. Assign a role to a person on their user page.'])
 
-  <div class="mb-6">
+  @php $limits = \Illuminate\Support\Facades\DB::table('approval_limits')->orderBy('role')->get(); @endphp
+  <x-staff.tabs :tabs="['people' => ['People per role', $roles->count()], 'permissions' => ['Permissions by role', $permissions->count()], 'limits' => ['Approval limits', $limits->count()]]">
+  <x-staff.tab name="people">
+  <div>
     <x-staff.table title="People per role" caption="People per role" :headers="['Role', 'People', ['Permissions', 'num']]">
       @foreach ($roles as $role)
         @php $people = $members[$role->id] ?? collect(); @endphp
@@ -44,9 +47,11 @@
       @endforeach
     </x-staff.table>
   </div>
+  </x-staff.tab>
 
+  <x-staff.tab name="permissions">
   @can('manage roles')
-    <section class="{{ $card }} mb-6">
+    <section class="{{ $card }}">
       <h2 class="mb-1 text-lg font-semibold text-gray-800 dark:text-white/90">Change a permission</h2>
       <p class="mb-4 text-theme-sm text-gray-500">Takes effect at once for everyone in the role and is written to the audit log. The super-admin role cannot be changed here.</p>
       <form method="POST" id="role-perm-form" action="{{ route('staff.roles.permissions', $editable->first() ?? 0) }}"
@@ -61,7 +66,7 @@
       </form>
     </section>
   @else
-    <x-staff.alert type="info" class="mb-6" title="Read-only">Changing role permissions needs “manage roles” (super-admin only today).</x-staff.alert>
+    <x-staff.alert type="info" title="Read-only">Changing role permissions needs “manage roles” (super-admin only today).</x-staff.alert>
   @endcan
 
   <x-staff.table title="Permissions by role" caption="Roles by permission" class="!min-w-[900px]" :list="false">
@@ -91,9 +96,10 @@
       @endforeach
     @endforeach
   </x-staff.table>
+  </x-staff.tab>
 
-  @php $limits = \Illuminate\Support\Facades\DB::table('approval_limits')->orderBy('role')->get(); @endphp
-  <x-staff.alert type="info" class="mt-6" title="Approval limits">
+  <x-staff.tab name="limits">
+  <x-staff.alert type="info" title="Approval limits">
     @if ($limits->isEmpty())
       No limits set: anyone with "approve loans" approves any amount alone.
     @else
@@ -102,4 +108,6 @@
       Above that a second person approves{{ config('lending.approvals.enabled') ? '' : ' once second sign-offs are switched on' }}.
     @endif
   </x-staff.alert>
+  </x-staff.tab>
+  </x-staff.tabs>
 @endsection

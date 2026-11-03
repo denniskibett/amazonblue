@@ -13,7 +13,13 @@
   @endif
 
   @php $diffPill = fn ($v) => abs((float) $v) < 0.005 ? 'green' : 'red'; @endphp
-  <div class="grid grid-cols-1 gap-6">
+  @php
+    $bCount = count($borrowers['issues']) + count($borrowers['integrity'] ?? []);
+    $pCount = count($partners['issues']) + count($partners['integrity'] ?? []) + count($partners['slug_mismatches'] ?? []);
+  @endphp
+  {{-- tabs (owner, 3 Nov 2026): borrower checks and partner checks; counts are what needs attention --}}
+  <x-staff.tabs :tabs="['borrowers' => ['Borrower wallets', $bCount], 'partners' => ['Partner wallets', $pCount]]" :active="$bCount === 0 && $pCount > 0 ? 'partners' : 'borrowers'">
+    <x-staff.tab name="borrowers">
     {{-- borrowers: one card per check, Loans Due look (owner, 22 Oct 2026) --}}
     <div>
       <x-staff.table title="Borrower cash wallets vs loan tables" caption="Borrower differences" :headers="['Borrower', ['Expected', 'num'], ['Wallet', 'num'], ['Difference', 'num']]">
@@ -45,6 +51,9 @@
       </x-staff.table>
     @endif
 
+    </x-staff.tab>
+
+    <x-staff.tab name="partners">
     {{-- partners --}}
     @if (! empty($partners['slug_mismatches']))
       <div>
@@ -94,8 +103,10 @@
       </x-staff.table>
     @endif
 
-    <x-staff.alert type="info" title="Ledger and statements">
-      Every repayment and disbursement also posts to the double-entry ledger (six accounts). The weekly M-Pesa statement check is on M-Pesa payments.
-    </x-staff.alert>
-  </div>
+    </x-staff.tab>
+  </x-staff.tabs>
+
+  <x-staff.alert type="info" class="mt-6" title="Ledger and statements">
+    Every repayment and disbursement also posts to the double-entry ledger (six accounts). The weekly M-Pesa statement check is on M-Pesa payments.
+  </x-staff.alert>
 @endsection

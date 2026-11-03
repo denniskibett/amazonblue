@@ -17,9 +17,19 @@ use Illuminate\View\View;
  */
 class AmlController extends Controller
 {
-    public function lists(SanctionsList $lists): View
+    public function lists(Request $request, SanctionsList $lists): View
     {
-        return view('aml.lists', ['lists' => $lists->lists(), 'enabled' => Screening::enabled()]);
+        // the names themselves, searchable and paged (owner, 3 Nov 2026)
+        $q = trim((string) $request->query('q', ''));
+        $kind = in_array($request->query('kind'), ['individual', 'entity'], true) ? $request->query('kind') : null;
+        $list = (string) $request->query('list', '');
+        $names = \Illuminate\Support\Facades\DB::table('sanctions_entries')
+            ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', "%{$q}%")->orWhere('reference', 'like', "%{$q}%")->orWhere('country', 'like', "%{$q}%")))
+            ->when($kind, fn ($w) => $w->where('kind', $kind))
+            ->when($list !== '', fn ($w) => $w->where('list_name', $list))
+            ->orderBy('name')->paginate(50, ['id', 'list_name', 'kind', 'name', 'dob', 'country', 'reference'])->withQueryString();
+
+        return view('aml.lists', ['lists' => $lists->lists(), 'enabled' => Screening::enabled(), 'names' => $names, 'q' => $q, 'kind' => $kind, 'list' => $list]);
     }
 
     public function upload(Request $request, SanctionsList $lists): RedirectResponse

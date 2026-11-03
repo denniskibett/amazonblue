@@ -93,7 +93,9 @@
           };
         };
       </script>
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-5" x-data="splitPreview(@js(route('staff.repayments.split-preview')))" @input.debounce.400ms="update($event)" @change="update($event)">
+    <x-staff.tabs :tabs="['record' => 'Record a payment', 'recent' => ['Payments on this loan', $recent->count()]]">
+    <x-staff.tab name="record">
+    <div class="grid grid-cols-1 gap-6 p-4 sm:p-6 lg:grid-cols-5" x-data="splitPreview(@js(route('staff.repayments.split-preview')))" @input.debounce.400ms="update($event)" @change="update($event)">
       <section class="{{ $card }} min-w-0 lg:col-span-3">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">Loan #{{ $loan->id }} · {{ $loan->user->name ?? '' }}</h2>
@@ -202,8 +204,10 @@
         </section>
       </aside>
     </div>
+    </x-staff.tab>
 
-    <section class="mt-6">
+    <x-staff.tab name="recent">
+    <section>
       @if ($recent->isEmpty())
         <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"><x-staff.empty title="No payments yet on this loan" /></div>
       @else
@@ -233,5 +237,7 @@
         <p class="mt-2 text-theme-xs text-gray-500">Reversal deletes the row today (the audit log keeps the old values and your reason). Proper reversal entries that keep the original are Stage 4.</p>
       @endif
     </section>
+    </x-staff.tab>
+    </x-staff.tabs>
   @endif
 @endsection
