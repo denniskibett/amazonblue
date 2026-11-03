@@ -267,7 +267,7 @@ class Emails
     }
 
     /** 15: payment received. */
-    public static function paymentReceived(string $firstName, string $amount, string $date, string $method, string $transaction, string $url): array
+    public static function paymentReceived(string $firstName, string $amount, string $date, string $method, string $transaction, string $url, ?string $stillDue = null): array
     {
         return [
             'subject' => 'Payment received — thank you',
@@ -275,7 +275,8 @@ class Emails
             'badge' => ['Payment received', 'ok'],
             'heading' => "Thank you, {$firstName} — we've got it",
             'paragraphs' => ['Your payment has been received and applied to your loan. Here is your receipt.'],
-            'panel' => ['label' => 'Amount received', 'amount' => $amount, 'rows' => [['Date', $date], ['Method', $method], ['Transaction ID', $transaction]]],
+            'panel' => ['label' => 'Amount received', 'amount' => $amount, 'rows' => array_values(array_filter([['Date', $date], ['Method', $method], ['Transaction ID', $transaction],
+                $stillDue !== null ? ['Still due', $stillDue, true] : null]))],
             'buttons' => [['View receipt', $url, false]],
         ];
     }

@@ -516,6 +516,21 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('inbox', [\App\Http\Controllers\Staff\LoanDeskController::class, 'inbox'])->name('inbox');
         Route::get('approvals', [\App\Http\Controllers\Staff\LoanDeskController::class, 'approvals'])
             ->name('approvals')->middleware('permission:view loans');
+        // integrations and API keys (owner, 3 Nov 2026)
+        Route::middleware('permission:access system settings')->group(function () {
+            Route::get('integrations', [\App\Http\Controllers\Staff\IntegrationsController::class, 'index'])->name('integrations');
+            Route::post('integrations/{slug}', [\App\Http\Controllers\Staff\IntegrationsController::class, 'update'])->name('integrations.update');
+            Route::post('integrations/{slug}/toggle', [\App\Http\Controllers\Staff\IntegrationsController::class, 'toggle'])->name('integrations.toggle');
+        });
+        Route::middleware('permission:manage API tokens')->group(function () {
+            Route::get('api-keys', [\App\Http\Controllers\Staff\ApiKeysController::class, 'index'])->name('api-keys');
+            Route::post('api-keys', [\App\Http\Controllers\Staff\ApiKeysController::class, 'store'])->name('api-keys.store');
+            Route::post('api-keys/{apiKey}/regenerate', [\App\Http\Controllers\Staff\ApiKeysController::class, 'regenerate'])->name('api-keys.regenerate');
+            Route::post('api-keys/{apiKey}/toggle', [\App\Http\Controllers\Staff\ApiKeysController::class, 'toggle'])->name('api-keys.toggle');
+            Route::delete('api-keys/{apiKey}', [\App\Http\Controllers\Staff\ApiKeysController::class, 'destroy'])->name('api-keys.destroy');
+        });
+        // header search: loans and people, each by its own permission (owner, 3 Nov 2026)
+        Route::post('search', \App\Http\Controllers\Staff\SearchController::class)->name('search')->middleware('throttle:60,1');
         // the person side panel, opened from any name (owner, 22 Oct 2026)
         Route::get('users/{user}/peek', \App\Http\Controllers\Staff\UserPeekController::class)
             ->name('users.peek')->middleware('permission:view users');

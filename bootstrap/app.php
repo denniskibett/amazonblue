@@ -8,6 +8,7 @@ use App\Http\Middleware\CheckRole;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -23,6 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.role' => CheckRole::class,
             // dashboard = staff only; borrowers and partners use /account
             'staff' => \App\Http\Middleware\EnsureStaff::class,
+            // /api/v1 keys from /staff/api-keys (owner, 3 Nov 2026)
+            'api.key' => \App\Http\Middleware\AuthenticateApiKey::class,
         ]);
         
         // ============ ADD GLOBAL MIDDLEWARE ============

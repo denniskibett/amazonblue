@@ -252,7 +252,12 @@ class DisbursementController extends Controller
                 $approver = \App\Models\AuditLog::where('table_name', 'loans')->where('record_id', $loan->id)->where('action', 'update')
                     ->where('new_values->status', 'approved')->latest('id')->value('user_id');
                 if ($approver && (int) $approver === (int) $request->user()->id) {
-                    throw \Illuminate\Validation\ValidationException::withMessages(['loan_id' => 'You approved this loan, so someone else must send the money.']);
+                    $exempt = config('lending.approvals.self_disburse_roles', []);
+                    if (! $exempt || ! $request->user()->hasAnyRole($exempt)) {
+                        throw \Illuminate\Validation\ValidationException::withMessages(['loan_id' => 'You approved this loan, so someone else must send the money.']);
+                    }
+                    \App\Services\AuditTrail::record('loans', $loan->id, 'update', null,
+                        ['event' => 'self_disbursed', 'amount' => (float) $validated['amount'], 'role' => $request->user()->primaryRole()]);
                 }
             }
             $cycle = $loan->getCurrentCycle();

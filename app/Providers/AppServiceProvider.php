@@ -33,6 +33,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // saved integration settings (/staff/integrations) over the .env ones, before anything reads them (owner, 3 Nov 2026)
+        \App\Support\Integrations::apply();
+
         // The loan modal (create and edit) works on any page that includes it: what it lists comes from here when
         // the page didn't pass it (owner, 23 Oct 2026: edit a loan from the loan page, new loan from the person page).
         \Illuminate\Support\Facades\View::composer('partials.modal.loans-create-modal', function ($view) {
@@ -134,6 +137,10 @@ class AppServiceProvider extends ServiceProvider
                 DB::afterCommit(fn () => $events->loan($loan->status, $loan));
             }
         });
+        // branded money emails (Services\MoneyEmails, NOTIFICATIONS_MONEY_EMAILS): money sent, each payment, paid in full
+        $money = app(\App\Services\MoneyEmails::class);
+        Disbursement::created(fn ($d) => DB::afterCommit(fn () => $money->disbursed($d)));
+        Repayment::created(fn ($r) => DB::afterCommit(fn () => $money->paid($r)));
         Disbursement::created(function ($d) use ($events) {
             if (\App\Services\CustomerEvents::enabled() && \App\Services\CustomerWallets::kindOf($d) === 'cash') {
                 DB::afterCommit(function () use ($d, $events) {

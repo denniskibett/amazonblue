@@ -28,7 +28,8 @@ class CustomerEvent extends Notification implements ShouldQueue
     {
         return array_values(array_filter([
             'database',
-            ! empty($notifiable->email) ? 'mail' : null,
+            // money events are emailed by Services\MoneyEmails (branded) while that is on
+            ! empty($notifiable->email) && ! (\App\Services\MoneyEmails::enabled() && in_array($this->event, \App\Services\MoneyEmails::EVENTS, true)) ? 'mail' : null,
             ! empty($notifiable->phone) ? SmsChannel::class : null,
         ]));
     }

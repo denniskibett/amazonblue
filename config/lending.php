@@ -136,6 +136,9 @@ return [
     // partner payouts need a second person with the same permission. Off = one person, as before.
     'approvals' => [
         'enabled' => (bool) env('LENDING_APPROVALS_ENABLED', false),
+        // roles that may disburse a loan they approved themselves (small team, owner, 3 Nov 2026); each use is
+        // audited as event self_disbursed. Empty the list to bring the rule back for everyone.
+        'self_disburse_roles' => array_filter(array_map('trim', explode(',', (string) env('LENDING_SELF_DISBURSE_ROLES', 'super-admin,admin')))),
     ],
 
     // Borrower and partner requests stored with a status (Stage 4 Phase 5). Off = email + audit row, as in Stage 2.
@@ -151,6 +154,9 @@ return [
     */
     'notifications' => [
         'enabled' => (bool) env('NOTIFICATIONS_ENABLED', false),
+        // branded emails for money sent, every payment and the loan paid in full, whatever 'enabled' says
+        // (owner, 3 Nov 2026); email only, no SMS. Services\MoneyEmails.
+        'money_emails' => (bool) env('NOTIFICATIONS_MONEY_EMAILS', true),
         // late-payment emails with the penalty breakdown (owner, 25 Oct 2026). With NOTIFICATIONS_ENABLED they go by email
         // and SMS; NOTIFICATIONS_OVERDUE_EMAILS=true sends just these emails even while the other notifications are off.
         'overdue_emails' => (bool) env('NOTIFICATIONS_OVERDUE_EMAILS', false),

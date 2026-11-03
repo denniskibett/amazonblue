@@ -59,9 +59,14 @@
     btn.type = 'button'; btn.setAttribute('aria-label', 'Actions'); btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false');
     const panel = make('div', 'hidden fixed z-[99999] min-w-44 rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900 [&>*]:flex [&>*]:w-full [&>*]:items-center [&>*]:gap-2 [&>*]:rounded-lg [&>*]:px-3 [&>*]:py-2 [&>*]:text-left [&>*]:text-theme-sm [&>*]:text-gray-700 hover:[&>*]:bg-gray-100 dark:[&>*]:text-gray-300 dark:hover:[&>*]:bg-white/5 [&_form]:m-0 [&_form>button]:w-full [&_form>button]:text-left');
     panel.setAttribute('role', 'menu');
+    // dialogs (Approve / Reject …) live outside the menu: inside it they showed as squashed forms, and closing the
+    // menu hid the dialog its own button had just opened (owner, 3 Nov 2026). Their buttons open them by id.
+    td.querySelectorAll('dialog').forEach(d => document.body.append(d));
     Array.from(td.childNodes).forEach(n => { if (n.nodeType === 1 || text(n)) panel.appendChild(n); });
     // inner wrappers (flex rows of buttons) are flattened so every action is one line in the menu
     panel.querySelectorAll(':scope > div:not([x-data])').forEach(d => { if (d.querySelector('a,button,form')) { while (d.firstChild) panel.insertBefore(d.firstChild, d); d.remove(); } });
+    // a button styled for the table (solid blue "Approve") reads grey-on-blue in the menu: menu rows look alike
+    panel.querySelectorAll(':scope > a, :scope > button').forEach(el => el.removeAttribute('class'));
     // icon-only links get their title written out, so the menu reads "View", "Edit", "Delete"
     panel.querySelectorAll('a, button').forEach(a => { if (!text(a) && (a.title || a.getAttribute('aria-label'))) a.append(make('span', '', a.title || a.getAttribute('aria-label'))); });
     btn.addEventListener('click', (e) => {
