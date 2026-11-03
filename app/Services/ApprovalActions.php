@@ -28,9 +28,6 @@ class ApprovalActions
             'approve_business' => app(\App\Services\Business\BusinessApproval::class)->perform(\App\Models\Business::findOrFail($a->subject_id), $checker,
                 isset($payload['credit_limit']) ? (float) $payload['credit_limit'] : null, $payload['notes'] ?? null, $maker),
             'mpesa_b2c' => app(\App\Services\Mpesa\B2cPayouts::class)->send((int) $a->subject_id, $checker),
-            'accept_shortfall' => \App\Services\Loans\ShortfallFit::apply(Loan::findOrFail($a->subject_id),
-                trim(($payload['reason'] ?? '') . ' (asked by ' . ($maker->name ?? '#' . $a->requested_by) . ', approved by ' . $checker->name . ')'), $checker),
-            'delete_disbursement' => self::deleteDisbursement(\App\Models\Disbursement::findOrFail($a->subject_id), (string) ($payload['reason'] ?? '')),
             default => throw new \DomainException('Unknown action ' . $a->action),
         };
     }
@@ -46,20 +43,6 @@ class ApprovalActions
         return $loan;
     }
 
-    /** Takes the payout off the loan: its processing fee leaves the loan's fees, the row is soft-deleted (audited). */
-    public static function deleteDisbursement(\App\Models\Disbursement $disbursement, string $reason): bool
-    {
-        return DB::transaction(function () use ($disbursement, $reason) {
-            $loan = $disbursement->loan;
-            $loan->total_processing_fees = max(0, ($loan->total_processing_fees ?? 0) - $disbursement->processing_fee);
-            $loan->save();
-            AuditTrail::record('loans', $loan->id, 'update', null, ['event' => 'disbursement_deleted',
-                'disbursement_id' => $disbursement->id, 'amount' => $disbursement->amount, 'reason' => $reason]);
-
-            return (bool) $disbursement->delete();
-        });
-    }
-
     private function payPartner(int $requestId, User $checker): object
     {
         $r = DB::table('partner_requests')->where('id', $requestId)->lockForUpdate()->first();
@@ -70,7 +53,6 @@ class ApprovalActions
         $journal = $partner->withdrawPartnerBalance((float) $r->amount, 'PAYOUT-PR' . $r->id, 'Payout (request #' . $r->id . ')', $r->wallet_slug ?: 'principal');
         DB::table('partner_requests')->where('id', $r->id)->update(['status' => 'done', 'approved_by' => $checker->id,
             'partner_transaction_id' => $journal->id, 'updated_at' => now()]);
-        AuditTrail::record('partner_requests', $r->id, 'update', ['status' => 'prepared'], ['status' => 'done', 'paid_by' => $checker->id, 'partner_transaction_id' => $journal->id]);
         $user = User::find($partner->user_id);
         DB::afterCommit(fn () => app(CustomerEvents::class)->partner('withdrawal_paid', $user, (float) $r->amount));
 

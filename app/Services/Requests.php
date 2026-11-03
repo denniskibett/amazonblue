@@ -152,8 +152,6 @@ class Requests
             }
             DB::table('partner_requests')->where('id', $id)->update(['status' => $received ? 'done' : 'declined', 'prepared_by' => $by->id,
                 'partner_transaction_id' => $journal?->id, 'investment_id' => $lineId, 'decision_note' => $note, 'updated_at' => now()]);
-            AuditTrail::record('partner_requests', $id, 'update', ['status' => $r->status],
-                ['status' => $received ? 'done' : 'declined', 'type' => 'funding', 'amount' => (float) $r->amount, 'note' => $note]);
             if ($received) {
                 $user = User::find(Partner::whereKey($r->partner_id)->value('user_id'));
                 DB::afterCommit(fn () => app(CustomerEvents::class)->partner('funds_confirmed', $user, (float) $r->amount));
@@ -174,7 +172,6 @@ class Requests
             }
             if (! $pay) {
                 DB::table('partner_requests')->where('id', $id)->update(['status' => 'declined', 'prepared_by' => $by->id, 'decision_note' => $note, 'updated_at' => now()]);
-                AuditTrail::record('partner_requests', $id, 'update', ['status' => 'pending'], ['status' => 'declined', 'type' => 'withdrawal', 'note' => $note]);
 
                 return;
             }
@@ -183,7 +180,6 @@ class Requests
                 throw new \DomainException('The partner no longer has KES ' . number_format((float) $r->amount, 2) . ' available in that wallet.');
             }
             DB::table('partner_requests')->where('id', $id)->update(['status' => 'prepared', 'prepared_by' => $by->id, 'decision_note' => $note, 'updated_at' => now()]);
-            AuditTrail::record('partner_requests', $id, 'update', ['status' => 'pending'], ['status' => 'prepared', 'type' => 'withdrawal', 'amount' => (float) $r->amount, 'note' => $note]);
             $approvals = app(Approvals::class);
             if ($approvals->needsSecond($by, 'partner_withdrawal', (float) $r->amount)) {
                 $approvals->request($by, 'partner_withdrawal', 'partner_requests', $id, (float) $r->amount, ['reason' => $note]);

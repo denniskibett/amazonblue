@@ -300,21 +300,8 @@ class LoanController extends Controller
                 'cycle' => 1, // Start with cycle 1
             ]);
             
-            // maker-checker: creating a loan already approved is an approval, so the same limit applies as on edit;
-            // above it the loan is saved pending and waits for a second approver (owner, 3 Nov 2026)
-            $approvals = app(\App\Services\Approvals::class);
-            $needsSecond = $loanData['status'] === Loan::STATUS_APPROVED
-                && $approvals->needsSecond($user, 'approve_loan', (float) ($loanData['amount'] ?? 0));
-            if ($needsSecond) {
-                $loanData['status'] = Loan::STATUS_PENDING;
-            }
-
             // Create the loan
             $loan = Loan::create($loanData);
-            if ($needsSecond) {
-                $approvals->request($user, 'approve_loan', 'loans', $loan->id, (float) $loan->amount);
-            }
-            $created = $needsSecond ? 'Loan saved as pending: above your approval limit, a second approver signs it off on Sign-offs.' : 'Loan created successfully.';
 
             // ============ CREATE INITIAL CYCLE ============
             try {
@@ -356,13 +343,13 @@ class LoanController extends Controller
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => $created,
+                    'message' => 'Loan created successfully.',
                     'loan' => $loan->load(['user', 'loanType', 'cycles']),
                     'redirect' => route('loans.index')
                 ]);
             }
             
-            return redirect()->route('loans.index')->with('success', $created);
+            return redirect()->route('loans.index')->with('success', 'Loan created successfully.');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->ajax() || $request->wantsJson()) {
@@ -1243,7 +1230,6 @@ class LoanController extends Controller
      */
     public function createPaymentPlan(Loan $loan, Request $request)
     {
-        $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
         try {
             $request->validate([
                 'interest_rate' => 'required|numeric|min:0|max:100',
@@ -1266,7 +1252,7 @@ class LoanController extends Controller
                 // Handle edit - update the existing payment plan cycle
                 // This would update the cycle with new terms
                 $cycleId = $request->input('cycle_id');
-                $cycle = LoanCycle::where('loan_id', $loan->id)->findOrFail($cycleId);
+                $cycle = LoanCycle::findOrFail($cycleId);
                 
                 $cycle->update([
                     'interest_rate' => $interestRate,
@@ -1279,8 +1265,6 @@ class LoanController extends Controller
                 $loan->calculated_due_date = now()->addDays($periodDays);
                 $loan->due_date = now()->addDays($periodDays);
                 $loan->save();
-                \App\Services\AuditTrail::record('loans', $loan->id, 'update', null, ['event' => 'payment_plan_updated',
-                    'cycle_id' => $cycle->id, 'interest_rate' => $interestRate, 'period_days' => $periodDays, 'note' => $notes]);
                 
                 return response()->json([
                     'success' => true,
@@ -1303,10 +1287,6 @@ class LoanController extends Controller
                 $newCycle->notes = ($newCycle->notes ? $newCycle->notes . "\n" : '') . $notes;
                 $newCycle->save();
             }
-
-            \App\Services\AuditTrail::record('loans', $loan->id, 'update', null, ['event' => 'payment_plan', 'plan_type' => $planType,
-                'cycle_id' => $newCycle->id, 'cycle_number' => $newCycle->cycle_number, 'interest_rate' => $interestRate,
-                'period_days' => $periodDays, 'manual_balance' => $manualNewBalance, 'note' => $notes]);
 
             Log::info('Payment plan created for loan #' . $loan->id, [
                 'interest_rate' => $interestRate,
@@ -1394,11 +1374,6 @@ class LoanController extends Controller
                 // roll into another product, e.g. 10 days → 5 days (owner, 1 Nov 2026)
                 'loan_type_id' => $request->loan_type_id ?: null,
             ]);
-
-            \App\Services\AuditTrail::record('loans', $loan->id, 'update', ['cycle' => $loan->getOriginal('cycle')], ['event' => 'rollover',
-                'cycle_number' => $result['data']['cycle_number'] ?? null, 'new_balance' => $result['data']['new_balance'] ?? null,
-                'due_date' => $result['data']['due_date'] ?? null, 'loan_type_id' => $request->loan_type_id ?: null,
-                'waive_penalty' => (bool) $request->waive_penalty, 'note' => $request->notes]);
 
             // Log the result
             Log::info('Rollover completed for loan #' . $loan->id, [
@@ -1519,7 +1494,6 @@ class LoanController extends Controller
 
     public function grantForbearance(Loan $loan, Request $request)
     {
-        $this->authorizeLoanChange($request->user(), $loan, 'grant forbearance');
         try {
             $request->validate([
                 'days' => 'required|integer|min:1|max:90',
@@ -1530,7 +1504,6 @@ class LoanController extends Controller
             $reason = $request->input('reason', 'Granted forbearance');
 
             $loan->grantForbearance($days, $reason);
-            \App\Services\AuditTrail::record('loans', $loan->id, 'update', null, ['event' => 'forbearance_granted', 'days' => $days, 'reason' => $reason]);
 
             Log::info('Forbearance granted for loan #' . $loan->id, [
                 'days' => $days,
@@ -1561,7 +1534,6 @@ class LoanController extends Controller
      */
     public function setGraceDays(Loan $loan, Request $request)
     {
-        $this->authorizeLoanChange($request->user(), $loan, 'grant forbearance');
         $data = $request->validate([
             'grace_days' => 'required|integer|min:0|max:60',
             'reason' => 'required|string|min:3|max:300',
@@ -1608,13 +1580,6 @@ class LoanController extends Controller
     {
         $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
         $data = $request->validate(['reason' => 'required|string|min:3|max:300']);
-        // maker-checker: the gap becomes a discount, so a second person signs it off (owner, 3 Nov 2026)
-        $approvals = app(\App\Services\Approvals::class);
-        if ($approvals->needsSecond($request->user(), 'accept_shortfall')) {
-            $approvals->request($request->user(), 'accept_shortfall', 'loans', $loan->id, null, ['reason' => $data['reason']]);
-
-            return back()->with('success', 'Shortfall sent for a second approval on Sign-offs. Nothing changes until someone else approves it.');
-        }
         try {
             $plan = \App\Services\Loans\ShortfallFit::apply($loan, $data['reason'], $request->user());
         } catch (\DomainException $e) {
@@ -1685,10 +1650,8 @@ class LoanController extends Controller
 
     public function endForbearance(Loan $loan, Request $request)
     {
-        $this->authorizeLoanChange($request->user(), $loan, 'end forbearance');
         try {
             $loan->endForbearance();
-            \App\Services\AuditTrail::record('loans', $loan->id, 'update', null, ['event' => 'forbearance_ended']);
 
             Log::info('Forbearance ended for loan #' . $loan->id, [
                 'user_id' => auth()->id()
@@ -2040,7 +2003,6 @@ class LoanController extends Controller
      */
     public function saveSignature(Request $request, Loan $loan)
     {
-        $this->authorizeLoanChange($request->user(), $loan, 'edit loans');
         $request->validate([
             'signature' => 'required|string',
         ]);

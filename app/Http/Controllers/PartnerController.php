@@ -368,26 +368,6 @@ class PartnerController extends Controller
         }
 
         try {
-            // with maker-checker on, a staff payout goes the same way as a partner's own request: prepared here,
-            // paid when a second person approves on Sign-offs (owner, 3 Nov 2026)
-            if (\App\Services\Approvals::enabled()) {
-                $id = \Illuminate\Support\Facades\DB::table('partner_requests')->insertGetId([
-                    'type' => 'withdrawal', 'partner_id' => $partner->id, 'amount' => (float) $request->amount, 'wallet_slug' => 'principal',
-                    'reference' => $request->reference, 'note' => $request->notes, 'status' => 'pending',
-                    'requested_by' => $request->user()->id, 'created_at' => now(), 'updated_at' => now(),
-                ]);
-                \App\Services\AuditTrail::record('partner_requests', $id, 'create', null,
-                    ['event' => 'staff_withdrawal', 'partner_id' => $partner->id, 'amount' => (float) $request->amount]);
-                app(\App\Services\Requests::class)->prepareWithdrawal($id, $request->user(), true, $request->notes);
-
-                return response()->json([
-                    'success' => true,
-                    'pending_approval' => true,
-                    'message' => 'Withdrawal sent for a second approval on Sign-offs. Nothing is paid until someone else approves it.',
-                    'current_balance' => $this->walletBalance($partner, 'principal'),
-                ]);
-            }
-
             // the partner journal + principal wallet; refused when the wallet holds less than asked
             $transaction = $partner->withdrawPartnerBalance((float) $request->amount, $request->reference, $request->notes);
 

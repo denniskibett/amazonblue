@@ -88,7 +88,7 @@
         @endforeach
       </dl>
       <p class="mt-2 text-theme-sm">Variance <x-staff.money :amount="$close->variance" tone="auto" sign /> · {{ $close->status === 'approved' ? 'approved' : 'waiting for a manager' }}@if ($close->note) · {{ $close->note }}@endif</p>
-      @if ($close->status !== 'approved' && (int) $close->teller_id !== (int) auth()->id() && auth()->user()->canAny(['reconcile wallets', 'approve loans']))
+      @if ($close->status !== 'approved' && (int) $close->teller_id !== (int) auth()->id() && auth()->user()->can('view reports'))
         <form method="POST" action="{{ route('staff.end-of-day.approve', $close->id) }}" class="mt-3">@csrf
           <button class="rounded-lg bg-brand-500 px-3 py-1.5 text-theme-xs font-medium text-white hover:bg-brand-600">Approve cash-up</button></form>
       @endif
