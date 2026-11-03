@@ -262,6 +262,7 @@ class HomeController extends Controller
                 'name' => $product->name,
                 'rate' => (float) $product->interest_rate,
                 'penalty_rate' => (float) $product->penalty_rate,
+                'grace_days' => (int) ($product->grace_period_days ?? 0),
                 'period' => $product->period . ' ' . $product->unit,
                 'due_date' => $eligibility->quote(1)['due_date'],
                 'min' => (int) config('lending.min_amount'),

@@ -137,6 +137,28 @@
               <span class="cal"><b>{{ $product['due_date']->format('j') }}</b>{{ strtoupper($product['due_date']->format('M')) }}</span>
               <span><b>One payment of <span x-text="fmt((amount || 0) + interest)"></span></b><small>Due {{ $product['due_date']->format('j M Y') }} if sent today; the date is set when the money is sent. Paying late adds a {{ $penalty }}% penalty.</small></span>
             </div>
+            {{-- the repayment plan, step by step, even for one payment (owner, 3 Nov 2026); the late rules are the engine's:
+                 a daily penalty on unpaid principal + interest after any grace days, never above the principal --}}
+            @php
+              $grace = (int) ($product['grace_days'] ?? 0); $lateFrom = $product['due_date']->copy()->addDays($grace + 1);
+              $s0 = (float) $start; $i0 = round($s0 * $rate / 100, 2); $pen0 = round(($s0 + $i0) * (float) ($product['penalty_rate'] ?? 0) / 100, 2);
+            @endphp
+            <div class="a-sec-h" style="margin-top:18px"><h2>Your repayment plan</h2></div>
+            <ol class="a-timeline" style="margin-top:8px">
+              <li class="done"><span class="dot">1</span><div><b>Money sent to your M-Pesa <small>· the day it is approved</small></b><span>You receive <span x-text="fmt(amount)">{{ $kes($s0) }}</span>. Nothing is taken off it.</span></div></li>
+              <li class="current"><span class="dot">2</span><div><b>Repay in full <small>· {{ $product['due_date']->format('j M Y') }}</small></b>
+                <span><span x-text="fmt(amount)">{{ $kes($s0) }}</span> borrowed + <span x-text="fmt(interest)">{{ $kes($i0) }}</span> interest ({{ $rate }}% flat) = <b x-text="fmt((amount || 0) + interest)">{{ $kes($s0 + $i0) }}</b>. Paying early costs the same; you can pay in parts before this date.</span></div></li>
+              @if ($grace > 0)
+                <li><span class="dot">3</span><div><b>Grace {{ $grace }} {{ \Illuminate\Support\Str::plural('day', $grace) }} <small>· to {{ $product['due_date']->copy()->addDays($grace)->format('j M') }}</small></b><span>No penalty yet if you are a little late.</span></div></li>
+              @endif
+              <li class="red"><span class="dot">{{ $grace > 0 ? 4 : 3 }}</span><div><b>If it is late <small>· from {{ $lateFrom->format('j M Y') }}</small></b>
+                <span>A penalty of {{ $penalty }}% of what is unpaid is added each day: about <span x-text="fmt(((amount || 0) + interest) * {{ (float) ($product['penalty_rate'] ?? 0) }} / 100)">{{ $kes($pen0) }}</span> a day on the full amount.@if (config('lending.penalty.cap') === 'in_duplum') It stops once it reaches <span x-text="fmt(amount)">{{ $kes($s0) }}</span>, the amount you borrowed.@endif</span></div></li>
+            </ol>
+            <dl class="a-dl" style="margin-top:6px">
+              <div><dt>Payments</dt><dd>1, on {{ $product['due_date']->format('j M Y') }}</dd></div>
+              <div><dt>Total if paid on time</dt><dd x-text="fmt((amount || 0) + interest)">{{ $kes($s0 + $i0) }}</dd></div>
+              @if (config('lending.penalty.cap') === 'in_duplum')<div><dt>Most it can cost if never paid</dt><dd x-text="fmt((amount || 0) * 2 + interest)">{{ $kes($s0 * 2 + $i0) }}</dd></div>@endif
+            </dl>
             <p class="muted" style="font-size:12.5px;margin-top:10px">This is the offer for your application. Our team reviews it before the money is sent.</p>
             <div class="bj-nav"><button type="button" class="btn btn-ghost" @click="go(3)">Back</button><button type="button" class="btn btn-primary" @click="go(5)">Accept and sign</button></div>
           </section>
