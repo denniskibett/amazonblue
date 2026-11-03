@@ -323,8 +323,9 @@ class PageMetrics
         $earned = (float) DB::table('partner_transactions')->whereIn('type', ['broker_fee_earned', 'penalty_share', 'profit_distribution', 'interest'])->sum('amount');
 
         return [
-            $this->card('Partners', self::n(DB::table('partners')->where('is_house_account', 0)->count()), 'briefcase', 'investors and brokers'),
-            $this->card('Brokers', self::n(DB::table('partners')->where('broker_rate', '>', 0)->count()), 'users', 'earn a share of loans'),
+            $this->card('Partners', self::n(DB::table('partners')->where('is_house_account', 0)->count()), 'briefcase', 'long-term and short-term'),
+            // short-term partners (was "brokers", 3 Nov 2026): partners with introducer terms
+            $this->card('Short-term partners', self::n(DB::table('partners as p')->join('brokers as b', 'b.user_id', '=', 'p.user_id')->distinct()->count('p.id')), 'users', 'introduce borrowers'),
             $this->card('Earned by partners', self::kes($earned), 'coins', 'interest and penalty shares'),
             $this->card('Withdrawals waiting', self::n(Schema::hasTable('partner_requests') ? DB::table('partner_requests')->where('type', 'withdrawal')->whereIn('status', ['pending', 'prepared'])->count() : 0), 'send', 'asked by partners'),
         ];

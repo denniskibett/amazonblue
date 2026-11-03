@@ -329,6 +329,7 @@
           selected: $persist('{{ ucfirst(request()->segment(1) ?? 'Dashboard') }}')
       }"
       x-init="$watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+      x-on:az:close-sidebar="sidebarToggle = false"
       :class="{'dark bg-gray-900': darkMode}">
 @include('partials.ui.preview-bar')
 
@@ -359,6 +360,9 @@
 @include('partials.ui.datatable')
 @include('partials.ui.swap')
 @include('partials.ui.user-panel')
+{{-- the page's own scripts sit between these two markers, so a sidebar swap can run the next page's (partials.ui.swap) --}}
+<script type="text/x-az-page-scripts" data-start></script>
 @stack('scripts')
+<script type="text/x-az-page-scripts" data-end></script>
 </body>
 </html>

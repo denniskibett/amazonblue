@@ -5,6 +5,9 @@
        comes back to this same page only the content area is swapped and its message shows as a toast.
        If the server sends you to another page, the browser simply goes there.
      - Links to other pages start loading as soon as the pointer rests on them (speculation rules), so they open fast.
+     - Sidebar links (owner, 3 Nov 2026) open the next page the same way: only the content area, the menu and the title
+       change, and that page's own scripts (@push('scripts')) run once. A page that needs a script file or stylesheet
+       this one hasn't loaded, or isn't a staff page, loads in full instead.
      Opt out with data-no-swap on a link or form. Downloads and new tabs are never touched.
      - Deletes (owner, 1 Nov 2026): when the server answers a delete with another page (e.g. the list), you stay where
        you are; this page is refreshed in the background and the server's message shows as a notification. Only when
@@ -43,7 +46,7 @@
 
   // scripts inside the new content run again; code waiting for "page ready" (DOMContentLoaded / alpine:init)
   // runs straight away, because that moment has already passed
-  function runScripts(root) {
+  function runScripts(root, list) {
     const add = document.addEventListener, addW = window.addEventListener;
     // alpine:init runs straight away (synchronously), so components the new content registers with Alpine.data()
     // exist before Alpine starts the new content; with a delay they were missing and modals stopped opening
@@ -52,6 +55,17 @@
     document.addEventListener = function (type, fn, ...rest) { if (now(type, fn) === null) return add.call(document, type, fn, ...rest); };
     window.addEventListener = function (type, fn, ...rest) { if (type === 'load' ? (setTimeout(fn, 0), true) : now(type, fn) !== null) return; return addW.call(window, type, fn, ...rest); };
     try {
+      if (list) {
+        // another page's own scripts: run once, in a block so a second visit can't trip over const/let already declared
+        list.forEach((old) => {
+          const s = document.createElement('script');
+          const text = old.textContent;
+          s.textContent = /['"]use strict['"]/.test(text) ? text : '{\n' + text + '\n}';
+          s.setAttribute('data-az-page', '');
+          root.appendChild(s);
+        });
+        return;
+      }
       root.querySelectorAll('script').forEach((old) => {
         if (old.type && !/javascript|module/.test(old.type)) return;
         const s = document.createElement('script');
@@ -62,15 +76,43 @@
     } finally { document.addEventListener = add; window.addEventListener = addW; }
   }
 
-  function apply(html, url, push) {
+  // the page's own scripts: between the two markers the layout puts around the pushed scripts stack
+  function pageScripts(doc) {
+    const start = doc.querySelector('script[type="text/x-az-page-scripts"][data-start]');
+    const out = [];
+    for (let n = start && start.nextElementSibling; n && !n.matches('script[type="text/x-az-page-scripts"][data-end]'); n = n.nextElementSibling) {
+      if (n.tagName === 'SCRIPT' && (!n.type || /javascript|module/.test(n.type)) && !n.src) out.push(n);
+      else n.querySelectorAll && n.querySelectorAll('script:not([src])').forEach(x => out.push(x));
+    }
+    return out;
+  }
+  // a different page can be swapped in only if it is a staff page that needs no file this one hasn't loaded
+  function swappable(doc) {
+    if (!doc.querySelector('aside.sidebar') || !doc.querySelector('script[type="text/x-az-page-scripts"][data-start]')) return false;
+    const have = new Set(Array.from(document.querySelectorAll('script[src], link[rel="stylesheet"]')).map(e => (e.src || e.href).split('?')[0]));
+    const needs = Array.from(doc.querySelectorAll('script[src], link[rel="stylesheet"]'))
+      .map(e => new URL(e.getAttribute('src') || e.getAttribute('href'), location.href).href.split('?')[0]);
+    const missing = needs.filter(u => !have.has(u));
+    if (missing.length) console.info('loading in full: this page needs', missing);
+    return missing.length === 0;
+  }
+
+  function apply(html, url, push, cross) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const fresh = doc.querySelector('main');
     if (!fresh || !main()) return false;
+    if (cross && !swappable(doc)) return false;
     main().innerHTML = fresh.innerHTML;
     // the sidebar counts change after most actions (approved, sent, reviewed)
     const nav = document.querySelector('aside.sidebar nav'), nav2 = doc.querySelector('aside.sidebar nav');
     if (nav && nav2) nav.replaceWith(nav2);
     if (doc.title) document.title = doc.title;
+    if (cross) {
+      document.querySelectorAll('script[data-az-page]').forEach(x => x.remove());
+      runScripts(document.body, pageScripts(doc));
+      const scroller = main().parentElement; if (scroller) scroller.scrollTop = 0;
+      window.dispatchEvent(new CustomEvent('az:navigated', {detail: {url}}));
+    }
     runScripts(main());
     try {
       const flash = JSON.parse((doc.getElementById('az-flash') || {}).textContent || '[]');
@@ -82,6 +124,9 @@
     return true;
   }
 
+  // a full load, with the reason kept for anyone checking why a click did not swap (sessionStorage azLastFull)
+  const full = (href, why) => { try { sessionStorage.setItem('azLastFull', why + ' ' + href); } catch (e) {} location.assign(href); };
+
   async function load(url, opts = {}, push = 'push') {
     if (controller) controller.abort();
     controller = new AbortController();
@@ -90,23 +135,23 @@
       const res = await fetch(url, Object.assign({credentials: 'same-origin', signal: controller.signal, headers: {'X-Requested-With': 'AzSwap', 'Accept': 'text/html'}}, opts));
       const type = res.headers.get('content-type') || '';
       const final = new URL(res.url || url, location.href);
-      if (res.redirected && final.pathname.startsWith('/login')) { location.assign(final.href); return; }
+      if (res.redirected && final.pathname.startsWith('/login')) { full(final.href, 'load-1'); return; }
       if (!type.includes('text/html') || res.status === 419) {                   // a file, JSON or an expired session
-        if (opts.method === 'POST') location.reload(); else location.assign(final.href);
+        if (opts.method === 'POST') location.reload(); else full(final.href, 'load-2');
         return;
       }
       if (!samePage(final) && opts.stay) {                                        // a delete: stay here, refresh, notify
         const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
         const here = await fetch(location.href, {credentials: 'same-origin', headers: {'X-Requested-With': 'AzSwap', 'Accept': 'text/html'}});
-        if (!here.ok || here.redirected || !apply(await here.text(), location.href, 'none')) { location.assign(final.href); return; }
+        if (!here.ok || here.redirected || !apply(await here.text(), location.href, 'none')) { full(final.href, 'load-3'); return; }
         try { JSON.parse((doc.getElementById('az-flash') || {}).textContent || '[]').forEach(t => window.dispatchEvent(new CustomEvent('toast', {detail: t}))); } catch (e) {}
         return;
       }
-      if (!samePage(final)) { location.assign(final.href); return; }            // the server moved us on: go there
+      if (!samePage(final) && !opts.cross) { full(final.href, 'load-4'); return; }   // the server moved us on: go there
       const html = await res.text();
-      if (!apply(html, final.href, opts.method === 'POST' ? 'replace' : push)) location.assign(final.href);
+      if (!apply(html, final.href, opts.method === 'POST' ? 'replace' : push, opts.cross && !samePage(final))) full(final.href, 'load-5');
     } catch (e) {
-      if (e.name !== 'AbortError') location.assign(typeof url === 'string' ? url : url.href);
+      if (e.name !== 'AbortError') { console.warn('in-place load failed, loading in full', e); full(typeof url === 'string' ? url : url.href, 'load-6'); }
     } finally { progress(false); }
   }
   window.azSwap = {load, apply};
@@ -211,6 +256,19 @@
     load(url.href);
   });
 
+  // sidebar: open the next staff page in place. Capture phase, so no other click handler on the page gets there first.
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest && e.target.closest('aside.sidebar nav a[href]');
+    if (!a || a.closest('[data-no-swap]') || a.target || a.hasAttribute('download')) return;
+    const url = new URL(a.href, location.href);
+    if (url.origin !== location.origin || /logout|preview|export|download|\.csv|\.pdf/i.test(url.pathname + url.search)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.innerWidth < 1024) document.body.dispatchEvent(new CustomEvent('az:close-sidebar'));
+    load(url.href, {cross: true});
+  }, true);
+
   document.addEventListener('submit', (e) => {
     if (e.defaultPrevented) return;
     const form = e.target;
@@ -232,6 +290,7 @@
     load(action.href, {method: 'POST', body: data, stay: String(data.get('_method') || '').toUpperCase() === 'DELETE'});
   });
 
-  window.addEventListener('popstate', (e) => { if (e.state && e.state.az) load(location.href, {}, 'none'); });
+  if (!history.state) history.replaceState({az: 1}, '', location.href);   // so Back to the first page swaps too
+  window.addEventListener('popstate', (e) => { if (e.state && e.state.az) load(location.href, {cross: true}, 'none'); });
 })();
 </script>
