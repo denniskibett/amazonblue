@@ -68,20 +68,20 @@
     $loanStatus = $caseLoanRow->status ?? null;
     $phone = $caseUser->phone ?? null;
     $wa = $phone ? 'https://wa.me/' . preg_replace('/^0/', '254', preg_replace('/\D/', '', $phone)) : null;
-    $actions = $caseData->actions->sortByDesc('action_date');
+    $caseActions = $caseData->actions->sortByDesc('action_date');
     $forbearanceUntil = $caseLoanRow->forbearance_until ?? null;
 @endphp
 <div x-data="caseShow({{ \Illuminate\Support\Js::from($caseJs) }})">
-    @include('staff.desk._header', ['title' => $caseData->case_number . ' · ' . ($caseUser->name ?? 'Borrower'), 'metrics' => false,
-        'sub' => 'Opened ' . optional($caseData->created_at)->format('j M Y') . ($caseData->assignedTo ? ' · with ' . $caseData->assignedTo->name : ' · not assigned') . ($caseLoanRow ? ' · loan #' . str_pad($caseData->loan_id, 5, '0', STR_PAD_LEFT) : ''),
-        'actions' => '<button type="button" @click="openEditCase()" class="inline-flex h-11 items-center rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300">Edit case</button>'
-            . '<button type="button" @click="openAddActionModal()" class="inline-flex h-11 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white">+ Log an action</button>'])
-
-    <div class="mb-6 flex flex-wrap items-center gap-2">
-        <x-staff.pill :tone="str_contains(strtolower($statusName), 'recover') || str_contains(strtolower($statusName), 'clos') ? 'green' : 'blue'">{{ $statusName }}</x-staff.pill>
+    {{-- one header row: case, borrower, status and the breadcrumb (owner, 4 Nov 2026) --}}
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 class="font-outfit text-xl font-semibold text-gray-800 dark:text-white/90">{{ $caseData->case_number }} · {{ $caseUser->name ?? 'Borrower' }}</h1>
+            <span class="text-theme-sm text-gray-500">Opened {{ optional($caseData->created_at)->format('j M Y') }} · {{ $caseData->assignedTo ? 'with ' . $caseData->assignedTo->name : 'not assigned' }}</span>
+            <x-staff.pill :tone="str_contains(strtolower($statusName), 'recover') || str_contains(strtolower($statusName), 'clos') ? 'green' : 'blue'">{{ $statusName }}</x-staff.pill>
         @if ($priorityName)<x-staff.pill :tone="in_array(strtolower($priorityName), ['high', 'urgent', 'critical'], true) ? 'red' : 'gray'">{{ $priorityName }} priority</x-staff.pill>@endif
         @if ($loanStatus)<x-staff.pill :tone="$loanStatus === 'forbearance' ? 'amber' : (in_array($loanStatus, ['defaulted', 'recovery', 'written_off'], true) ? 'red' : 'gray')">Loan {{ str_replace('_', ' ', $loanStatus) }}{{ $loanStatus === 'forbearance' && $forbearanceUntil ? (\Illuminate\Support\Carbon::parse($forbearanceUntil)->year >= 2035 ? ', open-ended' : ' until ' . \Illuminate\Support\Carbon::parse($forbearanceUntil)->format('j M Y')) : '' }}</x-staff.pill>@endif
         @if ($caseLoanRow?->is_non_performing)<x-staff.pill tone="red">Non-performing</x-staff.pill>@endif
+        </div>
     </div>
 
     <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -95,19 +95,23 @@
         @endforeach
     </div>
 
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div class="space-y-6 xl:col-span-2">
+    <div>
+        <div>
             {{-- the case's follow-up in one tabline (owner, 4 Nov 2026) --}}
             @php
-                $promises = $actions->filter(fn ($a) => $a->promised_amount > 0);
-                $followUps = $actions->filter(fn ($a) => $a->follow_up_date)->sortBy('follow_up_date');
+                $promises = $caseActions->filter(fn ($a) => $a->promised_amount > 0);
+                $followUps = $caseActions->filter(fn ($a) => $a->follow_up_date)->sortBy('follow_up_date');
                 $plans = collect($caseJs['payment_plans']);
                 $hasNotes = $caseData->recovery_strategy || $caseData->getAttribute('notes');
             @endphp
-            <x-staff.tabs :tabs="['activity' => ['Activity', $actions->count()], 'promises' => ['Promises', $promises->count()], 'followups' => ['Follow-ups', $followUps->count()], 'plan' => ['Payment plan', $plans->count()], 'notes' => 'Notes']">
+            <x-staff.tabs :tabs="['activity' => ['Activity', $caseActions->count()], 'promises' => ['Promises', $promises->count()], 'followups' => ['Follow-ups', $followUps->count()], 'plan' => ['Payment plan', $plans->count()], 'who' => 'Borrower and loan', 'notes' => 'Notes', 'close' => 'Close']">
+                <x-slot:tools>
+                    <button type="button" @click="openEditCase()" class="inline-flex h-10 items-center whitespace-nowrap rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300">Edit case</button>
+                    <button type="button" @click="openAddActionModal()" class="inline-flex h-10 items-center whitespace-nowrap rounded-lg bg-brand-500 px-4 text-sm font-medium text-white">+ Log an action</button>
+                </x-slot:tools>
                 <x-staff.tab name="activity">
                     <div class="p-5 sm:p-6">
-                @forelse ($actions as $a)
+                @forelse ($caseActions as $a)
                     <div class="flex gap-4 border-t border-gray-100 py-4 first:border-t-0 first:pt-0 dark:border-gray-800">
                         <span class="mt-1 size-2.5 shrink-0 rounded-full {{ $a->amount_collected > 0 ? 'bg-success-500' : ($a->promised_amount > 0 ? 'bg-orange-400' : 'bg-brand-500') }}"></span>
                         <div class="min-w-0 flex-1">
@@ -173,18 +177,9 @@
                         @endforelse
                     </div>
                 </x-staff.tab>
-                <x-staff.tab name="notes">
-                    <div class="p-5 sm:p-6 text-theme-sm text-gray-700 dark:text-gray-300">
-                        @if ($caseData->recovery_strategy)<p><span class="font-medium">Strategy:</span> {{ $caseData->recovery_strategy }}</p>@endif
-                        @if ($caseData->getAttribute('notes'))<p class="mt-1">{{ $caseData->getAttribute('notes') }}</p>@endif
-                        @unless ($hasNotes)<p class="py-6 text-center text-gray-500">No notes. Add them with Edit case.</p>@endunless
-                    </div>
-                </x-staff.tab>
-            </x-staff.tabs>
-        </div>
-
-        <div class="space-y-6">
-            <div class="{{ $card }}">
+                <x-staff.tab name="who">
+                    <div class="grid grid-cols-1 gap-8 p-5 sm:p-6 lg:grid-cols-2">
+            <div>
                 <div class="flex items-center gap-3">
                     <span class="flex size-12 items-center justify-center rounded-full bg-brand-50 font-semibold text-brand-600 dark:bg-brand-500/15">{{ $caseJs['user_initials'] }}</span>
                     <div class="min-w-0"><p class="truncate font-semibold text-gray-800 dark:text-white/90">{{ $caseUser->name ?? '—' }}</p><p class="truncate text-theme-sm text-gray-500">{{ $phone ?? 'no phone' }}</p></div>
@@ -201,7 +196,7 @@
             </div>
 
             @if ($caseLoanRow)
-                <div class="{{ $card }}">
+                <div>
                     <h3 class="mb-3 font-semibold text-gray-800 dark:text-white/90">Loan #{{ str_pad($caseData->loan_id, 5, '0', STR_PAD_LEFT) }}</h3>
                     <dl class="space-y-2.5">
                         <div class="flex justify-between gap-3"><dt class="{{ $dt }}">Product</dt><dd class="{{ $dd }} text-right">{{ $caseLoanRow->loanType->name ?? '—' }}</dd></div>
@@ -213,14 +208,27 @@
                 </div>
             @endif
 
-            <div class="{{ $card }}">
-                <h3 class="mb-3 font-semibold text-gray-800 dark:text-white/90">Close the case</h3>
-                <div class="space-y-2">
-                    <button type="button" @click="markAsRecovered()" class="inline-flex h-10 w-full items-center justify-center rounded-lg border border-success-500 text-sm font-medium text-success-600 hover:bg-success-50">Mark as recovered</button>
-                    <button type="button" @click="openWriteOffModal()" class="inline-flex h-10 w-full items-center justify-center rounded-lg text-sm font-medium text-error-600 hover:bg-error-50">Write off…</button>
-                </div>
-            </div>
+                    </div>
+                </x-staff.tab>
+                <x-staff.tab name="close">
+                    <div class="max-w-xl p-5 sm:p-6">
+                        <p class="text-theme-sm text-gray-600 dark:text-gray-400">Close the case when the borrower has paid in full, or write off what can't be recovered. A write-off needs a reason and is in the audit log.</p>
+                        <div class="mt-4 flex flex-wrap gap-3">
+                            <button type="button" @click="markAsRecovered()" class="inline-flex h-10 items-center rounded-lg border border-success-500 px-4 text-sm font-medium text-success-600 hover:bg-success-50">Mark as recovered</button>
+                            <button type="button" @click="openWriteOffModal()" class="inline-flex h-10 items-center rounded-lg border border-error-500 px-4 text-sm font-medium text-error-600 hover:bg-error-50">Write off…</button>
+                        </div>
+                    </div>
+                </x-staff.tab>
+                <x-staff.tab name="notes">
+                    <div class="p-5 sm:p-6 text-theme-sm text-gray-700 dark:text-gray-300">
+                        @if ($caseData->recovery_strategy)<p><span class="font-medium">Strategy:</span> {{ $caseData->recovery_strategy }}</p>@endif
+                        @if ($caseData->getAttribute('notes'))<p class="mt-1">{{ $caseData->getAttribute('notes') }}</p>@endif
+                        @unless ($hasNotes)<p class="py-6 text-center text-gray-500">No notes. Add them with Edit case.</p>@endunless
+                    </div>
+                </x-staff.tab>
+            </x-staff.tabs>
         </div>
+
     </div>
 </div>
 
