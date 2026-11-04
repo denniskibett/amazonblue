@@ -1,6 +1,6 @@
 # AIMZONE design file (imported 3 Nov 2026)
 
-A copy of the design canvas "AIMZONE Ventures Logos" (claude.ai/artifact/2JAjByGcGyBxbALNTnFMX9, version 1793811657-43a5): 287 artboards. It is the reference for how every screen should look. The app's tokens in `resources/design/tokens.cjs` already use its colours and fonts.
+A copy of the design canvas "AIMZONE Ventures Logos" (claude.ai/artifact/2JAjByGcGyBxbALNTnFMX9, version 1793812847-4dbb): 301 artboards. It is the reference for how every screen should look. The app's tokens in `resources/design/tokens.cjs` already use its colours and fonts.
 
 Each `.dc.html` file is one artboard: the markup is in `<x-dc>`, its data in the `<script type="text/x-dc">` block. `canvas.json` is the index (positions, titles, pages).
 
@@ -248,7 +248,7 @@ Web app journeys was rebuilt on 3 Nov 2026 to match the code's roles (loan offic
 - `WA-G1-Alerts.dc.html` · Alerts · by journey
 - `WA-G2-Channels.dc.html` · Alerts · channels
 
-## Later · not in the app yet (53)
+## Later · not in the app yet (58)
 
 - `WA-E1-KYB.dc.html` · Trade · 1 business verification
 - `WA-E2-Deal.dc.html` · Trade · 2 deal details
@@ -290,21 +290,26 @@ Web app journeys was rebuilt on 3 Nov 2026 to match the code's roles (loan offic
 - `AF-9-Approve.dc.html` · Asset finance · 10 final approval (general manager / admin)
 - `R-ACC-Suppliers.dc.html` · Accountant · pay suppliers and book asset finance
 - `R-ADM-Settings.dc.html` · Admin · asset finance settings
+- `R-ADM-Countries.dc.html` · Admin · countries (Kenya, Tanzania with Twende Ride)
 - `R-SA-Integrations.dc.html` · Super-admin · asset finance integrations
 - `R-AUD-Files.dc.html` · Auditor · asset finance files (read only)
 - `AF-0-Checks.dc.html` · Asset finance · every check, by stage
 - `B-1-Choose.dc.html` · Borrower · asset finance · get a bike or car
 - `B-2-Apply.dc.html` · Borrower · asset finance · apply for the spiro ekon 450
 - `B-3-Offer.dc.html` · Borrower · asset finance · your offer
-- `B-4-Deposit.dc.html` · Borrower · asset finance · pay your deposit
+- `B-4-Deposit.dc.html` · Borrower · asset finance · pay day one
 - `B-5-Sign.dc.html` · Borrower · asset finance · sign your agreement
 - `B-6-Collect.dc.html` · Borrower · asset finance · collect your bike
 - `AF-12-Apply.dc.html` · Borrower · bike application status
 - `AF-11-Borrower.dc.html` · Borrower · my bike (asset finance)
 - `B-7-Late.dc.html` · Borrower · asset finance · your payment is late
 - `B-8-Owned.dc.html` · Borrower · asset finance · it's yours
+- `B-1tz-Choose.dc.html` · Borrower · Tanzania with Twende Ride (Kiswahili)
+- `RM-1-Clients.dc.html` · Relationship manager · trade finance clients and cash requests
+- `RM-2-Client.dc.html` · Relationship manager · client 360 and assessing a cash request (side sheet)
+- `RM-3-Import.dc.html` · Relationship manager · international: paying a supplier in China
 
-## Gap screens (14)
+## Gap screens (17)
 
 - `Gap-ApprovalLimits.dc.html` · Admin · approval limits
 - `Gap-EndOfDay.dc.html` · Manager · end-of-day approvals
@@ -320,3 +325,15 @@ Web app journeys was rebuilt on 3 Nov 2026 to match the code's roles (loan offic
 - `S-1-Collections.dc.html` · Staff · six-group sidebar · Collections & Recovery tabs
 - `S-2-FinOps.dc.html` · Staff · Financial Operations tabs
 - `S-3-Map.dc.html` · Staff · sidebar consolidation map
+- `IM-1-Pipeline.dc.html` · Investment manager · capital raising desk
+- `IM-2-Investor.dc.html` · Investment manager · investor proposal
+- `OW-1-Capital.dc.html` · Owner · capital raised and the managers who report to you
+
+## Analytics · who and where to trust (6)
+
+- `AN-1-Business.dc.html` · Analytics · income statement, ratios and unit economics
+- `AN-2-Person.dc.html` · Analytics · one borrower: literacy, work, income vs loan, payments
+- `AN-3-Segments.dc.html` · Analytics · who pays: work, literacy, income gap, age
+- `AN-4-Places.dc.html` · Analytics · places to trust (map)
+- `AN-5-Gaps.dc.html` · Analytics · income told vs seen vs borrowed
+- `AN-6-Daily.dc.html` · Analytics · bike collections vs the 98% target
