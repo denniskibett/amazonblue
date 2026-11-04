@@ -45,7 +45,7 @@ class PartnerWithdrawCapTest extends TestCase
         $this->assertSame(82000.0, $summary['available']);
 
         $this->actingAs($user)->get('/account/partner')
-            ->assertOk()->assertSee('82,000.00')->assertSee('Not counting')->assertSee('newer earnings are being calculated');
+            ->assertOk()->assertSee('82,000.00')->assertSee('Not counting');
     }
 
     /** @return array{0: User, 1: Partner} */

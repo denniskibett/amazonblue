@@ -228,6 +228,22 @@ return [
     ],
 
     // cash and growth forecast (owner, 3 Nov 2026): the chance that what a loan owes today comes back, by how late it is
+    // analytics (owner, 4 Nov 2026): figures the system doesn't record yet, so the P&L and unit economics can use them.
+    // Operating expenses are KES a month by line (prorated to the period); CAC is the cost to bring in one borrower.
+    'analytics' => [
+        'opex' => array_filter([
+            'staff' => env('ANALYTICS_OPEX_STAFF'),
+            'premises' => env('ANALYTICS_OPEX_PREMISES'),
+            'tech_and_messaging' => env('ANALYTICS_OPEX_TECH'),
+            'marketing' => env('ANALYTICS_OPEX_MARKETING'),
+        ], fn ($v) => $v !== null && $v !== ''),
+        'cac' => env('ANALYTICS_CAC'),
+        // capital the investment managers aim to raise in a quarter (KES), all together
+        'capital_target_quarter' => (float) env('CAPITAL_TARGET_QUARTER', 0),
+        // a borrower's KYC, agreement and requests done by themselves in the app: signs of digital literacy
+        'literacy_bands' => [3 => 'Fluent', 2 => 'Functional', 0 => 'Basic'],
+    ],
+
     'forecast' => [
         'collect' => [
             'current' => (float) env('FORECAST_COLLECT_CURRENT', 0.9),

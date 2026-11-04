@@ -36,6 +36,16 @@ trait PartnerSelfService
         ]);
     }
 
+    /** Distributions paid, being paid, and how one is built (owner, 4 Nov 2026). */
+    public function partnerPayouts(Request $request, PartnerAccount $account, \App\Services\Partners\PartnerReturns $returns): View
+    {
+        if (! $partner = $account->partnerFor($request->user())) {
+            return $this->partnerSetup('Payouts', 'payouts');
+        }
+
+        return view('home.account.partner.payouts', ['partner' => $partner, 'd' => $returns->distributions($partner, 30), 'returns' => $returns->summary($partner)]);
+    }
+
     public function partnerInvestments(Request $request, PartnerAccount $account): View
     {
         if (! $partner = $account->partnerFor($request->user())) {

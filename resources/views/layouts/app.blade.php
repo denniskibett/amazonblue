@@ -347,6 +347,7 @@
 
         {{-- Page Content --}}
         <main class="flex-1 p-6">
+            @include('partials.module-tabs')
             @yield('content')
         </main>
 

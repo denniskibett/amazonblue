@@ -192,7 +192,7 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
      */
     // roles that work in the dashboard; everyone else is a customer
     // "broker" was retired on 3 Nov 2026: brokers are short-term partners (isShortTermPartner) on the partner portal
-    public const STAFF_ROLES = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'teller'];
+    public const STAFF_ROLES = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'teller', 'investment-manager'];
 
     /**
      * Borrowers and partners (without any staff role) use the customer account area, not the dashboard.
@@ -211,7 +211,7 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
     }
 
     // staff who see every loan/borrower (not limited to their own clients like brokers)
-    public const BACK_OFFICE_ROLES = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor'];
+    public const BACK_OFFICE_ROLES = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'investment-manager'];
 
     // most senior first: the first one a user holds is mirrored into users.role
     public const ROLE_PRIORITY = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'teller', 'partner', 'borrower'];

@@ -259,7 +259,8 @@
   // sidebar: open the next staff page in place. Capture phase, so no other click handler on the page gets there first.
   document.addEventListener('click', (e) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    const a = e.target.closest && e.target.closest('aside.sidebar nav a[href]');
+    // and a module's tabs (partials.module-tabs): the module reads as one page
+    const a = e.target.closest && e.target.closest('aside.sidebar nav a[href], nav[data-module-tabs] a[href]');
     if (!a || a.closest('[data-no-swap]') || a.target || a.hasAttribute('download')) return;
     const url = new URL(a.href, location.href);
     if (url.origin !== location.origin || /logout|preview|export|download|\.csv|\.pdf/i.test(url.pathname + url.search)) return;

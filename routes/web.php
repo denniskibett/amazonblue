@@ -151,6 +151,7 @@ Route::middleware('auth')->prefix('account')->name('account.')->group(function (
                 Route::get('/loans', 'partnerLoans')->name('loans');
                 Route::get('/loans/{loan}', 'partnerLoan')->name('loan');
                 Route::get('/earnings', 'partnerEarnings')->name('earnings');
+                Route::get('/payouts', 'partnerPayouts')->name('payouts');
                 Route::get('/add-funds', 'partnerFunds')->name('funds');
                 Route::post('/add-funds', 'partnerFundsStore')->middleware('throttle:5,10')->name('funds.store');
                 Route::get('/withdraw', 'partnerWithdraw')->name('withdraw');
@@ -572,6 +573,17 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('analytics', [\App\Http\Controllers\Staff\AnalyticsController::class, 'index'])->name('analytics')->middleware('permission:view reports');
         // site analytics: visits, pages, funnel, a person's journey and what to improve (owner, 1 Nov 2026)
         Route::get('site-analytics', [\App\Http\Controllers\Staff\SiteAnalyticsController::class, 'index'])->name('site-analytics')->middleware('permission:view reports');
+        // capital raising: investment managers' prospects and investors, reported to the owner (4 Nov 2026)
+        Route::middleware('permission:manage investor pipeline')->controller(\App\Http\Controllers\Staff\CapitalController::class)->group(function () {
+            Route::get('capital', 'index')->name('capital');
+            Route::post('capital/prospects', 'store')->name('capital.store');
+            Route::post('capital/prospects/{prospect}', 'update')->whereNumber('prospect')->name('capital.update');
+            Route::post('capital/assign', 'assign')->name('capital.assign');
+        });
+        // is the business working, and who and where to trust (owner, 4 Nov 2026)
+        Route::get('pnl', [\App\Http\Controllers\Staff\InsightsController::class, 'pnl'])->name('pnl')->middleware('permission:view reports');
+        Route::get('people', [\App\Http\Controllers\Staff\InsightsController::class, 'people'])->name('people')->middleware('permission:view reports');
+        Route::get('people/{user}', [\App\Http\Controllers\Staff\InsightsController::class, 'person'])->whereNumber('user')->name('people.person')->middleware('permission:view reports');
         // email and SMS manager: reminders and collection notices in batches a person checks and sends (23 Oct 2026)
         Route::controller(\App\Http\Controllers\Staff\MessagesController::class)->prefix('messages')->name('messages.')->group(function () {
             Route::get('/', 'index')->name('index');

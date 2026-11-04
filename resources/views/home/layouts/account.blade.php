@@ -19,13 +19,14 @@
     'profile' => 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1-4 4-6 8-6s7 2 8 6',
     'investments' => 'M4 20V10M10 20V4M16 20v-7M22 20H2',
     'funded' => 'M12 8c4 0 7-1 7-2.5S16 3 12 3 5 4 5 5.5 8 8 12 8zM5 5.5v6C5 13 8 14 12 14s7-1 7-2.5v-6M5 11.5v6C5 19 8 20 12 20s7-1 7-2.5v-6',
+    'payouts' => 'M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
     'signout' => 'M15 12H4M8 8l-4 4 4 4M13 4h6a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-6',
   ];
   // outside debt collection agencies (3 Nov 2026): their own two-page portal
   $nav = $me->hasRole('collector')
     ? ['home' => ['Accounts', route('collect.index')]]
     : ($partnerArea
-    ? ['home' => ['Home', route($isBorrower ? 'account.partner.home' : 'account.home')], 'investments' => ['Investments', route('account.partner.investments')], 'funded' => ['Loans', route('account.partner.loans')], 'statement' => ['Statement', route('account.statement')], 'profile' => ['Profile', route('account.profile')]]
+    ? ['home' => ['Portfolio', route($isBorrower ? 'account.partner.home' : 'account.home')], 'investments' => ['Tranches', route('account.partner.investments')], 'funded' => ['Loans', route('account.partner.loans')], 'payouts' => ['Payouts', route('account.partner.payouts')], 'statement' => ['Statement', route('account.statement')], 'profile' => ['Profile', route('account.profile')]]
     : ($isBorrower
     ? ['home' => ['Home', route('account.home')], 'borrow' => ['Borrow', route('account.borrow')], 'loans' => ['Loans', route('account.loans')], 'profile' => ['Profile', route('account.profile')]]
     : ['home' => ['Home', route('account.home')], 'profile' => ['Profile', route('account.profile')]]));

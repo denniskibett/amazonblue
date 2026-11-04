@@ -94,6 +94,8 @@ class RoleSeeder extends Seeder
         'manage API tokens',
         'manage integrations',
         'manage collection agencies',
+        // investment managers bring in investors and capital and report to the owner (4 Nov 2026)
+        'manage investor pipeline',
         'impersonate users',
         'view system health',
         'manage feature flags',
@@ -105,6 +107,7 @@ class RoleSeeder extends Seeder
     public const ROLES = [
         'super-admin' => '*',
         'admin' => [
+            'manage investor pipeline',
             'manage collection agencies',
             'view loans',
             'create loans',
@@ -365,6 +368,15 @@ class RoleSeeder extends Seeder
         ],
         // outside debt collection agencies (owner, 3 Nov 2026): their own portal (/collect), no staff permissions
         'collector' => [],
+        // investment managers (owner, 4 Nov 2026): bring in investors and capital, look after them, report to the owner
+        'investment-manager' => [
+            'view dashboard',
+            'view partners',
+            'view investments',
+            'view partner statements',
+            'view investment fundings',
+            'manage investor pipeline',
+        ],
     ];
 
     public function run(): void

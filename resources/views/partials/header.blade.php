@@ -99,7 +99,7 @@
              back-office staff loans by number and people by name, phone, email or ID (Staff\SearchController). --}}
         @php
           $searchPages = collect(\App\Support\NavMenu::groups(Auth::user(), false))
-            ->flatMap(fn ($items, $group) => collect($items)->map(fn ($i) => ['group' => $group, 'label' => $i[0], 'url' => route($i[1])]))
+            ->flatMap(fn ($items, $group) => collect($items)->flatMap(fn ($i) => isset($i['tabs']) ? collect($i['tabs'])->map(fn ($t) => ['group' => $i[0], 'label' => $t[0], 'url' => route($t[1])]) : [['group' => $group, 'label' => $i[0], 'url' => route($i[1])]]))
             ->unique('url')->values();
           $searchRecords = Auth::user()->isStaff() && \Illuminate\Support\Facades\Route::has('staff.search') ? route('staff.search') : null;
         @endphp

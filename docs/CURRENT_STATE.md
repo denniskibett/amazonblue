@@ -31,11 +31,12 @@ Staff roles are in `User::STAFF_ROLES`; anyone else who signs in goes to `/accou
 | Role | Can do |
 |---|---|
 | borrower | KYC, borrow, repay (STK), top-up/extension/plan requests, statements, businesses, testimonial |
-| partner | Partner portal: lines, funded loans, earnings (paid out / to be paid out / pending), add funds, withdraw, subscriptions. Two kinds, one role: **long-term** partners fund lines (fixed rate or loan share); **short-term** partners (the old "broker") introduce borrowers and can fund them loan by loan. A short-term partner has introducer terms in `brokers` (`User::isShortTermPartner()`); their loans carry `loans.partner_id` + `broker_status`, listed as "brokered" in the portal |
+| partner | Partner portal (investor terms since 4 Nov 2026: net asset value, deployed capital and dry powder, realised and accrued returns, MOIC, net yield, run-rate, tranches, a treasury view for institutions, and a Payouts page with each distribution, its reference and how it was built; `Partners/PartnerReturns`): lines, funded loans, earnings (paid out / to be paid out / pending), add funds, withdraw, subscriptions. Two kinds, one role: **long-term** partners fund lines (fixed rate or loan share); **short-term** partners (the old "broker") introduce borrowers and can fund them loan by loan. A short-term partner has introducer terms in `brokers` (`User::isShortTermPartner()`); their loans carry `loans.partner_id` + `broker_status`, listed as "brokered" in the portal |
 | teller | Create and disburse loans, take repayments, cash-up |
 | loan-officer | Origination and loan changes |
 | recovery-officer | Collections, recovery cases, notices |
 | accountant | Ledger, wallets, partner money, reports |
+| investment-manager | Capital raising (since 4 Nov 2026): their prospects from first call to money in (`investor_prospects`), the investors they look after (`partners.investment_manager_id`), what those investors put in; they report to the owner, who sees every manager side by side on `/staff/capital` |
 | auditor | Read-only |
 | manager | Nearly everything an admin has, including `edit users` and API tokens |
 | admin | Adds Integrations (`manage integrations`) and API keys |
@@ -124,12 +125,17 @@ only, once per event. Not sent for book entries, console entries or money dated 
 | Reports, dashboard, operations review | On | `Reports*`, `staff/operations-review` |
 | Collection agencies (outside collectors) | On (since 3 Nov). Staff with `manage collection agencies` (admin, manager, recovery officer) add agencies and collector logins on `/staff/agencies` and place overdue, defaulted, recovery and forbearance loans until an end date. The old empty `recovery_agencies` / `agency_*` tables are not used | `Staff/CollectionAgenciesController`, `Collect/PortalController`, `Services/Collections/AgencyPlacements` |
 | Cash and growth | On (since 3 Nov). `/staff/cash-forecast` (`view reports`): cash per the ledger, a 12-week cash forecast from the loan book (weighted by lateness, `lending.forecast`) with and without lending at the recent pace, and lending, collections and new-loan interest by month with a 3-month projection. Partner payouts and running costs are not in it yet | `Services/CashForecast` |
+| P&L and unit economics | On (since 4 Nov). `/staff/pnl` (`view reports`), a tab of Financial Performance: where the money went (revenue down to profit), the income statement, key ratios (NIM, cost of risk, PAR 30/90, NPL, cost-to-income, return on the book), collection efficiency by month (new loans paid by due date + 7 days, target 98%), unit economics and product profitability. Cash basis from the operational records' own dates; operating expenses and CAC come from `.env` (`ANALYTICS_OPEX_*`, `ANALYTICS_CAC`) until they are recorded | `Services/Analytics/BusinessInsights` |
+| People and places | On (since 4 Nov). `/staff/people` (`view reports`), a tab of Reports & Analytics: on-time rate by how people earn (salaried or own business), digital literacy (how much of the journey they did in the app), education, loan size against income, time with us and age; places; income gaps; and one page per borrower (`/staff/people/{user}`). Shows how much we know. Religion, ethnicity, disability and health are never used | `Services/Analytics/PeopleInsights` |
+| Capital raising | On (since 4 Nov). `/staff/capital` (`manage investor pipeline`): investment managers' pipelines and investors; admins and the owner see every manager and capital in vs money lent. Quarter target: `CAPITAL_TARGET_QUARTER` | `Staff/CapitalController` |
 | Agreements and signature pad | On | `LoanAgreementService`, `SignatureService` |
 | Integrations page | On (since 3 Nov). M-Pesa, SMS, SMTP/`MAIL_URL`, Google Analytics, S3, Slack. Values are encrypted in `integrations` and **override `.env` at boot** | `Support/Integrations`, `Staff/IntegrationsController` |
 | API keys and `/api/v1` | On; only `GET /api/v1/ping` so far | `ApiKey`, `AuthenticateApiKey` |
 | Site analytics (first-party) | On (`ANALYTICS_ENABLED`), kept 180 days | `SiteAnalytics`, `TrackPageView` |
 | Header search | On: menu pages, loans by number, people by name/phone/ID (back office only) | `Support/NavMenu`, `Staff/SearchController` |
 | Preview ("view as") | On, super-admin only; mail, SMS, STK and B2C payouts are blocked while previewing | `Middleware/PreviewAs` |
+
+**Sidebar (since 4 Nov 2026):** six groups (Overview, Needs Attention, Lending, Collections & Finance, Partners, Management). Related pages are one module (`NavMenu::modules`) whose pages show as a tabline on top and switch in place (`partials.module-tabs`): Collections & Recovery, Payments, Financial Operations, Financial Performance, Reports & Analytics, Integrations & API Keys.
 
 ## 5. Switches
 
@@ -206,7 +212,7 @@ fixes are also mirrored in `RoleSeeder`.
 
 Latest twins: `2026_11_01_cycle_interest_amount`, `2026_11_01_site_analytics`, `2026_11_01_testimonials`,
 `2026_11_02_part_funding`, `2026_11_03_integrations_api_keys`, `2026_11_03_integrations_permission`,
-`2026_11_03_users_utility_meters`, `2026_11_03_retire_broker_role`, `2026_11_03_collection_agencies`.
+`2026_11_03_users_utility_meters`, `2026_11_03_retire_broker_role`, `2026_11_03_collection_agencies`, `2026_11_04_partner_slices`, `2026_11_04_investor_prospects`.
 
 ## 9. Known issues
 
