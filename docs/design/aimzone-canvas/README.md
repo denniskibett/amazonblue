@@ -1,6 +1,6 @@
 # AIMZONE design file (imported 3 Nov 2026)
 
-A copy of the design canvas "AIMZONE Ventures Logos" (claude.ai/artifact/2JAjByGcGyBxbALNTnFMX9, version 1793812847-4dbb): 301 artboards. It is the reference for how every screen should look. The app's tokens in `resources/design/tokens.cjs` already use its colours and fonts.
+A copy of the design canvas "AIMZONE Ventures Logos" (claude.ai/artifact/2JAjByGcGyBxbALNTnFMX9, version 1793812947-f231): 301 artboards. It is the reference for how every screen should look. The app's tokens in `resources/design/tokens.cjs` already use its colours and fonts.
 
 Each `.dc.html` file is one artboard: the markup is in `<x-dc>`, its data in the `<script type="text/x-dc">` block. `canvas.json` is the index (positions, titles, pages).
 
@@ -331,7 +331,7 @@ Web app journeys was rebuilt on 3 Nov 2026 to match the code's roles (loan offic
 
 ## Analytics · who and where to trust (6)
 
-- `AN-1-Business.dc.html` · Analytics · income statement, ratios and unit economics
+- `AN-1-Business.dc.html` · Analytics · where the money went, income statement, ratios and unit economics
 - `AN-2-Person.dc.html` · Analytics · one borrower: literacy, work, income vs loan, payments
 - `AN-3-Segments.dc.html` · Analytics · who pays: work, literacy, income gap, age
 - `AN-4-Places.dc.html` · Analytics · places to trust (map)
