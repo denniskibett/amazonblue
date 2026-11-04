@@ -94,6 +94,13 @@ class PartnerController extends Controller
             'broker_fee_balance'   => $this->walletBalance($partner, 'broker_fee'),
             'tracker_balance'      => $this->walletBalance($partner, 'investment_tracker'),
 
+            // the balances table merged in (owner, 4 Nov 2026): what they can withdraw, earned to date, committed
+            ...(function () use ($partner) {
+                $sum = app(\App\Services\PartnerPortfolio::class)->summary($partner);
+
+                return ['available' => (float) $sum['available'], 'earned' => (float) $sum['earned'], 'committed' => (float) $sum['committed'], 'is_house' => (bool) $partner->is_house_account];
+            })(),
+
             // Legacy fields still referenced by the show modal
             'profit_share_rate'    => $partner->profit_share_rate,
             'max_loan_to_value'    => $partner->max_loan_to_value,

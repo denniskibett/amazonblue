@@ -7,7 +7,7 @@
 <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6"
      x-data="partnerTable()"
      x-init="init()">
-  <div class="mb-4"><h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Partners Overview</h3></div>
+  <div class="mb-4"><h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Partners</h3></div>
   <div id="partners-tools" class="contents">
       <button type="button"
           @click="window.dispatchEvent(new CustomEvent('open-partner-create'))"
@@ -85,12 +85,17 @@
           </th>
           <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
             <div class="flex items-center justify-between">
-              <span>Tracker</span>
-              <span class="sort-icon text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </span>
+              <span>Available</span>
+            </div>
+          </th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span>Earned to date</span>
+            </div>
+          </th>
+          <th scope="col" class="py-3 pr-4 text-left text-theme-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span>Committed</span>
             </div>
           </th>
           <th scope="col" class="py-3 pr-4 text-right text-theme-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
@@ -144,27 +149,31 @@
             </td>
 
             <td class="py-3 pr-4 hidden sm:table-cell">
-              <p class="font-medium text-theme-sm dark:text-white/90"
+              <p class="whitespace-nowrap font-medium text-theme-sm dark:text-white/90"
                  :class="(partner.principal_balance || 0) > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
                  x-text="formatCurrency(partner.principal_balance || 0)"></p>
             </td>
 
             <td class="py-3 pr-4 hidden sm:table-cell">
-              <p class="font-medium text-theme-sm dark:text-white/90"
+              <p class="whitespace-nowrap font-medium text-theme-sm dark:text-white/90"
                  :class="(partner.interest_balance || 0) > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'"
                  x-text="formatCurrency(partner.interest_balance || 0)"></p>
             </td>
 
             <td class="py-3 pr-4 hidden sm:table-cell">
-              <p class="font-medium text-theme-sm dark:text-white/90"
+              <p class="whitespace-nowrap font-medium text-theme-sm dark:text-white/90"
                  :class="(partner.broker_fee_balance || 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'"
                  x-text="formatCurrency(partner.broker_fee_balance || 0)"></p>
             </td>
 
             <td class="py-3 pr-4 hidden sm:table-cell">
-              <p class="font-medium text-theme-sm dark:text-white/90"
-                 :class="(partner.tracker_balance || 0) > 0 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 dark:text-gray-400'"
-                 x-text="formatCurrency(partner.tracker_balance || 0)"></p>
+              <p class="whitespace-nowrap font-semibold text-theme-sm text-gray-900 dark:text-white" x-text="formatCurrency(partner.available || 0)"></p>
+            </td>
+            <td class="py-3 pr-4 hidden sm:table-cell">
+              <p class="whitespace-nowrap text-theme-sm text-gray-500 dark:text-gray-400" x-text="formatCurrency(partner.earned || 0)"></p>
+            </td>
+            <td class="py-3 pr-4 hidden sm:table-cell">
+              <p class="whitespace-nowrap text-theme-sm text-gray-500 dark:text-gray-400" x-text="formatCurrency(partner.committed || 0)"></p>
             </td>
 
             <td class="py-3 text-right">
@@ -231,7 +240,7 @@
         </template>
 
         <tr x-show="filteredData.length === 0" data-table-skip>
-          <td colspan="9" class="py-8 text-center">
+          <td colspan="10" class="py-8 text-center">
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>

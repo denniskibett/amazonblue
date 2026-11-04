@@ -48,7 +48,8 @@ class NavMenu
           $groups['Partners'] = [
             ['Partner Management', 'partners.index', 'briefcase', $u->can('view partners'), ['partners.*'], $count(fn () => \Illuminate\Support\Facades\DB::table('partner_requests')->where('type', 'funding')->where('status', 'pending')->count())],
             ['Investment Portfolio', 'investments.index', 'layers', $u->can('view investments'), ['investments.*'], null],
-            ['Partner Payouts', 'staff.partner-payouts', 'coins', $u->can('view partner statements'), ['staff.partner-payouts'], $count(fn () => \Illuminate\Support\Facades\DB::table('partner_requests')->where('type', 'withdrawal')->whereIn('status', ['pending', 'prepared'])->count())],
+            // balances are in the partners table; this shows (under Needs Attention) only while payouts wait, and opens them on Requests
+            ['Partner Payouts', 'staff.requests', 'coins', $u->can('view partner statements') && $u->canAny(['rollover loans', 'edit partners']) && ($payoutsWaiting = $count(fn () => \Illuminate\Support\Facades\DB::table('partner_requests')->where('type', 'withdrawal')->whereIn('status', ['pending', 'prepared'])->count())) > 0, [], $payoutsWaiting ?? 0],
             ['Capital Raising', 'staff.capital', 'trending-up', $u->can('manage investor pipeline'), ['staff.capital*'], null],
           ];
           $groups['Management'] = [

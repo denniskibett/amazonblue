@@ -26,14 +26,9 @@ class FinanceController extends Controller
         return view('staff.desk.wallets', compact('borrowers', 'partners', 'problems', 'partnerNames'));
     }
 
-    public function partnerPayouts(PartnerPortfolio $portfolio)
+    /** Partner balances are part of the partners table now (owner, 4 Nov 2026); payout requests are on Requests. */
+    public function partnerPayouts()
     {
-        $rows = Partner::orderByDesc('is_house_account')->orderBy('name')->get()
-            ->map(fn (Partner $p) => $portfolio->summary($p));
-
-        return view('staff.desk.partner-payouts', [
-            'rows' => $rows,
-            'wallets' => PartnerPortfolio::WALLETS,
-        ]);
+        return redirect()->route('partners.index');
     }
 }

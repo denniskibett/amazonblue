@@ -17,5 +17,6 @@
 
     <!-- Partner Table (Contains ALL modals) -->
     @include('partials.table.table-partners', ['partners' => $partners])
+    <p class="mt-2 text-theme-xs text-gray-500">Available = the partner's wallets (capital, interest, introducer fees) minus capital still lent out to borrowers; partners can ask for up to this. Payouts they ask for, and line payouts, wait on <a class="underline" href="{{ route('staff.requests', ['tab' => 'partners']) }}">Requests</a>: one person prepares{{ config('lending.approvals.enabled') ? ', a second approves on Second sign-offs' : '' }}, and payouts already made post on the day they were paid.</p>
 </div>
 @endsection

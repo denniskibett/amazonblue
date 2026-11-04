@@ -122,7 +122,7 @@ class StaffNotifications
         if ($u->canAny(['view partner statements', 'edit partners']) && Schema::hasTable('partner_requests') && ! $u->can('edit partners')) {
             $safe(fn () => DB::table('partner_requests as r')->leftJoin('partners as p', 'p.id', '=', 'r.partner_id')->whereIn('r.status', ['pending', 'prepared'])->latest('r.created_at')->limit(30)->get(['r.*', 'p.name'])
                 ->each(fn ($r) => $add('Finance', 'partner-request-' . $r->id . '-' . $r->status, 'coins', 'orange', 'Partner ' . str_replace('_', ' ', $r->type),
-                    ($r->name ?? 'A partner') . ' · KES ' . number_format((float) $r->amount, 2) . ' · ' . $r->status, $r->updated_at ?? $r->created_at, $route('staff.partner-payouts'))));
+                    ($r->name ?? 'A partner') . ' · KES ' . number_format((float) $r->amount, 2) . ' · ' . $r->status, $r->updated_at ?? $r->created_at, $route('staff.requests'))));
         }
         // anything sent to this person directly
         if (Schema::hasTable('notifications')) {
