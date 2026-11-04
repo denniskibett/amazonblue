@@ -28,7 +28,7 @@
 
   <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
     @foreach ([
-      ['Profit before tax', $signed($r['profit']), $r['opex_set'] ? 'after operating expenses' : 'before operating expenses (not set)', $r['profit'] >= 0 ? 'text-success-600' : 'text-error-600'],
+      ['Profit before tax', $signed($r['profit']), ($r['opex_set'] ? 'after operating expenses' : 'before operating expenses (not set)') . ($r['prior'] > 0 ? '; ' . $kes($r['prior']) . ' of older loans shown separately' : ''), $r['profit'] >= 0 ? 'text-success-600' : 'text-error-600'],
       ['Net interest income', $kes($r['nii']), 'NIM ' . $pct($ra['nim']) . ' a year', null],
       ['Cost of funds', $pct($ra['funding_share']), 'of gross revenue paid to partners', null],
       ['PAR 30', $pct($ra['par30']), 'of KES ' . number_format($r['book'], 0) . ' owed', $ra['par30'] > 5 ? 'text-error-600' : 'text-success-600'],

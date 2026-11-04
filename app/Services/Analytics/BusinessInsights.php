@@ -61,14 +61,25 @@ class BusinessInsights
                 ->whereBetween('t.transaction_date', [$from->toDateString(), $to->toDateString()])->sum('t.amount'), 2);
             $kind = fn (string $k) => round((float) DB::table('repayments')->whereNull('deleted_at')->where('kind', $k)
                 ->whereBetween('repayment_date', [$from->toDateString(), $to->toDateString()])->sum('amount'), 2);
-            $writeOffs = $kind('bad_debt');
-            $discounts = $kind('discount');
+            // a write-off or waiver on a loan whose last cycle fell due before the period is a prior-period
+            // adjustment (owner decisions, data clean-up), shown below the operating profit, not as this
+            // period's impairment (owner, 4 Nov 2026)
+            $split = fn (string $k) => DB::table('repayments as r')->join('loans as l', 'l.id', '=', 'r.loan_id')->whereNull('r.deleted_at')->where('r.kind', $k)
+                ->whereBetween('r.repayment_date', [$from->toDateString(), $to->toDateString()])
+                ->selectRaw('r.amount, (select max(c.due_date) from loan_cycles c where c.loan_id = l.id) as last_due')->get()
+                ->partition(fn ($x) => $x->last_due && $x->last_due >= $from->toDateString());
+            [$wNow, $wPrior] = $split('bad_debt');
+            [$dNow, $dPrior] = $split('discount');
+            $writeOffs = round((float) $wNow->sum('amount'), 2);
+            $discounts = round((float) $dNow->sum('amount'), 2);
+            $prior = round((float) $wPrior->sum('amount') + (float) $dPrior->sum('amount'), 2);
             $opexLines = collect(config('lending.analytics.opex', []))->map(fn ($monthly) => round((float) $monthly * $days / 30.4, 2))->filter(fn ($v) => $v > 0);
             $opex = round($opexLines->sum(), 2);
 
             $gross = round($income['interest'] + $income['penalty'] + $fees, 2);
             $nii = round($gross - $costOfFunds, 2);
             $profit = round($nii - $writeOffs - $discounts - $opex, 2);
+            $after = round($profit - $prior, 2);
             $book = $this->ledger->portfolio();
             $annual = 365 / $days;
 
@@ -82,8 +93,9 @@ class BusinessInsights
                     ['Impairment (loans written off)', -$writeOffs, 'out'], ['Discounts and waivers', -$discounts, 'out'],
                     ...$opexLines->map(fn ($v, $k) => ['Operating expenses: ' . str_replace('_', ' ', $k), -$v, 'out'])->values()->all(),
                     ['Profit before tax', $profit, 'total'],
+                    ...($prior > 0 ? [['Prior-period adjustments (older loans written off or waived)', -$prior, 'out'], ['Profit after prior-period adjustments', $after, 'total']] : []),
                 ],
-                'gross' => $gross, 'nii' => $nii, 'profit' => $profit, 'opex' => $opex, 'opex_set' => $opex > 0, 'cost_of_funds' => $costOfFunds, 'write_offs' => $writeOffs,
+                'gross' => $gross, 'nii' => $nii, 'profit' => $profit, 'opex' => $opex, 'opex_set' => $opex > 0, 'cost_of_funds' => $costOfFunds, 'write_offs' => $writeOffs, 'prior' => $prior, 'after' => $after,
                 'book' => $book['owed'], 'open_loans' => $book['open_loans'],
                 'ratios' => [
                     'nim' => $book['owed'] > 0 ? round($nii / $book['owed'] * $annual * 100, 1) : null,

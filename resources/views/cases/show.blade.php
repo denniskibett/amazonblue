@@ -50,422 +50,175 @@
         ])->values(),
     ];
 @endphp
-<div class="container mx-auto px-4 py-6"
-     x-data="caseShow({{ \Illuminate\Support\Js::from($caseJs) }})">
-    
-    <!-- Breadcrumb -->
-    <nav class="flex mb-6" aria-label="Breadcrumb">
-        <ol class="inline-flex items-center space-x-1 md:space-x-3">
-            <li class="inline-flex items-center">
-                <a href="{{ route('dashboard') }}" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white">
-                    <svg class="w-3 h-3 mr-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 6 10">
-                        <path d="m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2a1 1 0 0 0 1.414 1.414L2 10.414V18a2 2 0 0 0 2 2h3a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h3a2 2 0 0 0 2-2v-7.586l.293.293a1 1 0 0 0 1.414-1.414Z"/>
-                    </svg>
-                    Home
-                </a>
-            </li>
-            <li>
-                <div class="flex items-center">
-                    <svg class="w-3 h-3 mx-1 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
-                    </svg>
-                    <a href="{{ route('cases.index') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">Recovery Cases</a>
-                </div>
-            </li>
-            <li aria-current="page">
-                <div class="flex items-center">
-                    <svg class="w-3 h-3 mx-1 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
-                    </svg>
-                    <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400" x-text="rc.case_number"></span>
-                </div>
-            </li>
-        </ol>
-    </nav>
+@php
+    // the live position of the loan (engine v2 balance), not the case's opening figure (owner, 4 Nov 2026)
+    $bal = $caseData->loan_id ? app(\App\Services\LedgerReports::class)->balance($caseData->loan_id) : null;
+    $owedNow = $bal ? (float) ($bal['final_outstanding'] ?? 0) : (float) $caseData->remaining_balance;
+    $daysLate = $bal ? (int) ($bal['days_overdue'] ?? 0) : (int) ($caseLoanRow->days_overdue ?? 0);
+    $paidSince = $caseData->loan_id ? (float) \App\Services\CustomerWallets::whereCash(\Illuminate\Support\Facades\DB::table('repayments')->whereNull('deleted_at'))
+        ->where('loan_id', $caseData->loan_id)->where('repayment_date', '>=', optional($caseData->created_at)->toDateString() ?? '1970-01-01')->sum('amount') : 0.0;
+    $opening = (float) $caseData->total_debt_amount;
+    $progress = $opening > 0 ? min(100, round($paidSince / $opening * 100)) : 0;
+    $kes = fn ($v) => 'KES ' . number_format((float) $v, 2);
+    $card = 'rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6';
+    $dt = 'text-theme-sm text-gray-500 dark:text-gray-400';
+    $dd = 'text-theme-sm font-medium text-gray-800 dark:text-white/90';
+    $statusName = $caseData->status->name ?? 'Open';
+    $priorityName = $caseData->priority->name ?? null;
+    $loanStatus = $caseLoanRow->status ?? null;
+    $phone = $caseUser->phone ?? null;
+    $wa = $phone ? 'https://wa.me/' . preg_replace('/^0/', '254', preg_replace('/\D/', '', $phone)) : null;
+    $actions = $caseData->actions->sortByDesc('action_date');
+    $forbearanceUntil = $caseLoanRow->forbearance_until ?? null;
+@endphp
+<div x-data="caseShow({{ \Illuminate\Support\Js::from($caseJs) }})">
+    @include('staff.desk._header', ['title' => $caseData->case_number . ' · ' . ($caseUser->name ?? 'Borrower'), 'metrics' => false,
+        'sub' => 'Opened ' . optional($caseData->created_at)->format('j M Y') . ($caseData->assignedTo ? ' · with ' . $caseData->assignedTo->name : ' · not assigned') . ($caseLoanRow ? ' · loan #' . str_pad($caseData->loan_id, 5, '0', STR_PAD_LEFT) : ''),
+        'actions' => '<button type="button" @click="openEditCase()" class="inline-flex h-11 items-center rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300">Edit case</button>'
+            . '<button type="button" @click="openAddActionModal()" class="inline-flex h-11 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white">+ Log an action</button>'])
 
-    <!-- Case Header -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <div class="flex items-center gap-3 flex-wrap">
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="rc.case_number"></h1>
-                    
-                    <!-- Status Badge -->
-                    @php
-                        $statusColors = [
-                            'open' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-                            'in_progress' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-                            'negotiation' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-                            'legal' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-                            'recovered' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-                            'written_off' => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-                            'closed' => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-                        ];
-                        $statusSlug = $caseData->status->slug ?? 'open';
-                        $statusClass = $statusColors[$statusSlug] ?? $statusColors['open'];
-                    @endphp
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClass }}">
-                        {{ $caseData->status->name ?? 'Open' }}
-                    </span>
-
-                    <!-- Priority Badge -->
-                    @php
-                        $priorityColors = [
-                            'critical' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-                            'high' => 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-                            'medium' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-                            'low' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-                        ];
-                        $prioritySlug = $caseData->priority->slug ?? 'medium';
-                        $priorityClass = $priorityColors[$prioritySlug] ?? $priorityColors['medium'];
-                    @endphp
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $priorityClass }}">
-                        {{ $caseData->priority->name ?? 'Medium' }}
-                    </span>
-
-                    @if($caseData->loan && $caseData->loan->is_non_performing)
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-                            NPL Loan
-                        </span>
-                    @endif
-                </div>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    Created <span x-text="rc.created_at_diff"></span> • 
-                    Last updated <span x-text="rc.updated_at_diff"></span>
-                </p>
-            </div>
-            <div class="flex items-center gap-2">
-                @if(auth()->user()->can('edit recovery cases'))
-                <button @click="openEditCase()" 
-                        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                    </svg>
-                    Edit Case
-                </button>
-                @endif
-                <a href="{{ route('cases.index') }}" 
-                   class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                    </svg>
-                    Back
-                </a>
-            </div>
-        </div>
+    <div class="mb-6 flex flex-wrap items-center gap-2">
+        <x-staff.pill :tone="str_contains(strtolower($statusName), 'recover') || str_contains(strtolower($statusName), 'clos') ? 'green' : 'blue'">{{ $statusName }}</x-staff.pill>
+        @if ($priorityName)<x-staff.pill :tone="in_array(strtolower($priorityName), ['high', 'urgent', 'critical'], true) ? 'red' : 'gray'">{{ $priorityName }} priority</x-staff.pill>@endif
+        @if ($loanStatus)<x-staff.pill :tone="$loanStatus === 'forbearance' ? 'amber' : (in_array($loanStatus, ['defaulted', 'recovery', 'written_off'], true) ? 'red' : 'gray')">Loan {{ str_replace('_', ' ', $loanStatus) }}{{ $loanStatus === 'forbearance' && $forbearanceUntil ? (\Illuminate\Support\Carbon::parse($forbearanceUntil)->year >= 2035 ? ', open-ended' : ' until ' . \Illuminate\Support\Carbon::parse($forbearanceUntil)->format('j M Y')) : '' }}</x-staff.pill>@endif
+        @if ($caseLoanRow?->is_non_performing)<x-staff.pill tone="red">Non-performing</x-staff.pill>@endif
     </div>
 
-    <!-- Stats as the standard cards -->
-    @php $cj = (array) $caseJs; @endphp
-    <x-ui.metrics :items="[
-      ['label' => 'Total debt', 'value' => 'KES ' . number_format((float) ($cj['total_debt_amount'] ?? 0), 2), 'icon' => 'wallet'],
-      ['label' => 'Recovered', 'value' => 'KES ' . number_format((float) ($cj['total_recovered'] ?? 0), 2), 'icon' => 'hand-coins', 'tone' => 'up'],
-      ['label' => 'Remaining', 'value' => 'KES ' . number_format((float) ($cj['remaining_balance'] ?? 0), 2), 'icon' => 'scale'],
-      ['label' => 'Days in default', 'value' => number_format((int) ($cj['days_in_default'] ?? 0)), 'icon' => 'clock', 'tone' => ($cj['days_in_default'] ?? 0) > 90 ? 'down' : 'neutral'],
-    ]" />
+    <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        @foreach ([
+            ['Owed now', $kes($owedNow), 'live balance on the loan', $owedNow > 0 ? 'text-error-600' : 'text-success-600'],
+            ['Paid since the case opened', $kes($paidSince), $progress . '% of ' . $kes($opening) . ' at opening', null],
+            ['Days late', $daysLate, $caseData->default_date ? 'defaulted ' . \Illuminate\Support\Carbon::parse($caseData->default_date)->format('j M Y') : 'not defaulted', $daysLate > 30 ? 'text-error-600' : null],
+            ['Next step', $caseData->next_action_date ? \Illuminate\Support\Carbon::parse($caseData->next_action_date)->format('j M Y') : 'Not set', 'last contact ' . ($caseData->last_contact_date ? \Illuminate\Support\Carbon::parse($caseData->last_contact_date)->format('j M Y') : 'never'), $caseData->next_action_date ? null : 'text-orange-600'],
+        ] as [$l, $v, $s, $c])
+            <div class="{{ $card }}"><p class="{{ $dt }}">{{ $l }}</p><p class="mt-2 whitespace-nowrap font-outfit text-2xl font-bold text-gray-800 dark:text-white/90">{{ $v }}</p><p class="mt-1 text-theme-xs {{ $c ?? 'text-gray-500' }}">{{ $s }}</p></div>
+        @endforeach
+    </div>
 
-    <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Left Column - Case Details -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- Debtor Information -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Debtor Information</h3>
-                <div class="flex items-start gap-4">
-                    <div class="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg font-semibold text-gray-700 dark:text-gray-300" 
-                         x-text="rc.user_initials || 'U'">
-                    </div>
-                    <div>
-                        <p class="text-base font-medium text-gray-900 dark:text-white" x-text="rc.user_name"></p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="rc.user_email"></p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="rc.user_phone || 'No phone'"></p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="rc.client_type ? 'Client Type: ' + rc.client_type : 'N/A'"></p>
-                        <a :href="'/users/' + rc.user_id" class="mt-2 inline-block text-sm text-blue-600 hover:underline">View Full Profile →</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Loan Information -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="rc.loan_id">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Associated Loan</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Loan ID</p>
-                        <p class="text-base font-medium" x-text="'#' + String(rc.loan_id).padStart(5, '0')"></p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Loan Type</p>
-                        <p class="text-base font-medium" x-text="rc.loan_type || 'N/A'"></p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Amount</p>
-                        <p class="text-base font-medium" x-text="formatCurrency(rc.loan_amount)"></p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Status</p>
-                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
-                              :class="{
-                                'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300': rc.loan_status === 'disbursed',
-                                'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': rc.loan_status === 'repaid',
-                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300': rc.loan_status === 'defaulted',
-                                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300': rc.loan_status === 'overdue',
-                                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': !rc.loan_status || !['disbursed','repaid','defaulted','overdue'].includes(rc.loan_status)
-                              }"
-                              x-text="rc.loan_status ? rc.loan_status.charAt(0).toUpperCase() + rc.loan_status.slice(1) : 'N/A'">
-                        </span>
-                    </div>
-                </div>
-                <div class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg" x-show="rc.is_non_performing">
-                    <div class="flex items-center gap-2">
-                        <svg class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-                        </svg>
-                        <span class="text-sm font-medium text-red-800 dark:text-red-300">This loan is Non-Performing (NPL)</span>
-                    </div>
-                    <div class="mt-1 text-sm text-red-700 dark:text-red-400">
-                        <span x-text="rc.days_overdue || 0"></span> days overdue • Defaulted on <span x-text="rc.default_date_formatted || 'N/A'"></span>
-                    </div>
-                </div>
-                <a :href="'/users/' + rc.user_id + '/loans/' + rc.loan_id" class="mt-4 inline-block text-sm text-blue-600 hover:underline">View Loan Details →</a>
-            </div>
-
-            <!-- Recovery Strategy -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="rc.recovery_strategy">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Recovery Strategy</h3>
-                <p class="text-gray-700 dark:text-gray-300" x-text="rc.recovery_strategy"></p>
-            </div>
-
-            <!-- Notes -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="rc.notes">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Notes</h3>
-                <p class="text-gray-700 dark:text-gray-300" x-text="rc.notes"></p>
-            </div>
-
-            <!-- Activity Timeline -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Activity Timeline</h3>
-                    <span class="text-sm text-gray-500 dark:text-gray-400" x-text="rc.actions_count + ' actions'"></span>
-                </div>
-                
-                <!-- Action Timeline - Inline -->
-                <div class="flow-root">
-                    @if($caseData->actions && $caseData->actions->count() > 0)
-                        <ul class="-mb-8">
-                            @foreach($caseData->actions as $action)
-                                @php
-                                    $actionColors = [
-                                        'call' => 'bg-blue-500',
-                                        'email' => 'bg-purple-500',
-                                        'meeting' => 'bg-green-500',
-                                        'letter' => 'bg-yellow-500',
-                                        'payment' => 'bg-green-500',
-                                        'reminder' => 'bg-orange-500',
-                                        'negotiation' => 'bg-indigo-500',
-                                        'legal' => 'bg-red-500',
-                                        'note' => 'bg-gray-500',
-                                        'other' => 'bg-gray-500',
-                                    ];
-                                    $actionType = $action->type ?? 'other';
-                                    $actionColor = $actionColors[$actionType] ?? $actionColors['other'];
-                                    
-                                    $typeLabels = [
-                                        'call' => 'Call',
-                                        'email' => 'Email',
-                                        'meeting' => 'Meeting',
-                                        'letter' => 'Letter',
-                                        'payment' => 'Payment',
-                                        'reminder' => 'Reminder',
-                                        'negotiation' => 'Negotiation',
-                                        'legal' => 'Legal',
-                                        'note' => 'Note',
-                                        'other' => 'Other',
-                                    ];
-                                    $typeLabel = $typeLabels[$actionType] ?? 'Other';
-                                @endphp
-                                <li>
-                                    <div class="relative pb-8">
-                                        @if(!$loop->last)
-                                            <span class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true"></span>
-                                        @endif
-                                        <div class="relative flex space-x-3">
-                                            <div>
-                                                <span class="h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-gray-800 {{ $actionColor }}">
-                                                    <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        @if($actionType === 'call')
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                                                        @elseif($actionType === 'email')
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                                                        @elseif($actionType === 'payment')
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                        @elseif($actionType === 'meeting')
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                                        @elseif($actionType === 'legal')
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                                                        @else
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                                                        @endif
-                                                    </svg>
-                                                </span>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                                    <div>
-                                                        <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                                            {{ $typeLabel }}
-                                                            @if($action->user)
-                                                                <span class="text-xs font-normal text-gray-500 dark:text-gray-400">
-                                                                    by {{ $action->user->name }}
-                                                                </span>
-                                                            @endif
-                                                        </p>
-                                                        @if($action->description)
-                                                            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ $action->description }}</p>
-                                                        @endif
-                                                        @if($action->notes)
-                                                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $action->notes }}</p>
-                                                        @endif
-                                                        @if($action->amount > 0)
-                                                            <p class="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
-                                                                Amount: KES {{ number_format($action->amount, 2) }}
-                                                            </p>
-                                                        @endif
-                                                    </div>
-                                                    <div class="flex-shrink-0 text-right">
-                                                        <time class="text-xs text-gray-500 dark:text-gray-400">
-                                                            {{ $action->created_at->format('M d, Y') }}
-                                                            <span class="block text-xs">{{ $action->created_at->format('h:i A') }}</span>
-                                                        </time>
-                                                        @if($action->status)
-                                                            <span class="mt-1 inline-flex px-2 py-0.5 rounded-full text-xs font-medium
-                                                                {{ $action->status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
-                                                                   ($action->status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' : 
-                                                                   ($action->status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 
-                                                                   'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300')) }}">
-                                                                {{ ucfirst($action->status) }}
-                                                            </span>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @else
-                        <div class="text-center py-8">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <h4 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No activities recorded</h4>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Start tracking recovery actions for this case</p>
-                            @if(auth()->user()->can('edit recovery cases'))
-                                <button @click="openAddActionModal()" 
-                                        class="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                                    </svg>
-                                    Add First Action
-                                </button>
-                            @endif
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div class="space-y-6 xl:col-span-2">
+            {{-- the case's follow-up in one tabline (owner, 4 Nov 2026) --}}
+            @php
+                $promises = $actions->filter(fn ($a) => $a->promised_amount > 0);
+                $followUps = $actions->filter(fn ($a) => $a->follow_up_date)->sortBy('follow_up_date');
+                $plans = collect($caseJs['payment_plans']);
+                $hasNotes = $caseData->recovery_strategy || $caseData->getAttribute('notes');
+            @endphp
+            <x-staff.tabs :tabs="['activity' => ['Activity', $actions->count()], 'promises' => ['Promises', $promises->count()], 'followups' => ['Follow-ups', $followUps->count()], 'plan' => ['Payment plan', $plans->count()], 'notes' => 'Notes']">
+                <x-staff.tab name="activity">
+                    <div class="p-5 sm:p-6">
+                @forelse ($actions as $a)
+                    <div class="flex gap-4 border-t border-gray-100 py-4 first:border-t-0 first:pt-0 dark:border-gray-800">
+                        <span class="mt-1 size-2.5 shrink-0 rounded-full {{ $a->amount_collected > 0 ? 'bg-success-500' : ($a->promised_amount > 0 ? 'bg-orange-400' : 'bg-brand-500') }}"></span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                                <p class="font-medium text-gray-800 dark:text-white/90">{{ $a->actionType->name ?? 'Action' }}@if ($a->outcome) <span class="font-normal text-gray-500">· {{ str_replace('_', ' ', $a->outcome) }}</span>@endif</p>
+                                <span class="text-theme-xs text-gray-500">{{ $a->action_date ? \Illuminate\Support\Carbon::parse($a->action_date)->format('j M Y, H:i') : '' }}{{ $a->performedBy ? ' · ' . $a->performedBy->name : '' }}</span>
+                            </div>
+                            @if ($a->contact_person)<p class="text-theme-sm text-gray-600 dark:text-gray-400">Spoke to {{ $a->contact_person }}{{ $a->contact_relationship ? ' (' . $a->contact_relationship . ')' : '' }}</p>@endif
+                            @if ($a->notes)<p class="mt-1 text-theme-sm text-gray-700 dark:text-gray-300">{{ $a->notes }}</p>@endif
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                @if ($a->amount_collected > 0)<x-staff.pill tone="green">Collected {{ $kes($a->amount_collected) }}</x-staff.pill>@endif
+                                @if ($a->promised_amount > 0)<x-staff.pill tone="amber">Promised {{ $kes($a->promised_amount) }}{{ $a->promised_date ? ' by ' . \Illuminate\Support\Carbon::parse($a->promised_date)->format('j M') : '' }}</x-staff.pill>@endif
+                                @if ($a->follow_up_date)<x-staff.pill tone="blue">Follow up {{ \Illuminate\Support\Carbon::parse($a->follow_up_date)->format('j M') }}</x-staff.pill>@endif
+                            </div>
                         </div>
-                    @endif
-                </div>
-            </div>
+                    </div>
+                @empty
+                    <div class="py-8 text-center">
+                        <p class="font-medium text-gray-800 dark:text-white/90">Nothing logged yet</p>
+                        <p class="mt-1 text-theme-sm text-gray-500">Call {{ $caseUser->name ?? 'the borrower' }}, then log what they said and any promise to pay.</p>
+                        <button type="button" @click="openAddActionModal()" class="mt-4 inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white">+ Log the first action</button>
+                    </div>
+                @endforelse
+                    </div>
+                </x-staff.tab>
+                <x-staff.tab name="promises">
+                    <div class="p-5 sm:p-6">
+                        @forelse ($promises as $a)
+                            @php $kept = $a->promised_date && $paidSince > 0 && \Illuminate\Support\Carbon::parse($a->promised_date)->isPast(); $due = $a->promised_date ? \Illuminate\Support\Carbon::parse($a->promised_date) : null; @endphp
+                            <div class="flex items-center justify-between border-t border-gray-100 py-3 first:border-t-0 first:pt-0 dark:border-gray-800">
+                                <div><p class="font-medium text-gray-800 dark:text-white/90">{{ $kes($a->promised_amount) }}{{ $due ? ' by ' . $due->format('j M Y') : '' }}</p><p class="text-theme-xs text-gray-500">Promised {{ $a->action_date ? \Illuminate\Support\Carbon::parse($a->action_date)->format('j M') : '' }}{{ $a->contact_person ? ' by ' . $a->contact_person : '' }}</p></div>
+                                <x-staff.pill :tone="! $due ? 'gray' : ($due->isFuture() ? 'blue' : ($kept ? 'green' : 'red'))">{{ ! $due ? 'No date' : ($due->isFuture() ? 'Due' : ($kept ? 'Paid something' : 'Broken')) }}</x-staff.pill>
+                            </div>
+                        @empty
+                            <p class="py-6 text-center text-theme-sm text-gray-500">No promises to pay yet. Log one with the amount and date when the borrower gives it.</p>
+                        @endforelse
+                    </div>
+                </x-staff.tab>
+                <x-staff.tab name="followups">
+                    <div class="p-5 sm:p-6">
+                        @if ($caseData->next_action_date)<p class="mb-3 rounded-lg bg-brand-50 p-3 text-theme-sm text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">Next step on the case: {{ \Illuminate\Support\Carbon::parse($caseData->next_action_date)->format('j M Y') }}</p>@endif
+                        @forelse ($followUps as $a)
+                            @php $on = \Illuminate\Support\Carbon::parse($a->follow_up_date); @endphp
+                            <div class="flex items-center justify-between border-t border-gray-100 py-3 first:border-t-0 first:pt-0 dark:border-gray-800">
+                                <div><p class="font-medium text-gray-800 dark:text-white/90">{{ $on->format('j M Y') }} · {{ $a->actionType->name ?? 'Action' }}</p><p class="text-theme-xs text-gray-500">{{ $a->follow_up_notes ?: ($a->notes ?: '') }}</p></div>
+                                <x-staff.pill :tone="$on->isToday() ? 'amber' : ($on->isPast() ? 'red' : 'blue')">{{ $on->isToday() ? 'Today' : ($on->isPast() ? 'Overdue' : 'Coming') }}</x-staff.pill>
+                            </div>
+                        @empty
+                            <p class="py-6 text-center text-theme-sm text-gray-500">No follow-ups set. Add a follow-up date when you log an action.</p>
+                        @endforelse
+                    </div>
+                </x-staff.tab>
+                <x-staff.tab name="plan">
+                    <div class="p-5 sm:p-6">
+                        @forelse ($plans as $p)
+                            <div class="border-t border-gray-100 py-3 first:border-t-0 first:pt-0 dark:border-gray-800">
+                                <div class="flex justify-between text-theme-sm"><span>{{ $p['number_of_installments'] }} × {{ $kes($p['installment_amount']) }} {{ $p['installment_frequency'] }}</span><x-staff.pill :tone="$p['status'] === 'active' ? 'blue' : 'gray'">{{ ucfirst($p['status']) }}</x-staff.pill></div>
+                                <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-white/5"><div class="h-2 rounded-full bg-brand-500" style="width: {{ (float) $p['progress_percentage'] }}%"></div></div>
+                                <p class="mt-1 text-theme-xs text-gray-500">{{ $kes($p['remaining_balance']) }} left of {{ $kes($p['total_amount']) }}</p>
+                            </div>
+                        @empty
+                            <p class="py-6 text-center text-theme-sm text-gray-500">No payment plan. Offer one from the loan when the borrower can't pay in full.</p>
+                        @endforelse
+                    </div>
+                </x-staff.tab>
+                <x-staff.tab name="notes">
+                    <div class="p-5 sm:p-6 text-theme-sm text-gray-700 dark:text-gray-300">
+                        @if ($caseData->recovery_strategy)<p><span class="font-medium">Strategy:</span> {{ $caseData->recovery_strategy }}</p>@endif
+                        @if ($caseData->getAttribute('notes'))<p class="mt-1">{{ $caseData->getAttribute('notes') }}</p>@endif
+                        @unless ($hasNotes)<p class="py-6 text-center text-gray-500">No notes. Add them with Edit case.</p>@endunless
+                    </div>
+                </x-staff.tab>
+            </x-staff.tabs>
         </div>
 
-        <!-- Right Column - Sidebar -->
-        <div class="lg:col-span-1 space-y-6">
-            <!-- Case Summary -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Case Summary</h3>
-                <div class="space-y-3">
-                    <div class="flex justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Assigned To</span>
-                        <span class="text-sm font-medium" x-text="rc.assigned_to_name || 'Unassigned'"></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Recovery Officer</span>
-                        <span class="text-sm font-medium" x-text="rc.recovery_officer || 'N/A'"></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Default Date</span>
-                        <span class="text-sm font-medium" x-text="rc.default_date_formatted || 'N/A'"></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Last Contact</span>
-                        <span class="text-sm font-medium" x-text="rc.last_contact_date_formatted || 'Never'"></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Next Action</span>
-                        <span class="text-sm font-medium" x-text="rc.next_action_date_formatted || 'Not set'"></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Recovery Progress</span>
-                        <span class="text-sm font-medium" x-text="rc.recovery_progress + '%'"></span>
-                    </div>
+        <div class="space-y-6">
+            <div class="{{ $card }}">
+                <div class="flex items-center gap-3">
+                    <span class="flex size-12 items-center justify-center rounded-full bg-brand-50 font-semibold text-brand-600 dark:bg-brand-500/15">{{ $caseJs['user_initials'] }}</span>
+                    <div class="min-w-0"><p class="truncate font-semibold text-gray-800 dark:text-white/90">{{ $caseUser->name ?? '—' }}</p><p class="truncate text-theme-sm text-gray-500">{{ $phone ?? 'no phone' }}</p></div>
                 </div>
+                <div class="mt-4 grid grid-cols-2 gap-2">
+                    @if ($phone)<a href="tel:{{ $phone }}" class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 text-sm font-medium dark:border-gray-700">Call</a>@endif
+                    @if ($wa)<a href="{{ $wa }}" target="_blank" rel="noopener" class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 text-sm font-medium dark:border-gray-700">WhatsApp</a>@endif
+                </div>
+                <dl class="mt-4 space-y-2.5">
+                    @if ($caseUser?->email)<div class="flex justify-between gap-3"><dt class="{{ $dt }}">Email</dt><dd class="{{ $dd }} truncate">{{ $caseUser->email }}</dd></div>@endif
+                    @if ($caseUser?->kin_name)<div class="flex justify-between gap-3"><dt class="{{ $dt }}">Next of kin</dt><dd class="{{ $dd }} text-right">{{ $caseUser->kin_name }}{{ $caseUser->kin_phone ? ' · ' . $caseUser->kin_phone : '' }}</dd></div>@endif
+                </dl>
+                @if ($caseUser)<a href="{{ route('users.show', $caseUser) }}" class="mt-4 inline-block text-theme-sm font-medium text-brand-500 hover:underline">Full profile →</a>@endif
             </div>
 
-            <!-- Quick Actions -->
-            @if(auth()->user()->can('edit recovery cases'))
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Quick Actions</h3>
-                <div class="space-y-3">
-                    <button @click="openAddActionModal()" 
-                            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                        </svg>
-                        Add Action
-                    </button>
-                    
-                    <button @click="markAsRecovered()" 
-                            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Mark as Recovered
-                    </button>
-                    
-                    @if(auth()->user()->can('edit recovery cases'))
-                    <button @click="openWriteOffModal()" 
-                            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        Write Off Case
-                    </button>
-                    @endif
+            @if ($caseLoanRow)
+                <div class="{{ $card }}">
+                    <h3 class="mb-3 font-semibold text-gray-800 dark:text-white/90">Loan #{{ str_pad($caseData->loan_id, 5, '0', STR_PAD_LEFT) }}</h3>
+                    <dl class="space-y-2.5">
+                        <div class="flex justify-between gap-3"><dt class="{{ $dt }}">Product</dt><dd class="{{ $dd }} text-right">{{ $caseLoanRow->loanType->name ?? '—' }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="{{ $dt }}">Lent</dt><dd class="{{ $dd }}">{{ $kes($caseLoanRow->amount) }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="{{ $dt }}">Due</dt><dd class="{{ $dd }}">{{ $caseLoanRow->due_date ? \Illuminate\Support\Carbon::parse($caseLoanRow->due_date)->format('j M Y') : '—' }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="{{ $dt }}">Owed now</dt><dd class="{{ $dd }}">{{ $kes($owedNow) }}</dd></div>
+                    </dl>
+                    <a href="{{ route('loans.show', $caseData->loan_id) }}" class="mt-4 inline-block text-theme-sm font-medium text-brand-500 hover:underline">Open the loan →</a>
                 </div>
-            </div>
             @endif
 
-            <!-- Payment Plans -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6" x-show="rc.payment_plans && rc.payment_plans.length > 0">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Payment Plans</h3>
-                <template x-for="plan in rc.payment_plans" :key="plan.id">
-                    <div class="border-b border-gray-100 dark:border-gray-700 last:border-0 py-3 last:pb-0">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium" x-text="plan.installment_frequency + ' Plan'"></span>
-                            <span class="text-xs px-2 py-0.5 rounded-full"
-                                  :class="{
-                                    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': plan.status === 'accepted',
-                                    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300': plan.status === 'proposed',
-                                    'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300': plan.status === 'completed',
-                                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': !['accepted','proposed','completed'].includes(plan.status)
-                                  }"
-                                  x-text="plan.status.charAt(0).toUpperCase() + plan.status.slice(1)">
-                            </span>
-                        </div>
-                        <div class="mt-1 text-sm text-gray-500 dark:text-gray-400" x-text="plan.installment_amount + ' x ' + plan.number_of_installments + ' = KES ' + formatCurrency(plan.total_amount)"></div>
-                        <div class="mt-2 w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
-                            <div class="bg-blue-600 h-1.5 rounded-full" :style="'width: ' + plan.progress_percentage + '%'"></div>
-                        </div>
-                        <div class="mt-1 text-xs text-gray-400" x-text="plan.progress_percentage + '% complete • ' + (plan.remaining_balance > 0 ? 'KES ' + formatCurrency(plan.remaining_balance) + ' remaining' : 'Fully paid')"></div>
-                    </div>
-                </template>
+            <div class="{{ $card }}">
+                <h3 class="mb-3 font-semibold text-gray-800 dark:text-white/90">Close the case</h3>
+                <div class="space-y-2">
+                    <button type="button" @click="markAsRecovered()" class="inline-flex h-10 w-full items-center justify-center rounded-lg border border-success-500 text-sm font-medium text-success-600 hover:bg-success-50">Mark as recovered</button>
+                    <button type="button" @click="openWriteOffModal()" class="inline-flex h-10 w-full items-center justify-center rounded-lg text-sm font-medium text-error-600 hover:bg-error-50">Write off…</button>
+                </div>
             </div>
         </div>
     </div>
