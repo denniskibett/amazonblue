@@ -1,6 +1,6 @@
 # AIMZONE design file (imported 3 Nov 2026)
 
-A copy of the design canvas "AIMZONE Ventures Logos" (claude.ai/artifact/2JAjByGcGyBxbALNTnFMX9, version 1793726628-a2d1): 246 artboards. It is the reference for how every screen should look. The app's tokens in `resources/design/tokens.cjs` already use its colours and fonts.
+A copy of the design canvas "AIMZONE Ventures Logos" (claude.ai/artifact/2JAjByGcGyBxbALNTnFMX9, version 1793811062-3427): 267 artboards. It is the reference for how every screen should look. The app's tokens in `resources/design/tokens.cjs` already use its colours and fonts.
 
 Each `.dc.html` file is one artboard: the markup is in `<x-dc>`, its data in the `<script type="text/x-dc">` block. `canvas.json` is the index (positions, titles, pages).
 
@@ -10,7 +10,7 @@ Refresh this copy by reading the artifact again; don't edit these files by hand.
 
 **Staff screens use the app's TailAdmin look** (white sidebar with MENU groups, top bar with search, grey page, white cards with a grey border and 16px corners, royal-blue `#2B4FD8` buttons, right-hand side sheets for forms). Borrower and partner screens use the customer look described above.
 
-Web app journeys was rebuilt on 3 Nov 2026 to match the code's roles (loan officer, manager, KYC & compliance, teller, recovery officer, accountant, admin, super-admin, auditor, broker), with a row for the borrower's unhappy paths and a row of staff side sheets and dialogs. Trade finance and valuation moved to "Later · not in the app yet".
+Web app journeys was rebuilt on 3 Nov 2026 to match the code's roles (loan officer, manager, KYC & compliance, teller, recovery officer, accountant, admin, super-admin, auditor, broker), with a row for the borrower's unhappy paths and a row of staff side sheets and dialogs. Trade finance and valuation moved to "Later · not in the app yet". Asset finance (any asset: bikes first, then cars, buses, land, buildings, aircraft, equipment) was designed there on 4 Nov 2026; partner returns and payouts, and the six-group sidebar with module tabs, are on "Gap screens".
 
 ## Page 1 (32)
 
@@ -248,7 +248,7 @@ Web app journeys was rebuilt on 3 Nov 2026 to match the code's roles (loan offic
 - `WA-G1-Alerts.dc.html` · Alerts · by journey
 - `WA-G2-Channels.dc.html` · Alerts · channels
 
-## Later · not in the app yet (18)
+## Later · not in the app yet (33)
 
 - `WA-E1-KYB.dc.html` · Trade · 1 business verification
 - `WA-E2-Deal.dc.html` · Trade · 2 deal details
@@ -268,8 +268,23 @@ Web app journeys was rebuilt on 3 Nov 2026 to match the code's roles (loan offic
 - `WA-R-VA2.dc.html` · Valuation officer · report
 - `WA-R-VA3.dc.html` · Valuation officer · collateral register
 - `WA-R-VA4.dc.html` · Valuation officer · insurance & tracking
+- `AF-0-Checks.dc.html` · Asset finance · every check, by stage
+- `AF-1-Desk.dc.html` · Asset finance · desk (teller)
+- `AF-2-New.dc.html` · Asset finance · new application (side sheet)
+- `AF-3-Checks.dc.html` · Asset finance · 1–3 KYC, IPRS, CRB (teller)
+- `AF-4-Asset.dc.html` · Asset finance · 4 asset details (teller)
+- `AF-4b-AssetChecks.dc.html` · Asset finance · 4b asset checks: NTSA, registry, valuation (teller)
+- `AF-5-Cover.dc.html` · Asset finance · 5–6 insurance and tracker (teller)
+- `AF-6-Calculator.dc.html` · Asset finance · 7 loan calculator (teller)
+- `AF-6b-Amortization.dc.html` · Asset finance · 7b amortization table (teller)
+- `AF-7-Release.dc.html` · Asset finance · 8 release form (teller)
+- `AF-8-Review.dc.html` · Asset finance · 9 branch review (branch manager)
+- `AF-9-Approve.dc.html` · Asset finance · 10 final approval (general manager / admin)
+- `AF-10-Fleet.dc.html` · Asset finance · asset register and tracker map
+- `AF-11-Borrower.dc.html` · Borrower · my bike (asset finance)
+- `AF-12-Apply.dc.html` · Borrower · bike application status
 
-## Gap screens (8)
+## Gap screens (14)
 
 - `Gap-ApprovalLimits.dc.html` · Admin · approval limits
 - `Gap-EndOfDay.dc.html` · Manager · end-of-day approvals
@@ -279,3 +294,9 @@ Web app journeys was rebuilt on 3 Nov 2026 to match the code's roles (loan offic
 - `Gap-BrokerFees.dc.html` · Broker · clients and fees
 - `Gap-Alerts.dc.html` · Borrower · How we contact you
 - `Gap-Health.dc.html` · Super-admin · system health
+- `P-1-Portfolio.dc.html` · Partner · portfolio and returns (individual)
+- `P-2-Payouts.dc.html` · Partner · payouts and distributions
+- `P-3-Treasury.dc.html` · Partner · treasury overview (corporate)
+- `S-1-Collections.dc.html` · Staff · six-group sidebar · Collections & Recovery tabs
+- `S-2-FinOps.dc.html` · Staff · Financial Operations tabs
+- `S-3-Map.dc.html` · Staff · sidebar consolidation map
