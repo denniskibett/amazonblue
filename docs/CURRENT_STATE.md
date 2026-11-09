@@ -133,7 +133,7 @@ only, once per event. Not sent for book entries, console entries or money dated 
 | Integrations page | On (since 3 Nov). M-Pesa, SMS, SMTP/`MAIL_URL`, Google Analytics, S3, Slack. Values are encrypted in `integrations` and **override `.env` at boot** | `Support/Integrations`, `Staff/IntegrationsController` |
 | API keys and `/api/v1` | On; only `GET /api/v1/ping` so far | `ApiKey`, `AuthenticateApiKey` |
 | Site analytics (first-party) | On (`ANALYTICS_ENABLED`), kept 180 days | `SiteAnalytics`, `TrackPageView` |
-| Header search | On: menu pages, loans by number, people by name/phone/ID (back office only) | `Support/NavMenu`, `Staff/SearchController` |
+| Header search | On (staff only, GET `staff.search`): menu pages this person can open, then loans (number or borrower), people, partners, recovery cases, businesses, investments, open borrower requests, partner payouts/funding and capital prospects, each behind its page's permission; ⌘K/Ctrl+K or "/" | `Support/NavMenu`, `Staff/SearchController` |
 | Preview ("view as") | On, super-admin only; mail, SMS, STK and B2C payouts are blocked while previewing | `Middleware/PreviewAs` |
 
 **Sidebar (since 4 Nov 2026):** six groups (Overview, Needs Attention, Lending, Collections & Finance, Partners, Management). Related pages are one module (`NavMenu::modules`) whose pages show as a tabline on top and switch in place (`partials.module-tabs`): Collections & Recovery, Payments, Financial Operations, Financial Performance, Reports & Analytics, Integrations & API Keys.

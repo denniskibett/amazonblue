@@ -549,8 +549,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             Route::post('api-keys/{apiKey}/toggle', [\App\Http\Controllers\Staff\ApiKeysController::class, 'toggle'])->name('api-keys.toggle');
             Route::delete('api-keys/{apiKey}', [\App\Http\Controllers\Staff\ApiKeysController::class, 'destroy'])->name('api-keys.destroy');
         });
-        // header search: loans and people, each by its own permission (owner, 3 Nov 2026)
-        Route::post('search', \App\Http\Controllers\Staff\SearchController::class)->name('search')->middleware('throttle:60,1');
+        // header search: pages and records, each by its own permission (owner, 3 Nov 2026; GET since 9 Nov 2026)
+        Route::get('search', \App\Http\Controllers\Staff\SearchController::class)->name('search')->middleware('throttle:120,1');
         // the person side panel, opened from any name (owner, 22 Oct 2026)
         Route::get('users/{user}/peek', \App\Http\Controllers\Staff\UserPeekController::class)
             ->name('users.peek')->middleware('permission:view users');

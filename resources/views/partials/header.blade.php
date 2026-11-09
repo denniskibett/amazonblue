@@ -94,61 +94,92 @@
       </button>
       <!-- Application nav menu button -->
 
-      <div class="hidden lg:block">
-        {{-- Search (owner, 3 Nov 2026): pages from Support\NavMenu (only those this user can open), and for
-             back-office staff loans by number and people by name, phone, email or ID (Staff\SearchController). --}}
-        @php
-          $searchPages = collect(\App\Support\NavMenu::groups(Auth::user(), false))
-            ->flatMap(fn ($items, $group) => collect($items)->flatMap(fn ($i) => isset($i['tabs']) ? collect($i['tabs'])->map(fn ($t) => ['group' => $i[0], 'label' => $t[0], 'url' => route($t[1])]) : [['group' => $group, 'label' => $i[0], 'url' => route($i[1])]]))
-            ->unique('url')->values();
-          $searchRecords = Auth::user()->isStaff() && \Illuminate\Support\Facades\Route::has('staff.search') ? route('staff.search') : null;
-        @endphp
-        <div class="relative" x-data="azSearch(@js($searchPages), @js($searchRecords))" @keydown.window.prevent.meta.k="focus()" @keydown.window.prevent.ctrl.k="focus()" @click.outside="open = false">
-          <svg class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 fill-gray-500 dark:fill-gray-400" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z"/>
-          </svg>
-          <input x-ref="input" type="search" x-model="q" @input.debounce.200ms="run()" @focus="open = true; run()" @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
-            @keydown.enter.prevent="go()" @keydown.escape="open = false; $refs.input.blur()" autocomplete="off" aria-label="Search pages, loans and people"
-            placeholder="{{ $searchRecords ? 'Search pages, loan number, name or phone…' : 'Search pages…' }}"
-            class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]" />
-          <span class="pointer-events-none absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] text-xs text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">⌘ K</span>
-          <div x-show="open && (items.length || q.length >= 2)" x-cloak class="absolute left-0 top-full z-99999 mt-2 max-h-96 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900 xl:w-[430px]">
-            <template x-for="(item, i) in items" :key="item.url + i">
-              <a :href="item.url" @mouseenter="active = i" :class="active === i ? 'bg-gray-100 dark:bg-white/5' : ''" class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm">
-                <span class="min-w-0">
-                  <span class="block truncate font-medium text-gray-800 dark:text-white/90" x-text="item.label"></span>
-                  <span class="block truncate text-theme-xs text-gray-500 dark:text-gray-400" x-show="item.sub" x-text="item.sub"></span>
-                </span>
-                <span class="shrink-0 text-theme-xs text-gray-400" x-text="item.group"></span>
-              </a>
+      {{-- Search (owner, 3 Nov 2026; quick-switcher look, 9 Nov 2026): type to jump to a page or open a loan, person,
+           partner, case, business, investment or request. Pages and records come from Staff\SearchController
+           (GET staff.search), each only with the permission its page needs. Ctrl/Cmd+K or "/" focuses the box. --}}
+      @if (Auth::user()->isStaff() && \Illuminate\Support\Facades\Route::has('staff.search'))
+      <div class="relative hidden lg:block" x-data="azSearch(@js(route('staff.search')))" @keydown.window="shortcut($event)" @click.outside="open = false">
+        <form role="search" @submit.prevent="go()">
+          <div class="relative">
+            <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400"><x-ui.icon name="search" class="size-5" /></span>
+            <input type="search" x-ref="input" x-model="q" @focus="focus()" @input.debounce.150ms="search()"
+                   @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)" @keydown.enter.prevent="go()" @keydown.escape.prevent="close()"
+                   placeholder="Search or jump to…" aria-label="Search pages, loans, people and partners" autocomplete="off" role="combobox"
+                   aria-controls="header-search-results" :aria-expanded="open && results.length > 0"
+                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-16 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px] [&::-webkit-search-cancel-button]:hidden" />
+            <span x-show="loading" x-cloak class="absolute right-14 top-1/2 -translate-y-1/2 text-gray-400"><x-ui.icon name="refresh" class="size-4 animate-spin" /></span>
+            <kbd class="pointer-events-none absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] font-sans text-xs text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
+              <span x-text="isMac ? '⌘' : 'Ctrl'">⌘</span><span>K</span>
+            </kbd>
+          </div>
+        </form>
+
+        {{-- Results, grouped under small headings, under the box --}}
+        <div x-show="open && (results.length || (q.trim().length >= 2 && !loading))" x-cloak
+             x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+             class="absolute left-0 top-full z-99999 mt-2 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-lg dark:border-gray-800 dark:bg-gray-900 xl:w-[430px]">
+          <ul id="header-search-results" x-ref="list" role="listbox" class="max-h-[60vh] overflow-y-auto p-2">
+            <template x-for="(r, i) in results" :key="r.url + '|' + r.label + '|' + i">
+              <li role="option" :aria-selected="i === active">
+                <p x-show="i === 0 || results[i - 1].group !== r.group" x-text="r.group" class="px-3 pb-1 pt-3 text-theme-xs font-semibold uppercase tracking-wider text-gray-400"></p>
+                <a :href="r.url" @mouseenter="active = i" @click.prevent="go(i)"
+                   :class="i === active ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-200' : 'text-gray-700 dark:text-gray-300'"
+                   class="flex items-center gap-3 rounded-lg px-3 py-2.5">
+                  <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-white/5" x-html="icon(r.icon) || icon('search')"></span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-theme-sm font-medium" x-text="r.label"></span>
+                    <span class="block truncate text-theme-xs text-gray-500 dark:text-gray-400" x-show="r.sub" x-text="r.sub"></span>
+                  </span>
+                </a>
+              </li>
             </template>
-            <p x-show="!items.length && !loading" class="px-3 py-2 text-sm text-gray-500">Nothing found for “<span x-text="q"></span>”.</p>
-            <p x-show="loading" class="px-3 py-1 text-theme-xs text-gray-400">Searching…</p>
+            <li x-show="!loading && q.trim().length >= 2 && !results.length" class="px-3 py-8 text-center text-theme-sm text-gray-500 dark:text-gray-400">Nothing found for “<span x-text="q.trim()"></span>”.</li>
+          </ul>
+          <div class="flex items-center gap-4 border-t border-gray-200 px-4 py-2.5 text-theme-xs text-gray-400 dark:border-gray-800">
+            <span><kbd class="font-sans">↑</kbd> <kbd class="font-sans">↓</kbd> to move</span><span><kbd class="font-sans">Enter</kbd> to open</span><span class="ml-auto"><kbd class="font-sans">Esc</kbd> to close</span>
           </div>
         </div>
-        <script>
-          function azSearch(pages, recordsUrl) {
-            return {
-              q: '', open: false, active: 0, items: [], records: [], loading: false, seq: 0,
-              focus() { this.$refs.input.focus(); this.open = true; },
-              run() {
-                const q = this.q.trim().toLowerCase();
-                const matches = q ? pages.filter(p => (p.label + ' ' + p.group).toLowerCase().includes(q)) : pages.slice(0, 8);
-                this.items = matches.slice(0, 8).concat(this.records);
-                this.active = 0;
-                if (!recordsUrl || q.length < 2) { this.records = []; this.items = matches.slice(0, 8); return; }
-                const n = ++this.seq; this.loading = true;
-                fetch(recordsUrl, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '' }, body: JSON.stringify({ q: this.q.trim() }) })
-                  .then(r => r.ok ? r.json() : { results: [] })
-                  .then(d => { if (n !== this.seq) return; this.records = d.results || []; this.items = matches.slice(0, 8).concat(this.records); })
-                  .catch(() => {}).finally(() => { if (n === this.seq) this.loading = false; });
-              },
-              move(d) { if (this.items.length) this.active = (this.active + d + this.items.length) % this.items.length; },
-              go() { const item = this.items[this.active]; if (item) window.location.href = item.url; },
-            };
-          }
-        </script>
+
+        {{-- Icons the results can use (the sidebar's and the record groups'), rendered once on the server --}}
+        <template x-ref="icons">
+          @foreach (['grid', 'inbox', 'check-circle', 'shield', 'user-check', 'building', 'briefcase', 'mail', 'file', 'send', 'user', 'users', 'star', 'alert', 'hand-coins', 'scale', 'trending-up', 'chart', 'list', 'key', 'layers', 'coins', 'search'] as $ic)
+            <span data-icon="{{ $ic }}"><x-ui.icon :name="$ic" class="size-4" /></span>
+          @endforeach
+        </template>
       </div>
+      <script>
+        function azSearch(url) {
+          return {
+            q: '', results: [], active: 0, open: false, loading: false, seq: 0, isMac: /Mac|iPhone|iPad/.test(navigator.platform),
+            async search() {
+              const n = ++this.seq;
+              this.loading = true;
+              try {
+                const r = await fetch(url + '?q=' + encodeURIComponent(this.q.trim()), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                const d = r.ok ? await r.json() : { results: [] };
+                if (n !== this.seq) return; // a newer search was sent: drop this answer
+                this.results = d.results || []; this.active = 0; this.open = true;
+              } catch (e) { if (n === this.seq) this.results = []; }
+              if (n === this.seq) this.loading = false;
+            },
+            focus() { this.open = true; if (!this.results.length) this.search(); },
+            move(step) {
+              if (!this.results.length) return;
+              this.active = (this.active + step + this.results.length) % this.results.length;
+              this.$nextTick(() => this.$refs.list?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' }));
+            },
+            go(i = this.active) { const r = this.results[i]; if (!r) return; this.close(); window.location.href = r.url; },
+            close() { this.open = false; this.q = ''; this.results = []; this.seq++; this.loading = false; this.$refs.input?.blur(); },
+            shortcut(e) {
+              const typing = /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.target.isContentEditable;
+              if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.$refs.input.focus(); }
+              else if (e.key === '/' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); this.$refs.input.focus(); }
+            },
+            icon(name) { const t = this.$refs.icons?.content.querySelector('[data-icon="' + name + '"]'); return t ? t.innerHTML : ''; },
+          };
+        }
+      </script>
+      @endif
     </div>
 
     <div
