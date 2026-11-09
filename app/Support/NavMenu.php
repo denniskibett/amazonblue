@@ -107,6 +107,8 @@ class NavMenu
                 ['Receive payment', 'staff.repayments.receive', $u->canAny(['create repayments', 'delete repayments']), ['staff.repayments.*'], null],
                 ['M-Pesa payments', 'staff.payments', $u->can('create repayments'), ['staff.payments'], $count(fn () => \Illuminate\Support\Facades\Schema::hasTable('mpesa_transactions') ? \Illuminate\Support\Facades\DB::table('mpesa_transactions')->whereIn('status', ['unmatched', 'received'])->count() : 0)],
                 ['M-Pesa payouts', 'mpesa.payouts', \App\Services\Mpesa\B2cPayouts::enabled() && $u->can('view disbursements'), ['mpesa.payouts'], null],
+                // the second rail (9 Nov 2026), shown once Sharet Pay is switched on
+                ['Sharet Pay', 'sharet.index', \App\Services\Sharet\SharetCollections::available() && $u->canAny(['create repayments', 'disburse loans', 'edit partners']), ['sharet.index'], null],
             ]],
             'finops' => ['Financial Operations', 'scale', [
                 ['Wallets & reconciliation', 'staff.wallets', $u->canAny(['reconcile wallets', 'view house reconciliation']), ['staff.wallets'], null],

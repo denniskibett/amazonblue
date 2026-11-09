@@ -68,6 +68,9 @@ trait BorrowerRepayment
             'mode' => $mode,
             'due' => $this->repayAmountDue($data),
             'mpesa' => $this->mpesaInstructions($loan),
+            // Sharet Pay, the second rail (9 Nov 2026): shown when on; first only when chosen on Integrations
+            'sharet' => \App\Services\Sharet\SharetCollections::available(),
+            'sharetFirst' => \App\Services\Sharet\SharetCollections::preferred() === 'sharet',
             'claims' => self::claimsFor($loan),
             'checking' => session('repay_checking'),
             'stkRequest' => session('stk_request'),

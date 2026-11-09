@@ -72,17 +72,31 @@ class RequestsController extends Controller
         abort_unless($request->user()->can('edit partners'), 403);
         $data = $request->validate(['decision' => 'required|in:yes,no', 'note' => 'required_if:decision,no|nullable|string|max:500',
             // a payout already sent (owner, 3 Nov 2026): the day and the bank or M-Pesa reference; it posts on that day
-            'paid_on' => 'nullable|date|before_or_equal:today|required_with:bank_reference', 'bank_reference' => 'nullable|string|max:60|required_with:paid_on']);
+            'paid_on' => 'nullable|date|before_or_equal:today|required_with:bank_reference', 'bank_reference' => 'nullable|string|max:60|required_with:paid_on',
+            // pay through Sharet (9 Nov 2026): sent at the next Sharet run once this withdrawal's own approval has posted it
+            'via_sharet' => 'nullable|boolean', 'sharet_phone' => 'nullable|required_if:via_sharet,1|string|max:20']);
         $row = DB::table('partner_requests')->where('id', $id)->first();
         $type = $row?->type;
+        $viaSharet = $type === 'withdrawal' && $data['decision'] === 'yes' && empty($data['paid_on']) && ! empty($data['via_sharet']);
+        if ($viaSharet && (! \App\Services\Sharet\SharetPayouts::enabled() || ! \App\Services\Mpesa\Daraja::msisdn($data['sharet_phone'] ?? null)
+            || fmod((float) $row->amount, 1.0) !== 0.0)) {
+            return back()->with('error', ! \App\Services\Sharet\SharetPayouts::enabled() ? 'Payouts through Sharet are off.'
+                : (fmod((float) $row->amount, 1.0) !== 0.0 ? 'Sharet pays whole shillings; pay this one another way.' : 'Enter the partner\'s Kenyan M-Pesa number.'));
+        }
         try {
             if ($type === 'withdrawal' && $data['decision'] === 'yes' && ! empty($data['paid_on'])) {
                 $requests->recordPaidPayout(\App\Models\Partner::findOrFail($row->partner_id), $row->wallet_slug ?: 'principal', (float) $row->amount,
                     $data['paid_on'], $data['bank_reference'], $request->user(), $id, $data['note'] ?? null);
             } else {
-                $type === 'funding'
-                    ? $requests->confirmFunding($id, $request->user(), $data['decision'] === 'yes', $data['note'] ?? null)
-                    : $requests->prepareWithdrawal($id, $request->user(), $data['decision'] === 'yes', $data['note'] ?? null);
+                // one transaction: a payout that can't be queued for Sharet is not prepared either
+                DB::transaction(function () use ($type, $requests, $id, $request, $data, $viaSharet) {
+                    $type === 'funding'
+                        ? $requests->confirmFunding($id, $request->user(), $data['decision'] === 'yes', $data['note'] ?? null)
+                        : $requests->prepareWithdrawal($id, $request->user(), $data['decision'] === 'yes', $data['note'] ?? null);
+                    if ($viaSharet) {
+                        app(\App\Services\Sharet\SharetPayouts::class)->queuePartnerPayout($id, $data['sharet_phone'], $request->user());
+                    }
+                });
             }
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
@@ -90,7 +104,7 @@ class RequestsController extends Controller
         $status = DB::table('partner_requests')->where('id', $id)->value('status');
 
         return back()->with('success', match ($status) {
-            'done' => $type === 'funding' ? 'Capital added to the partner\'s account.' : 'Paid out and posted to the partner\'s statement.',
+            'done' => $type === 'funding' ? 'Capital added to the partner\'s account.' : ($viaSharet ? 'Posted to the partner\'s statement; the money goes through Sharet at the next run.' : 'Paid out and posted to the partner\'s statement.'),
             'prepared' => 'Prepared. A second person approves the payout on Second sign-offs.',
             default => 'Declined.',
         });

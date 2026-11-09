@@ -28,6 +28,7 @@ class ApprovalActions
             'approve_business' => app(\App\Services\Business\BusinessApproval::class)->perform(\App\Models\Business::findOrFail($a->subject_id), $checker,
                 isset($payload['credit_limit']) ? (float) $payload['credit_limit'] : null, $payload['notes'] ?? null, $maker),
             'mpesa_b2c' => app(\App\Services\Mpesa\B2cPayouts::class)->send((int) $a->subject_id, $checker),
+            'sharet_payout' => app(\App\Services\Sharet\SharetPayouts::class)->approve((int) $a->subject_id, $checker),
             default => throw new \DomainException('Unknown action ' . $a->action),
         };
     }

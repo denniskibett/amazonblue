@@ -112,6 +112,11 @@
             <p x-show="!valid" x-cloak class="a-note err" style="margin-top:12px">Choose between KES 1.00 and {{ $kes($due) }}.</p>
           </section>
 
+          {{-- Sharet Pay first when the owner chose it as the repayment rail (9 Nov 2026) --}}
+          @if ($mode === 'pay' && ($sharet ?? false) && ($sharetFirst ?? false))
+            @include('home.account.repay._sharet', ['loan' => $loan, 'startAmount' => $startAmount, 'kes' => $kes])
+          @endif
+
           {{-- 2a. STK push (Stage 4; design stub with ?demo=1 locally) --}}
           @if ($mode === 'pay')
             <section class="a-card" @if ($demo) x-data="{
@@ -222,6 +227,11 @@
               <a class="btn btn-ghost btn-block" href="{{ $whatsapp }}" target="_blank" rel="noopener" style="margin-top:12px">Ask on WhatsApp</a>
             @endif
           </section>
+
+          {{-- 2c. Sharet Pay, the second rail, after the own paybill by default (9 Nov 2026) --}}
+          @if ($mode === 'pay' && ($sharet ?? false) && ! ($sharetFirst ?? false))
+            @include('home.account.repay._sharet', ['loan' => $loan, 'startAmount' => $startAmount, 'kes' => $kes])
+          @endif
         </div>
 
         <div class="a-grid">

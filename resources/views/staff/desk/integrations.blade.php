@@ -40,12 +40,16 @@
                 </button>
               @endif
               <button type="button" @click="details = @js($c['slug'])" class="{{ $btn }}">Details</button>
+              @if ($c['slug'] === 'sharet')
+                {{-- checks the key and registers the webhook once (its secret is saved, never shown) --}}
+                <form method="POST" action="{{ route('sharet.test') }}">@csrf<button class="{{ $btn }}">Test connection</button></form>
+              @endif
             </div>
             @unless ($c['managed'])
               <form method="POST" action="{{ route('staff.integrations.toggle', $c['slug']) }}">
                 @csrf
                 <button type="submit" role="switch" aria-checked="{{ $c['enabled'] ? 'true' : 'false' }}" aria-label="Switch {{ $c['name'] }} {{ $c['enabled'] ? 'off' : 'on' }}"
-                  data-confirm="{{ $c['enabled'] ? 'Switch ' . $c['name'] . ' off? Its saved values stop applying' . ($c['slug'] === 'mpesa' ? ' and M-Pesa payments stop.' : ' and .env is used.') : 'Switch ' . $c['name'] . ' on?' }}"
+                  data-confirm="{{ $c['enabled'] ? 'Switch ' . $c['name'] . ' off? Its saved values stop applying' . ($c['slug'] === 'mpesa' ? ' and M-Pesa payments stop.' : ($c['slug'] === 'sharet' ? ' and Sharet Pay stops.' : ' and .env is used.')) : 'Switch ' . $c['name'] . ' on?' }}"
                   class="relative inline-flex h-6 w-[52px] shrink-0 items-center rounded-full p-0.5 transition-colors {{ $c['enabled'] ? 'bg-brand-500 hover:bg-brand-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700' }}">
                   <span class="block h-5 w-[30px] rounded-full bg-white shadow-theme-sm transition-transform {{ $c['enabled'] ? 'translate-x-[18px]' : '' }}"></span>
                 </button>

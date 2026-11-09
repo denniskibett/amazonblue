@@ -214,17 +214,29 @@ class PaymentRecorder
 
     private function record(MpesaTransaction $t, Loan $loan, ?User $by): Repayment
     {
+        $repayment = $this->recordCash($loan, (float) $t->amount, ($t->trans_time ?? now())->toDateString(), $t->trans_id, 'mpesa', $by,
+            'M-Pesa ' . strtoupper($t->type) . ($t->maskedMsisdn() ? ' from ' . $t->maskedMsisdn() : '') . ($t->bill_ref ? ', account ' . $t->bill_ref : ''));
+        $this->settleClaims($t->trans_id, $repayment);
+
+        return $repayment;
+    }
+
+    /**
+     * Money received for a loan becomes one cash repayment on its latest cycle; the Repayment model events then
+     * allocate it (penalty, interest, principal), split it and post the ledger. Every rail that receives money
+     * uses this: M-Pesa C2B / STK here, Sharet Pay in Sharet\SharetCollections (9 Nov 2026).
+     */
+    public function recordCash(Loan $loan, float $amount, string $date, string $transaction, string $mode, ?User $by, string $notes): Repayment
+    {
         $cycle = LoanCycle::where('loan_id', $loan->id)->orderByDesc('cycle_number')->first();
         $repayment = Repayment::create([
-            'loan_id' => $loan->id, 'loan_cycle_id' => $cycle?->id, 'amount' => (float) $t->amount,
-            'repayment_date' => ($t->trans_time ?? now())->toDateString(), 'transaction' => $t->trans_id, 'kind' => 'cash',
-            'mode' => 'mpesa', 'created_by' => $by?->id,
-            'notes' => 'M-Pesa ' . strtoupper($t->type) . ($t->maskedMsisdn() ? ' from ' . $t->maskedMsisdn() : '') . ($t->bill_ref ? ', account ' . $t->bill_ref : ''),
+            'loan_id' => $loan->id, 'loan_cycle_id' => $cycle?->id, 'amount' => $amount,
+            'repayment_date' => $date, 'transaction' => $transaction, 'kind' => 'cash',
+            'mode' => $mode, 'created_by' => $by?->id, 'notes' => $notes,
         ]);
         if (LoanCalculator::v2()) {
             LoanStatus::apply($loan->refresh());
         }
-        $this->settleClaims($t->trans_id, $repayment);
 
         return $repayment;
     }

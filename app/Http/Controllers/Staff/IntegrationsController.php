@@ -70,6 +70,11 @@ class IntegrationsController extends Controller
                 $changed[] = $env;
             }
         }
+        // a new Sharet key (e.g. test -> live) needs its own webhook: Test connection registers it again (9 Nov 2026)
+        if ($slug === 'sharet' && in_array('SHARET_API_KEY', $changed, true) && ! in_array('SHARET_WEBHOOK_SECRET', $changed, true) && ! empty($settings['SHARET_WEBHOOK_SECRET'])) {
+            unset($settings['SHARET_WEBHOOK_SECRET']);
+            $changed[] = 'SHARET_WEBHOOK_SECRET';
+        }
         $row->fill(['name' => $def['name'], 'category' => $def['category'], 'description' => $def['description'], 'logo' => $def['logo'],
             'settings' => $settings, 'enabled' => $row->exists ? $row->enabled : true, 'updated_by' => $request->user()->id])->save();
         Integrations::forget();

@@ -121,7 +121,7 @@
                   @if (($sub['kind'] ?? null) === 'subscription' && ! $r->reference)
                     <span class="self-center text-theme-xs text-gray-500">Waiting for the money</span>
                   @else
-                  <form method="POST" action="{{ route('staff.requests.partner', $r->id) }}" @if ($r->type === 'withdrawal') x-data="{ paid: false }" class="flex flex-wrap items-center justify-end gap-2" @endif>@csrf<input type="hidden" name="decision" value="yes">
+                  <form method="POST" action="{{ route('staff.requests.partner', $r->id) }}" @if ($r->type === 'withdrawal') x-data="{ paid: false, sharet: false }" class="flex flex-wrap items-center justify-end gap-2" @endif>@csrf<input type="hidden" name="decision" value="yes">
                     @if ($r->type === 'withdrawal')
                       {{-- already sent from the bank or M-Pesa (owner, 3 Nov 2026): it posts on the day it was paid --}}
                       <label class="flex items-center gap-1.5 text-theme-xs text-gray-600 dark:text-gray-400"><input type="checkbox" x-model="paid"> Already paid</label>
@@ -129,6 +129,11 @@
                         <input type="date" name="paid_on" required max="{{ now()->toDateString() }}" aria-label="Day it was paid" class="h-9 rounded-lg border border-gray-300 px-2 text-theme-xs dark:border-gray-700 dark:bg-gray-900">
                         <input name="bank_reference" required maxlength="60" placeholder="Bank or M-Pesa ref" aria-label="Reference" class="h-9 w-40 rounded-lg border border-gray-300 px-2 text-theme-xs dark:border-gray-700 dark:bg-gray-900">
                       </span></template>
+                      {{-- pay through Sharet (9 Nov 2026): sent at the next Sharet run once this payout's approval has posted it --}}
+                      @if (\App\Services\Sharet\SharetPayouts::enabled())
+                        <label class="flex items-center gap-1.5 text-theme-xs text-gray-600 dark:text-gray-400" x-show="!paid"><input type="checkbox" name="via_sharet" value="1" x-model="sharet"> Pay through Sharet</label>
+                        <template x-if="!paid && sharet"><input name="sharet_phone" required maxlength="20" value="{{ \App\Models\Partner::whereKey($r->partner_id)->value('phone') }}" placeholder="Partner's M-Pesa number" aria-label="Partner's M-Pesa number" class="h-9 w-40 rounded-lg border border-gray-300 px-2 text-theme-xs dark:border-gray-700 dark:bg-gray-900"></template>
+                      @endif
                     @endif
                     <button class="{{ $btn }}">{{ $r->type === 'funding' ? (($sub['kind'] ?? null) === 'subscription' ? 'Confirm and open line' : 'Confirm received') : 'Prepare payout' }}</button></form>
                   @endif

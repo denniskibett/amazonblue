@@ -93,3 +93,10 @@ Schedule::command('analytics:prune-views')
     ->dailyAt('03:30')
     ->timezone('Africa/Nairobi')
     ->withoutOverlapping();
+
+// Sharet Pay (9 Nov 2026, docs/SHARET_PAYMENTS.md): both do nothing while Sharet is off.
+// Pay links and payouts a webhook missed are picked up here.
+Schedule::command('sharet:sync')->everyFiveMinutes()->withoutOverlapping()->appendOutputTo(storage_path('logs/sharet.log'));
+// approved disbursements and partner payouts set to go through Sharet, three times a day
+Schedule::command('payments:sweep')->cron('0 8,12,16 * * *')->timezone('Africa/Nairobi')->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/sharet.log'));

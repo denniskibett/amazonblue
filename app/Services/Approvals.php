@@ -26,6 +26,8 @@ class Approvals
         // owner, 24 Oct 2026
         'approve_business' => ['permission' => 'edit users', 'label' => 'Approve a business and its limit'],
         'mpesa_b2c' => ['permission' => 'disburse loans', 'label' => 'Send a disbursement by M-Pesa'],
+        // 9 Nov 2026: approving queues it for the next Sharet payout run (payments:sweep)
+        'sharet_payout' => ['permission' => 'disburse loans', 'label' => 'Send a disbursement through Sharet'],
     ];
 
     public static function enabled(): bool

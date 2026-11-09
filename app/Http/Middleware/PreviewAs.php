@@ -49,6 +49,7 @@ class PreviewAs
             'lending.mpesa.enabled' => false,
             'lending.mpesa.stk_enabled' => false,
             'lending.mpesa.b2c_enabled' => false,
+            'sharet.enabled' => false,
             'filesystems.disks.local.root' => storage_path('framework/preview'),
             'filesystems.disks.public.root' => storage_path('framework/preview/public'),
         ]);

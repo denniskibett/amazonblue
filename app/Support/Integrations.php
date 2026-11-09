@@ -49,6 +49,21 @@ class Integrations
                 'MPESA_B2C_COMMAND' => ['B2C command', 'lending.mpesa.b2c_command', 'text'],
             ],
         ],
+        // Sharet Pay, a second rail beside the own paybill above (9 Nov 2026; docs/SHARET_PAYMENTS.md). "Test connection"
+        // on its card checks the key and registers the webhook, saving its signing secret here.
+        'sharet' => [
+            'name' => 'Sharet Pay', 'category' => 'Payments', 'logo' => 'images/integrations/sharet.svg', 'switch' => 'sharet.enabled',
+            'description' => 'Borrowers repay through a Sharet pay link into our Sharet wallet; optionally, approved disbursements and partner payouts go out through Sharet.',
+            'fields' => [
+                'SHARET_ENABLED' => ['Sharet Pay on', 'sharet.enabled', 'bool'],
+                'SHARET_API_KEY' => ['API key (sk_test_… or sk_live_…; scopes collect, payout, read)', 'sharet.api_key', 'secret'],
+                'SHARET_WEBHOOK_SECRET' => ['Webhook signing secret (saved by Test connection)', 'sharet.webhook_secret', 'secret'],
+                'SHARET_BASE_URL' => ['API base URL', 'sharet.base_url', 'text'],
+                'SHARET_REPAYMENT_RAIL' => ['Repayment rail shown first to borrowers', 'sharet.repayment_rail', 'select', ['paybill', 'sharet']],
+                'SHARET_PAYOUTS_ENABLED' => ['Disbursements and partner payouts through Sharet', 'sharet.payouts_enabled', 'bool'],
+                'SHARET_PAY_LINK_MINUTES' => ['Pay link open for (minutes)', 'sharet.pay_link_minutes', 'text'],
+            ],
+        ],
         'africastalking' => [
             'name' => "Africa's Talking", 'category' => 'SMS', 'logo' => 'images/integrations/africastalking.svg', 'switch' => null,
             'description' => 'Bulk SMS for reminders, receipts and alerts (used when the SMS driver is africastalking).',

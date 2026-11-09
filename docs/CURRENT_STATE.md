@@ -112,6 +112,7 @@ only, once per event. Not sent for book entries, console entries or money dated 
 | Disbursements (staff form) | On | `DisbursementController`, `DisbursementService` |
 | M-Pesa C2B / STK repayments | Built, off (`MPESA_ENABLED`, `MPESA_STK_ENABLED`) | `Services/Mpesa/*`, `MpesaCallbackController` |
 | M-Pesa B2C payouts | Built, off (`MPESA_B2C_ENABLED`; needs sign-offs on) | `routes/features/mpesa-b2c.php`, `B2cPayouts` |
+| Sharet Pay (second rail beside the own paybill) | Built, off (since 9 Nov; `SHARET_ENABLED`, `SHARET_PAYOUTS_ENABLED`). Borrower pay links recorded through the same `PaymentRecorder::recordCash` as M-Pesa; approved disbursements and partner payouts sent at 08:00/12:00/16:00. [SHARET_PAYMENTS.md](SHARET_PAYMENTS.md) | `routes/features/sharet.php`, `Services/Sharet/*` |
 | Part funding | On (since 2 Nov) | `LoanFundings`, `RepaymentSplit` |
 | Partner portal and lines | On | `PartnerAccount`, `Partners/*` |
 | Partner subscriptions (online KYC + subscription) | Built, off (`LENDING_PARTNER_SUBSCRIPTIONS`) | `routes/features/partner-subscriptions.php` |
@@ -157,6 +158,9 @@ change it, then `php artisan config:cache`. Switch order and checks: [stage4/SWI
 | `SMS_DRIVER` | `log` | `log` (23 Oct) | `kenyasms`, `africastalking` or `log` |
 | `MPESA_ENABLED`, `MPESA_STK_ENABLED` | false | off, sandbox (23 Oct) | C2B and STK repayments |
 | `MPESA_B2C_ENABLED` | false | not recorded | M-Pesa payouts |
+| `SHARET_ENABLED` | false | not deployed | Sharet Pay pay links, webhook and poll ([SHARET_PAYMENTS.md](SHARET_PAYMENTS.md)) |
+| `SHARET_REPAYMENT_RAIL` | `paybill` | not deployed | Which rail borrowers see first: `paybill` or `sharet` |
+| `SHARET_PAYOUTS_ENABLED` | false | not deployed | Approved disbursements and partner payouts through Sharet |
 | `LENDING_PARTNER_SUBSCRIPTIONS` | false | not recorded | Partner online subscription |
 | `LENDING_BUSINESS_LOANS` | false | not recorded | Loans to businesses |
 | `LENDING_AML_SCREENING` | false | not recorded | Sanctions screening before approvals |
@@ -176,6 +180,8 @@ Defined in `routes/console.php`, Africa/Nairobi time. The server runs `schedule:
 | Time | Command | What it does |
 |---|---|---|
 | every minute | `queue:work` | Drains the queue |
+| every 5 min | `sharet:sync` | Sharet pay links and payouts a webhook missed (nothing while Sharet is off) |
+| 08:00, 12:00, 16:00 | `payments:sweep` | Sends approved disbursements and partner payouts set to go through Sharet, once per slot |
 | 01:00 | `loans:update-statuses` | Loan statuses; defaults past the threshold |
 | 01:15 | `ledger:accrue` | Books cycle interest and penalty to the ledger |
 | 01:30 | `loans:detect-npl` | Non-performing loans; opens recovery cases |
@@ -213,6 +219,9 @@ fixes are also mirrored in `RoleSeeder`.
 Latest twins: `2026_11_01_cycle_interest_amount`, `2026_11_01_site_analytics`, `2026_11_01_testimonials`,
 `2026_11_02_part_funding`, `2026_11_03_integrations_api_keys`, `2026_11_03_integrations_permission`,
 `2026_11_03_users_utility_meters`, `2026_11_03_retire_broker_role`, `2026_11_03_collection_agencies`, `2026_11_04_partner_slices`, `2026_11_04_investor_prospects`.
+
+Exception: `2026_11_09_sharet_pay.sql` (Sharet Pay tables) has **no migration** by the owner's rule for that change; it
+inserts no `migrations` row, and `SharetPayTest` loads it into the test database itself.
 
 ## 9. Known issues
 
@@ -259,6 +268,7 @@ Newest first. One line per change that alters a rule, switch, role or module.
 
 | Date | Change |
 |---|---|
+| 2026-11-09 | Sharet Pay as a second rail beside the own paybill: borrower pay links (repay screen, staff "Send Sharet pay link"), signed webhook + `sharet:sync`, one repayment per payment through `PaymentRecorder::recordCash` (mode `sharet`); optional payouts of approved disbursements (sign-off action `sharet_payout`) and approved partner withdrawals at 08:00/12:00/16:00 (`payments:sweep`); Integrations › Sharet Pay with Test connection; `/staff/sharet`; tables `sharet_payment_requests`, `sharet_payouts`, `sharet_webhook_events`. All off by default |
 | 2026-11-03 | Collection agencies: `collector` role and `/collect` portal, `/staff/agencies`, permission `manage collection agencies`; tables `collection_agencies`, `collection_agency_users`, `collection_placements`, `collection_contacts` |
 | 2026-11-03 | Cash and growth page (`/staff/cash-forecast`), `lending.forecast` assumptions |
 | 2026-11-03 | Preview ("view as") opens any real account but a super-admin, staff included |

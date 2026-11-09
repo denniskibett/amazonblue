@@ -216,6 +216,31 @@
             </details>
             @endcan
             @endif
+            {{-- Sharet Pay, the second rail (9 Nov 2026): send an approved loan's money through Sharet at the next run --}}
+            @if ($loan->status === 'approved' && \App\Services\Sharet\SharetPayouts::enabled())
+            @can('disburse loans')
+            <details class="rounded-lg border border-gray-300 dark:border-gray-700">
+                <summary class="flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300">Send through Sharet</summary>
+                <form method="POST" action="{{ route('sharet.disburse', $loan) }}" class="space-y-2 p-3">
+                    @csrf
+                    <x-staff.field name="phone" id="sharet-phone" label="M-Pesa number" :value="$loan->user?->phone" required />
+                    <x-staff.field name="amount" id="sharet-amount" type="number" label="Amount (KES)" :value="(int) $loan->amount" min="10" step="1" required />
+                    <button class="w-full rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600">Send through Sharet</button>
+                    <p class="text-xs text-gray-500">Goes at the next run (08:00, 12:00, 16:00){{ \App\Services\Approvals::enabled() ? ', after a second person approves it on Second sign-offs' : '' }}.</p>
+                </form>
+            </details>
+            @endcan
+            @endif
+            {{-- a Sharet pay link for what is due, texted to the borrower --}}
+            @if (in_array($loan->status, \App\Services\Mpesa\PaymentRecorder::PAYABLE, true) && \App\Services\Sharet\SharetCollections::available())
+            @can('create repayments')
+            <form method="POST" action="{{ route('sharet.pay-link', $loan) }}">
+                @csrf
+                <button class="w-full flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors"
+                        data-confirm="Text the borrower a Sharet pay link for what is due now?">Send Sharet pay link</button>
+            </form>
+            @endcan
+            @endif
             <!-- Rollover Loan -->
             @if(in_array($loan->status, ['active', 'overdue', 'disbursed']) && !$loan->isDefaulted() && !$loan->isInForbearance())
             <button @click="window.openRolloverModal({{ $loan->id }})"

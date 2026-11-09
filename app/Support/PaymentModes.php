@@ -19,6 +19,8 @@ class PaymentModes
         'pesalink' => 'Pesalink',
         'cash' => 'Cash',
         'cheque' => 'Cheque',
+        // a second rail beside the own paybill (9 Nov 2026): the reference is Sharet's transaction ID
+        'sharet' => 'Sharet Pay',
         'other' => 'Other',
     ];
 
@@ -72,7 +74,8 @@ class PaymentModes
         $t = trim((string) $transaction) ?: null;
         $bank = trim((string) $bankRef) ?: null;
         $mpesa = strtoupper(trim((string) $mpesaRef)) ?: null;
-        if ($t && ! $bank && ! $mpesa) {
+        // a Sharet transaction ID (e.g. SHD1CCFAF6) looks like an M-Pesa code but is neither a bank nor an M-Pesa reference
+        if ($t && ! $bank && ! $mpesa && $mode !== 'sharet') {
             $shape = self::shape($t);
             if ($shape === 'mpesa' && ! in_array($mode, self::BANK, true)) {
                 $mpesa = strtoupper($t);
