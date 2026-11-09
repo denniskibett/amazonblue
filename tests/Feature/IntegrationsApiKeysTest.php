@@ -93,12 +93,12 @@ class IntegrationsApiKeysTest extends TestCase
     public function test_search_finds_a_loan_by_number_and_only_for_staff_who_may_see_it(): void
     {
         $borrower = User::factory()->create(['name' => 'Wanjiku Search']);
-        $this->actingAs($this->super)->postJson(route('staff.search'), ['q' => 'Wanjiku'])->assertOk()
+        $this->actingAs($this->super)->getJson(route('staff.search', ['q' => 'Wanjiku']))->assertOk()
             ->assertJsonFragment(['label' => 'Wanjiku Search']);
 
         $teller = User::factory()->create();
         $teller->assignRole('teller');
-        $this->actingAs($teller)->postJson(route('staff.search'), ['q' => 'Wanjiku'])->assertOk()->assertJsonMissing(['label' => 'Wanjiku Search']);
+        $this->actingAs($teller)->getJson(route('staff.search', ['q' => 'Wanjiku']))->assertOk()->assertJsonMissing(['label' => 'Wanjiku Search']);
         $this->assertNotNull($borrower);
     }
 
