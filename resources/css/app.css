@@ -570,17 +570,17 @@ span.flatpickr-weekday,
 .dark .shadow-theme-xs, .dark .shadow-sm { box-shadow: none; }
 
 
-/* Modal backdrops (owner, 23 Oct 2026): every modal, drawer and dialog sits on the same black gradient, 50% to 60%,
-   with no blur so it reads as a clear dark layer. */
+/* Modal backdrops (owner, 10 Nov 2026, replaces the 23 Oct black gradient): every modal, drawer and dialog sits on
+   the same frosted 50% grey (Tailwind bg-gray-400/50 backdrop-blur-[32px]), as in the other Sharet apps. */
 .az-backdrop {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.6) 100%) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
+  background: rgba(156, 163, 175, 0.5) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  backdrop-filter: blur(32px) !important;
 }
 dialog::backdrop {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.6) 100%) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
+  background: rgba(156, 163, 175, 0.5) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  backdrop-filter: blur(32px) !important;
 }
 
 /* Side sheets (owner, 23 Oct 2026): every modal with a form slides in from the right, flush with the top, right and

@@ -59,7 +59,7 @@
     @foreach ($cards as $c)
       {{-- details --}}
       <div x-cloak x-show="details === @js($c['slug'])" class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-5" @keydown.escape.window="details = null">
-        <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px] dark:bg-gray-900/70" @click="details = null"></div>
+        <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="details = null"></div>
         <div class="relative w-full max-w-[600px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
           <h4 class="mb-1 text-title-xs font-semibold text-gray-800 dark:text-white/90">{{ $c['name'] }} details</h4>
           <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">What is in force now. Secrets show their last four characters only.</p>
@@ -81,7 +81,7 @@
       {{-- settings --}}
       @unless ($c['managed'])
         <div x-cloak x-show="settings === @js($c['slug'])" class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-5" @keydown.escape.window="settings = null">
-          <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px] dark:bg-gray-900/70" @click="settings = null"></div>
+          <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="settings = null"></div>
           <div class="relative my-auto w-full max-w-[600px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
             <h4 class="mb-1 text-title-xs font-semibold text-gray-800 dark:text-white/90">{{ $c['name'] }} settings</h4>
             <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">Leave a secret blank to keep the saved one. Changes apply on the next page load and are recorded in the audit log (names only, never values).</p>

@@ -78,7 +78,7 @@
     </div>
 
     <div x-cloak x-show="adding" class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-5" @keydown.escape.window="adding = false">
-      <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px] dark:bg-gray-900/70" @click="adding = false"></div>
+      <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="adding = false"></div>
       <div class="relative w-full max-w-[600px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
         <h4 class="mb-1 text-title-sm font-semibold text-gray-800 dark:text-white/90">Generate API key</h4>
         <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">Name it after the system that will use it, so you know what breaks if you switch it off.</p>

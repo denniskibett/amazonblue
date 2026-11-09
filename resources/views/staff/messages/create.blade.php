@@ -134,7 +134,7 @@
 
     {{-- preview: the exact email and SMS for one borrower --}}
     <div x-show="open" x-cloak class="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" @keydown.escape.window="open = false">
-      <div class="absolute inset-0 bg-gray-900/50" @click="open = false"></div>
+      <div class="absolute inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="open = false"></div>
       <div class="relative flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-theme-xl dark:bg-gray-900">
         <div class="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-3 dark:border-gray-800">
           <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">What <span x-text="who"></span> will get</h3>

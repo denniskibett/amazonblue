@@ -134,7 +134,7 @@
     </x-staff.tab>
   </x-staff.tabs>
 
-  <dialog id="add-prospect" class="w-full max-w-lg rounded-2xl p-0 backdrop:bg-gray-900/50">
+  <dialog id="add-prospect" class="w-full max-w-lg rounded-2xl p-0 backdrop:bg-gray-400/50 backdrop:backdrop-blur-[32px]">
     <form method="POST" action="{{ route('staff.capital.store') }}" class="space-y-4 p-6">@csrf
       <h3 class="text-lg font-semibold text-gray-800">New prospect</h3>
       <div class="grid grid-cols-2 gap-3">

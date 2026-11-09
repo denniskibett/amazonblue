@@ -158,7 +158,7 @@
 
     {{-- add agency --}}
     <div x-cloak x-show="adding" class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-5" @keydown.escape.window="adding = false">
-      <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px] dark:bg-gray-900/70" @click="adding = false"></div>
+      <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="adding = false"></div>
       <div class="relative w-full max-w-[640px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
         <h4 class="mb-1 text-title-sm font-semibold text-gray-800 dark:text-white/90">Add a collection agency</h4>
         <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">Add it only once the data sharing agreement is signed. An agency outside Kenya also needs the cross-border clause (Data Protection Act, section 48).</p>
@@ -182,7 +182,7 @@
     @if ($agency)
       {{-- add collector --}}
       <div x-cloak x-show="collector" class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-5" @keydown.escape.window="collector = false">
-        <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px] dark:bg-gray-900/70" @click="collector = false"></div>
+        <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px]" @click="collector = false"></div>
         <div class="relative w-full max-w-[560px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
           <h4 class="mb-1 text-title-sm font-semibold text-gray-800 dark:text-white/90">Add a collector to {{ $agency->name }}</h4>
           <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">They see only this agency's open placements. Give them the password yourself; they can change it with Forgot password.</p>
