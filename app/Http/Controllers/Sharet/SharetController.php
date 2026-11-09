@@ -27,8 +27,9 @@ class SharetController extends Controller
         abort_unless((int) $loan->user_id === (int) $request->user()->id, 404);
         abort_unless(SharetCollections::available(), 404);
         $due = max(0.0, (float) ($progress->for($loan)['balance']['due'] ?? 0));
-        $data = $request->validate(['amount' => ['required', 'numeric', 'min:1', 'max:' . max(1, ceil($due))]],
-            ['amount.max' => 'That is more than the amount due (KES ' . number_format($due, 2) . ').']);
+        $min = SharetCollections::MIN_AMOUNT;
+        $data = $request->validate(['amount' => ['required', 'numeric', 'min:' . $min, 'max:' . max($min, ceil($due))]],
+            ['amount.max' => 'That is more than the amount due (KES ' . number_format($due, 2) . ').', 'amount.min' => 'Sharet Pay takes at least KES ' . $min . '.']);
         try {
             $link = $collections->payLink($loan, (float) $data['amount'], $request->user());
         } catch (\Throwable $e) {
@@ -45,7 +46,8 @@ class SharetController extends Controller
     public function sendPayLink(Request $request, Loan $loan, LoanProgress $progress, SharetCollections $collections, SmsSender $sms): RedirectResponse
     {
         $due = max(0.0, (float) ($progress->for($loan)['balance']['due'] ?? 0));
-        $data = $request->validate(['amount' => ['nullable', 'numeric', 'min:1', 'max:' . max(1, ceil($due))]]);
+        $min = SharetCollections::MIN_AMOUNT;
+        $data = $request->validate(['amount' => ['nullable', 'numeric', 'min:' . $min, 'max:' . max($min, ceil($due))]]);
         try {
             $link = $collections->payLink($loan, (float) ($data['amount'] ?? $due), $request->user());
         } catch (\Throwable $e) {
@@ -124,6 +126,7 @@ class SharetController extends Controller
             return back()->with('error', 'Sharet refused the key: ' . ($me->json('detail') ?? $me->json('message') ?? ('HTTP ' . $me->status())));
         }
         $hooked = filled(config('sharet.webhook_secret'));
+        $why = null;
         if (! $hooked) {
             $hook = $client->post('/webhooks', ['url' => route('sharet.webhook'), 'events' => SharetClient::WEBHOOK_EVENTS]);
             if ($hook->successful() && $hook->json('secret')) {
@@ -135,11 +138,13 @@ class SharetController extends Controller
                 Integrations::forget();
                 AuditTrail::record('integrations', $row->id, 'update', null, ['event' => 'settings_changed', 'integration' => 'sharet', 'keys' => ['SHARET_WEBHOOK_SECRET']]);
                 $hooked = true;
+            } else {
+                $why = $hook->json('detail') ?? $hook->json('message') ?? ('HTTP ' . $hook->status());
             }
         }
 
         return back()->with($hooked ? 'success' : 'warning', 'Connected to Sharet as ' . ($me->json('name') ?? $me->json('business_name') ?? $me->json('sharet_id') ?? 'your account')
-            . ' (' . ($client->environment === 'live' ? 'live' : 'sandbox') . ').' . ($hooked ? ' Webhook registered.' : ' Webhook not registered yet: it needs the public HTTPS address.'));
+            . ' (' . ($client->environment === 'live' ? 'live' : 'sandbox') . ').' . ($hooked ? ' Webhook registered.' : ' Webhook not registered yet (' . ($why ?? 'no answer') . '): Sharet needs the public HTTPS address.'));
     }
 
     private function canTouch(Request $request, SharetPayout $payout): void

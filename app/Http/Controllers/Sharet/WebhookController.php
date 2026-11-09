@@ -51,8 +51,7 @@ class WebhookController extends Controller
         try {
             match (true) {
                 str_starts_with($type, 'payment_request.') => $collections->apply($data),
-                str_starts_with($type, 'payment.') => ($row = SharetPayout::where('sharet_payment_id', (string) ($data['id'] ?? ''))->first())
-                    ? $payouts->record($row, $data) : null,
+                str_starts_with($type, 'payment.') => ($row = $this->payout($data)) ? $payouts->record($row, $data) : null,
                 default => null,
             };
         } catch (\Throwable $e) {
@@ -65,5 +64,26 @@ class WebhookController extends Controller
         DB::table('sharet_webhook_events')->where('event_id', $id)->update(['processed_at' => now(), 'updated_at' => now()]);
 
         return response()->json(['received' => true]);
+    }
+
+    /**
+     * The payout a payment.* event is about. In the sandbox (and for any instant payout) Sharet sends the event before
+     * it answers our POST /payments, so we don't know its id yet: then it is the one payout still being sent with that
+     * reference, amount and environment. record() locks the row, so the answer arriving next adds nothing.
+     */
+    private function payout(array $data): ?SharetPayout
+    {
+        $id = (string) ($data['id'] ?? '');
+        if ($id === '') {
+            return null;
+        }
+        if ($row = SharetPayout::where('sharet_payment_id', $id)->first()) {
+            return $row;
+        }
+
+        return SharetPayout::where('status', 'paying')->whereNull('sharet_payment_id')
+            ->where('environment', (string) ($data['environment'] ?? ''))->orderBy('id')->get()
+            ->first(fn (SharetPayout $p) => ($p->request_body['reference'] ?? null) === ($data['reference'] ?? false)
+                && abs((float) ($p->request_body['amount'] ?? 0) - (float) ($data['amount'] ?? -1)) < 0.005);
     }
 }

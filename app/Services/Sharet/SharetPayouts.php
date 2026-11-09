@@ -266,6 +266,9 @@ class SharetPayouts
                 return;
             }
             $status = (string) ($payment['status'] ?? '');
+            if ($row->status === 'failed' && $status !== 'paid' && ($payment['id'] ?? null) === $row->sharet_payment_id) {
+                return; // the same failure again (the webhook, then Sharet's answer): one record and one alarm
+            }
             $fill = ['sharet_payment_id' => $payment['id'] ?? $row->sharet_payment_id];
             if ($status === 'paying' || $status === '') {
                 $row->update($fill + ['status' => 'paying', 'failure' => null]);

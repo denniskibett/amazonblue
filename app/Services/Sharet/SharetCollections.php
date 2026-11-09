@@ -25,6 +25,9 @@ use Illuminate\Support\Facades\Log;
  */
 class SharetCollections
 {
+    /** Sharet's smallest payment request (config pricing.min_amount there: KES 10.00). */
+    public const MIN_AMOUNT = 10;
+
     /** Sharet switched on and a key saved. */
     public static function available(): bool
     {
@@ -46,10 +49,10 @@ class SharetCollections
         if (! in_array($loan->status, PaymentRecorder::PAYABLE, true)) {
             throw new \DomainException('Loan #' . $loan->id . ' is ' . $loan->status . ', not open for payments.');
         }
-        // Sharet takes whole shillings
+        // Sharet takes whole shillings, at least KES 10 (it refuses less with 422 invalid_amount)
         $amount = (float) ceil(round($amount, 2));
-        if ($amount < 1) {
-            throw new \DomainException('Nothing to pay.');
+        if ($amount < self::MIN_AMOUNT) {
+            throw new \DomainException('Sharet Pay takes at least KES ' . self::MIN_AMOUNT . '.');
         }
 
         $existing = SharetPaymentRequest::where('loan_id', $loan->id)->where('status', 'open')->where('amount', $amount)->latest('id')->first();
@@ -68,7 +71,9 @@ class SharetCollections
             'expires_in_minutes' => (int) config('sharet.pay_link_minutes'),
             'metadata' => ['loan_id' => (string) $loan->id],
         ]);
-        $key = 'aimzone-loan-' . $loan->id . '-' . (int) $amount . '-' . now()->format('YmdHi');
+        // a new key for every new link: Sharet replays the first answer for a repeated key, so a key reused within the
+        // minute after a link was paid, cancelled or expired would hand back that dead link
+        $key = 'aimzone-loan-' . $loan->id . '-' . (int) $amount . '-' . now()->format('YmdHi') . '-' . SharetPaymentRequest::where('loan_id', $loan->id)->count();
         $res = $client->post('/payment-requests', $body, $key);
         if (! $res->successful() || ! $res->json('id')) {
             Log::error('Sharet pay link failed', ['loan_id' => $loan->id, 'status' => $res->status(), 'body' => mb_substr($res->body(), 0, 500)]);
@@ -79,7 +84,7 @@ class SharetCollections
             'loan_id' => $loan->id, 'user_id' => $loan->user_id,
             'environment' => $res->json('environment') ?? $client->environment,
             'amount' => $amount, 'status' => $res->json('status') ?? 'open', 'pay_url' => $res->json('pay_url'),
-            'reference' => $reference, 'expires_at' => $res->json('expires_at') ? Carbon::parse($res->json('expires_at')) : null,
+            'reference' => $reference, 'expires_at' => $res->json('expires_at') ? Carbon::parse($res->json('expires_at'))->setTimezone(config('app.timezone')) : null,
             'created_by' => $by?->id, 'raw' => $res->json(),
         ]);
         AuditTrail::record('sharet_payment_requests', $row->id, 'create', null, ['event' => 'sharet_pay_link', 'loan_id' => $loan->id, 'amount' => $amount]);

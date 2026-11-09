@@ -13,8 +13,9 @@ use Illuminate\Support\Facades\Http;
  */
 class SharetClient
 {
+    /** Events we subscribe to: only names Sharet accepts (ApiWebhook::EVENTS there); an unknown one fails the whole registration. */
     public const WEBHOOK_EVENTS = [
-        'payment_request.paid', 'payment_request.expired', 'payment_request.cancelled',
+        'payment_request.paid', 'payment_request.expired',
         'payment.paid', 'payment.failed', 'payment.refunded',
     ];
 

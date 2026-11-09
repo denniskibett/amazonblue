@@ -72,6 +72,21 @@ Only money the app has already approved is sent, and only for the amount the app
 | Routes | `routes/features/sharet.php` |
 | Tests | `tests/Feature/Features/SharetPayTest.php` (Sharet faked, real HMAC signatures) |
 
+## Sharet's contract, as checked end to end (10 Nov 2026, against a local Sharet sandbox)
+
+- Amounts are strings with two decimals (`"2500.00"`), whole shillings, at least **KES 10**, for pay links and payouts.
+  The repay screen and the staff pay link refuse less.
+- `Idempotency-Key` is 8 to 80 characters. Sharet replays the first answer for a repeated key, so each new pay link
+  gets its own key.
+- Webhook events we register: `payment_request.paid`, `payment_request.expired`, `payment.paid`, `payment.failed`,
+  `payment.refunded`. Sharet refuses any other name, and the whole registration fails with it.
+- A paid request's `transaction_id` is its own SH reference (`null` in the sandbox, where the request id is used). A
+  payment object has no `transaction_id`: its id (`pay_…`) is the reference on the disbursement or partner payout.
+- The sandbox **fail** button cancels the request with no event; `sharet:sync` closes it here.
+- Sharet sends `payment.*` before it answers `POST /payments` (sandbox and instant payouts). The webhook then matches
+  the one payout still being sent with that reference and amount, and the answer that follows adds nothing.
+- Times come back in UTC and are kept as the same instant in Nairobi time.
+
 ## Settings (Integrations › Sharet Pay)
 
 | Field | Default | Meaning |

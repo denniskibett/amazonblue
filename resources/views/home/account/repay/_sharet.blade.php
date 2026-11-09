@@ -6,6 +6,7 @@
     @csrf
     <input type="hidden" name="amount" :value="amount" value="{{ $startAmount }}">
     <p class="muted rp-small">You go to a secure Sharet page to pay <b x-text="fmt(amount)">{{ $kes($startAmount) }}</b> by M-Pesa or your Sharet wallet. It shows under your loan's payments as soon as it is paid; there is no code to send us.</p>
-    <button class="btn btn-primary btn-block" type="submit" :disabled="!valid" style="margin-top:14px">Pay with Sharet Pay</button>
+    <button class="btn btn-primary btn-block" type="submit" :disabled="!valid || amount < {{ \App\Services\Sharet\SharetCollections::MIN_AMOUNT }}" style="margin-top:14px">Pay with Sharet Pay</button>
+    <p class="muted rp-small" x-show="valid && amount < {{ \App\Services\Sharet\SharetCollections::MIN_AMOUNT }}" x-cloak>Sharet Pay takes at least KES {{ \App\Services\Sharet\SharetCollections::MIN_AMOUNT }}; pay smaller amounts by Paybill.</p>
   </form>
 </section>

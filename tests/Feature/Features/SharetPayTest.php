@@ -20,12 +20,14 @@ use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\Feature\Money\AuditLoanFixtures;
 use Tests\TestCase;
 
 /**
- * Sharet Pay, the second rail beside the own paybill (9 Nov 2026). Sharet is faked (Http::fake) and webhooks carry real
- * HMAC signatures; nothing leaves the test. The Sharet tables come from database/sql/2026_11_09_sharet_pay.sql
+ * Sharet Pay, the second rail beside the own paybill (9 Nov 2026). Sharet is faked (Http::fake) with the objects its API
+ * really returns (App\Api\PaymentRequests::present and Payments::present in Sharet, checked end to end against a local
+ * Sharet on 10 Nov 2026), and webhooks carry real HMAC signatures; nothing leaves the test. The Sharet tables come from database/sql/2026_11_09_sharet_pay.sql
  * (there is no migration), loaded before each test's transaction.
  */
 class SharetPayTest extends TestCase
@@ -88,24 +90,46 @@ class SharetPayTest extends TestCase
         parent::tearDown();
     }
 
-    private function fakeSharet(array $payment = ['id' => 'pay_test_1', 'status' => 'paid', 'transaction_id' => 'SHP0A1B2C3']): void
+    private function fakeSharet(array $payment = []): void
     {
+        $payment = $this->paymentObject($payment);
         Http::fake([
             'sharet.test/api/v1/payment-requests/*' => Http::response($this->linkObject('paid')),
             'sharet.test/api/v1/payment-requests' => Http::response($this->linkObject('open'), 201),
             'sharet.test/api/v1/payments/*' => Http::response($payment),
             'sharet.test/api/v1/payments' => Http::response($payment, 201),
-            'sharet.test/api/v1/accounts/me' => Http::response(['sharet_id' => 'SH-AIMZONE', 'name' => 'Aimzone Credit']),
-            'sharet.test/api/v1/webhooks' => Http::response(['id' => 7, 'secret' => 'whsec_registered_secret_xyz'], 201),
+            'sharet.test/api/v1/accounts/me' => Http::response(['sharet_id' => 'SH-AIMZONE', 'handle' => '@aimzone', 'name' => 'Aimzone Credit',
+                'verification' => 'none', 'business' => ['sharet_id' => 'SH-AIMZONE', 'name' => 'Aimzone Credit'],
+                'balance' => ['currency' => 'KES', 'available' => '0.00'], 'key' => ['name' => 'Aimzone', 'environment' => 'test', 'scopes' => ['read', 'collect', 'payout']]]),
+            'sharet.test/api/v1/webhooks' => Http::response(['id' => 7, 'url' => 'https://aimzone.test/webhooks/sharet', 'events' => \App\Services\Sharet\SharetClient::WEBHOOK_EVENTS,
+                'environment' => 'test', 'enabled' => true, 'secret' => 'whsec_registered_secret_xyz', 'note' => 'Keep the secret.'], 201),
         ]);
     }
 
-    private function linkObject(string $status, string $id = 'pr_test_1', string $amount = '2500.00'): array
+    /** Sharet's payment_request object. A paid request's transaction_id is its own SH reference (null in the sandbox). */
+    private function linkObject(string $status, string $id = 'SHD1CCFAF6', string $amount = '2500.00'): array
     {
-        return ['id' => $id, 'object' => 'payment_request', 'environment' => 'test', 'status' => $status, 'amount' => $amount,
-            'pay_url' => 'https://sharet.test/r/tok123', 'paid_via' => $status === 'paid' ? 'mpesa' : null,
-            'transaction_id' => $status === 'paid' ? 'SHD1CCFAF6' : null, 'paid_at' => $status === 'paid' ? '2026-11-09T07:30:00+00:00' : null,
-            'expires_at' => '2026-11-12T10:00:00+00:00', 'metadata' => ['loan_id' => '901']];
+        return ['id' => $id, 'object' => 'payment_request', 'environment' => 'test', 'status' => $status, 'amount' => $amount, 'currency' => 'KES',
+            'reference' => 'Loan 901', 'payee' => ['sharet_id' => 'SH-AIMZONE', 'handle' => '@aimzone'], 'payer' => ['phone' => '254712345678'],
+            'channels' => ['sharet', 'mpesa'], 'pay_url' => 'https://sharet.test/r/tok123', 'paid_via' => $status === 'paid' ? 'mpesa' : null,
+            'transaction_id' => $status === 'paid' ? $id : null, 'paid_at' => $status === 'paid' ? '2026-11-09T07:30:00+00:00' : null,
+            'expires_at' => '2026-11-12T10:00:00+00:00', 'metadata' => ['loan_id' => '901'], 'splits' => null, 'split_status' => null,
+            'split_failure' => null, 'created_at' => '2026-11-09T07:00:00+00:00'];
+    }
+
+    /** Sharet's payment object (POST /payments, GET /payments/{id}, payment.* events). It has no transaction_id. */
+    private function paymentObject(array $over = []): array
+    {
+        return array_merge(['id' => 'pay_test_1', 'object' => 'payment', 'environment' => 'test', 'status' => 'paid', 'amount' => '10000.00',
+            'fee' => '0.00', 'total' => '10000.00', 'currency' => 'KES', 'to' => ['type' => 'mpesa', 'phone' => '254712345678'],
+            'reference' => 'Loan 700 disbursement', 'tariff' => null, 'failure' => null, 'created_at' => '2026-11-09T07:00:00+00:00'], $over);
+    }
+
+    /** Replace every Sharet stub (Http::fake adds to the earlier ones, and the first match wins). */
+    private function refake(array $stubs): void
+    {
+        Http::swap(new \Illuminate\Http\Client\Factory(app('events')));
+        Http::fake($stubs);
     }
 
     private function webhook(array $event, ?string $secret = self::WHSEC)
@@ -135,7 +159,10 @@ class SharetPayTest extends TestCase
         $this->assertEquals(2500, (float) $link->amount);
         $this->assertSame(901, (int) $link->loan_id);
         Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/payment-requests') && $r->hasHeader('Idempotency-Key')
+            && strlen($r->header('Idempotency-Key')[0]) >= 8 && strlen($r->header('Idempotency-Key')[0]) <= 80
             && $r->hasHeader('Authorization', 'Bearer sk_test_abc') && $r['amount'] === '2500.00' && $r['metadata']['loan_id'] === '901');
+        // Sharet's ISO time (UTC) is kept as the same instant in the app's time zone
+        $this->assertSame('2026-11-12 13:00:00', $link->expires_at->format('Y-m-d H:i:s'));
 
         $this->actingAs($this->borrower)->post(route('account.repay.sharet', 901), ['amount' => 2500])->assertRedirect('https://sharet.test/r/tok123');
         $this->assertSame(1, SharetPaymentRequest::count());
@@ -268,20 +295,20 @@ class SharetPayTest extends TestCase
         $this->assertSame('paid', $row->status);
         $d = Disbursement::findOrFail($row->disbursement_id);
         $this->assertSame('sharet', $d->mode);
-        $this->assertSame('SHP0A1B2C3', $d->transaction);
+        $this->assertSame('pay_test_1', $d->transaction);
         $this->assertSame('disbursed', Loan::findOrFail(700)->status);
 
         $this->artisan('payments:sweep', ['--slot' => '2026-11-09T12'])->assertSuccessful();
         $this->artisan('payments:sweep', ['--slot' => '2026-11-09T16'])->assertSuccessful();
         Http::assertSentCount(1);
         $this->assertSame(1, Disbursement::where('loan_id', 700)->count());
-        $this->actingAs($this->admin)->get(route('sharet.index'))->assertOk()->assertSee('Loan #700 · disbursement')->assertSee('SHP0A1B2C3');
+        $this->actingAs($this->admin)->get(route('sharet.index'))->assertOk()->assertSee('Loan #700 · disbursement')->assertSee('pay_test_1');
     }
 
     public function test_a_payout_still_paying_is_sent_once_per_slot_and_recorded_once_from_the_webhook(): void
     {
         $this->approvedLoan();
-        $this->fakeSharet(['id' => 'pay_test_9', 'status' => 'paying']);
+        $this->fakeSharet(['id' => 'pay_test_9', 'status' => 'paying']); // a live payout to M-Pesa answers "paying" first
         $this->actingAs($this->admin)->post(route('sharet.disburse', 700), ['phone' => '0712345678', 'amount' => 10000])->assertSessionHas('success');
         $this->assertSame('queued', SharetPayout::sole()->status, 'sign-offs off: the ask is the approval, as for a hand disbursement');
 
@@ -293,12 +320,12 @@ class SharetPayTest extends TestCase
         $this->assertSame('pay_test_9', $row->sharet_payment_id);
         $this->assertSame(0, Disbursement::count());
 
-        $paid = ['id' => 'pay_test_9', 'object' => 'payment', 'status' => 'paid', 'transaction_id' => 'SHP9Z9Z9Z9', 'amount' => '10000.00'];
+        $paid = $this->paymentObject(['id' => 'pay_test_9']);
         $this->webhook(['id' => 'evt_p1', 'type' => 'payment.paid', 'data' => $paid])->assertOk();
         $this->webhook(['id' => 'evt_p2', 'type' => 'payment.paid', 'data' => $paid])->assertOk();
         $this->assertSame('paid', $row->fresh()->status);
         $this->assertSame(1, Disbursement::count());
-        $this->assertSame('SHP9Z9Z9Z9', Disbursement::sole()->transaction);
+        $this->assertSame('pay_test_9', Disbursement::sole()->transaction, 'a payment has no transaction_id: its id is the reference');
     }
 
     public function test_a_loan_that_is_not_approved_cannot_be_paid_out(): void
@@ -312,7 +339,7 @@ class SharetPayTest extends TestCase
     public function test_a_partner_payout_goes_only_once_its_withdrawal_is_approved_and_once_per_slot(): void
     {
         config(['lending.approvals.enabled' => true]);
-        $this->fakeSharet();
+        $this->fakeSharet(['amount' => '30000.00', 'to' => ['type' => 'mpesa', 'phone' => '254722000111']]);
         $partner = Partner::create(['name' => 'IMAGINE-NATION', 'email' => 'imagine@example.test', 'type' => 'corporate', 'account_type' => 'principal', 'phone' => '0722000111']);
         $req = app(\App\Services\Requests::class);
         $manager = User::factory()->create();
@@ -339,7 +366,7 @@ class SharetPayTest extends TestCase
         Http::assertSentCount(1);
         Http::assertSent(fn (HttpRequest $r) => $r['amount'] === '30000.00' && $r['to'] === ['type' => 'mpesa', 'phone' => '254722000111']);
         $this->assertSame('paid', $row->fresh()->status);
-        $this->assertSame('SHP0A1B2C3', DB::table('partner_requests')->where('id', $out)->value('bank_reference'));
+        $this->assertSame('pay_test_1', DB::table('partner_requests')->where('id', $out)->value('bank_reference'));
         $this->assertEqualsWithDelta(70000, (float) $partner->getWallet('principal')->refresh()->balanceFloat, 0.001, 'posted once, by the approval');
     }
 
@@ -358,6 +385,90 @@ class SharetPayTest extends TestCase
         config(['sharet.payouts_enabled' => true]);
         $this->artisan('payments:sweep')->assertSuccessful();
         $this->assertSame('cancelled', SharetPayout::sole()->status);
+        Http::assertNothingSent();
+    }
+
+    public function test_a_payout_event_that_comes_before_sharets_answer_is_recorded_once(): void
+    {
+        // Sharet sends payment.* before it answers POST /payments (sandbox payouts and instant ones), so the app doesn't
+        // know the payment id yet: the event is matched on reference and amount, and the answer then adds nothing
+        $this->approvedLoan();
+        $answer = $this->paymentObject(['id' => 'pay_test_early', 'reference' => 'Loan 700 disbursement']);
+        $events = 0;
+        Http::fake(['sharet.test/api/v1/payments' => function () use ($answer, &$events) {
+            $this->webhook(['id' => 'evt_early', 'type' => 'payment.paid', 'data' => $answer])->assertOk();
+            $this->assertSame('paid', SharetPayout::sole()->status, 'settled by the event, before the answer');
+            $events++;
+
+            return Http::response($answer, 201);
+        }]);
+        $this->actingAs($this->admin)->post(route('sharet.disburse', 700), ['phone' => '0712345678', 'amount' => 10000])->assertSessionHas('success');
+        $this->artisan('payments:sweep', ['--slot' => '2026-11-09T08'])->assertSuccessful();
+        $this->assertSame(1, $events);
+        $row = SharetPayout::sole();
+        $this->assertSame('paid', $row->status);
+        $this->assertSame('pay_test_early', $row->sharet_payment_id);
+        $this->assertSame(1, Disbursement::where('loan_id', 700)->count());
+    }
+
+    public function test_a_failed_payout_is_marked_once_and_can_be_tried_again_with_a_new_key(): void
+    {
+        $this->approvedLoan();
+        $failed = $this->paymentObject(['id' => 'pay_test_f', 'status' => 'failed', 'to' => ['type' => 'mpesa', 'phone' => '254700000002'],
+            'failure' => 'The test number 0700 000 002 always fails.']);
+        $n = 0;
+        Http::fake(['sharet.test/api/v1/payments' => function () use (&$failed, &$n) {
+            $failed['id'] = 'pay_test_f' . (++$n);   // each attempt is a new payment on Sharet, with its own event
+            $this->webhook(['id' => 'evt_f' . $n, 'type' => 'payment.failed', 'data' => $failed])->assertOk();
+            $this->assertSame('failed', SharetPayout::sole()->status, 'marked by the event, before the answer');
+
+            return Http::response($failed, 201);
+        }]);
+        $this->actingAs($this->admin)->post(route('sharet.disburse', 700), ['phone' => '0700000002', 'amount' => 10000])->assertSessionHas('success');
+        Log::spy();
+        $this->artisan('payments:sweep', ['--slot' => '2026-11-09T08'])->assertSuccessful();
+        Log::shouldHaveReceived('error')->with('Sharet payout failed', \Mockery::any())->once();   // one alarm, not one per report
+        $row = SharetPayout::sole();
+        $this->assertSame('failed', $row->status);
+        $this->assertStringContainsString('always fails', $row->failure);
+        $this->assertSame(0, Disbursement::count());
+
+        $this->actingAs($this->admin)->post(route('sharet.payouts.retry', $row))->assertSessionHas('success');
+        $this->artisan('payments:sweep', ['--slot' => '2026-11-09T12'])->assertSuccessful();
+        Http::assertSent(fn (HttpRequest $r) => $r->hasHeader('Idempotency-Key', 'aimzone-payout-' . $row->id . '-2'));
+        $this->actingAs($this->admin)->post(route('sharet.payouts.cancel', $row))->assertSessionHas('success');
+        $this->assertSame('cancelled', $row->fresh()->status);
+    }
+
+    public function test_sandbox_links_cancelled_or_expired_on_sharet_close_here_and_a_sandbox_payment_uses_the_link_id(): void
+    {
+        $this->fakeSharet();
+        $link = $this->makeLink();
+        // the sandbox "fail" button cancels the request on Sharet (no event); the poll closes it here
+        $this->refake(['sharet.test/api/v1/payment-requests/*' => Http::response($this->linkObject('cancelled'))]);
+        $this->artisan('sharet:sync')->assertSuccessful();
+        $this->assertSame('cancelled', $link->fresh()->status);
+
+        // a new link for the same amount is made, not the cancelled one
+        $this->refake(['sharet.test/api/v1/payment-requests' => Http::response($this->linkObject('open', 'SHTEST2EXPIRE'), 201)]);
+        $this->actingAs($this->borrower)->post(route('account.repay.sharet', 901), ['amount' => 2500])->assertRedirect();
+        $expiring = SharetPaymentRequest::where('sharet_id', 'SHTEST2EXPIRE')->sole();
+        $this->webhook(['id' => 'evt_x', 'type' => 'payment_request.expired', 'data' => $this->linkObject('expired', 'SHTEST2EXPIRE')])->assertOk();
+        $this->assertSame('expired', $expiring->fresh()->status);
+
+        $this->refake(['sharet.test/api/v1/payment-requests' => Http::response($this->linkObject('open', 'SHTEST3PAID'), 201)]);
+        $this->actingAs($this->borrower)->post(route('account.repay.sharet', 901), ['amount' => 2500])->assertRedirect();
+        $sandboxPaid = ['transaction_id' => null, 'paid_via' => 'sandbox'] + $this->linkObject('paid', 'SHTEST3PAID');
+        $this->webhook(['id' => 'evt_y', 'type' => 'payment_request.paid', 'data' => $sandboxPaid])->assertOk();
+        $this->assertSame('SHTEST3PAID', Repayment::sole()->transaction);
+        $this->assertSame(3, SharetPaymentRequest::count());
+    }
+
+    public function test_sharet_pay_takes_at_least_ten_shillings(): void
+    {
+        $this->fakeSharet();
+        $this->actingAs($this->borrower)->post(route('account.repay.sharet', 901), ['amount' => 5])->assertSessionHasErrors('amount');
+        $this->actingAs($this->admin)->post(route('sharet.pay-link', 901), ['amount' => 9])->assertSessionHasErrors('amount');
         Http::assertNothingSent();
     }
 
@@ -399,7 +510,8 @@ class SharetPayTest extends TestCase
         $super = User::factory()->create();
         $super->assignRole('super-admin');
         $this->actingAs($super)->post(route('sharet.test'))->assertSessionHas('success', fn ($m) => str_contains($m, 'Webhook registered'));
-        Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/webhooks') && $r['url'] === route('sharet.webhook'));
+        Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/webhooks') && $r['url'] === route('sharet.webhook')
+            && $r['events'] === ['payment_request.paid', 'payment_request.expired', 'payment.paid', 'payment.failed', 'payment.refunded']);
         $this->assertSame('whsec_registered_secret_xyz', Integration::where('slug', 'sharet')->first()->settings['SHARET_WEBHOOK_SECRET']);
         $this->assertStringNotContainsString('whsec_registered', (string) DB::table('integrations')->where('slug', 'sharet')->value('settings'));
         $this->actingAs($super)->get(route('staff.integrations'))->assertDontSee('whsec_registered_secret_xyz');
