@@ -574,6 +574,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('analytics', [\App\Http\Controllers\Staff\AnalyticsController::class, 'index'])->name('analytics')->middleware('permission:view reports');
         // site analytics: visits, pages, funnel, a person's journey and what to improve (owner, 1 Nov 2026)
         Route::get('site-analytics', [\App\Http\Controllers\Staff\SiteAnalyticsController::class, 'index'])->name('site-analytics')->middleware('permission:view reports');
+        // growth: this site's numbers from the Sharet growth hub, SEO checks and a small ad center (10 Nov 2026)
+        Route::get('growth', [\App\Http\Controllers\Staff\GrowthController::class, 'index'])->name('growth')->middleware('permission:view reports');
         // capital raising: investment managers' prospects and investors, reported to the owner (4 Nov 2026)
         Route::middleware('permission:manage investor pipeline')->controller(\App\Http\Controllers\Staff\CapitalController::class)->group(function () {
             Route::get('capital', 'index')->name('capital');

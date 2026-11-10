@@ -125,6 +125,7 @@ class NavMenu
                 ['People and places', 'staff.people', $u->can('view reports'), ['staff.people*'], null],
                 ['Lending analytics', 'staff.analytics', $u->can('view reports'), ['staff.analytics'], null],
                 ['Site analytics', 'staff.site-analytics', $u->can('view reports'), ['staff.site-analytics'], null],
+                ['Growth', 'staff.growth', $u->can('view reports'), ['staff.growth'], null],
             ]],
             'integrations' => ['Integrations & API Keys', 'layers', [
                 ['Integrations', 'staff.integrations', $u->canAny(['manage integrations', 'access system settings']), ['staff.integrations*'], null],
