@@ -89,15 +89,30 @@ Only money the app has already approved is sent, and only for the amount the app
 
 ## Settings (Integrations › Sharet Pay)
 
+The Sharet Pay card on `/staff/integrations` is the one place Sharet is set up (10 Nov 2026). It shows the Sharet
+icon, a status line (**Not connected**, **On · tested 5 minutes ago**, **On · last test failed**, **Off · …**), a
+**Connect** / **Settings** button, **Details** and the on/off switch. Settings holds:
+
 | Field | Default | Meaning |
 |---|---|---|
-| `SHARET_ENABLED` | off | The whole rail. While previewing ("view as") it is forced off |
-| `SHARET_API_KEY` | none | `sk_test_…` or `sk_live_…`, with scopes collect, payout and read. Secret: masked and never sent to the browser |
-| `SHARET_WEBHOOK_SECRET` | none | Saved by **Test connection**. Secret |
-| `SHARET_BASE_URL` | `https://sharet.africa/api/v1` | |
-| `SHARET_REPAYMENT_RAIL` | `paybill` | Which rail borrowers see first. Both are always shown while Sharet is on |
-| `SHARET_PAYOUTS_ENABLED` | off | Disbursements and partner payouts through Sharet |
-| `SHARET_PAY_LINK_MINUTES` | 4320 (3 days) | How long a pay link stays open. The amount owed changes with penalties, so keep it short |
+| API key (`SHARET_API_KEY`) | none | `sk_test_…` or `sk_live_…`, scopes collect, payout and read. Encrypted, never shown again; blank keeps the saved one. Saved on the card only, never read from `.env` |
+| Webhook signing secret (`SHARET_WEBHOOK_SECRET`) | none | Optional: **Test connection** registers our webhook and fills it in. Card only |
+| API base URL (`SHARET_BASE_URL`) | `https://sharet.africa/api/v1` | Optional; blank means the default |
+| Repayment rail (`SHARET_REPAYMENT_RAIL`) | `paybill` | Which rail borrowers see first. Both are shown while Sharet Pay is on |
+| Payouts through Sharet (`SHARET_PAYOUTS_ENABLED`) | off | Disbursements and partner payouts through Sharet |
+| Pay link open for (`SHARET_PAY_LINK_MINUTES`) | 4320 (3 days) | The amount owed changes with penalties, so keep it short |
+
+- **The switch** is the only on/off (the old "Sharet Pay on" field is gone; an "off" saved there still counts until the
+  switch is used). It cannot be switched on before a key is saved. While previewing ("view as") Sharet is forced off.
+- **Saving a new key** switches Sharet Pay off and drops the old webhook secret and test result: press Test connection,
+  then switch it back on. A key saved before this change keeps working; nothing needs to be typed again.
+- **Test connection** checks the saved key (also while switched off) and makes sure exactly one webhook of ours is
+  registered. With a secret saved it registers nothing; otherwise, under a lock against double clicks, any webhook
+  Sharet already has for `/webhooks/sharet` is deleted and one new one registered, its secret saved. The button is
+  disabled while it runs, and the result shows on the card.
+- **Remove** deletes the key, webhook secret and options and switches Sharet Pay off. The own paybill keeps working;
+  open pay links and queued Sharet payouts wait until Sharet is connected again.
+- The three options may also come from `.env` (same names), only as a fallback for an option never saved on the card.
 
 Only staff with `manage integrations` or `access system settings` (admin, super-admin) can open the page or
 **Test connection**. Borrowers and partners are sent back to their account.
@@ -130,8 +145,8 @@ Only staff with `manage integrations` or `access system settings` (admin, super-
 2. **Deploy** this branch, then run `php artisan config:cache` and `php artisan route:cache` as usual.
 3. **Create a Sharet key** in Sharet › Developers › API keys with scopes collect, payout and read. Start with
    `sk_test_`. For live payouts, add the server's IP to the key.
-4. On **Integrations › Sharet Pay**, paste the key and leave the switch, `SHARET_PAYOUTS_ENABLED` and the
-   rail at their defaults. Press **Test connection**. This checks the key and registers the webhook on the public
+4. On **Integrations › Sharet Pay**, press **Connect**, paste the key and leave payouts and the rail at their
+   defaults (Sharet Pay stays off). Press **Test connection**. This checks the key and registers the webhook on the public
    HTTPS address (`/webhooks/sharet`), saving its signing secret.
 5. **Test with the sandbox key.** Switch Sharet Pay on, pay a test loan's link with Sharet's sandbox, and check that
    one repayment appears (mode Sharet Pay) and that `/staff/sharet` shows it paid.

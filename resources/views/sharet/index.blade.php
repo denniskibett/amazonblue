@@ -3,9 +3,9 @@
 @extends('layouts.app')
 
 @section('content')
-  @include('staff.desk._header', ['title' => 'Sharet Pay', 'sub' => 'Repayments through Sharet pay links, and approved disbursements and partner payouts sent through Sharet at 08:00, 12:00 and 16:00. The own paybill works as before.', 'metrics' => false])
+  @include('staff.desk._header', ['title' => 'Sharet Pay', 'actions' => '<img src="' . e(asset('images/integrations/sharet.svg')) . '" alt="Sharet" class="size-10 rounded-xl">', 'sub' => 'Repayments through Sharet pay links, and approved disbursements and partner payouts sent through Sharet at 08:00, 12:00 and 16:00. The own paybill works as before.', 'metrics' => false])
   @unless ($available)
-    <x-staff.alert type="info" class="mb-6" title="Switched off">Sharet Pay needs its API key and its switch on, on Integrations › Sharet Pay.</x-staff.alert>
+    <x-staff.alert type="info" class="mb-6" title="Switched off">Sharet Pay needs its API key and its switch on, on @if (Route::has('staff.integrations') && auth()->user()->canAny(['manage integrations', 'access system settings']))<a class="font-medium underline" href="{{ route('staff.integrations') }}">Integrations › Sharet Pay</a>@else Integrations › Sharet Pay (an admin sets it)@endif.</x-staff.alert>
   @else
     <p class="mb-6 text-theme-sm text-gray-500 dark:text-gray-400">Borrowers see {{ $rail === 'sharet' ? 'Sharet Pay' : 'the own paybill' }} first. Payouts through Sharet are {{ $payoutsOn ? 'on' : 'off' }}.</p>
   @endunless

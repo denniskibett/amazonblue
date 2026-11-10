@@ -220,7 +220,7 @@
             @if ($loan->status === 'approved' && \App\Services\Sharet\SharetPayouts::enabled())
             @can('disburse loans')
             <details class="rounded-lg border border-gray-300 dark:border-gray-700">
-                <summary class="flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300">Send through Sharet</summary>
+                <summary class="flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300"><x-sharet-icon />Send through Sharet</summary>
                 <form method="POST" action="{{ route('sharet.disburse', $loan) }}" class="space-y-2 p-3">
                     @csrf
                     <x-staff.field name="phone" id="sharet-phone" label="M-Pesa number" :value="$loan->user?->phone" required />
@@ -237,7 +237,7 @@
             <form method="POST" action="{{ route('sharet.pay-link', $loan) }}">
                 @csrf
                 <button class="w-full flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors"
-                        data-confirm="Text the borrower a Sharet pay link for what is due now?">Send Sharet pay link</button>
+                        data-confirm="Text the borrower a Sharet pay link for what is due now?"><x-sharet-icon />Send Sharet pay link</button>
             </form>
             @endcan
             @endif

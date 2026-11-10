@@ -16,6 +16,7 @@ use App\Services\Sms\SmsSender;
 use App\Support\Integrations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 /** Sharet Pay, the second rail (9 Nov 2026): borrower pay links, staff pay links, payouts and the connection test. */
@@ -112,39 +113,84 @@ class SharetController extends Controller
     }
 
     /**
-     * Integrations › Sharet Pay › Test connection: checks the key and registers our webhook once, keeping the signing
-     * secret Sharet returns (encrypted with the other settings; never shown).
+     * Integrations › Sharet Pay › Test connection: checks the saved key (it works while Sharet Pay is still switched
+     * off, before it goes live) and makes sure exactly one webhook of ours is registered, keeping the signing secret
+     * Sharet returns (encrypted with the other settings; never shown). Idempotent (10 Nov 2026): with a secret saved
+     * nothing is registered; otherwise, under a lock against double submits, any webhook Sharet already has for our
+     * address is replaced by one new one, whose secret is saved. The result is kept for the card's status line.
      */
     public function test(Request $request): RedirectResponse
     {
-        if (! filled(config('sharet.api_key'))) {
+        $saved = Integrations::saved('sharet');
+        $key = (string) ($saved['SHARET_API_KEY'] ?? '') ?: (string) config('sharet.api_key');
+        if ($key === '') {
             return back()->with('error', 'Save the Sharet API key first.');
         }
-        $client = SharetClient::make();
-        $me = $client->get('/accounts/me');
-        if (! $me->successful()) {
-            return back()->with('error', 'Sharet refused the key: ' . ($me->json('detail') ?? $me->json('message') ?? ('HTTP ' . $me->status())));
+        $lock = Cache::lock('sharet:test-connection', 60);
+        if (! $lock->get()) {
+            return back()->with('warning', 'A connection test is already running. Wait a moment, then refresh.');
         }
-        $hooked = filled(config('sharet.webhook_secret'));
-        $why = null;
-        if (! $hooked) {
-            $hook = $client->post('/webhooks', ['url' => route('sharet.webhook'), 'events' => SharetClient::WEBHOOK_EVENTS]);
-            if ($hook->successful() && $hook->json('secret')) {
-                $def = Integrations::CATALOGUE['sharet'];
-                $row = Integration::firstOrNew(['slug' => 'sharet']);
-                $row->fill(['name' => $def['name'], 'category' => $def['category'], 'description' => $def['description'], 'logo' => $def['logo'],
-                    'settings' => array_merge($row->settings ?? [], ['SHARET_WEBHOOK_SECRET' => (string) $hook->json('secret')]),
-                    'enabled' => $row->exists ? $row->enabled : true, 'updated_by' => $request->user()->id])->save();
-                Integrations::forget();
-                AuditTrail::record('integrations', $row->id, 'update', null, ['event' => 'settings_changed', 'integration' => 'sharet', 'keys' => ['SHARET_WEBHOOK_SECRET']]);
-                $hooked = true;
-            } else {
-                $why = $hook->json('detail') ?? $hook->json('message') ?? ('HTTP ' . $hook->status());
+        try {
+            $client = new SharetClient($key, (string) (($saved['SHARET_BASE_URL'] ?? '') ?: config('sharet.base_url') ?: SharetClient::DEFAULT_BASE_URL));
+            $me = $client->get('/accounts/me');
+            if (! $me->successful()) {
+                return $this->tested($request, false, 'Sharet refused the key: ' . ($me->json('detail') ?? $me->json('message') ?? ('HTTP ' . $me->status())));
+            }
+            $hooked = filled(Integrations::saved('sharet')['SHARET_WEBHOOK_SECRET'] ?? null) || (! $saved && filled(config('sharet.webhook_secret')));
+            $why = null;
+            if (! $hooked) {
+                [$secret, $why] = $this->registerWebhook($client);
+                if ($secret) {
+                    $this->store($request, ['SHARET_WEBHOOK_SECRET' => $secret]);
+                    AuditTrail::record('integrations', Integration::where('slug', 'sharet')->value('id'), 'update', null,
+                        ['event' => 'settings_changed', 'integration' => 'sharet', 'keys' => ['SHARET_WEBHOOK_SECRET']]);
+                    $hooked = true;
+                }
+            }
+            $as = 'Connected to Sharet as ' . ($me->json('name') ?? $me->json('business_name') ?? $me->json('sharet_id') ?? 'your account')
+                . ' (' . ($client->environment === 'live' ? 'live' : 'sandbox') . ').';
+
+            return $this->tested($request, $hooked, $as . ($hooked ? ' Webhook registered.' : ' Webhook not registered yet (' . ($why ?? 'no answer') . '): Sharet needs the public HTTPS address.'));
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /** One webhook for our address: any Sharet already has for it is deleted first (its secret cannot be read back). */
+    private function registerWebhook(SharetClient $client): array
+    {
+        $url = route('sharet.webhook');
+        $list = $client->get('/webhooks');
+        foreach ($list->successful() ? (array) $list->json('data') : [] as $hook) {
+            if (($hook['url'] ?? null) === $url && isset($hook['id'])) {
+                $gone = $client->delete('/webhooks/' . $hook['id']);
+                if (! $gone->successful() && $gone->status() !== 404) {
+                    return [null, 'could not replace the webhook already registered: HTTP ' . $gone->status()];
+                }
             }
         }
+        $hook = $client->post('/webhooks', ['url' => $url, 'events' => SharetClient::WEBHOOK_EVENTS]);
 
-        return back()->with($hooked ? 'success' : 'warning', 'Connected to Sharet as ' . ($me->json('name') ?? $me->json('business_name') ?? $me->json('sharet_id') ?? 'your account')
-            . ' (' . ($client->environment === 'live' ? 'live' : 'sandbox') . ').' . ($hooked ? ' Webhook registered.' : ' Webhook not registered yet (' . ($why ?? 'no answer') . '): Sharet needs the public HTTPS address.'));
+        return $hook->successful() && $hook->json('secret')
+            ? [(string) $hook->json('secret'), null]
+            : [null, $hook->json('detail') ?? $hook->json('message') ?? ('HTTP ' . $hook->status())];
+    }
+
+    /** Keeps the test's result on the card (Integrations::TEST) and says it. */
+    private function tested(Request $request, bool $ok, string $message): RedirectResponse
+    {
+        $this->store($request, [Integrations::TEST => ['at' => now()->toIso8601String(), 'ok' => $ok, 'message' => $message]]);
+
+        return back()->with($ok ? 'success' : 'warning', $message);
+    }
+
+    private function store(Request $request, array $values): void
+    {
+        $def = Integrations::CATALOGUE['sharet'];
+        $row = Integration::firstOrNew(['slug' => 'sharet']);
+        $row->fill(['name' => $def['name'], 'category' => $def['category'], 'description' => $def['description'], 'logo' => $def['logo'],
+            'settings' => array_merge($row->settings ?? [], $values), 'enabled' => $row->exists && $row->enabled, 'updated_by' => $request->user()->id])->save();
+        Integrations::forget();
     }
 
     private function canTouch(Request $request, SharetPayout $payout): void

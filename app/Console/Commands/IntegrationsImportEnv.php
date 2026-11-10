@@ -25,6 +25,10 @@ class IntegrationsImportEnv extends Command
             $settings = $row->settings ?? [];
             $added = [];
             foreach (empty($def['managed']) ? array_keys($def['fields']) : [] as $env) {
+                // Sharet's key and webhook secret are pasted on its card only, never copied from .env
+                if (! empty($def['switch_on']) && $def['fields'][$env][2] === 'secret') {
+                    continue;
+                }
                 $value = $this->fromEnv($slug, $env);
                 if ($value !== null && ($this->option('force') || ! isset($settings[$env]) || $settings[$env] === '')) {
                     $settings[$env] = $value;
@@ -33,7 +37,8 @@ class IntegrationsImportEnv extends Command
             }
             $new = ! $row->exists;
             $row->fill(['name' => $def['name'], 'category' => $def['category'], 'description' => $def['description'], 'logo' => $def['logo'],
-                'settings' => $settings, 'enabled' => $row->exists ? $row->enabled : true])->save();
+                // an integration whose switch is its only on/off (Sharet Pay) starts off
+                'settings' => $settings, 'enabled' => $row->exists ? $row->enabled : empty($def['switch_on'])])->save();
             if ($new || $added) {
                 AuditTrail::record('integrations', $row->id, $new ? 'create' : 'update', null, ['event' => 'import_env', 'keys' => $added]);
             }

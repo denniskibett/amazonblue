@@ -131,7 +131,7 @@
                       </span></template>
                       {{-- pay through Sharet (9 Nov 2026): sent at the next Sharet run once this payout's approval has posted it --}}
                       @if (\App\Services\Sharet\SharetPayouts::enabled())
-                        <label class="flex items-center gap-1.5 text-theme-xs text-gray-600 dark:text-gray-400" x-show="!paid"><input type="checkbox" name="via_sharet" value="1" x-model="sharet"> Pay through Sharet</label>
+                        <label class="flex items-center gap-1.5 text-theme-xs text-gray-600 dark:text-gray-400" x-show="!paid"><input type="checkbox" name="via_sharet" value="1" x-model="sharet"> <x-sharet-icon />Pay through Sharet</label>
                         <template x-if="!paid && sharet"><input name="sharet_phone" required maxlength="20" value="{{ \App\Models\Partner::whereKey($r->partner_id)->value('phone') }}" placeholder="Partner's M-Pesa number" aria-label="Partner's M-Pesa number" class="h-9 w-40 rounded-lg border border-gray-300 px-2 text-theme-xs dark:border-gray-700 dark:bg-gray-900"></template>
                       @endif
                     @endif

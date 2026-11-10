@@ -510,7 +510,7 @@ class SharetPayTest extends TestCase
         $super = User::factory()->create();
         $super->assignRole('super-admin');
         $this->actingAs($super)->post(route('sharet.test'))->assertSessionHas('success', fn ($m) => str_contains($m, 'Webhook registered'));
-        Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/webhooks') && $r['url'] === route('sharet.webhook')
+        Http::assertSent(fn (HttpRequest $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/webhooks') && $r['url'] === route('sharet.webhook')
             && $r['events'] === ['payment_request.paid', 'payment_request.expired', 'payment.paid', 'payment.failed', 'payment.refunded']);
         $this->assertSame('whsec_registered_secret_xyz', Integration::where('slug', 'sharet')->first()->settings['SHARET_WEBHOOK_SECRET']);
         $this->assertStringNotContainsString('whsec_registered', (string) DB::table('integrations')->where('slug', 'sharet')->value('settings'));
@@ -519,5 +519,162 @@ class SharetPayTest extends TestCase
         // a new key (test -> live) drops the old secret, so Test connection registers the new key's webhook
         $this->actingAs($super)->post(route('staff.integrations.update', 'sharet'), ['fields' => ['SHARET_API_KEY' => 'sk_live_newkey']])->assertSessionHas('success');
         $this->assertArrayNotHasKey('SHARET_WEBHOOK_SECRET', Integration::where('slug', 'sharet')->first()->settings);
+    }
+
+    // ---------------------------------------------------------------- the Sharet Pay card (10 Nov 2026)
+
+    private function super(): User
+    {
+        $u = User::factory()->create();
+        $u->assignRole('super-admin');
+
+        return $u;
+    }
+
+    /** What the app reads at boot from the saved card. */
+    private function applied(): array
+    {
+        Integrations::forget();
+        config(['sharet.enabled' => false, 'sharet.api_key' => null, 'sharet.webhook_secret' => null]);
+        Integrations::apply();
+
+        return ['on' => (bool) config('sharet.enabled'), 'key' => config('sharet.api_key'), 'whsec' => config('sharet.webhook_secret')];
+    }
+
+    public function test_connecting_saves_the_key_encrypted_off_until_switched_on_and_never_shows_it(): void
+    {
+        Http::fake();
+        $super = $this->super();
+        $this->actingAs($super)->get(route('staff.integrations'))->assertOk()->assertSee('Not connected')->assertSee('Connect Sharet Pay')
+            ->assertSee('images/integrations/sharet.svg')->assertDontSee('SHARET_ENABLED');
+        // the switch cannot be used before a key is saved
+        $this->actingAs($super)->post(route('staff.integrations.toggle', 'sharet'))->assertSessionHas('error');
+        $this->assertFalse($this->applied()['on']);
+
+        $this->actingAs($super)->post(route('staff.integrations.update', 'sharet'), ['fields' => ['SHARET_API_KEY' => 'not-a-key']])->assertSessionHasErrors('fields.SHARET_API_KEY');
+        $this->actingAs($super)->post(route('staff.integrations.update', 'sharet'), ['fields' => ['SHARET_BASE_URL' => 'http://insecure.example']])->assertSessionHasErrors('fields.SHARET_BASE_URL');
+        $this->actingAs($super)->post(route('staff.integrations.update', 'sharet'), ['fields' => ['SHARET_API_KEY' => 'sk_live_pastedkey1234', 'SHARET_BASE_URL' => '',
+            'SHARET_REPAYMENT_RAIL' => 'paybill', 'SHARET_PAYOUTS_ENABLED' => '0', 'SHARET_PAY_LINK_MINUTES' => '4320']])
+            ->assertSessionHas('success', fn ($m) => str_contains($m, 'Test connection'));
+        $row = Integration::where('slug', 'sharet')->first();
+        $this->assertFalse($row->enabled);
+        $this->assertSame('sk_live_pastedkey1234', $row->settings['SHARET_API_KEY']);
+        $this->assertStringNotContainsString('sk_live_pastedkey', (string) DB::table('integrations')->where('slug', 'sharet')->value('settings'));
+        $this->assertSame(['on' => false, 'key' => null, 'whsec' => null], $this->applied());
+        // a blank base URL means Sharet's default
+        $this->assertSame('https://sharet.test/api/v1', config('sharet.base_url'));
+
+        $page = $this->actingAs($super)->get(route('staff.integrations'))->assertOk()->assertSee('Off · not tested yet · live key')->assertSee('Remove Sharet Pay');
+        $page->assertDontSee('sk_live_pastedkey1234')->assertDontSee('pastedkey');
+        // a blank key keeps the saved one; options save on their own
+        $this->actingAs($super)->post(route('staff.integrations.update', 'sharet'), ['fields' => ['SHARET_API_KEY' => '', 'SHARET_REPAYMENT_RAIL' => 'sharet']])->assertSessionHas('success');
+        $this->assertSame('sk_live_pastedkey1234', Integration::where('slug', 'sharet')->first()->settings['SHARET_API_KEY']);
+
+        $this->actingAs($super)->post(route('staff.integrations.toggle', 'sharet'))->assertSessionHas('success', 'Sharet Pay switched on.');
+        $this->assertSame(['on' => true, 'key' => 'sk_live_pastedkey1234', 'whsec' => null], $this->applied());
+        $this->assertSame('sharet', config('sharet.repayment_rail'));
+        $this->assertFalse((bool) config('sharet.payouts_enabled'));
+        // a new key switches it off again, and drops the old webhook secret and test
+        $this->actingAs($super)->post(route('staff.integrations.update', 'sharet'), ['fields' => ['SHARET_API_KEY' => 'sk_live_otherkey5678']])
+            ->assertSessionHas('success', fn ($m) => str_contains($m, 'switched off'));
+        $this->assertFalse($this->applied()['on']);
+        Http::assertNothingSent();
+    }
+
+    public function test_a_key_saved_before_this_release_keeps_working_without_re_entry(): void
+    {
+        // saved through the old form: the "Sharet Pay on" field, the key and the registered webhook's secret
+        Integration::create(['slug' => 'sharet', 'name' => 'Sharet Pay', 'category' => 'Payments', 'enabled' => true,
+            'settings' => ['SHARET_ENABLED' => '1', 'SHARET_API_KEY' => 'sk_live_savedearlier99', 'SHARET_WEBHOOK_SECRET' => 'whsec_saved_earlier',
+                'SHARET_BASE_URL' => 'https://sharet.africa/api/v1', 'SHARET_REPAYMENT_RAIL' => 'paybill', 'SHARET_PAYOUTS_ENABLED' => '0']]);
+        $this->assertSame(['on' => true, 'key' => 'sk_live_savedearlier99', 'whsec' => 'whsec_saved_earlier'], $this->applied());
+        $this->actingAs($this->super())->get(route('staff.integrations'))->assertSee('On · not tested yet · live key')->assertDontSee('savedearlier')->assertDontSee('whsec_saved');
+
+        // the old field saved as "off" still counts as off, until the card's switch is used
+        $row = Integration::where('slug', 'sharet')->first();
+        $row->update(['settings' => ['SHARET_ENABLED' => '0'] + $row->settings]);
+        $this->assertSame(['on' => false, 'key' => null, 'whsec' => null], $this->applied());
+        $this->actingAs($this->super())->get(route('staff.integrations'))->assertSee('Off · not tested yet');
+        // saving options does not turn it on
+        $this->actingAs($this->super())->post(route('staff.integrations.update', 'sharet'), ['fields' => ['SHARET_PAY_LINK_MINUTES' => '600']]);
+        $this->assertFalse($this->applied()['on']);
+        $this->assertArrayNotHasKey('SHARET_ENABLED', Integration::where('slug', 'sharet')->first()->settings);
+        $this->actingAs($this->super())->post(route('staff.integrations.toggle', 'sharet'))->assertSessionHas('success', 'Sharet Pay switched on.');
+        $this->assertSame(['on' => true, 'key' => 'sk_live_savedearlier99', 'whsec' => 'whsec_saved_earlier'], $this->applied());
+    }
+
+    public function test_test_connection_works_while_off_registers_one_webhook_and_shows_on_the_card(): void
+    {
+        Integration::create(['slug' => 'sharet', 'name' => 'Sharet Pay', 'category' => 'Payments', 'enabled' => false,
+            'settings' => ['SHARET_API_KEY' => 'sk_test_cardkey123', 'SHARET_BASE_URL' => 'https://sharet.test/api/v1']]);
+        Integrations::forget();
+        // Sharet already has a webhook for our address (an earlier test whose secret was lost): it is replaced, not doubled
+        Http::fake([
+            'sharet.test/api/v1/accounts/me' => Http::response(['name' => 'Aimzone Credit']),
+            'sharet.test/api/v1/webhooks/3' => Http::response(null, 204),
+            'sharet.test/api/v1/webhooks' => fn (HttpRequest $r) => $r->method() === 'GET'
+                ? Http::response(['data' => [['id' => 3, 'url' => route('sharet.webhook')], ['id' => 4, 'url' => 'https://other.app/hook']]])
+                : Http::response(['id' => 8, 'secret' => 'whsec_new_one_abc'], 201),
+        ]);
+        $super = $this->super();
+        $this->actingAs($super)->post(route('sharet.test'))->assertSessionHas('success', fn ($m) => str_contains($m, 'Webhook registered'));
+        Http::assertSent(fn (HttpRequest $r) => $r->method() === 'GET' && str_ends_with($r->url(), '/accounts/me') && $r->hasHeader('Authorization', 'Bearer sk_test_cardkey123'));
+        Http::assertSent(fn (HttpRequest $r) => $r->method() === 'DELETE' && str_ends_with($r->url(), '/webhooks/3'));
+        Http::assertNotSent(fn (HttpRequest $r) => $r->method() === 'DELETE' && str_ends_with($r->url(), '/webhooks/4'));
+        $row = Integration::where('slug', 'sharet')->first();
+        $this->assertSame('whsec_new_one_abc', $row->settings['SHARET_WEBHOOK_SECRET']);
+        $this->assertFalse($row->enabled, 'testing does not switch it on');
+        $this->actingAs($super)->get(route('staff.integrations'))->assertSee('Off · tested')->assertDontSee('whsec_new_one_abc');
+
+        // pressing it again (or a double submit) registers nothing more
+        $this->actingAs($super)->post(route('sharet.test'))->assertSessionHas('success');
+        $this->assertSame(1, collect(Http::recorded())->filter(fn ($p) => $p[0]->method() === 'POST' && str_ends_with($p[0]->url(), '/webhooks'))->count());
+
+        // while another test holds the lock, nothing is sent
+        $lock = \Illuminate\Support\Facades\Cache::lock('sharet:test-connection', 60);
+        $lock->get();
+        $before = count(Http::recorded());
+        $this->actingAs($super)->post(route('sharet.test'))->assertSessionHas('warning');
+        $this->assertCount($before, Http::recorded());
+        $lock->release();
+
+        // a refused key shows as a failed test
+        $this->refake(['sharet.test/api/v1/accounts/me' => Http::response(['detail' => 'Invalid API key'], 401)]);
+        $this->actingAs($super)->post(route('sharet.test'))->assertSessionHas('warning', fn ($m) => str_contains($m, 'Invalid API key'));
+        $this->actingAs($super)->get(route('staff.integrations'))->assertSee('Off · last test failed');
+    }
+
+    public function test_remove_forgets_the_key_and_switches_sharet_off(): void
+    {
+        Http::fake();
+        Integration::create(['slug' => 'sharet', 'name' => 'Sharet Pay', 'category' => 'Payments', 'enabled' => true,
+            'settings' => ['SHARET_API_KEY' => 'sk_live_toberemoved1', 'SHARET_WEBHOOK_SECRET' => 'whsec_toberemoved', 'SHARET_PAYOUTS_ENABLED' => '1']]);
+        $this->assertTrue($this->applied()['on']);
+        $teller = User::factory()->create();
+        $teller->assignRole('teller');
+        $this->actingAs($teller)->delete(route('staff.integrations.destroy', 'sharet'))->assertForbidden();
+        $this->actingAs($this->super())->delete(route('staff.integrations.destroy', 'mpesa'))->assertNotFound();
+
+        $this->actingAs($this->super())->delete(route('staff.integrations.destroy', 'sharet'))->assertSessionHas('success');
+        $row = Integration::where('slug', 'sharet')->first();
+        $this->assertSame([], $row->settings);
+        $this->assertFalse($row->enabled);
+        $this->assertSame(['on' => false, 'key' => null, 'whsec' => null], $this->applied());
+        $this->assertFalse(\App\Services\Sharet\SharetPayouts::enabled());
+        $audit = DB::table('audit_logs')->where('table_name', 'integrations')->latest('id')->value('new_values');
+        $this->assertStringContainsString('integration_removed', (string) $audit);
+        $this->assertStringNotContainsString('toberemoved', (string) $audit);
+        $this->actingAs($this->super())->get(route('staff.integrations'))->assertSee('Not connected');
+        Http::assertNothingSent();
+    }
+
+    public function test_sharet_pay_shows_with_its_icon_as_a_way_to_pay(): void
+    {
+        $html = \Illuminate\Support\Facades\Blade::render('<x-pay-mode mode="sharet">Sharet</x-pay-mode>|<x-pay-mode mode="mpesa">M-Pesa</x-pay-mode>');
+        $this->assertStringContainsString('images/integrations/sharet.svg', $html);
+        $this->assertStringContainsString('Sharet Pay', $html);
+        $this->assertStringEndsWith('|M-Pesa', trim($html));
+        $this->fakeSharet();
+        $this->actingAs($this->borrower)->get(route('account.repay', 901))->assertOk()->assertSee('images/integrations/sharet.svg')->assertSee('Pay with Sharet Pay');
     }
 }

@@ -112,7 +112,7 @@ only, once per event. Not sent for book entries, console entries or money dated 
 | Disbursements (staff form) | On | `DisbursementController`, `DisbursementService` |
 | M-Pesa C2B / STK repayments | Built, off (`MPESA_ENABLED`, `MPESA_STK_ENABLED`) | `Services/Mpesa/*`, `MpesaCallbackController` |
 | M-Pesa B2C payouts | Built, off (`MPESA_B2C_ENABLED`; needs sign-offs on) | `routes/features/mpesa-b2c.php`, `B2cPayouts` |
-| Sharet Pay (second rail beside the own paybill) | Built, off (since 9 Nov; `SHARET_ENABLED`, `SHARET_PAYOUTS_ENABLED`). Borrower pay links recorded through the same `PaymentRecorder::recordCash` as M-Pesa; approved disbursements and partner payouts sent at 08:00/12:00/16:00. [SHARET_PAYMENTS.md](SHARET_PAYMENTS.md) | `routes/features/sharet.php`, `Services/Sharet/*` |
+| Sharet Pay (second rail beside the own paybill) | Built, off (since 9 Nov; the switch and key on Integrations › Sharet Pay, `SHARET_PAYOUTS_ENABLED`). Borrower pay links recorded through the same `PaymentRecorder::recordCash` as M-Pesa; approved disbursements and partner payouts sent at 08:00/12:00/16:00. [SHARET_PAYMENTS.md](SHARET_PAYMENTS.md) | `routes/features/sharet.php`, `Services/Sharet/*` |
 | Part funding | On (since 2 Nov) | `LoanFundings`, `RepaymentSplit` |
 | Partner portal and lines | On | `PartnerAccount`, `Partners/*` |
 | Partner subscriptions (online KYC + subscription) | Built, off (`LENDING_PARTNER_SUBSCRIPTIONS`) | `routes/features/partner-subscriptions.php` |
@@ -158,7 +158,6 @@ change it, then `php artisan config:cache`. Switch order and checks: [stage4/SWI
 | `SMS_DRIVER` | `log` | `log` (23 Oct) | `kenyasms`, `africastalking` or `log` |
 | `MPESA_ENABLED`, `MPESA_STK_ENABLED` | false | off, sandbox (23 Oct) | C2B and STK repayments |
 | `MPESA_B2C_ENABLED` | false | not recorded | M-Pesa payouts |
-| `SHARET_ENABLED` | false | not deployed | Sharet Pay pay links, webhook and poll ([SHARET_PAYMENTS.md](SHARET_PAYMENTS.md)) |
 | `SHARET_REPAYMENT_RAIL` | `paybill` | not deployed | Which rail borrowers see first: `paybill` or `sharet` |
 | `SHARET_PAYOUTS_ENABLED` | false | not deployed | Approved disbursements and partner payouts through Sharet |
 | `LENDING_PARTNER_SUBSCRIPTIONS` | false | not recorded | Partner online subscription |

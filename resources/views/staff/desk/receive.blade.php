@@ -216,7 +216,7 @@
             <tr>
               <td data-sort-value="{{ \Illuminate\Support\Carbon::parse($p->repayment_date)->timestamp }}"><span class="font-medium text-gray-800 dark:text-white/90">#{{ $p->id }}</span><span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ \Illuminate\Support\Carbon::parse($p->repayment_date)->format('j M Y') }}</span></td>
               <td>Cycle {{ optional($cycles->firstWhere('id', $p->loan_cycle_id))->cycle_number ?? '—' }}</td>
-              <td><x-staff.pill :tone="$p->mode === 'mpesa' ? 'green' : 'gray'">{{ ['mpesa' => 'M-Pesa', 'cash' => 'Cash', 'bank' => 'Bank', 'cheque' => 'Cheque'][$p->mode] ?? ($p->mode ?: '—') }}</x-staff.pill></td>
+              <td><x-staff.pill :tone="$p->mode === 'mpesa' ? 'green' : 'gray'"><x-pay-mode :mode="$p->mode">{{ ['mpesa' => 'M-Pesa', 'cash' => 'Cash', 'bank' => 'Bank', 'cheque' => 'Cheque'][$p->mode] ?? ($p->mode ?: '—') }}</x-pay-mode></x-staff.pill></td>
               <td class="font-mono text-theme-xs">{{ $p->transaction ?: '—' }}</td>
               <td class="num"><x-staff.money :amount="$p->amount" class="text-gray-800 dark:text-white/90" /></td>
               <td class="text-right">

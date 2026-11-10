@@ -58,7 +58,7 @@
                 <td class="px-5 py-3 text-gray-800 dark:text-white/90"><span class="cursor-pointer hover:text-brand-500" data-user-peek="{{ $d->loan->user_id ?? '' }}">{{ $d->loan->user->name ?? '' }}</span></td>
                 <td class="whitespace-nowrap px-5 py-3 text-right font-medium text-gray-800 dark:text-white/90">{{ number_format((float) $d->amount, 2) }}</td>
                 <td class="whitespace-nowrap px-5 py-3 text-right text-gray-600 dark:text-gray-400">{{ (float) $d->processing_fee ? number_format((float) $d->processing_fee, 2) : '' }}</td>
-                <td class="px-5 py-3 capitalize text-gray-600 dark:text-gray-400">{{ str_replace('_', ' ', (string) $d->mode) }}</td>
+                <td class="px-5 py-3 capitalize text-gray-600 dark:text-gray-400"><x-pay-mode :mode="$d->mode">{{ str_replace('_', ' ', (string) $d->mode) }}</x-pay-mode></td>
                 <td class="px-5 py-3"><span class="whitespace-nowrap rounded-full px-2.5 py-0.5 text-theme-xs font-medium {{ $kindTone[$kind] ?? $kindTone['non_cash'] }}">{{ str_replace('_', ' ', $kind) }}</span></td>
                 <td class="max-w-[220px] truncate px-5 py-3 font-mono text-theme-xs text-gray-500 dark:text-gray-400" title="{{ $d->transaction }}">{{ $d->transaction }}@if ($d->bank_ref && $d->mpesa_ref)<span class="block">M-Pesa {{ $d->mpesa_ref }}</span>@endif</td>
                 <td class="px-5 py-3 text-right"><a href="{{ route('disbursements.show', $d->id) }}" class="text-gray-500 hover:text-brand-500 dark:text-gray-400" title="Open"><x-ui.icon name="eye" class="size-4" /></a></td>

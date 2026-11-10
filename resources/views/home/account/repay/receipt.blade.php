@@ -47,7 +47,7 @@
     <dl class="rp-receipt__table">
       <div><dt>{{ $isCash ? 'Receipt number' : 'Entry number' }}</dt><dd>{{ $number }}</dd></div>
       <div><dt>{{ $isCash ? 'Payment date' : 'Date' }}</dt><dd>{{ \Illuminate\Support\Carbon::parse($repayment->repayment_date)->format('j M Y') }}</dd></div>
-      @if ($isCash)<div><dt>Method</dt><dd>{{ $method }}</dd></div>@endif
+      @if ($isCash)<div><dt>Method</dt><dd><x-pay-mode :mode="$repayment->mode">{{ $method }}</x-pay-mode></dd></div>@endif
       <div><dt>{{ $isCash ? 'Transaction ID' : 'Reference' }}</dt><dd>{{ $repayment->transaction ?: '—' }}</dd></div>
       <div><dt>Amount</dt><dd>KES {{ number_format((float) $repayment->amount, 2) }}</dd></div>
       <div><dt>Recorded</dt><dd>{{ optional($repayment->created_at)->format('j M Y, H:i') ?? '—' }}</dd></div>

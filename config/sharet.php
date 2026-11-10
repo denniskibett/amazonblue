@@ -2,17 +2,21 @@
 
 /*
 | Sharet Pay: a second payment rail beside the own M-Pesa paybill (docs/SHARET_PAYMENTS.md).
-| Every value can be set on /staff/integrations › Sharet Pay (saved encrypted, overrides .env).
-| Defaults are the conservative ones: off, repayments shown on the own paybill first, payouts off.
+|
+| One place sets it: /staff/integrations › Sharet Pay. The API key and webhook signing secret live only there
+| (encrypted in the integrations table, never shown again); the card's switch is the on/off. Support\Integrations
+| writes them over the values below at boot. The options further down may also come from .env, but only as a
+| fallback for an option never saved on the card.
 */
 return [
-    // the whole rail: pay links, webhook, sync and payouts do nothing while this is false
-    'enabled' => (bool) env('SHARET_ENABLED', false),
+    // set by the card's switch (Support\Integrations::apply); off with no saved Sharet integration
+    'enabled' => false,
 
-    'api_key' => env('SHARET_API_KEY'),
+    // saved on the card only (no .env): sk_test_… or sk_live_…, scopes collect, payout and read
+    'api_key' => null,
 
     // the whsec_ value Sharet returns once when the webhook is registered ("Test connection" saves it)
-    'webhook_secret' => env('SHARET_WEBHOOK_SECRET'),
+    'webhook_secret' => null,
 
     'base_url' => env('SHARET_BASE_URL', 'https://sharet.africa/api/v1'),
 

@@ -21,36 +21,52 @@
       @foreach ($cards as $c)
         <article class="flex flex-col rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
           <div class="relative flex-1 p-5 pb-7">
-            <div class="flex h-10 items-center"><img src="{{ $c['logo'] }}" alt="{{ $c['name'] }} logo" class="max-h-10 max-w-[140px] object-contain"></div>
+            <div class="flex h-10 items-center"><img src="{{ $c['logo'] }}" alt="{{ $c['name'] }} logo" class="{{ $c['switch_on'] ? 'size-10 rounded-xl' : 'max-h-10 max-w-[140px]' }} object-contain"></div>
             <span class="absolute right-5 top-5 rounded-full bg-gray-100 px-2.5 py-0.5 text-theme-xs font-medium text-gray-600 dark:bg-white/5 dark:text-gray-400">{{ $c['category'] }}</span>
             <h3 class="mb-2 mt-5 text-lg font-semibold text-gray-800 dark:text-white/90">{{ $c['name'] }}</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ $c['description'] }}</p>
-            <p class="mt-3 text-theme-xs text-gray-500 dark:text-gray-400">
-              {{ $c['configured'] }} of {{ $c['fields']->count() }} set
-              @if ($c['updated']) · saved {{ $c['updated'] }} @endif
-            </p>
+            @if ($c['switch_on'])
+              {{-- Sharet Pay: Not connected / On · tested 5 minutes ago / On · last test failed / Off · … --}}
+              @php
+                $t = $c['test'];
+                $status = ! $c['connected'] ? 'Not connected' : (($c['enabled'] ? 'On' : 'Off') . ' · ' . (! $t ? 'not tested yet' : ($t['ok'] ? 'tested ' . $t['when'] : 'last test failed')) . ' · ' . $c['key_mode']);
+                $dot = ! $c['connected'] ? 'bg-gray-300 dark:bg-gray-600' : ($t && ! $t['ok'] ? 'bg-warning-500' : ($c['enabled'] ? 'bg-success-500' : 'bg-gray-400'));
+              @endphp
+              <p class="mt-3 flex items-center gap-2 text-theme-xs font-medium text-gray-500 dark:text-gray-400" data-integration-status="{{ $c['slug'] }}">
+                <span class="size-2 shrink-0 rounded-full {{ $dot }}"></span>{{ $status }}
+              </p>
+            @else
+              <p class="mt-3 text-theme-xs text-gray-500 dark:text-gray-400">
+                {{ $c['configured'] }} of {{ $c['fields']->count() }} set
+                @if ($c['updated']) · saved {{ $c['updated'] }} @endif
+              </p>
+            @endif
           </div>
           <div class="flex items-center justify-between gap-3 border-t border-gray-200 p-5 dark:border-gray-800">
             <div class="flex items-center gap-3">
               @if ($c['managed'])
                 <a href="{{ $c['managed'] }}" class="{{ $btn }}">Change on System</a>
+              @elseif ($c['switch_on'])
+                <button type="button" @click="settings = @js($c['slug'])" class="{{ $btn }} gap-2">
+                  <x-ui.icon name="settings" class="size-5" />{{ $c['connected'] ? 'Settings' : 'Connect' }}
+                </button>
               @else
                 <button type="button" @click="settings = @js($c['slug'])" class="{{ $btn }} size-11 !px-0" aria-label="Settings for {{ $c['name'] }}">
                   <x-ui.icon name="settings" class="size-5" />
                 </button>
               @endif
-              <button type="button" @click="details = @js($c['slug'])" class="{{ $btn }}">Details</button>
-              @if ($c['slug'] === 'sharet')
-                {{-- checks the key and registers the webhook once (its secret is saved, never shown) --}}
-                <form method="POST" action="{{ route('sharet.test') }}">@csrf<button class="{{ $btn }}">Test connection</button></form>
+              @if (! $c['switch_on'] || $c['connected'])
+                <button type="button" @click="details = @js($c['slug'])" class="{{ $btn }}">Details</button>
               @endif
             </div>
             @unless ($c['managed'])
+              @php $locked = $c['switch_on'] && ! $c['connected']; @endphp
               <form method="POST" action="{{ route('staff.integrations.toggle', $c['slug']) }}">
                 @csrf
                 <button type="submit" role="switch" aria-checked="{{ $c['enabled'] ? 'true' : 'false' }}" aria-label="Switch {{ $c['name'] }} {{ $c['enabled'] ? 'off' : 'on' }}"
-                  data-confirm="{{ $c['enabled'] ? 'Switch ' . $c['name'] . ' off? Its saved values stop applying' . ($c['slug'] === 'mpesa' ? ' and M-Pesa payments stop.' : ($c['slug'] === 'sharet' ? ' and Sharet Pay stops.' : ' and .env is used.')) : 'Switch ' . $c['name'] . ' on?' }}"
-                  class="relative inline-flex h-6 w-[52px] shrink-0 items-center rounded-full p-0.5 transition-colors {{ $c['enabled'] ? 'bg-brand-500 hover:bg-brand-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700' }}">
+                  @disabled($locked) title="{{ $locked ? 'Connect first' : ($c['enabled'] ? 'Switch off' : 'Switch on') }}"
+                  data-confirm="{{ $c['enabled'] ? 'Switch ' . $c['name'] . ' off? Its saved values stop applying' . ($c['slug'] === 'mpesa' ? ' and M-Pesa payments stop.' : ($c['slug'] === 'sharet' ? ' and borrowers no longer see Sharet Pay. The own paybill keeps working.' : ' and .env is used.')) : 'Switch ' . $c['name'] . ' on?' . ($c['slug'] === 'sharet' ? ' Borrowers then see Sharet Pay on their repay screen.' : '') }}"
+                  class="relative inline-flex h-6 w-[52px] shrink-0 items-center rounded-full p-0.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40 {{ $c['enabled'] ? 'bg-brand-500 hover:bg-brand-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700' }}">
                   <span class="block h-5 w-[30px] rounded-full bg-white shadow-theme-sm transition-transform {{ $c['enabled'] ? 'translate-x-[18px]' : '' }}"></span>
                 </button>
               </form>
@@ -77,13 +93,21 @@
                 </span>
               </li>
             @endforeach
+            @if ($c['switch_on'])
+              <li class="flex justify-between gap-4 border-b border-gray-100 py-2.5 dark:border-gray-800">
+                <span class="w-1/2 text-sm text-gray-500 dark:text-gray-400">Last test</span>
+                <span class="w-1/2 break-words text-sm text-gray-700 dark:text-gray-300">{{ $c['test'] ? ($c['test']['ok'] ? 'Passed ' : 'Failed ') . $c['test']['when'] : 'Not tested' }}</span>
+              </li>
+            @endif
           </ul>
           <div class="mt-8 flex justify-end"><button type="button" @click="details = null" class="{{ $btn }}">Close</button></div>
         </div>
       </div>
 
       {{-- settings --}}
-      @unless ($c['managed'])
+      @if ($c['switch_on'])
+        @include('staff.desk._integration-connect', ['c' => $c, 'input' => $input, 'btn' => $btn])
+      @elseif (! $c['managed'])
         <div x-cloak x-show="settings === @js($c['slug'])" class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-5" @keydown.escape.window="settings = null">
           <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px] dark:bg-gray-900/70" @click="settings = null"></div>
           <div class="relative my-auto w-full max-w-[600px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
@@ -117,7 +141,7 @@
             </form>
           </div>
         </div>
-      @endunless
+      @endif
     @endforeach
   </div>
 @endsection

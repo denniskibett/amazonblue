@@ -49,20 +49,30 @@ class Integrations
                 'MPESA_B2C_COMMAND' => ['B2C command', 'lending.mpesa.b2c_command', 'text'],
             ],
         ],
-        // Sharet Pay, a second rail beside the own paybill above (9 Nov 2026; docs/SHARET_PAYMENTS.md). "Test connection"
-        // on its card checks the key and registers the webhook, saving its signing secret here.
+        // Sharet Pay, a second rail beside the own paybill above (9 Nov 2026; docs/SHARET_PAYMENTS.md). Its card is the one
+        // place for the key (connection fields) and the rail's options; the card's switch alone turns it on and off
+        // ('switch_on'), "Test connection" checks the key and registers the webhook, and Remove forgets the key.
         'sharet' => [
             'name' => 'Sharet Pay', 'category' => 'Payments', 'logo' => 'images/integrations/sharet.svg', 'switch' => 'sharet.enabled',
+            'switch_on' => true, 'removable' => true, 'connection' => ['SHARET_API_KEY', 'SHARET_WEBHOOK_SECRET', 'SHARET_BASE_URL'],
             'description' => 'Borrowers repay through a Sharet pay link into our Sharet wallet; optionally, approved disbursements and partner payouts go out through Sharet.',
             'fields' => [
-                'SHARET_ENABLED' => ['Sharet Pay on', 'sharet.enabled', 'bool'],
-                'SHARET_API_KEY' => ['API key (sk_test_… or sk_live_…; scopes collect, payout, read)', 'sharet.api_key', 'secret'],
-                'SHARET_WEBHOOK_SECRET' => ['Webhook signing secret (saved by Test connection)', 'sharet.webhook_secret', 'secret'],
+                'SHARET_API_KEY' => ['API key', 'sharet.api_key', 'secret'],
+                'SHARET_WEBHOOK_SECRET' => ['Webhook signing secret', 'sharet.webhook_secret', 'secret'],
                 'SHARET_BASE_URL' => ['API base URL', 'sharet.base_url', 'text'],
                 'SHARET_REPAYMENT_RAIL' => ['Repayment rail shown first to borrowers', 'sharet.repayment_rail', 'select', ['paybill', 'sharet']],
                 'SHARET_PAYOUTS_ENABLED' => ['Disbursements and partner payouts through Sharet', 'sharet.payouts_enabled', 'bool'],
                 'SHARET_PAY_LINK_MINUTES' => ['Pay link open for (minutes)', 'sharet.pay_link_minutes', 'text'],
             ],
+            'help' => [
+                'SHARET_API_KEY' => 'From Sharet › Developers › API keys: sk_test_… or sk_live_…, with scopes collect, payout and read. Encrypted when saved and never shown again; leave blank to keep the saved key.',
+                'SHARET_WEBHOOK_SECRET' => 'Optional. Test connection registers our webhook with Sharet and fills this in.',
+                'SHARET_BASE_URL' => 'Optional. Blank uses https://sharet.africa/api/v1.',
+                'SHARET_REPAYMENT_RAIL' => 'Both are shown while Sharet Pay is on; this one comes first.',
+                'SHARET_PAYOUTS_ENABLED' => 'Sent at 08:00, 12:00 and 16:00, after any second sign-off. Keep off until collections are trusted.',
+                'SHARET_PAY_LINK_MINUTES' => '4320 is 3 days. The amount owed changes with penalties, so keep it short.',
+            ],
+            'placeholders' => ['SHARET_API_KEY' => 'sk_live_…', 'SHARET_WEBHOOK_SECRET' => 'whsec_…', 'SHARET_BASE_URL' => 'https://sharet.africa/api/v1'],
         ],
         'africastalking' => [
             'name' => "Africa's Talking", 'category' => 'SMS', 'logo' => 'images/integrations/africastalking.svg', 'switch' => null,
@@ -170,11 +180,14 @@ class Integrations
             if (! $def || ! empty($def['managed'])) {
                 continue;
             }
-            if (! $row['enabled']) {
+            if (! self::on($row['slug'], $row['enabled'], $row['settings'])) {
                 if ($def['switch']) {
                     config([$def['switch'] => false]);
                 }
                 continue;
+            }
+            if (! empty($def['switch_on'])) {
+                config([$def['switch'] => true]);
             }
             foreach ($def['fields'] as $env => $field) {
                 if (! array_key_exists($env, $row['settings']) || $row['settings'][$env] === null || $row['settings'][$env] === '') {
@@ -185,6 +198,27 @@ class Integrations
                 }
             }
         }
+    }
+
+    /**
+     * Whether an integration is switched on. Before the card's switch was its only on/off (10 Nov 2026), Sharet Pay
+     * also had a "Sharet Pay on" field (SHARET_ENABLED); a saved "off" there still counts until the switch is used.
+     */
+    public static function on(string $slug, bool $enabled, array $settings): bool
+    {
+        return $enabled && ! ($slug === 'sharet' && ($settings[self::SHARET_LEGACY_SWITCH] ?? null) === '0');
+    }
+
+    /** Where the last "Test connection" is kept in an integration's saved settings: [at, ok, message]. */
+    public const TEST = '_test';
+
+    /** The old Sharet "on" field; dropped from the saved settings whenever the Sharet card is saved or switched. */
+    public const SHARET_LEGACY_SWITCH = 'SHARET_ENABLED';
+
+    /** Saved values of one integration (decrypted), or [] when it was never saved. */
+    public static function saved(string $slug): array
+    {
+        return Integration::where('slug', $slug)->first()?->settings ?? [];
     }
 
     public static function forget(): void

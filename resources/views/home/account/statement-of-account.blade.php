@@ -72,7 +72,10 @@
           <tr @class(['bj-book' => $e['kind'] !== 'cash'])>
             <td>{{ $date($e['date']) }}</td>
             <td>
-              {{ $e['type'] === 'sent' ? 'Loan sent' . ($e['mode'] ? ' by ' . (strtolower($e['mode']) === 'mpesa' ? 'M-Pesa' : ucfirst($e['mode'])) : '') : ($e['kind'] === 'cash' ? 'Payment' . ($e['mode'] ? ' · ' . (strtolower($e['mode']) === 'mpesa' ? 'M-Pesa' : ucfirst($e['mode'])) : '') : ['rollover' => 'Moved to a new period (rollover)', 'discount' => 'Discount', 'bad_debt' => 'Written off', 'non_cash' => 'Book entry'][$e['kind']]) }}
+              @php $modeLabel = $e['mode'] ? (strtolower($e['mode']) === 'mpesa' ? 'M-Pesa' : ucfirst($e['mode'])) : null; @endphp
+              @if ($e['type'] === 'sent')Loan sent@if ($modeLabel) by <x-pay-mode :mode="$e['mode']">{{ $modeLabel }}</x-pay-mode>@endif
+              @elseif ($e['kind'] === 'cash')Payment@if ($modeLabel) · <x-pay-mode :mode="$e['mode']">{{ $modeLabel }}</x-pay-mode>@endif
+              @else{{ ['rollover' => 'Moved to a new period (rollover)', 'discount' => 'Discount', 'bad_debt' => 'Written off', 'non_cash' => 'Book entry'][$e['kind']] }}@endif
               <span class="bj-kind {{ $e['kind'] }}">{{ $kindLabel[$e['kind']] }}</span>
               @if ($e['ref'] && $e['kind'] === 'cash')<small class="muted bj-ref">{{ $e['ref'] }}</small>@endif
             </td>

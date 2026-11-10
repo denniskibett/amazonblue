@@ -19,6 +19,8 @@ class SharetClient
         'payment.paid', 'payment.failed', 'payment.refunded',
     ];
 
+    public const DEFAULT_BASE_URL = 'https://sharet.africa/api/v1';
+
     public string $environment;
 
     public function __construct(private string $apiKey, private string $baseUrl)
@@ -27,10 +29,10 @@ class SharetClient
         $this->environment = str_starts_with($apiKey, 'sk_live_') ? 'live' : 'test';
     }
 
-    /** The client for the key saved on Integrations (or .env). */
+    /** The client for the key saved on Integrations › Sharet Pay (in force while Sharet Pay is on). */
     public static function make(): self
     {
-        return new self((string) config('sharet.api_key'), (string) (config('sharet.base_url') ?: 'https://sharet.africa/api/v1'));
+        return new self((string) config('sharet.api_key'), (string) (config('sharet.base_url') ?: self::DEFAULT_BASE_URL));
     }
 
     public function get(string $path, array $query = []): Response
@@ -46,6 +48,11 @@ class SharetClient
         }
 
         return $http->post($this->baseUrl . $path, $body);
+    }
+
+    public function delete(string $path): Response
+    {
+        return $this->http()->delete($this->baseUrl . $path);
     }
 
     private function http(): PendingRequest

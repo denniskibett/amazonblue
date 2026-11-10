@@ -127,7 +127,7 @@
             <ul class="divide-y divide-gray-100 dark:divide-gray-800">
               @forelse ($p->payments(8) as $pay)
                 <li class="flex items-center justify-between gap-3 py-2.5 text-theme-sm">
-                  <span><span class="font-medium text-gray-800 dark:text-white/90">{{ \Illuminate\Support\Carbon::parse($pay->repayment_date)->format('j M Y') }}</span> <span class="text-gray-500">· loan #{{ $pay->loan_id }} · {{ ucfirst($pay->mode ?? '') }} {{ $pay->kind && $pay->kind !== 'cash' ? '· ' . str_replace('_', ' ', $pay->kind) : '' }}</span></span>
+                  <span><span class="font-medium text-gray-800 dark:text-white/90">{{ \Illuminate\Support\Carbon::parse($pay->repayment_date)->format('j M Y') }}</span> <span class="text-gray-500">· loan #{{ $pay->loan_id }} · <x-pay-mode :mode="$pay->mode">{{ ucfirst($pay->mode ?? '') }}</x-pay-mode> {{ $pay->kind && $pay->kind !== 'cash' ? '· ' . str_replace('_', ' ', $pay->kind) : '' }}</span></span>
                   <span class="font-medium text-gray-800 dark:text-white/90">KES {{ number_format((float) $pay->amount, 2) }}</span>
                 </li>
               @empty

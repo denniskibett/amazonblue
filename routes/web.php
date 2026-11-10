@@ -541,6 +541,7 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             Route::get('integrations', [\App\Http\Controllers\Staff\IntegrationsController::class, 'index'])->name('integrations');
             Route::post('integrations/{slug}', [\App\Http\Controllers\Staff\IntegrationsController::class, 'update'])->name('integrations.update');
             Route::post('integrations/{slug}/toggle', [\App\Http\Controllers\Staff\IntegrationsController::class, 'toggle'])->name('integrations.toggle');
+            Route::delete('integrations/{slug}', [\App\Http\Controllers\Staff\IntegrationsController::class, 'destroy'])->name('integrations.destroy');
         });
         Route::middleware('permission:manage API tokens')->group(function () {
             Route::get('api-keys', [\App\Http\Controllers\Staff\ApiKeysController::class, 'index'])->name('api-keys');

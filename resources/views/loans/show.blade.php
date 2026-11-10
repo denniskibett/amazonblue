@@ -376,7 +376,7 @@
                                     </div>
                                     <div class="text-right">
                                         <p class="text-xs text-gray-500">{{ $disbursement->transaction ?? 'N/A' }}@if ($disbursement->bank_ref && $disbursement->mpesa_ref) <span class="whitespace-nowrap">· M-Pesa {{ $disbursement->mpesa_ref }}</span>@endif</p>
-                                        <p class="text-xs text-gray-400">{{ $disbursement->mode ?? '' }}</p>
+                                        <p class="text-xs text-gray-400"><x-pay-mode :mode="$disbursement->mode">{{ $disbursement->mode ?? '' }}</x-pay-mode></p>
                                         @if(! auth()->user()->hasRole('borrower'))
                                         <div class="flex space-x-1 mt-1 justify-end">
                                             <button onclick="openDisbursementModal(null, {{ json_encode($disbursement->attributesToArray()) }})" 
@@ -436,7 +436,7 @@
                                     </div>
                                     <div class="text-right">
                                         <p class="text-xs text-gray-500">{{ $repayment->transaction ?? 'N/A' }}@if ($repayment->bank_ref && $repayment->mpesa_ref) <span class="whitespace-nowrap">· bank {{ $repayment->bank_ref }}</span>@endif</p>
-                                        <p class="text-xs text-gray-400">{{ $repayment->mode ?? '' }}</p>
+                                        <p class="text-xs text-gray-400"><x-pay-mode :mode="$repayment->mode">{{ $repayment->mode ?? '' }}</x-pay-mode></p>
                                         @if(! auth()->user()->hasRole('borrower'))
                                         <div class="flex space-x-1 mt-1 justify-end">
                                             <button onclick="openRepaymentModal(null, {{ json_encode($repayment->attributesToArray()) }})" 

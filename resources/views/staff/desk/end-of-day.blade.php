@@ -58,7 +58,7 @@
         <tr @class(['opacity-60' => $p->deleted_at])>
           <td data-sort-value="{{ $p->loan->user->name ?? '' }}"><x-staff.person :user="$p->loan->user ?? null" :sub="'Loan #' . $p->loan_id" /></td>
           <td><span class="font-medium text-gray-800 dark:text-white/90">#{{ $p->id }}</span><span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ optional($p->created_at)->format('H:i') }}</span></td>
-          <td data-filter-value="{{ $modeName($p->mode) }}">{{ $modeName($p->mode) }}<span class="block font-mono text-theme-xs text-gray-500 dark:text-gray-400">{{ $p->transaction ?: '—' }}</span></td>
+          <td data-filter-value="{{ $modeName($p->mode) }}"><x-pay-mode :mode="$p->mode">{{ $modeName($p->mode) }}</x-pay-mode><span class="block font-mono text-theme-xs text-gray-500 dark:text-gray-400">{{ $p->transaction ?: '—' }}</span></td>
           <td data-filter-value="{{ $p->deleted_at ? 'Reversed' : ($k === 'cash' ? 'Cash' : 'Book') }}">
             @if ($p->deleted_at)<x-staff.pill tone="red">Reversed</x-staff.pill>
             @elseif ($k === 'cash')<x-staff.pill tone="green" dot>Cash</x-staff.pill>
@@ -79,7 +79,7 @@
         <tr>
           <td data-sort-value="{{ $d->loan->user->name ?? '' }}"><x-staff.person :user="$d->loan->user ?? null" :sub="'Loan #' . $d->loan_id" /></td>
           <td><span class="font-medium text-gray-800 dark:text-white/90">#{{ $d->id }}</span><span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ optional($d->created_at)->format('H:i') }}</span></td>
-          <td data-filter-value="{{ $modeName($d->mode) }}">{{ $modeName($d->mode) }}<span class="block font-mono text-theme-xs text-gray-500 dark:text-gray-400">{{ $d->transaction ?: '—' }}</span></td>
+          <td data-filter-value="{{ $modeName($d->mode) }}"><x-pay-mode :mode="$d->mode">{{ $modeName($d->mode) }}</x-pay-mode><span class="block font-mono text-theme-xs text-gray-500 dark:text-gray-400">{{ $d->transaction ?: '—' }}</span></td>
           <td data-filter-value="{{ $k === 'cash' ? 'Cash' : 'Book' }}">@if ($k === 'cash')<x-staff.pill tone="blue" dot>Cash</x-staff.pill>@else<x-staff.pill tone="gray">Book · {{ str_replace('_', ' ', $k) }}</x-staff.pill>@endif</td>
           <td class="num" data-sort-value="{{ (float) $d->amount }}"><x-staff.money :amount="$d->amount" tone="muted" /></td>
           <td class="num"><x-staff.money :amount="(float) $d->net_amount ?: $d->amount" :tone="$k === 'cash' ? 'out' : 'muted'" /></td>
