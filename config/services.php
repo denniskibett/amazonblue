@@ -35,6 +35,11 @@ return [
         ],
     ],
     
+    // Sharet cross-site analytics (first-party tracker on Sharet; owner, 10 Nov 2026)
+    'sharet_analytics' => [
+        'url' => env('SHARET_ANALYTICS_URL', 'https://sharet.africa'),
+    ],
+
     'google' => [
         'analytics_id' => env('GOOGLE_ANALYTICS_ID'),
     ],

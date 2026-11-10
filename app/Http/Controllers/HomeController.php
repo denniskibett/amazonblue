@@ -42,7 +42,11 @@ class HomeController extends Controller
     public const PAGES = [
         'services', 'emergency-solutions', 'crb-solutions', 'asset-finance', 'commodities',
         'company', 'careers', 'contact', 'privacy', 'terms', 'disclaimer',
+        // bike loan landing pages (SEO, 10 Nov 2026)
+        ...self::BIKE_PAGES,
     ];
+
+    public const BIKE_PAGES = ['boda-boda-loans', 'electric-bike-loans', 'motorbike-loans-kenya', 'bike-loan-requirements'];
 
     public const COUNTIES = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Kiambu', 'Machakos', 'Uasin Gishu', 'Other'];
 
@@ -82,29 +86,36 @@ class HomeController extends Controller
 
     public function robots(): Response
     {
-        $lines = [
-            'User-agent: *',
-            'Disallow: /dashboard',
-            'Disallow: /account',
-            'Disallow: /kyc',
-            'Disallow: /storage',
-            'Disallow: /files',
-            'Disallow: /system',
-            'Disallow: /verify-email',
-            'Disallow: /login',
-            'Disallow: /register',
-            'Disallow: /forgot-password',
-            'Disallow: /reset-password',
-            '',
-            'Sitemap: ' . route('sitemap'),
+        $private = [
+            '/dashboard', '/account', '/kyc', '/storage', '/files', '/system', '/verify-email', '/verify/',
+            '/login', '/register', '/forgot-password', '/reset-password', '/confirm-password',
+            '/staff', '/collect', '/preview', '/api', '/_components', '/loans/', '/users', '/cases', '/disbursements',
+            '/loans$', '/repayments', '/investments', '/partners', '/reports', '/audit-log', '/kyc-reviews', '/business-reviews',
+            '/profile', '/mpesa', '/webhooks',
         ];
+        $lines = array_merge(
+            ['User-agent: *'],
+            // staging and local copies are closed to crawlers altogether
+            app()->environment('production') ? [] : ['Disallow: /'],
+            array_map(fn ($path) => 'Disallow: ' . $path, $private),
+            ['', 'Sitemap: ' . route('sitemap')],
+        );
 
         return response(implode("\n", $lines) . "\n", 200, ['Content-Type' => 'text/plain']);
     }
 
     public function sitemap(): Response
     {
-        $urls = array_merge([route('home')], array_map(fn ($page) => route('site.page', $page), self::PAGES));
+        // lastmod = when the page's own view last changed (the bike pages first, as they are the ones to rank)
+        $lastmod = fn (string $view) => date('Y-m-d', filemtime(resource_path('views/' . str_replace('.', '/', $view) . '.blade.php')));
+        $urls = [['loc' => route('home'), 'lastmod' => $lastmod('welcome'), 'priority' => '1.0']];
+        foreach (self::BIKE_PAGES as $page) {
+            $urls[] = ['loc' => route('site.page', $page), 'lastmod' => $lastmod('home.' . $page), 'priority' => '0.9'];
+        }
+        foreach (array_diff(self::PAGES, self::BIKE_PAGES) as $page) {
+            $legal = in_array($page, ['privacy', 'terms', 'disclaimer'], true);
+            $urls[] = ['loc' => route('site.page', $page), 'lastmod' => $lastmod('home.' . $page), 'priority' => $legal ? '0.3' : '0.7'];
+        }
 
         return response()->view('home.sitemap', ['urls' => $urls], 200, ['Content-Type' => 'application/xml']);
     }
@@ -350,7 +361,8 @@ class HomeController extends Controller
             return $back->with('enquiry', ['duplicate' => true] + $this->enquiryFlash($existing));
         }
 
-        return $back->with('enquiry', ['duplicate' => false] + $this->enquiryFlash($enquiry));
+        return $back->with('enquiry', ['duplicate' => false] + $this->enquiryFlash($enquiry))
+            ->with('sa_conversion', 'lead'); // Sharet analytics: a new enquiry is a lead
     }
 
     private function findEnquiry(string $topic, string $email, string $phone): ?Enquiry

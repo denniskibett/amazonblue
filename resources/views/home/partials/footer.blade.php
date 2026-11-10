@@ -41,6 +41,11 @@
       </div>
       <div class="footer-cols">
         <div class="footer-col">
+          <h2 class="footer-h">Bike loans</h2>
+          <a href="{{ route('site.page', 'boda-boda-loans') }}">Boda boda loans</a><a href="{{ route('site.page', 'electric-bike-loans') }}">Electric bike loans</a
+          ><a href="{{ route('site.page', 'motorbike-loans-kenya') }}">Motorbike loans in Kenya</a><a href="{{ route('site.page', 'bike-loan-requirements') }}">Requirements</a>
+        </div>
+        <div class="footer-col">
           <h2 class="footer-h">Services</h2>
           <a href="{{ route('site.page', 'emergency-solutions') }}">Emergency Solutions</a><a href="{{ route('site.page', 'crb-solutions') }}">CRB Solutions</a
           ><a href="{{ route('site.page', 'asset-finance') }}">Asset Finance</a><a href="{{ route('site.page', 'commodities') }}">Commodities</a>
@@ -57,6 +62,16 @@
         </div>
       </div>
     </div>
+    {{-- sister sites (SEO, 10 Nov 2026): plain followed links --}}
+    <nav class="footer-sister" aria-label="More from Sharet">
+      <h2 class="footer-h">More from Sharet</h2>
+      <a href="https://sharet.africa">Sharet: payments API for Kenya</a>
+      <a href="https://breve.sharet.africa">Breve: invoicing and M-Pesa payments for SMEs</a>
+      <a href="https://aiyotickets.com">Aiyotickets: events and tickets in Nairobi</a>
+      <a href="https://eserviz.aiyotickets.com">eServiz: government errands done for you (NTSA, Lands, KRA)</a>
+      <a href="https://scharge.sharet.africa">Scharge: property and rent management</a>
+      <a href="https://shoope.africa">Shoope: safe payments for online shops</a>
+    </nav>
     <div class="footer-bottom">
       <span class="copy">© <span data-year>2026</span> Aimzone Ventures. All rights reserved.</span>
       <div class="footer-end">

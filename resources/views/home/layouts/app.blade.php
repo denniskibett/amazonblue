@@ -3,10 +3,10 @@
     @extends('home.layouts.app', ['title' => ..., 'description' => ..., 'variant' => 'on-photo|on-dark', 'active' => 'services|company|contact'])
 --}}
 <!doctype html>
-<html lang="en">
+<html lang="en-KE">
   <head>
     @include('home.partials.head', [
-      'title' => $title ?? 'Aimzone Ventures — Emergency funding and trade finance in Kenya',
+      'title' => $title ?? 'Boda Boda, E-Bike & Emergency Loans in Kenya | Aimzone Ventures',
       'description' => $description ?? 'Emergency bridge finance, asset-backed lending, CRB resolution and trade finance for businesses across East Africa. Fast, discreet, from Nairobi.',
     ])
   </head>

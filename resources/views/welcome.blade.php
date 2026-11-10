@@ -1,8 +1,12 @@
 @extends('home.layouts.app', [
-  'title' => 'Aimzone Ventures — Emergency funding and trade finance in Kenya',
-  'description' => 'Emergency bridge finance, asset-backed lending, CRB resolution and trade finance for businesses across East Africa. Fast, discreet, from Nairobi.',
+  'title' => 'Boda Boda, E-Bike & Emergency Loans in Kenya | Aimzone Ventures',
+  'description' => 'Boda boda and e-bike loans against your logbook, emergency cash to M-Pesa, asset finance and CRB solutions from a Nairobi lender. Apply online in minutes.',
   'variant' => 'on-photo',
 ])
+
+@push('jsonld')
+  {!! \App\Support\Seo::script(\App\Support\Seo::financialService('Boda boda, motorbike and e-bike loans, emergency cash to M-Pesa, asset finance, CRB solutions and trade finance in Kenya.')) !!}
+@endpush
 
 @section('content')
   <section class="hero" aria-label="Our services">
@@ -249,6 +253,21 @@
         <div>
           <b class="num" data-count="2" data-pre="KES " data-suf="B+">KES 2B+</b><span>Capital deployed</span>
         </div>
+      </div>
+    </div>
+  </section>
+  {{-- bike loans (SEO, 10 Nov 2026): the landing pages, linked from the home page --}}
+  <section class="section" id="bike-loans">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>Boda boda and e-bike loans</h2>
+        <p class="muted">Riders and owners borrow against a motorbike or e-motorcycle logbook and keep riding, or get emergency cash to M-Pesa.</p>
+      </div>
+      <div class="grid g4" aria-label="Bike loans">
+        <a class="card" href="{{ route('site.page', 'boda-boda-loans') }}"><span class="chip sand">@include('home.partials.bike-icon')</span><h3>Boda boda loans</h3><p class="muted text-sm">Logbook loans and emergency cash for riders.</p></a>
+        <a class="card" href="{{ route('site.page', 'electric-bike-loans') }}"><span class="chip sage">@include('home.partials.bike-icon')</span><h3>Electric bike loans</h3><p class="muted text-sm">For e-motorcycle and e-bike riders.</p></a>
+        <a class="card" href="{{ route('site.page', 'motorbike-loans-kenya') }}"><span class="chip">@include('home.partials.bike-icon')</span><h3>Motorbike loans in Kenya</h3><p class="muted text-sm">Up to 70% of your bike's forced sale value.</p></a>
+        <a class="card" href="{{ route('site.page', 'bike-loan-requirements') }}"><span class="chip apricot">@include('home.partials.doc-icon')</span><h3>Requirements</h3><p class="muted text-sm">What to have ready, and how to apply.</p></a>
       </div>
     </div>
   </section>

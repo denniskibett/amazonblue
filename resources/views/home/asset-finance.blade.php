@@ -1,5 +1,5 @@
 @extends('home.layouts.app', [
-  'title' => 'Asset Finance — Aimzone Ventures',
+  'title' => 'Asset Finance & Logbook Loans in Kenya — Aimzone Ventures',
   'description' => 'Borrow against a vehicle, property or machinery, and keep using it while you repay. We value the asset quickly and lend up to 70% of its value.',
   'active' => 'services',
   'variant' => 'on-photo',
@@ -157,7 +157,11 @@
               ><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg
             ></span>
           </summary>
-          <p class="answer">Yes. You keep using it while you repay; we register our interest as security.</p>
+          <p class="answer">
+            Yes. You keep using it while you repay; we register our interest as security. Riders can read more on
+            <a href="{{ route('site.page', 'boda-boda-loans') }}">boda boda loans</a> and
+            <a href="{{ route('site.page', 'electric-bike-loans') }}">electric bike loans</a>.
+          </p>
         </details>
         <details>
           <summary>

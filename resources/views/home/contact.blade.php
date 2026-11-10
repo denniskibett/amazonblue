@@ -150,6 +150,7 @@
               <optgroup label="Funding">
                 <option value="bridge" @selected(old('topic') === 'bridge') data-route="clients@aimzoneventures.com">Emergency Bridge Finance</option>
                 <option value="asset" @selected(old('topic') === 'asset') data-route="clients@aimzoneventures.com">Asset-Backed Lending</option>
+                <option value="bike" @selected(old('topic', request('topic')) === 'bike') data-route="clients@aimzoneventures.com">Motorbike or e-bike finance</option>
                 <option value="crb" @selected(old('topic') === 'crb') data-route="clients@aimzoneventures.com">CRB Resolution</option>
                 <option value="trade" @selected(old('topic') === 'trade') data-route="clients@aimzoneventures.com">Trade Finance</option>
               </optgroup>

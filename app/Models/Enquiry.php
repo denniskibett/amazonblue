@@ -10,6 +10,7 @@ class Enquiry extends Model
     public const TOPICS = [
         'bridge' => ['Emergency Bridge Finance', 'clients@aimzoneventures.com'],
         'asset' => ['Asset-Backed Lending', 'clients@aimzoneventures.com'],
+        'bike' => ['Motorbike or e-bike finance', 'clients@aimzoneventures.com'],
         'crb' => ['CRB Resolution', 'clients@aimzoneventures.com'],
         'trade' => ['Trade Finance', 'clients@aimzoneventures.com'],
         'investment' => ['Investment opportunities', 'investors@aimzoneventures.com'],

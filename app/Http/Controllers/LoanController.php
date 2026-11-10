@@ -131,7 +131,7 @@ class LoanController extends Controller
 
         $quote = $eligibility->quote((float) $loan->amount, \Illuminate\Support\Carbon::parse($loan->borrow_date));
 
-        return redirect()->route('account.home')->with('alert', [
+        return redirect()->route('account.home')->with('sa_conversion', 'loan_application')->with('alert', [
             'type' => 'success',
             'title' => 'Application sent',
             'message' => 'Loan #' . str_pad((string) $loan->id, 5, '0', STR_PAD_LEFT) . ' for KES ' . number_format((float) $loan->amount, 2)

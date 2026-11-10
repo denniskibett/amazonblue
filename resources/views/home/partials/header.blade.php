@@ -1,6 +1,6 @@
-{{-- Site header. $variant: '', 'on-photo' or 'on-dark'. $active: 'services', 'company', 'contact' or null. --}}
+{{-- Site header. $variant: '', 'on-photo' or 'on-dark'. $active: 'bikes', 'services', 'company', 'contact' or null. --}}
 @php
-  $links = ['services' => 'Services', 'company' => 'Company', 'contact' => 'Contact'];
+  $links = ['boda-boda-loans' => 'Bike loans', 'services' => 'Services', 'company' => 'Company', 'contact' => 'Contact'];
 @endphp
 <header class="site-header {{ $variant ?? '' }}">
   <div class="wrap header-row">
@@ -12,7 +12,7 @@
     </button>
     <nav class="nav" id="site-nav" aria-label="Main">
       @foreach ($links as $page => $label)
-        <a class="nav-link" href="{{ route('site.page', $page) }}" @if (($active ?? null) === $page) aria-current="page" @endif>{{ $label }}</a>
+        <a class="nav-link" href="{{ route('site.page', $page) }}" @if (($active ?? null) === $page || ($page === 'boda-boda-loans' && ($active ?? null) === 'bikes')) aria-current="page" @endif>{{ $label }}</a>
       @endforeach
       @auth
         <a class="btn btn-primary" href="{{ route(auth()->user()->homeRoute()) }}">{{ auth()->user()->isCustomer() ? 'My account' : 'Dashboard' }}</a>

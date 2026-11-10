@@ -41,6 +41,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // site analytics: one row per page opened, written after the page has gone out (owner, 1 Nov 2026)
         $middleware->web(append: \App\Http\Middleware\TrackPageView::class);
 
+        // only the public website may be indexed: everything else answers X-Robots-Tag: noindex (SEO, 10 Nov 2026)
+        // (global, so 404s and other unrouted answers are covered too)
+        $middleware->append(\App\Http\Middleware\NoIndexPrivatePages::class);
+
         // Safaricom's Daraja callbacks carry no session or CSRF token; they are protected by a secret path
         // segment and an IP allowlist instead (MpesaCallbackController)
         $middleware->validateCsrfTokens(except: ['mpesa/*', 'webhooks/sharet']);
