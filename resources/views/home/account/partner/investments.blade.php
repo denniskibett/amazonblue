@@ -22,6 +22,18 @@
         <a class="a-card" href="{{ route('account.partner.investment', $inv) }}" style="text-decoration:none;color:inherit;display:block">
           <div class="a-sec-h"><h2>{{ $inv->name }}</h2><x-az.status-badge :status="$funding->status === 'settled' ? 'repaid' : 'disbursed'" :label="ucfirst($funding->status ?: 'active')" /></div>
           <p class="muted" style="margin:4px 0 0;font-size:14px">{{ $inv->formatted_status }}{{ $inv->facility_type ? ' · ' . $inv->facility_type_label : '' }}{{ $inv->interest_rate ? ' · ' . rtrim(rtrim(number_format((float) $inv->interest_rate, 2), '0'), '.') . '%' : '' }}</p>
+          @if ($inv->return_type === 'fixed_return')
+            {{-- a fixed return (owner, 15 Nov 2026): what they put in, what they are owed and when; how we used the
+                 money is ours, not shown --}}
+            @php [$fxIn, $fxRet, $fxDue] = app(\App\Services\Partners\PartnerLines::class)->fixedDue($inv); @endphp
+            <dl class="a-dl">
+              <div><dt>Terms</dt><dd>{{ \App\Services\Partners\PartnerLines::fixedLabel((float) $inv->interest_rate, (float) $inv->partner_share_rate, (int) $inv->duration_days) }}</dd></div>
+              <div><dt>You put in</dt><dd><x-az.money :amount="$fxIn" /></dd></div>
+              <div><dt>Your return</dt><dd><x-az.money :amount="$fxRet" /></dd></div>
+              <div><dt>{{ $inv->status === 'active' ? 'Due to you' : 'Paid to you' }}</dt><dd><x-az.money :amount="$inv->status === 'active' ? $fxDue : app(\App\Services\Partners\PartnerLines::class)->paidOut($inv)" /></dd></div>
+              <div><dt>{{ $inv->status === 'active' ? 'Due on' : 'Paid on' }}</dt><dd>{{ $inv->status === 'active' ? ($inv->maturity_date?->format('j M Y') ?? '—') : ($inv->exit_date?->format('j M Y') ?? '—') }}</dd></div>
+            </dl>
+          @else
           <dl class="a-dl">
             <div><dt>Committed</dt><dd><x-az.money :amount="$funding->amount_committed" /></dd></div>
             <div><dt>Lent to borrowers</dt><dd><x-az.money :amount="$funding->amount_disbursed" /></dd></div>
@@ -35,7 +47,8 @@
               <div><dt>{{ $inv->status === 'active' ? 'Comes back' : 'Closed' }}</dt><dd>{{ $inv->status === 'active' ? ($inv->maturity_date ? 'by ' . $inv->maturity_date->format('j M Y') : 'when its loans are repaid') : ($inv->exit_date?->format('j M Y') ?? 'yes') }}</dd></div>
             @endif
           </dl>
-          @if ($used !== null)
+          @endif
+          @if ($used !== null && $inv->return_type !== 'fixed_return')
             <div class="a-progress" style="margin-top:12px" aria-label="{{ $used }}% of the commitment lent out"><i style="width: {{ $used }}%"></i></div>
             <p class="muted" style="margin:6px 0 0;font-size:13px">{{ $used }}% of your commitment lent out</p>
           @endif

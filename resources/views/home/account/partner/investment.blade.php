@@ -20,15 +20,28 @@
     </div>
   </div>
 
+  @php $fixed = $investment->return_type === 'fixed_return'; @endphp
+  @if ($fixed)
+    {{-- a fixed return (owner, 15 Nov 2026): what they are owed and when, not how the money was used --}}
+    @php [$fxIn, $fxRet, $fxDue] = app(\App\Services\Partners\PartnerLines::class)->fixedDue($investment); @endphp
+    <div class="a-stats four">
+      <div class="a-stat"><span>You put in</span><b><x-az.money :amount="$fxIn" /></b></div>
+      <div class="a-stat"><span>Your return</span><b><x-az.money :amount="$fxRet" /></b></div>
+      <div class="a-stat"><span>{{ $investment->status === 'active' ? 'Due to you on ' . $date($investment->maturity_date) : 'Paid to you on ' . $date($investment->exit_date) }}</span><b><x-az.money :amount="$investment->status === 'active' ? $fxDue : app(\App\Services\Partners\PartnerLines::class)->paidOut($investment)" /></b></div>
+      <div class="a-stat"><span>Terms</span><b style="font-size:15px">{{ \App\Services\Partners\PartnerLines::fixedLabel((float) $investment->interest_rate, (float) $investment->partner_share_rate, (int) $investment->duration_days) }}</b></div>
+    </div>
+  @else
   <div class="a-stats four">
     <div class="a-stat"><span>You committed</span><b><x-az.money :amount="$committed" /></b></div>
     <div class="a-stat"><span>Lent to borrowers</span><b><x-az.money :amount="$drawn" /></b></div>
     <div class="a-stat"><span>Returned to you</span><b>—</b></div>{{-- S-P3: not recorded yet (Phase 3) --}}
     <div class="a-stat"><span>Status</span><b>{{ $fundings->isNotEmpty() ? ucfirst($fundings->first()->status ?: 'active') : $investment->formatted_status }}</b></div>
   </div>
+  @endif
 
   <div class="a-grid two">
     <div class="a-grid">
+      @unless ($fixed)
       <section class="a-card">
         <div class="a-sec-h"><h2>Loans from this investment</h2><span class="muted" style="font-size:13px">{{ $loans->count() }}</span></div>
         @forelse ($loans as $loan)
@@ -42,6 +55,7 @@
           <x-az.empty title="No loans yet" message="No loan has been paid out from this investment yet." />
         @endforelse
       </section>
+      @endunless
 
       <section class="a-card">
         <div class="a-sec-h"><h2>Your entries</h2><a href="{{ route('account.statement') }}">Statement</a></div>

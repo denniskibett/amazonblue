@@ -136,6 +136,21 @@ class PartnerPortalTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_a_fixed_return_investor_sees_what_they_are_owed_and_when_not_the_loans(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow('2026-11-15 10:00');
+        [$user, $partner] = $this->partnerUser(['borrower', 'partner']);
+        $line = app(\App\Services\Partners\PartnerLines::class)->open($partner, 100000, 'short_term', null, 'BANKFX1', '2026-11-14', null, null, null, null,
+            ['rate' => 8, 'days' => 10, 'share' => 40]);
+
+        $this->actingAs($user)->get('/account/partner/investments')->assertOk()
+            ->assertSee('Fixed 40% of 20% interest · 10 days')->assertSee('Due to you')->assertSee('108,000')->assertSee('24 Nov 2026')
+            ->assertDontSee('Lent to borrowers');
+        $this->actingAs($user)->get(route('account.partner.investment', $line))->assertOk()
+            ->assertSee('Your return')->assertSee('8,000')->assertDontSee('Loans from this investment');
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
     private function partnerUser(array $roles): array
     {
         $user = User::factory()->create();
