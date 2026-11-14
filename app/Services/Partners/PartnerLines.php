@@ -177,7 +177,7 @@ class PartnerLines
     /** Partner lines that can still lend: active, not past maturity, with money not yet lent. */
     public function openLines(?int $partnerId = null): Collection
     {
-        return Investment::with(['fundings.partner:id,name,is_house_account'])->where('status', 'active')->where('return_type', 'loan_share')
+        return Investment::with(['fundings.partner:id,name,is_house_account'])->where('status', 'active')->whereIn('return_type', ['loan_share', 'fixed_return'])
             ->whereHas('fundings', fn ($q) => $q->whereHas('partner', fn ($p) => $p->where('is_house_account', false))
                 ->when($partnerId, fn ($f) => $f->where('partner_id', $partnerId)))
             ->orderBy('id')->get()

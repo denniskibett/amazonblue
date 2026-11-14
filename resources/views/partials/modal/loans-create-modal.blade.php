@@ -1107,7 +1107,7 @@ function loansCreateModal() {
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    const sent = this.editId ? '' : await this.recordSend(data.loan);
+                    const sent = this.editId ? '' : await this.recordSend(data.loan || { id: data.loan_id });
                     if (typeof window.showAlert === 'function') {
                         window.showAlert(sent.includes('not recorded') ? 'warning' : 'success', 'Success!', (data.message || (this.editId ? 'Loan updated successfully!' : 'Loan created successfully!')) + sent);
                     } else {
@@ -1143,7 +1143,7 @@ function loansCreateModal() {
 
                             const retryData = await retryResponse.json();
                             if (retryResponse.ok && retryData.success) {
-                                const sent = await this.recordSend(retryData.loan);
+                                const sent = await this.recordSend(retryData.loan || { id: retryData.loan_id });
                                 if (typeof window.showAlert === 'function') {
                                     window.showAlert(sent.includes('not recorded') ? 'warning' : 'success', 'Success!', 'Loan created successfully!' + sent);
                                 } else {
