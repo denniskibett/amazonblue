@@ -55,7 +55,7 @@
                   <label>Paid (KES)<input name="paid" type="number" step="0.01" min="1" required value="{{ old('paid', $plines->fixedDue($l)[2]) }}" class="mt-1 block h-9 w-32 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
                   <label>On<input name="date" type="date" required max="{{ now()->toDateString() }}" value="{{ old('date', min(now()->toDateString(), $l->maturity_date?->toDateString() ?? now()->toDateString())) }}" class="mt-1 block h-9 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
                   <label>Payout code<input name="code" required maxlength="40" value="{{ old('code') }}" class="mt-1 block h-9 w-40 rounded-md border border-gray-300 px-2 uppercase dark:border-gray-700 dark:bg-gray-900"></label>
-                  <button class="h-9 rounded-md bg-brand-500 px-3 font-medium text-white" data-confirm="Record that {{ $partner->name }} was paid back on line #{{ $l->id }} and close it?">Record payout</button>
+                  <button type="submit" class="h-9 rounded-md bg-brand-500 px-3 font-medium text-white" data-confirm="Record that {{ $partner->name }} was paid back on line #{{ $l->id }} and close it?">Record payout</button>
                 </form>
               </td></tr>
             @endcan
@@ -84,7 +84,7 @@
                       <input type="date" name="date" required max="{{ now()->toDateString() }}" aria-label="Day the house paid" class="h-8 rounded-md border border-gray-300 px-1.5 dark:border-gray-700 dark:bg-gray-900">
                       <input type="number" name="interest" step="0.01" min="0" value="{{ app(\App\Services\Partners\PartnerSlices::class)->shareDue($sl) }}" aria-label="Their interest share" class="h-8 w-24 rounded-md border border-gray-300 px-1.5 dark:border-gray-700 dark:bg-gray-900">
                       <button name="mode" value="preview" class="h-8 rounded-md border border-gray-300 px-2 dark:border-gray-700">Preview</button>
-                      <button name="mode" value="save" class="h-8 rounded-md bg-brand-500 px-2 text-white" data-confirm="The house pays {{ $partner->name }} out of this slice and owns it from that day?">House settles</button>
+                      <button type="submit" name="mode" value="save" class="h-8 rounded-md bg-brand-500 px-2 text-white" data-confirm="The house pays {{ $partner->name }} out of this slice and owns it from that day?">House settles</button>
                     </form>
                   @endcan
                 @endif

@@ -303,6 +303,42 @@
                     </select>
                 </div>
 
+                {{-- Money sent (owner, 15 Nov 2026): record the disbursement with the loan, through the same checks as
+                     the disbursement form (references, duplicates, which line funded it) --}}
+                @php
+                  $sendLines = \App\Models\Investment::where('status', 'active')->orderByDesc('id')->get()
+                      ->filter(fn ($i) => ! $i->isHouseLine() && $i->remainingCommitted() > 0)
+                      ->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'free' => round($i->remainingCommitted(), 2)])->values();
+                @endphp
+                <div x-show="!editId" class="mt-6 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" x-model="send.on" class="size-4 rounded border-gray-300"> The money has been sent: record the disbursement too
+                    </label>
+                    <div x-show="send.on" x-cloak class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <label class="text-xs text-gray-600 dark:text-gray-400">Amount sent (KES)
+                            <input type="number" step="0.01" min="1" x-model="send.amount" :placeholder="form.amount" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
+                        <label class="text-xs text-gray-600 dark:text-gray-400">Sent on
+                            <input type="date" x-model="send.date" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
+                        <label class="text-xs text-gray-600 dark:text-gray-400">How
+                            <select x-model="send.mode" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                @foreach (\App\Support\PaymentModes::MODES as $mv => $ml)<option value="{{ $mv }}">{{ $ml }}</option>@endforeach
+                            </select></label>
+                        <label class="text-xs text-gray-600 dark:text-gray-400">Funded by
+                            <select x-model="send.line" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                <option value="">Our money (house)</option>
+                                @foreach ($sendLines as $ln)<option value="{{ $ln['id'] }}">#{{ $ln['id'] }} {{ $ln['name'] }} · KES {{ number_format($ln['free'], 2) }} free</option>@endforeach
+                            </select></label>
+                        <label class="text-xs text-gray-600 dark:text-gray-400" x-show="['bank_to_mpesa','mpesa_to_bank','bank_transfer','pesalink','cheque'].includes(send.mode)">Bank reference
+                            <input x-model="send.bank_ref" maxlength="100" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm uppercase dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
+                        <label class="text-xs text-gray-600 dark:text-gray-400" x-show="['bank_to_mpesa','mpesa_to_bank','mpesa'].includes(send.mode)">M-Pesa code
+                            <input x-model="send.mpesa_ref" maxlength="40" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm uppercase dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
+                        <label class="text-xs text-gray-600 dark:text-gray-400" x-show="!['bank_to_mpesa','mpesa_to_bank','bank_transfer','pesalink','cheque','mpesa'].includes(send.mode)">Reference
+                            <input x-model="send.ref" maxlength="255" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm uppercase dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
+                        <label class="text-xs text-gray-600 dark:text-gray-400 sm:col-span-2">Note (optional)
+                            <input x-model="send.notes" maxlength="500" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
+                    </div>
+                </div>
+
                 <!-- Digital Signature Section (unchanged) -->
                 <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
                     <h4 class="text-lg font-medium mb-4 text-gray-700 dark:text-white/90">Digital Signature</h4>
@@ -454,6 +490,9 @@ function loansCreateModal() {
         selectedUserName: '',
         showUserSelection: true,
         borrowerName: '',
+
+        // money sent with the loan (owner, 15 Nov 2026)
+        send: { on: false, amount: '', date: '', mode: 'mpesa', bank_ref: '', mpesa_ref: '', ref: '', line: '', notes: '' },
 
         // Loan data
         loanId: null,
@@ -856,6 +895,7 @@ function loansCreateModal() {
         },
 
         resetForm() {
+            this.send = { on: false, amount: '', date: '', mode: 'mpesa', bank_ref: '', mpesa_ref: '', ref: '', line: '', notes: '' };
             this.form = {
                 amount: '',
                 borrow_date: '',
@@ -1067,8 +1107,9 @@ function loansCreateModal() {
                 const data = await response.json();
 
                 if (response.ok && data.success) {
+                    const sent = this.editId ? '' : await this.recordSend(data.loan);
                     if (typeof window.showAlert === 'function') {
-                        window.showAlert('success', 'Success!', data.message || (this.editId ? 'Loan updated successfully!' : 'Loan created successfully!'));
+                        window.showAlert(sent.includes('not recorded') ? 'warning' : 'success', 'Success!', (data.message || (this.editId ? 'Loan updated successfully!' : 'Loan created successfully!')) + sent);
                     } else {
                         uiAlert(data.message || (this.editId ? 'Loan updated successfully!' : 'Loan created successfully!'));
                     }
@@ -1102,8 +1143,9 @@ function loansCreateModal() {
 
                             const retryData = await retryResponse.json();
                             if (retryResponse.ok && retryData.success) {
+                                const sent = await this.recordSend(retryData.loan);
                                 if (typeof window.showAlert === 'function') {
-                                    window.showAlert('success', 'Success!', 'Loan created successfully!');
+                                    window.showAlert(sent.includes('not recorded') ? 'warning' : 'success', 'Success!', 'Loan created successfully!' + sent);
                                 } else {
                                     uiAlert('Loan created successfully!');
                                 }
@@ -1127,6 +1169,32 @@ function loansCreateModal() {
             } finally {
                 this.isSubmitting = false;
             }
+        },
+
+        /** Records the money sent on a new loan through the disbursement form's endpoint; returns a line for the alert. */
+        async recordSend(loan) {
+            if (!this.send.on || !loan || !loan.id) return '';
+            const fd = new FormData();
+            fd.append('loan_id', loan.id);
+            fd.append('amount', this.send.amount || this.form.amount);
+            fd.append('disburse_date', this.send.date || this.formatDate(this.form.borrow_date));
+            fd.append('payment_date', this.send.date || this.formatDate(this.form.borrow_date));
+            fd.append('mode', this.send.mode);
+            fd.append('kind', 'cash');
+            if (this.send.bank_ref) fd.append('bank_ref', this.send.bank_ref.trim());
+            if (this.send.mpesa_ref) fd.append('mpesa_ref', this.send.mpesa_ref.trim().toUpperCase());
+            fd.append('transaction', (this.send.ref || this.send.mpesa_ref || this.send.bank_ref || '').trim());
+            if (this.send.notes) fd.append('notes', this.send.notes);
+            fd.append('funding_mode', this.send.line ? 'line' : 'house');
+            if (this.send.line) { fd.append('investment_id', this.send.line); fd.append('funding_source', 'partner'); }
+            const r = await fetch('{{ route("disbursements.store") }}', { method: 'POST', body: fd, headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) {
+                const why = d.errors ? Object.values(d.errors).flat().join(' ') : (d.message || 'it was not saved');
+                return ' The loan was created, but the disbursement was not recorded: ' + why + ' Record it on loan #' + loan.id + '.';
+            }
+            return ' KES ' + Number(this.send.amount || this.form.amount).toLocaleString() + ' sent is recorded.';
         },
 
         formatDate(date) {

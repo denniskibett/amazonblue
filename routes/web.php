@@ -229,6 +229,11 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('loans')
             ->middleware('permission:view loans');
         
+        // the new-loan modal asks whether the borrower has a signature on file (owner, 15 Nov 2026)
+        Route::get('/signature-check', [LoanController::class, 'signatureCheck'])
+            ->name('signature-check')
+            ->middleware('permission:create loans');
+
         Route::get('/loans/create', [LoanController::class, 'createForUser'])
             ->name('loans.create')
             ->middleware('permission:create loans');

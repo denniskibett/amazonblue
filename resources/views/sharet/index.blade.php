@@ -43,7 +43,7 @@
             <form method="POST" action="{{ route('sharet.payouts.retry', $p) }}" class="inline">@csrf<button class="text-theme-xs text-brand-500 hover:underline">Try again</button></form>
           @endif
           @if (in_array($p->status, ['awaiting_approval', 'queued', 'failed'], true))
-            <form method="POST" action="{{ route('sharet.payouts.cancel', $p) }}" class="inline">@csrf<button class="ml-2 text-theme-xs text-error-500 hover:underline" data-confirm="Cancel this payout? Nothing is sent.">Cancel</button></form>
+            <form method="POST" action="{{ route('sharet.payouts.cancel', $p) }}" class="inline">@csrf<button type="submit" class="ml-2 text-theme-xs text-error-500 hover:underline" data-confirm="Cancel this payout? Nothing is sent.">Cancel</button></form>
           @endif
         </td>
       </tr>

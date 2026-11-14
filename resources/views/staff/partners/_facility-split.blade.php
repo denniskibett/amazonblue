@@ -128,13 +128,13 @@
       @endif
 
       <div class="flex flex-wrap gap-2">
-        <button name="mode" value="preview" class="rounded-lg border border-gray-300 px-4 py-2.5 text-theme-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300">Preview</button>
-        <button name="mode" value="save" class="rounded-lg bg-brand-500 px-5 py-2.5 text-theme-sm font-medium text-white hover:bg-brand-600" data-confirm="Save this split for loan #{{ $loan->id }}? Payments from the start day are re-split.">Save the split</button>
+        <button type="submit" name="mode" value="preview" class="rounded-lg border border-gray-300 px-4 py-2.5 text-theme-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300">Preview</button>
+        <button type="submit" name="mode" value="save" class="rounded-lg bg-brand-500 px-5 py-2.5 text-theme-sm font-medium text-white hover:bg-brand-600" data-confirm="Save this split for loan #{{ $loan->id }}? Payments from the start day are re-split.">Save the split</button>
       </div>
     </form>
     @if ($split)
       <form method="POST" action="{{ route('staff.loans.facility-split.destroy', $loan) }}" class="mt-3">@csrf @method('DELETE')
-        <button class="text-theme-sm text-error-600 hover:underline" data-confirm="Remove the facility split? Payments from {{ $split->counted_from->format('j M Y') }} go back to the normal split." data-confirm-danger>Remove the facility split</button>
+        <button type="submit" class="text-theme-sm text-error-600 hover:underline" data-confirm="Remove the facility split? Payments from {{ $split->counted_from->format('j M Y') }} go back to the normal split." data-confirm-danger>Remove the facility split</button>
       </form>
     @endif
   @endcan

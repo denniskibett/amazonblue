@@ -71,7 +71,7 @@
             @forelse ($collectors as $c)
               <tr><td class="{{ $td }} pl-6 font-medium">{{ $c->name }}</td><td class="{{ $td }}">{{ $c->email }}</td><td class="{{ $td }}">{{ $c->phone }}</td>
                 <td class="{{ $td }} pr-6 text-right"><form method="POST" action="{{ route('staff.agencies.collectors.destroy', [$agency, $c->id]) }}">@csrf @method('DELETE')
-                  <button class="text-sm text-error-500 hover:underline" data-confirm="Remove {{ $c->name }}'s access?" data-confirm-danger>Remove access</button></form></td></tr>
+                  <button type="submit" class="text-sm text-error-500 hover:underline" data-confirm="Remove {{ $c->name }}'s access?" data-confirm-danger>Remove access</button></form></td></tr>
             @empty
               <tr><td class="px-6 py-6 text-sm text-gray-500">No collectors yet.</td></tr>
             @endforelse
@@ -106,7 +106,7 @@
                   </td>
                   <td class="{{ $td }}">{{ $p->contacts_count }}</td>
                   <td class="{{ $td }} pr-6 text-right"><form method="POST" action="{{ route('staff.placements.take-back', $p) }}">@csrf
-                    <button class="{{ $btn }} !h-9 !px-3 text-xs" data-confirm="Take loan #{{ $p->loan_id }} back from {{ $agency->name }}? They lose access at once.">Take back</button></form></td>
+                    <button type="submit" class="{{ $btn }} !h-9 !px-3 text-xs" data-confirm="Take loan #{{ $p->loan_id }} back from {{ $agency->name }}? They lose access at once.">Take back</button></form></td>
                 </tr>
               @empty
                 <tr><td colspan="8" class="px-6 py-6 text-sm text-gray-500">Nothing placed yet.</td></tr>

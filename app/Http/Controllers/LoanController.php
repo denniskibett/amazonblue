@@ -1011,8 +1011,26 @@ class LoanController extends Controller
     /**
      * Create-loan form with the borrower preselected (route users.loans.create).
      */
+    /**
+     * Does this borrower already have a signature on file (owner, 15 Nov 2026)? The new-loan modal asks before it
+     * insists on a drawn one; the route was missing, so every borrower looked unsigned. Only the yes/no and the link.
+     */
+    public function signatureCheck(User $user)
+    {
+        $s = $this->signatureService->checkSignature($user);
+
+        return response()->json(['hasSignature' => (bool) ($s['hasSignature'] ?? false) && (bool) ($s['signatureExists'] ?? false),
+            'signatureUrl' => $s['signatureUrl'] ?? null]);
+    }
+
     public function createForUser(Request $request, User $user)
     {
+        // owner, 15 Nov 2026: loans are created in the modal (it asks about other open loans and records the money
+        // sent); the borrower's page opens it with the borrower chosen
+        if (! $request->expectsJson() && \Illuminate\Support\Facades\Route::has('users.show')) {
+            return redirect()->to(route('users.show', $user) . '?new_loan=1#loans');
+        }
+
         $request->merge(['user_id' => $user->id]);
         // the create view preselects from old('user_id')
         $request->session()->flashInput(array_merge($request->old() ?: [], ['user_id' => $user->id]));

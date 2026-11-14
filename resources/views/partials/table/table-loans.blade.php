@@ -53,6 +53,7 @@
   <div class="hidden" id="loans-tools-{{ $context ?? 'list' }}-src"><div id="loans-tools-{{ $context ?? 'list' }}" class="flex gap-2">
       @if(isset($user) && (auth()->user()->hasRole('admin') || auth()->user()->hasRole('teller') || (auth()->user()->hasRole('broker') && auth()->user()->broker && $user->borrower->broker_id === auth()->user()->broker->id)))
       <button 
+          data-create-loan-for="{{ $user->id }}"
           @click="openCreateModal({ 
               userId: {{ $user->id }}, 
               userName: '{{ addslashes($user->name) }}',
@@ -456,6 +457,10 @@ function loanTable() {
             // "New loan" / "Edit" buttons elsewhere on the page open the same modal (owner, 23 Oct 2026)
             window.azOn('open-loan-create', (e) => this.openCreateModal(e.detail || null));
             window.azOn('open-loan-edit', (e) => e.detail && this.openEditModal(e.detail.id));
+            // ?new_loan=1 on a borrower's page opens the modal for them (owner, 15 Nov 2026)
+            if (new URLSearchParams(location.search).get('new_loan')) {
+                this.$nextTick(() => { const b = document.querySelector('[data-create-loan-for]'); b && b.click(); });
+            }
             this.allLoans = Array.from(document.querySelectorAll('.loan-row'));
             this.filteredLoans = [...this.allLoans];
             this.initializeStatusColors();
