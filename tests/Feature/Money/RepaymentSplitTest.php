@@ -67,6 +67,32 @@ class RepaymentSplitTest extends TestCase
         return round((float) PartnerTransaction::where('partner_id', $partnerId)->where('type', $type)->sum('amount'), 2);
     }
 
+    public function test_a_facility_split_reverses_the_broker_fee_and_shares_later_payments_by_its_own_rule(): void
+    {
+        $this->loan(702, true);
+        $this->pay(702, 13200, '2026-10-11', 'QK702');
+        $this->assertSame(800.0, $this->earned($this->broker->id, 'broker_fee_earned'));
+        $house = Partner::where('is_house_account', true)->value('id');
+        $houseBefore = $this->earned($house, 'profit_distribution');
+
+        // owner, 14 Nov 2026: a partner split, not a brokered loan
+        $this->artisan('loans:facility-split', ['loan' => 702, '--party' => ['house:8000:50:0', $this->broker->id . ':2000:50:0'],
+            '--pi-target' => 12000, '--cap' => 20000, '--from' => '2026-10-20', '--drop-broker-fee' => true, '--apply' => true])->assertSuccessful();
+
+        $this->assertSame(0, (int) DB::table('loans')->where('id', 702)->value('broker_status'));
+        $this->assertSame(0.0, $this->earned($this->broker->id, 'broker_fee_earned'));          // reversed by an adjustment row
+        $this->assertSame(round($houseBefore + 800, 2), $this->earned($house, 'profit_distribution'));
+        $this->assertSame(0.0, $this->earned($this->broker->id, 'penalty_share'));              // its 50% of the 1,200 penalty too
+
+        // a later payment: principal plus interest first, 9,600 : 2,400 of 12,000
+        $this->pay(702, 5000, '2026-10-21', 'QK702B');
+        $this->assertSame(833.33, $this->earned($this->broker->id, 'principal_returned'));
+        $houseInterest = $this->earned($house, 'profit_distribution');
+        $this->assertSame(round($houseBefore + 800 + 666.67, 2), $houseInterest);
+        $this->assertSame(166.67, round((float) PartnerTransaction::where('partner_id', $this->broker->id)->where('type', 'profit_distribution')
+            ->where('reference', 'like', 'SPLIT-R%')->sum('amount'), 2));
+    }
+
     public function test_an_introducer_broker_earns_40_percent_of_interest_and_50_percent_of_penalty_paid(): void
     {
         $this->loan(701, true);

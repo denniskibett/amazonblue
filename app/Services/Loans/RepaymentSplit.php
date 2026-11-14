@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\DB;
  *    broker + partner + house = the interest and penalty it paid. Book entries (rollover, discount, write-off)
  *    earn nobody anything.
  *
+ * A loan with a facility split (FacilitySplitter, owner 14 Nov 2026) is split by that rule from its start day instead.
+ *
  * Shares are posted to the partner journal (partner_transactions + the partner's wallet, which the partner
  * portal reads; the ledger follows from the journal). Posting is by difference: a repayment that is edited,
  * deleted or reversed moves its shares by exactly the change, with new rows; nothing is edited.
@@ -54,6 +56,11 @@ class RepaymentSplit
         $cycle = LoanCycle::find($r->loan_cycle_id);
         if (! $loan || ! $cycle) {
             return [];
+        }
+        // a facility with its own split (owner, 14 Nov 2026): from its start day it replaces the rules below
+        $facility = app(FacilitySplitter::class);
+        if ($split = $facility->governing($loan, optional($r->repayment_date)->toDateString())) {
+            return $facility->shares($split, $facility->collectedBefore($split, $r), round((float) $r->amount, 2));
         }
         $a = CycleBalance::at($cycle)['allocations'][$r->id] ?? null;
         if (! $a) {
@@ -175,7 +182,11 @@ class RepaymentSplit
         $after = CycleBalance::compute($terms, $payments, $date);
         $a = $after['allocations'][$fake] ?? ['penalty' => 0.0, 'interest' => 0.0, 'principal' => 0.0, 'overpaid' => 0.0];
         $loan = Loan::withTrashed()->find($cycle->loan_id);
-        $shares = $loan ? $this->shares($loan, $a) : [];
+        $facility = app(FacilitySplitter::class);
+        $split = $loan ? $facility->governing($loan, $date) : null;
+        $shares = $split
+            ? $facility->shares($split, round(array_sum(array_column(array_filter($facility->payments($split), fn ($p) => $p[1] <= $date), 2)), 2), $amount)
+            : ($loan ? $this->shares($loan, $a) : []);
         $funders = $loan ? $this->funders($loan, $a) : [];
         $names = Partner::whereIn('id', array_column($shares, 0))->pluck('name', 'id');
 
@@ -199,6 +210,28 @@ class RepaymentSplit
         $a = CycleBalance::at($cycle)['allocations'][$r->id] ?? null;
 
         return $a ? round($a['interest'] + $a['penalty'], 2) : 0.0;
+    }
+
+    /** What sync() would post for one repayment, without posting: [[partner_id, type, wallet, change], ...]. */
+    public function diff(Repayment $r): array
+    {
+        $target = [];
+        foreach ($this->plan($r) as [$partner, $type, $wallet, $amount]) {
+            $target["{$partner}|{$type}|{$wallet}"] = ($target["{$partner}|{$type}|{$wallet}"] ?? 0) + $amount;
+        }
+        $existing = PartnerTransaction::where('repayment_id', $r->id)->where('reference', 'like', self::PREFIX . $r->id . '-%')
+            ->selectRaw('partner_id, type, wallet_slug, sum(amount) as total')->groupBy('partner_id', 'type', 'wallet_slug')->get()
+            ->keyBy(fn ($e) => "{$e->partner_id}|{$e->type}|{$e->wallet_slug}");
+        $out = [];
+        foreach (array_unique(array_merge(array_keys($target), $existing->keys()->all())) as $key) {
+            $change = round(($target[$key] ?? 0) - (float) ($existing[$key]->total ?? 0), 2);
+            if (abs($change) >= 0.005) {
+                [$partnerId, $type, $wallet] = explode('|', $key);
+                $out[] = [(int) $partnerId, $type, $wallet, $change];
+            }
+        }
+
+        return $out;
     }
 
     /** Brings the journal for one repayment to its plan. Returns the rows posted. */
