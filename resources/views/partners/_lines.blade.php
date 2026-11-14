@@ -2,7 +2,7 @@
      and their own borrowing (full rate, broker share back). Record new money from the M-Pesa SMS here. --}}
 @php
   $plines = app(\App\Services\Partners\PartnerLines::class);
-  $lines = \App\Models\Investment::where('return_type', 'loan_share')
+  $lines = \App\Models\Investment::whereIn('return_type', ['loan_share', 'fixed_return'])
     ->whereHas('fundings', fn ($q) => $q->where('partner_id', $partner->id))->orderByDesc('id')->get()
     ->map(fn ($l) => ['line' => $l, 's' => $plines->status($l)]);
   $ownLoans = $partner->user_id ? \App\Models\Loan::where('user_id', $partner->user_id)->get(['id', 'status', 'broker_status', 'partner_id', 'amount']) : collect();
@@ -33,18 +33,33 @@
         @forelse ($lines as ['line' => $l, 's' => $s])
           <tr class="border-b border-gray-100 dark:border-gray-700">
             <td class="px-4 py-2 text-gray-800 dark:text-white/90">#{{ $l->id }} <span class="block text-theme-xs text-gray-500">{{ $s['loans'] }} loan(s){{ $s['open_loans'] ? ', ' . $s['open_loans'] . ' open' : '' }}</span></td>
-            <td class="px-4 py-2">{{ \App\Services\Partners\PartnerLines::TERMS[$l->facility_type] ?? '—' }}</td>
+            <td class="px-4 py-2">@if ($l->return_type === 'fixed_return')Fixed {{ rtrim(rtrim(number_format((float) $l->interest_rate, 4, '.', ''), '0'), '.') }}% · {{ $l->duration_days }} day{{ $l->duration_days == 1 ? '' : 's' }}@else{{ \App\Services\Partners\PartnerLines::TERMS[$l->facility_type] ?? '—' }}@endif</td>
             <td class="px-4 py-2 text-right font-outfit">{{ $kes($s['committed']) }}</td>
             <td class="px-4 py-2 text-right font-outfit">{{ $kes($s['out']) }}</td>
             <td class="px-4 py-2 text-right font-outfit">{{ $kes($s['idle']) }}</td>
-            <td class="px-4 py-2 text-right font-outfit">{{ $kes($s['earned']) }}</td>
+            <td class="px-4 py-2 text-right font-outfit">@if ($l->return_type === 'fixed_return'){{ $kes($plines->fixedDue($l)[1]) }}<span class="block text-theme-xs text-gray-500">fixed, due {{ $kes($plines->fixedDue($l)[2]) }}</span>@else{{ $kes($s['earned']) }}@endif</td>
             <td class="px-4 py-2">{{ $l->maturity_date?->format('j M Y') ?? '—' }}</td>
             <td class="px-4 py-2">
-              @if ($l->status === 'active')<x-staff.pill tone="blue" dot>Open</x-staff.pill>
+              @if ($l->status === 'active' && $l->return_type === 'fixed_return' && $l->maturity_date?->isPast())<x-staff.pill tone="amber" dot>Due</x-staff.pill>
+              @elseif ($l->status === 'active')<x-staff.pill tone="blue" dot>Open</x-staff.pill>
               @else<x-staff.pill tone="green" dot>Closed {{ $l->exit_date?->format('j M') }}</x-staff.pill>@if ($s['shortfall'] > 0)<span class="block text-theme-xs text-error-600">KES {{ $kes($s['shortfall']) }} not paid back</span>@endif
               @endif
             </td>
           </tr>
+          @if ($l->status === 'active' && $l->return_type === 'fixed_return')
+            @can('edit partners')
+              {{-- fixed return paid back (owner, 14 Nov 2026): capital and return leave their wallets, the line closes --}}
+              <tr class="border-b border-gray-100 bg-amber-50/40 dark:border-gray-700 dark:bg-amber-500/5"><td colspan="8" class="px-4 py-2">
+                <form method="POST" action="{{ route('staff.partners.lines.pay-back', [$partner, $l]) }}" class="flex flex-wrap items-end gap-2 text-theme-xs">@csrf
+                  <span class="mr-2 self-center font-medium text-gray-700 dark:text-gray-300">Paid back line #{{ $l->id }}</span>
+                  <label>Paid (KES)<input name="paid" type="number" step="0.01" min="1" required value="{{ old('paid', $plines->fixedDue($l)[2]) }}" class="mt-1 block h-9 w-32 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
+                  <label>On<input name="date" type="date" required max="{{ now()->toDateString() }}" value="{{ old('date', min(now()->toDateString(), $l->maturity_date?->toDateString() ?? now()->toDateString())) }}" class="mt-1 block h-9 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
+                  <label>Payout code<input name="code" required maxlength="40" value="{{ old('code') }}" class="mt-1 block h-9 w-40 rounded-md border border-gray-300 px-2 uppercase dark:border-gray-700 dark:bg-gray-900"></label>
+                  <button class="h-9 rounded-md bg-brand-500 px-3 font-medium text-white" data-confirm="Record that {{ $partner->name }} was paid back on line #{{ $l->id }} and close it?">Record payout</button>
+                </form>
+              </td></tr>
+            @endcan
+          @endif
           {{-- where this line's money went (owner, 3 Nov 2026): each slice, who paid it back, and the house settling one --}}
           @php
             $slicesOf = \Illuminate\Support\Facades\DB::table('loan_fundings as f')->join('loans as l', 'l.id', '=', 'f.loan_id')->join('users as u', 'u.id', '=', 'l.user_id')
@@ -119,23 +134,47 @@
         <textarea id="pl-sms" rows="3" x-model="sms" @input.debounce.500ms="read()" class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-theme-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"></textarea>
         <p class="mt-1 text-theme-xs" :class="readOk ? 'text-success-600' : 'text-amber-700 dark:text-amber-400'" x-text="readMsg" x-show="readMsg"></p>
       </div>
+      <div x-data="{ kind: @js(old('kind', 'loan_share')), gross: 20, cut: 40, rate: @js(old('fixed_rate', 8)), days: @js(old('fixed_days', 10)),
+          calc() { this.rate = Math.round(this.gross * this.cut) / 100 },
+          get ret() { return Math.round((+this.amount || 0) * (+this.rate || 0)) / 100 },
+          get due() { const d = new Date((this.date || new Date().toISOString().slice(0, 10)) + 'T00:00:00'); d.setDate(d.getDate() + (+this.days || 0)); return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) },
+          kes(n) { return (+n || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) } }">
+      <input type="hidden" name="kind" :value="kind">
+      <div class="mb-4"><span class="{{ $label }}">What they earn</span>
+        <div class="flex flex-wrap gap-2 text-theme-sm">
+          <button type="button" @click="kind = 'loan_share'" :class="kind === 'loan_share' ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300'" class="rounded-lg border px-3 py-2 font-medium">A share of what their loans earn</button>
+          <button type="button" @click="kind = 'fixed_return'" :class="kind === 'fixed_return' ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300'" class="rounded-lg border px-3 py-2 font-medium">A fixed return</button>
+        </div></div>
+      {{-- fixed return calculator (owner, 14 Nov 2026): e.g. 20% x 40% = 8% for 10 days; 20% x 20% = 4% for 1 day --}}
+      <div x-show="kind === 'fixed_return'" x-cloak class="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-white/[0.02]">
+        <p class="mb-3 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Return calculator</p>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <label class="text-theme-xs text-gray-600 dark:text-gray-400">Rate on the money (%)<input type="number" step="0.01" min="0" x-model.number="gross" @input="calc()" class="{{ $input_ }} mt-1"></label>
+          <label class="text-theme-xs text-gray-600 dark:text-gray-400">Their share of it (%)<input type="number" step="0.01" min="0" max="100" x-model.number="cut" @input="calc()" class="{{ $input_ }} mt-1"></label>
+          <label class="text-theme-xs text-gray-600 dark:text-gray-400">= Their return (%)<input name="fixed_rate" type="number" step="0.01" min="0" x-model.number="rate" :required="kind === 'fixed_return'" class="{{ $input_ }} mt-1 font-semibold"></label>
+          <label class="text-theme-xs text-gray-600 dark:text-gray-400">For (days)<input name="fixed_days" type="number" min="1" x-model.number="days" :required="kind === 'fixed_return'" class="{{ $input_ }} mt-1"></label>
+          <div class="text-theme-xs text-gray-600 dark:text-gray-400">Due<span class="mt-1 block h-11 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-theme-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" x-text="due"></span></div>
+        </div>
+        <p class="mt-3 text-theme-sm text-gray-700 dark:text-gray-300">They get back <b x-text="'KES ' + kes((+amount || 0) + ret)"></b>: <span x-text="'KES ' + kes(amount)"></span> plus <span x-text="'KES ' + kes(ret)"></span> return. Their money can still fund loans; we keep what those loans earn.</p>
+      </div>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div><label for="pl-a" class="{{ $label }}">Amount (KES)</label><input id="pl-a" name="amount" type="number" step="0.01" min="1" x-model="amount" required class="{{ $input_ }}"></div>
         <div><label for="pl-c" class="{{ $label }}">Code</label><input id="pl-c" name="code" x-model="code" maxlength="40" required class="{{ $input_ }} uppercase"></div>
         <div><label for="pl-d" class="{{ $label }}">Date received</label><input id="pl-d" name="date" type="date" x-model="date" class="{{ $input_ }}"></div>
-        <div><span class="{{ $label }}">How long</span><input type="hidden" name="term" :value="term">
+        <div x-show="kind !== 'fixed_return'"><span class="{{ $label }}">How long</span><input type="hidden" name="term" :value="term">
           <div class="flex gap-2 text-theme-sm">
             <button type="button" @click="term = 'short_term'" :class="term === 'short_term' ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300'" class="rounded-lg border px-3 py-2 font-medium">Short term</button>
             <button type="button" @click="term = 'long_term'" :class="term === 'long_term' ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300'" class="rounded-lg border px-3 py-2 font-medium">Long term</button>
           </div></div>
-        <div><label for="pl-m" class="{{ $label }}">Pay back by</label><input id="pl-m" name="maturity" type="date" x-model="maturity" :required="term === 'long_term'" class="{{ $input_ }}">
+        <div x-show="kind !== 'fixed_return'"><label for="pl-m" class="{{ $label }}">Pay back by</label><input id="pl-m" name="maturity" type="date" x-model="maturity" :required="kind !== 'fixed_return' && term === 'long_term'" class="{{ $input_ }}">
           <p class="mt-1 text-theme-xs text-gray-500">Needed for long term. Short term closes when its loans are repaid.</p></div>
         <div><label for="pl-n" class="{{ $label }}">Note (optional)</label><input id="pl-n" name="note" maxlength="500" class="{{ $input_ }}"></div>
         {{-- their share on what this money funds (owner, 3 Nov 2026): 60% of interest and 50% of penalty when the client is ours --}}
         @php $defShare = (float) $partner->profit_share_rate > 0 ? (float) $partner->profit_share_rate : (float) config('lending.partner_funding.line_share_rate', 60); @endphp
-        <div><label for="pl-sr" class="{{ $label }}">Their share of the interest (%)</label><input id="pl-sr" name="share_rate" type="number" step="0.01" min="0" max="100" value="{{ old('share_rate', $defShare) }}" class="{{ $input_ }}">
+        <div x-show="kind !== 'fixed_return'"><label for="pl-sr" class="{{ $label }}">Their share of the interest (%)</label><input id="pl-sr" name="share_rate" type="number" step="0.01" min="0" max="100" value="{{ old('share_rate', $defShare) }}" class="{{ $input_ }}">
           <p class="mt-1 text-theme-xs text-gray-500">We keep the rest. A broker's client: the broker's rate applies instead.</p></div>
-        <div><label for="pl-pr" class="{{ $label }}">Their share of the penalty (%)</label><input id="pl-pr" name="penalty_rate" type="number" step="0.01" min="0" max="100" value="{{ old('penalty_rate', config('lending.partner_funding.line_penalty_rate', 50)) }}" class="{{ $input_ }}"></div>
+        <div x-show="kind !== 'fixed_return'"><label for="pl-pr" class="{{ $label }}">Their share of the penalty (%)</label><input id="pl-pr" name="penalty_rate" type="number" step="0.01" min="0" max="100" value="{{ old('penalty_rate', config('lending.partner_funding.line_penalty_rate', 50)) }}" class="{{ $input_ }}"></div>
+      </div>
       </div>
       @if ($errors->any())<div class="rounded-lg bg-error-50 p-3 text-theme-sm text-error-700 dark:bg-error-500/15 dark:text-error-400">{{ $errors->first() }}</div>@endif
       <button type="submit" class="rounded-lg bg-brand-500 px-5 py-2.5 text-theme-sm font-medium text-white hover:bg-brand-600">Record the money</button>

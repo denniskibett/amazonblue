@@ -96,16 +96,46 @@ class PartnerFundingController extends Controller
             // their % of the interest and of the penalty on what this money funds (owner, 3 Nov 2026)
             'share_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'penalty_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
-        ], ['maturity.required_if' => 'A long-term line needs the date it is to be paid back.']);
+            // a fixed return (owner, 14 Nov 2026): a set % for a set number of days, whatever the loans earn
+            'kind' => ['nullable', Rule::in(['loan_share', 'fixed_return'])],
+            'fixed_rate' => ['nullable', 'required_if:kind,fixed_return', 'numeric', 'gt:0', 'max:100'],
+            'fixed_days' => ['nullable', 'required_if:kind,fixed_return', 'integer', 'min:1', 'max:3650'],
+        ], ['maturity.required_if' => 'A long-term line needs the date it is to be paid back.',
+            'fixed_rate.required_if' => 'A fixed return needs its %.', 'fixed_days.required_if' => 'A fixed return needs its number of days.']);
+        $fixed = ($data['kind'] ?? null) === 'fixed_return' ? ['rate' => (float) $data['fixed_rate'], 'days' => (int) $data['fixed_days']] : null;
+        if ($fixed) {
+            $data['maturity'] = null;   // worked out from the days
+        }
         try {
             $line = $lines->open($partner, (float) $data['amount'], $data['term'], $data['maturity'] ?? null, $data['code'], $data['date'] ?? null, $request->user(), $data['note'] ?? null,
-                isset($data['share_rate']) ? (float) $data['share_rate'] : null, isset($data['penalty_rate']) ? (float) $data['penalty_rate'] : null);
+                isset($data['share_rate']) ? (float) $data['share_rate'] : null, isset($data['penalty_rate']) ? (float) $data['penalty_rate'] : null, $fixed);
         } catch (\DomainException $e) {
             return back()->withInput()->withErrors(['code' => $e->getMessage()]);
         }
 
         return back()->with('alert', ['type' => 'success', 'title' => 'Money recorded',
             'message' => 'KES ' . number_format((float) $data['amount'], 2) . ' from ' . $partner->name . ' is line #' . $line->id . '. Choose it under "Funded by" when you disburse.']);
+    }
+
+    /** A fixed-return line paid back (owner, 14 Nov 2026): capital and return out of the partner's wallets, line closed. */
+    public function payBackLine(Request $request, Partner $partner, Investment $line, PartnerLines $lines): RedirectResponse
+    {
+        abort_unless($request->user()->can('edit partners'), 403);
+        abort_unless($line->fundings()->where('partner_id', $partner->id)->exists(), 404);
+        $data = $request->validate([
+            'paid' => ['required', 'numeric', 'min:1'],
+            'date' => ['required', 'date', 'before_or_equal:today'],
+            'code' => ['required', 'string', 'max:40'],
+            'note' => ['nullable', 'string', 'max:300'],
+        ]);
+        try {
+            $r = $lines->payBack($line, (float) $data['paid'], $data['date'], $data['code'], $request->user(), $data['note'] ?? null);
+        } catch (\DomainException|\RuntimeException $e) {
+            return back()->withInput()->withErrors(['paid' => $e->getMessage()]);
+        }
+
+        return back()->with('alert', ['type' => 'success', 'title' => 'Paid back',
+            'message' => 'Line #' . $line->id . ' is closed: KES ' . number_format($r['principal'], 2) . ' capital and KES ' . number_format($r['return'], 2) . ' return to ' . $partner->name . '.']);
     }
 
     /** One loan's partner links: current state, the form, and (with ?preview) the dry run. */

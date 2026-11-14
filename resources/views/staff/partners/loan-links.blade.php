@@ -146,4 +146,7 @@
     </div>
   </div>
 
+  {{-- a facility's own split (owner, 14 Nov 2026) --}}
+  <div class="mt-6">@include('staff.partners._facility-split')</div>
+
 @endsection

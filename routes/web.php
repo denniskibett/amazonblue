@@ -566,6 +566,7 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         // partner money and links: read an M-Pesa SMS, record a partner line, per-loan broker/funder with a dry run (owner, 23 Oct 2026)
         Route::post('mpesa/read-sms', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'parseSms'])->name('mpesa.read-sms');
         Route::post('partners/{partner}/lines', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'storeLine'])->name('partners.lines.store')->middleware('permission:edit partners');
+        Route::post('partners/{partner}/lines/{line}/pay-back', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'payBackLine'])->name('partners.lines.pay-back')->middleware('permission:edit partners');
         // which part of a loan a partner line paid for, and the house settling a partner's slice (owner, 3 Nov 2026)
         Route::post('partners/{partner}/slices', [\App\Http\Controllers\Staff\PartnerSlicesController::class, 'fund'])->name('partners.slices.fund')->middleware('permission:edit partners');
         Route::post('partners/{partner}/slices/{slice}/settle', [\App\Http\Controllers\Staff\PartnerSlicesController::class, 'settle'])->whereNumber('slice')->name('partners.slices.settle')->middleware('permission:edit partners');
@@ -574,6 +575,9 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('loans/{loan}/partner-options', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'options'])->name('loans.partner-options')->middleware('permission:create disbursements');
         Route::get('loans/{loan}/partners', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'show'])->name('loans.partners')->middleware('permission:edit partners');
         Route::post('loans/{loan}/partners', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'apply'])->name('loans.partners.apply')->middleware('permission:edit partners');
+        // a facility's own split (owner, 14 Nov 2026)
+        Route::post('loans/{loan}/facility-split', [\App\Http\Controllers\Staff\FacilitySplitController::class, 'store'])->name('loans.facility-split')->middleware('permission:edit partners');
+        Route::delete('loans/{loan}/facility-split', [\App\Http\Controllers\Staff\FacilitySplitController::class, 'destroy'])->name('loans.facility-split.destroy')->middleware('permission:edit partners');
         // borrowers: details, gaps and behaviour in one list (owner, 23 Oct 2026)
         Route::get('borrowers', [\App\Http\Controllers\Staff\BorrowersController::class, 'index'])->name('borrowers')->middleware('permission:view users');
         // lending analytics: amount heatmaps and borrower behaviour (owner, 23 Oct 2026)

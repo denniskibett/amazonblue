@@ -3,9 +3,14 @@
 namespace App\Services\Loans;
 
 use App\Models\FacilitySplit;
+use App\Models\FacilitySplitParty;
 use App\Models\Loan;
+use App\Models\Partner;
 use App\Models\Repayment;
+use App\Models\User;
+use App\Services\AuditTrail;
 use App\Services\CustomerWallets;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A facility's own split (owner, 14 Nov 2026; first for loan 458, the ISIRO facility).
@@ -164,5 +169,99 @@ class FacilitySplitter
     private function houseId(FacilitySplit $split): ?int
     {
         return $split->parties->first(fn ($p) => $p->partner?->is_house_account)?->partner_id;
+    }
+
+    /**
+     * Checks the terms and fills in each party's principal-plus-interest share. $parties: [[partner_id, principal,
+     * penalty_pct, received_before], ...] as arrays with those keys. Returns [parties, problems].
+     */
+    public function prepare(array $parties, float $target, float $cap, string $from): array
+    {
+        $parties = array_values(array_filter($parties, fn ($p) => (int) ($p['partner_id'] ?? 0) > 0));
+        $total = array_sum(array_map(fn ($p) => (float) $p['principal'], $parties));
+        $ids = array_map(fn ($p) => (int) $p['partner_id'], $parties);
+        $problems = array_values(array_filter([
+            count($parties) < 2 ? 'A split needs at least two parties.' : null,
+            count(array_unique($ids)) !== count($ids) ? 'A partner is listed twice.' : null,
+            $total <= 0 ? 'The parties have no principal.' : null,
+            abs(array_sum(array_map(fn ($p) => (float) $p['penalty_pct'], $parties)) - 100) > 0.01 ? 'The penalty shares must add up to 100%.' : null,
+            $target < $total ? 'Principal plus interest is below the principal.' : null,
+            $cap < $target ? 'The total to collect is below principal plus interest.' : null,
+            ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) ? 'Give the start day.' : null,
+            Partner::whereIn('id', $ids)->count() !== count(array_unique($ids)) ? 'A partner was not found.' : null,
+        ]));
+        $out = array_map(fn ($p) => [
+            'partner_id' => (int) $p['partner_id'], 'principal' => round((float) $p['principal'], 2), 'penalty_pct' => round((float) $p['penalty_pct'], 2),
+            'received_before' => round((float) ($p['received_before'] ?? 0), 2),
+            'pi_entitled' => $total > 0 ? round($target * (float) $p['principal'] / $total, 2) : 0.0,
+        ], $parties);
+
+        return [$out, $problems];
+    }
+
+    /** An unsaved split with these terms, for previews. */
+    public function draft(Loan $loan, array $parties, float $target, float $cap, string $from): FacilitySplit
+    {
+        $draft = new FacilitySplit(['loan_id' => $loan->id, 'pi_target' => $target, 'total_cap' => $cap, 'counted_from' => $from]);
+        $draft->setRelation('parties', collect($parties)->map(fn ($p) => (new FacilitySplitParty($p))->setRelation('partner', Partner::find($p['partner_id']))));
+
+        return $draft;
+    }
+
+    /**
+     * Saves the split (replacing any earlier one) and re-splits the loan's payments from $from, or all of them when
+     * $dropBroker (the loan stops being brokered, so earlier broker fees are reversed). Returns journal rows posted.
+     */
+    public function save(Loan $loan, array $parties, float $target, float $cap, string $from, ?string $note = null, bool $dropBroker = false, ?User $by = null): int
+    {
+        $loan = Loan::findOrFail($loan->id);
+        DB::transaction(function () use ($loan, $parties, $target, $cap, $from, $note, $dropBroker, $by) {
+            if ($dropBroker && $loan->broker_status) {
+                AuditTrail::record('loans', $loan->id, 'update', ['broker_status' => $loan->broker_status], ['broker_status' => 0, 'why' => 'facility split, not brokered']);
+                $loan->forceFill(['broker_status' => 0])->save();
+            }
+            $old = FacilitySplit::with('parties')->where('loan_id', $loan->id)->first();
+            $oldData = $old?->toArray();
+            $old?->delete();
+            $split = FacilitySplit::create(['loan_id' => $loan->id, 'pi_target' => $target, 'total_cap' => $cap, 'counted_from' => $from,
+                'notes' => $note, 'created_by' => $by?->id]);
+            foreach ($parties as $p) {
+                $split->parties()->create($p);
+            }
+            AuditTrail::record('facility_splits', $split->id, $old ? 'update' : 'create', $oldData, $split->load('parties')->toArray());
+        });
+        $this->cache = [];
+
+        return $this->resplit($loan, $dropBroker ? null : $from);
+    }
+
+    /** Removes the split; the loan's payments from its start day go back to the normal split. */
+    public function remove(Loan $loan, ?User $by = null): int
+    {
+        $split = FacilitySplit::with('parties')->where('loan_id', $loan->id)->first();
+        if (! $split) {
+            return 0;
+        }
+        $from = $split->counted_from->toDateString();
+        AuditTrail::record('facility_splits', $split->id, 'delete', $split->toArray(), ['by' => $by?->id]);
+        $split->delete();
+        $this->cache = [];
+
+        return $this->resplit($loan, $from);
+    }
+
+    private function resplit(Loan $loan, ?string $from): int
+    {
+        if (! RepaymentSplit::enabled()) {
+            return 0;
+        }
+        $split = app(RepaymentSplit::class);
+        $n = 0;
+        $q = Repayment::withTrashed()->where('loan_id', $loan->id)->orderBy('id');
+        foreach (($from ? $q->whereDate('repayment_date', '>=', $from) : $q)->get() as $r) {
+            $n += count($split->sync($r));
+        }
+
+        return $n;
     }
 }

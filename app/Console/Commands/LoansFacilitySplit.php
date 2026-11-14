@@ -67,15 +67,7 @@ class LoansFacilitySplit extends Command
         $target = (float) $this->option('pi-target');
         $cap = (float) $this->option('cap');
         $from = (string) $this->option('from');
-        $principalTotal = array_sum(array_column($parties, 'principal'));
-        $problems = array_filter([
-            count($parties) < 2 ? 'Give at least two --party.' : null,
-            $principalTotal <= 0 ? 'The parties have no principal.' : null,
-            abs(array_sum(array_column($parties, 'penalty_pct')) - 100) > 0.01 ? 'The penalty % must add up to 100.' : null,
-            $target < $principalTotal ? '--pi-target is below the principal.' : null,
-            $cap < $target ? '--cap is below --pi-target.' : null,
-            ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) ? '--from must be Y-m-d.' : null,
-        ]);
+        [$parties, $problems] = $splitter->prepare($parties, $target, $cap, $from);
         if ($problems) {
             foreach ($problems as $p) {
                 $this->error($p);
@@ -83,15 +75,9 @@ class LoansFacilitySplit extends Command
 
             return self::FAILURE;
         }
-        foreach ($parties as &$p) {
-            $p['pi_entitled'] = round($target * $p['principal'] / $principalTotal, 2);
-        }
-        unset($p);
 
         // the figures, worked out on an unsaved copy
-        $draft = new FacilitySplit(['loan_id' => $loan->id, 'pi_target' => $target, 'total_cap' => $cap, 'counted_from' => $from]);
-        $draft->setRelation('parties', collect($parties)->map(fn ($p) => (new \App\Models\FacilitySplitParty($p))->setRelation('partner', Partner::find($p['partner_id']))));
-        $status = $splitter->status($draft);
+        $status = $splitter->status($splitter->draft($loan, $parties, $target, $cap, $from));
         $this->info("Loan #{$loan->id}: principal plus interest " . number_format($target, 2) . ', total ' . number_format($cap, 2) . ", from {$from}");
         $this->table(['Party', 'Principal', 'P+I', 'Penalty', 'Final total', 'Received before', 'Since ' . $from, 'Still to come'],
             array_map(fn ($r) => [$r['name'], number_format($r['principal'], 2), number_format($r['pi_entitled'], 2), number_format($r['penalty_entitled'], 2),
@@ -109,32 +95,10 @@ class LoansFacilitySplit extends Command
             return self::SUCCESS;
         }
 
-        DB::transaction(function () use ($loan, $parties, $target, $cap, $from, $drop) {
-            if ($drop && $loan->broker_status) {
-                AuditTrail::record('loans', $loan->id, 'update', ['broker_status' => $loan->broker_status], ['broker_status' => 0, 'why' => 'facility split, not brokered']);
-                $loan->forceFill(['broker_status' => 0])->save();
-            }
-            $old = FacilitySplit::with('parties')->where('loan_id', $loan->id)->first();
-            $old?->delete();
-            $split = FacilitySplit::create(['loan_id' => $loan->id, 'pi_target' => $target, 'total_cap' => $cap, 'counted_from' => $from,
-                'notes' => $this->option('note')]);
-            foreach ($parties as $p) {
-                $split->parties()->create($p);
-            }
-            AuditTrail::record('facility_splits', $split->id, $old ? 'update' : 'create', $old?->toArray(), $split->load('parties')->toArray());
-        });
-
-        if (RepaymentSplit::enabled()) {
-            $split = app(RepaymentSplit::class);
-            $n = 0;
-            $all = Repayment::withTrashed()->where('loan_id', $loan->id)->orderBy('id');
-            foreach (($drop ? $all : $all->whereDate('repayment_date', '>=', $from))->get() as $r) {
-                $n += count($split->sync($r));
-            }
-            $this->info('Saved. Re-split the payments' . ($drop ? '' : " from {$from}") . ": {$n} journal rows posted.");
-        } else {
-            $this->info('Saved. The repayment split is switched off here, so nothing was posted.');
-        }
+        $n = $splitter->save($loan, $parties, $target, $cap, $from, $this->option('note'), $drop);
+        $this->info(RepaymentSplit::enabled()
+            ? 'Saved. Re-split the payments' . ($drop ? '' : " from {$from}") . ": {$n} journal rows posted."
+            : 'Saved. The repayment split is switched off here, so nothing was posted.');
 
         return self::SUCCESS;
     }
