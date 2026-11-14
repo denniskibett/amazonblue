@@ -34,7 +34,7 @@
           @else
             <p class="text-sm text-gray-500 dark:text-gray-400">No APK is up. The download page says "not up yet".</p>
           @endif
-          <p class="mt-1 text-sm"><a href="{{ route('app.download') }}" target="_blank" rel="noopener" class="text-brand-500 hover:underline">{{ route('app.download') }}</a>
+          <p class="mt-1 text-sm"><a href="{{ route('site.white-label') }}" target="_blank" rel="noopener" class="text-brand-500 hover:underline">{{ route('site.white-label') }}</a>
             <span class="text-gray-400">· build it with a "Mobile app" key from the list below</span></p>
         </div>
       </div>
@@ -52,7 +52,7 @@
       <div class="fixed inset-0 bg-gray-400/50 backdrop-blur-[32px] dark:bg-gray-900/70" @click="uploading = false"></div>
       <div class="relative w-full max-w-[600px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
         <h4 class="mb-1 text-title-sm font-semibold text-gray-800 dark:text-white/90">Upload the test APK</h4>
-        <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">It replaces the file on {{ route('app.download') }}. Phones that have the app keep working; testers install the new one over it.</p>
+        <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">It replaces the file on {{ route('site.white-label') }}. Phones that have the app keep working; testers install the new one over it.</p>
         <form method="POST" action="{{ route('staff.api-keys.apk') }}" enctype="multipart/form-data" class="space-y-4">@csrf
           <div>
             <label for="apk-file" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">APK file</label>

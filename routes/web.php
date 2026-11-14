@@ -19,8 +19,9 @@ use App\Http\Controllers\CaseController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/robots.txt', [HomeController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [HomeController::class, 'sitemap'])->name('sitemap');
-// the test APK of the mobile app (owner, 11 Nov 2026): Android only, outside the stores for now
-Route::get('/app', [\App\Http\Controllers\MobileAppController::class, 'show'])->name('app.download');
+// White label & API, with the Android test app on it (owner, 15 Nov 2026; the app page was /app since 11 Nov)
+Route::get('/white-label', [\App\Http\Controllers\MobileAppController::class, 'show'])->name('site.white-label');
+Route::get('/app', fn () => redirect()->to(route('site.white-label') . '#app', 301))->name('app.download');
 Route::get('/app/download', [\App\Http\Controllers\MobileAppController::class, 'download'])->middleware('throttle:20,1')->name('app.download.file');
 Route::get('/{page}', [HomeController::class, 'page'])
     ->whereIn('page', HomeController::PAGES)

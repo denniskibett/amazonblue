@@ -54,7 +54,7 @@
           <h2 class="footer-h">Connect</h2>
           <a href="{{ route('site.page', 'contact') }}">Contact us</a><a href="tel:+254701607959">24/7 support</a
           ><a href="{{ route('login') }}">Client login</a
-          >{{-- the Android test app, linked only while an APK is up (owner, 14 Nov 2026) --}}@if (is_file(\App\Http\Controllers\MobileAppController::path()))<a href="{{ route('app.download') }}">Android app</a>@endif
+          >{{-- White label & API, with the Android test app (owner, 15 Nov 2026) --}}<a href="{{ route('site.white-label') }}">White label &amp; API</a>
         </div>
       </div>
     </div>

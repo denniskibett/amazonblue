@@ -22,6 +22,7 @@ Route::prefix('mobile/v1')->middleware(['api.key:mobile', 'throttle:120,1'])->gr
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('auth/logout', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'logout']);
             Route::get('me', [\App\Http\Controllers\Api\Mobile\MeController::class, 'show']);
+            Route::get('me/photo', [\App\Http\Controllers\Api\Mobile\MeController::class, 'photo'])->name('mobile.me.photo');
             Route::post('devices', [\App\Http\Controllers\Api\Mobile\DeviceController::class, 'register']);
             Route::post('devices/sighting', [\App\Http\Controllers\Api\Mobile\DeviceController::class, 'sightingEndpoint']);
             Route::post('quotes', [\App\Http\Controllers\Api\Mobile\BorrowController::class, 'quote']);

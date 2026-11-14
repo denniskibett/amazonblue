@@ -70,7 +70,7 @@ class MobileAppController extends Controller
     {
         $apk = self::current();
 
-        return view('home.app', [
+        return view('home.white-label', [
             'apk' => $apk,
             'version' => $apk['version'] ?? config('mobile.apk.version'),
             'notes' => $apk['notes'] ?? config('mobile.apk.notes'),

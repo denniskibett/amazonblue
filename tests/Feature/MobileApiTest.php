@@ -69,6 +69,22 @@ class MobileApiTest extends TestCase
         $this->assertSame(0, $this->user->tokens()->count());
     }
 
+    public function test_the_app_gets_its_own_photo_and_the_open_loans_balance(): void
+    {
+        $token = $this->signIn();
+        $this->api()->withToken($token)->getJson('/api/mobile/v1/me')->assertOk()->assertJsonPath('user.has_photo', false);
+        $this->api()->withToken($token)->get('/api/mobile/v1/me/photo')->assertNotFound();
+        $this->flushHeaders()->get('/api/mobile/v1/me/photo')->assertUnauthorized();
+
+        $loan = $this->loan($this->user, 'disbursed');
+        DB::table('loan_cycles')->insert(['loan_id' => $loan->id, 'cycle_number' => 1, 'previous_balance' => 0, 'principal' => 5000, 'interest_capitalized' => 1000,
+            'new_balance' => 6000, 'interest_rate' => 20, 'penalty_rate' => 10, 'start_date' => now()->subDays(3)->toDateString(), 'due_date' => now()->addDays(7)->toDateString(), 'status' => 'active']);
+        $me = $this->api()->withToken($token)->getJson('/api/mobile/v1/me')->assertOk();
+        $this->assertSame($loan->id, $me->json('open_loan.id'));
+        $this->assertNotNull($me->json('open_loan.due_date'));
+        $this->assertArrayHasKey('progress', $me->json('open_loan'));
+    }
+
     public function test_a_token_without_the_key_is_refused(): void
     {
         $token = $this->signIn();
@@ -113,13 +129,14 @@ class MobileApiTest extends TestCase
         config(['mobile.apk.file' => 'phpunit-test.apk']);
         $path = \App\Http\Controllers\MobileAppController::path();
         @unlink($path);
-        $this->get('/app')->assertOk()->assertSee('not up yet')->assertSee('Never');
+        $this->get('/app')->assertRedirect(route('site.white-label') . '#app');
+        $this->get('/white-label')->assertOk()->assertSee('White label &amp; API', false)->assertSee('not up yet')->assertSee('Never');
         $this->get('/app/download')->assertNotFound();
 
         @mkdir(dirname($path), 0775, true);
         file_put_contents($path, 'not really an apk');
         try {
-            $this->get('/app')->assertOk()->assertSee('Download for Android')->assertSee(hash('sha256', 'not really an apk'));
+            $this->get('/white-label')->assertOk()->assertSee('Download for Android')->assertSee(hash('sha256', 'not really an apk'));
             $this->get('/app/download')->assertOk()->assertHeader('Content-Type', 'application/vnd.android.package-archive');
         } finally {
             @unlink($path);
@@ -138,7 +155,7 @@ class MobileApiTest extends TestCase
         @unlink($path);
 
         try {
-            $this->get('/')->assertDontSee('Android app');
+            $this->get('/')->assertSee('White label &amp; API', false);
             $fake = \Illuminate\Http\UploadedFile::fake()->createWithContent('notes.txt', 'hello');
             $this->actingAs($staff)->post(route('staff.api-keys.apk'), ['apk' => $fake, 'version' => '0.1.1'])->assertSessionHasErrors('apk');
             $this->assertFileDoesNotExist($path);
@@ -148,15 +165,15 @@ class MobileApiTest extends TestCase
                 ->assertSessionHasNoErrors()->assertSessionHas('success');
             $this->assertFileExists($path);
             $this->actingAs($staff)->get(route('staff.api-keys'))->assertOk()->assertSee('Version 0.1.1');
-            $this->get('/app')->assertOk()->assertSee('0.1.1')->assertSee('Faster sign in.')->assertSee(hash('sha256', "PK\x03\x04 pretend apk"));
+            $this->get('/white-label')->assertOk()->assertSee('0.1.1')->assertSee('Faster sign in.')->assertSee(hash('sha256', "PK\x03\x04 pretend apk"));
             $this->get('/app/download')->assertOk()->assertHeader('Content-Disposition', 'attachment; filename=aimzone-test-0.1.1.apk');
-            $this->get(route('site.page', 'contact'))->assertSee('Android app');
+            $this->get(route('site.page', 'contact'))->assertSee('White label &amp; API', false);
 
             // the same from the server, for files bigger than a web upload (owner, 15 Nov 2026)
             $big = tempnam(sys_get_temp_dir(), 'apk');
             file_put_contents($big, "PK\x03\x04 bigger build");
             $this->artisan('mobile:apk', ['file' => $big, '--app-version' => '0.1.2', '--notes' => 'From the server'])->assertSuccessful();
-            $this->get('/app')->assertSee('0.1.2')->assertSee('From the server')->assertSee('Test version for invited testers');
+            $this->get('/white-label')->assertSee('0.1.2')->assertSee('From the server')->assertSee('test version for invited testers');
             @unlink($big);
             $notApk = tempnam(sys_get_temp_dir(), 'txt');
             file_put_contents($notApk, 'hello');
@@ -164,7 +181,7 @@ class MobileApiTest extends TestCase
             @unlink($notApk);
             $this->actingAs($staff)->delete(route('staff.api-keys.apk.remove'))->assertSessionHas('success');
             $this->assertFileDoesNotExist($path);
-            $this->get('/app')->assertSee('not up yet');
+            $this->get('/white-label')->assertSee('not up yet');
             $this->assertDatabaseHas('audit_logs', ['table_name' => 'mobile_apk', 'action' => 'delete']);
         } finally {
             @unlink($path);
