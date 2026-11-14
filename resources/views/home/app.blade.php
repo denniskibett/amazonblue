@@ -10,6 +10,10 @@
       <span class="chip sand">Test build</span>
       <h1>The Aimzone app</h1>
       <p class="muted">Borrow, repay and see your statement from your phone. Android only for now; iPhone later.</p>
+      {{-- test mode (owner, 15 Nov 2026): say plainly what testers are installing --}}
+      <p class="muted text-sm" style="margin-top:12px;padding:10px 14px;border:1px dashed currentColor;border-radius:10px;max-width:60ch">
+        Test version for invited testers. It is not on the Play Store yet, the app shows a TEST ribbon, and screens may change between builds.
+        Your account, loans and payments in it are real: the same as on this website.</p>
     </div>
   </section>
 

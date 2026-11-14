@@ -149,9 +149,19 @@ class MobileApiTest extends TestCase
             $this->assertFileExists($path);
             $this->actingAs($staff)->get(route('staff.api-keys'))->assertOk()->assertSee('Version 0.1.1');
             $this->get('/app')->assertOk()->assertSee('0.1.1')->assertSee('Faster sign in.')->assertSee(hash('sha256', "PK\x03\x04 pretend apk"));
-            $this->get('/app/download')->assertOk()->assertHeader('Content-Disposition', 'attachment; filename=aimzone-0.1.1.apk');
+            $this->get('/app/download')->assertOk()->assertHeader('Content-Disposition', 'attachment; filename=aimzone-test-0.1.1.apk');
             $this->get(route('site.page', 'contact'))->assertSee('Android app');
 
+            // the same from the server, for files bigger than a web upload (owner, 15 Nov 2026)
+            $big = tempnam(sys_get_temp_dir(), 'apk');
+            file_put_contents($big, "PK\x03\x04 bigger build");
+            $this->artisan('mobile:apk', ['file' => $big, '--app-version' => '0.1.2', '--notes' => 'From the server'])->assertSuccessful();
+            $this->get('/app')->assertSee('0.1.2')->assertSee('From the server')->assertSee('Test version for invited testers');
+            @unlink($big);
+            $notApk = tempnam(sys_get_temp_dir(), 'txt');
+            file_put_contents($notApk, 'hello');
+            $this->artisan('mobile:apk', ['file' => $notApk, '--app-version' => '0.1.3'])->assertFailed();
+            @unlink($notApk);
             $this->actingAs($staff)->delete(route('staff.api-keys.apk.remove'))->assertSessionHas('success');
             $this->assertFileDoesNotExist($path);
             $this->get('/app')->assertSee('not up yet');

@@ -135,4 +135,20 @@ class FixedReturnAndFacilityScreenTest extends TestCase
     {
         $this->actingAs($this->staff)->get(route('loans.index'))->assertOk()->assertSee('window.openRepaymentModal', false);
     }
+
+    public function test_partner_numbers_show_what_each_partner_put_in_earned_and_was_paid(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow('2026-11-24 12:00');
+        $yvonne = Partner::create(['name' => 'Yvonne Numbers', 'email' => 'yn@example.test', 'type' => 'individual']);
+        $this->actingAs($this->staff)->post(route('staff.partners.lines.store', $yvonne), ['amount' => 100000, 'code' => 'BANKN1', 'date' => '2026-11-14',
+            'term' => 'short_term', 'kind' => 'fixed_return', 'fixed_rate' => 8, 'fixed_share' => 40, 'fixed_days' => 10])->assertSessionHasNoErrors();
+        $line = Investment::where('name', 'like', 'Yvonne Numbers%')->first();
+        $this->actingAs($this->staff)->post(route('staff.partners.lines.pay-back', [$yvonne, $line]), ['paid' => 108000, 'date' => '2026-11-24', 'code' => 'PAYN'])->assertSessionHasNoErrors();
+
+        $row = app(\App\Services\Partners\PartnerNumbers::class)->all()->first(fn ($r) => $r->partner->id === $yvonne->id);
+        $this->assertEquals([100000.0, 8000.0, 108000.0, 0.0], [$row->put_in, $row->interest, $row->paid_out, $row->held]);
+        $this->actingAs($this->staff)->get(route('staff.partners.numbers'))->assertOk()
+            ->assertSee('Partner numbers')->assertSee('Yvonne Numbers')->assertSee('108,000.00');
+        \Illuminate\Support\Carbon::setTestNow();
+    }
 }

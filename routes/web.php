@@ -570,6 +570,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('notifications', [\App\Http\Controllers\Staff\NotificationsController::class, 'index'])->name('notifications');
         // partner money and links: read an M-Pesa SMS, record a partner line, per-loan broker/funder with a dry run (owner, 23 Oct 2026)
         Route::post('mpesa/read-sms', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'parseSms'])->name('mpesa.read-sms');
+        // every partner's numbers and loans (owner, 15 Nov 2026)
+        Route::get('partners-numbers', [\App\Http\Controllers\Staff\PartnerNumbersController::class, 'index'])->name('partners.numbers')->middleware('permission:view partners');
         Route::post('partners/{partner}/lines', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'storeLine'])->name('partners.lines.store')->middleware('permission:edit partners');
         Route::post('partners/{partner}/lines/{line}/pay-back', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'payBackLine'])->name('partners.lines.pay-back')->middleware('permission:edit partners');
         Route::post('partners/{partner}/lines/{line}/payout-source', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'payoutSource'])->name('partners.lines.payout-source')->middleware('permission:edit partners');

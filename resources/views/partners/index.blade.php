@@ -11,6 +11,9 @@
                 </svg>
                 Refresh
             </button>
+            @can('view partners')
+            <a href="{{ route('staff.partners.numbers') }}" class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600"><x-ui.icon name="chart" class="size-4" />Partner numbers</a>
+            @endcan
         </x-ui.page-header>
     <x-ui.page-metrics page="partners" />
 

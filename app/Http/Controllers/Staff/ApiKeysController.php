@@ -22,25 +22,19 @@ class ApiKeysController extends Controller
     public function uploadApk(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'apk' => 'required|file|max:204800',
+            'apk' => 'required|file|max:2097152',   // 2048 MB (owner, 15 Nov 2026)
             'version' => ['required', 'string', 'max:20', 'regex:/^[0-9][0-9A-Za-z.+-]*$/'],
             'notes' => 'nullable|string|max:300',
         ]);
         $file = $request->file('apk');
-        $head = (string) file_get_contents($file->getRealPath(), false, null, 0, 2);
-        if (strtolower($file->getClientOriginalExtension()) !== 'apk' || $head !== 'PK') {
+        if (strtolower($file->getClientOriginalExtension()) !== 'apk') {
             return back()->withErrors(['apk' => 'That is not an APK file.'])->withInput();
         }
-
-        $path = MobileAppController::path();
-        @mkdir(dirname($path), 0775, true);
-        $tmp = $path . '.uploading';
-        $file->move(dirname($tmp), basename($tmp));
-        rename($tmp, $path);
-        $meta = ['version' => $data['version'], 'notes' => $data['notes'] ?: null, 'sha256' => hash_file('sha256', $path), 'size' => filesize($path),
-            'uploaded_by' => $request->user()->id, 'uploaded_at' => now()->toIso8601String()];
-        file_put_contents(MobileAppController::metaPath(), json_encode($meta, JSON_PRETTY_PRINT));
-        AuditTrail::record('mobile_apk', 0, 'update', null, ['event' => 'uploaded', 'version' => $meta['version'], 'sha256' => $meta['sha256'], 'size' => $meta['size']]);
+        try {
+            $meta = MobileAppController::put($file->getRealPath(), $data['version'], $data['notes'] ?? null, $request->user()->id, move: true);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['apk' => $e->getMessage()])->withInput();
+        }
 
         return back()->with('success', 'Version ' . $meta['version'] . ' is up on the download page.');
     }
