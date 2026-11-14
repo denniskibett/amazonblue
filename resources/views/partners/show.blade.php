@@ -59,6 +59,27 @@
     ['label' => 'Investment tracker', 'value' => 'KES ' . number_format($data['tracker_balance'] ?? 0, 2), 'icon' => 'layers', 'hint' => 'lent out on loans'],
   ]" />
 
+  {{-- to date (owner, 15 Nov 2026): the wallets are what is held now, so a partner paid back in full reads 0 everywhere;
+       these are the totals from the journal --}}
+  @php
+    $sum = fn ($q) => round((float) $q->sum('amount'), 2);
+    $j = fn () => \App\Models\PartnerTransaction::where('partner_id', $partner->id);
+    $toDate = [
+        'in' => $sum($j()->where('type', 'contribution')),
+        'earned' => $sum($j()->whereIn('type', ['profit_distribution', 'penalty_share'])->where('wallet_slug', 'interest')),
+        'fees' => $sum($j()->where('wallet_slug', 'broker_fee')->whereIn('type', ['broker_fee_earned', 'penalty_share'])),
+        'out' => abs($sum($j()->where('type', 'withdrawal'))),
+    ];
+  @endphp
+  <div class="mt-4">
+    <x-ui.metrics :items="[
+      ['label' => 'Put in to date', 'value' => 'KES ' . number_format($toDate['in'], 2), 'icon' => 'arrow-down', 'hint' => 'all the money they sent'],
+      ['label' => 'Earned to date', 'value' => 'KES ' . number_format($toDate['earned'], 2), 'icon' => 'trending-up', 'hint' => 'returns and interest shares'],
+      ['label' => 'Introducer fees to date', 'value' => 'KES ' . number_format($toDate['fees'], 2), 'icon' => 'hand-coins', 'hint' => 'from clients they brought'],
+      ['label' => 'Paid out to date', 'value' => 'KES ' . number_format($toDate['out'], 2), 'icon' => 'send', 'hint' => 'capital and earnings sent to them'],
+    ]" />
+  </div>
+
   <x-staff.tabs :tabs="['money' => 'Money, clients and loans', 'journal' => ['Journal', $tx->count()], 'details' => 'Details and banking', 'login' => ['Portal login', $partner->user ? 'on' : 'none']]">
     <x-staff.tab name="money">
       @include('partners._lines')

@@ -25,7 +25,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Figtree", ...defaultTheme.fontFamily.sans], // Makes Figtree the default font
+        sans: ["Outfit", ...defaultTheme.fontFamily.sans], // Outfit everywhere in the staff dashboard (owner, 15 Nov 2026)
         outfit: ["Outfit", "sans-serif"], // Optional font (use with `font-outfit`)
         figtree: ["Figtree", "sans-serif"],
         sora: ["Sora", "sans-serif"],

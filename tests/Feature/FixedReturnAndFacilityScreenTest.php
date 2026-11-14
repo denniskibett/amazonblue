@@ -52,6 +52,9 @@ class FixedReturnAndFacilityScreenTest extends TestCase
         $line->refresh();
         $this->assertSame('matured', $line->status);
         $this->assertEquals(0, app(\App\Services\Partners\PartnerLines::class)->status($line)['idle'], 'a paid-back fixed line has nothing free');
+        // the wallets read 0 once paid back; the to-date row still tells the story
+        $this->actingAs($this->staff)->get(route('partners.show', $yvonne))->assertOk()
+            ->assertSee('Put in to date')->assertSee('100,000.00')->assertSee('Earned to date')->assertSee('8,000.00')->assertSee('Paid out to date')->assertSee('108,000.00');
         $this->assertEquals(8000, (float) PartnerTransaction::where('partner_id', $yvonne->id)->where('type', 'profit_distribution')->sum('amount'));
         $this->assertEqualsWithDelta(0, (float) $yvonne->getWallet('principal')->refresh()->balanceFloat, 0.001);
         $this->assertEqualsWithDelta(0, (float) $yvonne->getWallet('interest')->refresh()->balanceFloat, 0.001);
