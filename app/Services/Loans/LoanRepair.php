@@ -177,9 +177,9 @@ class LoanRepair
     }
 
     /** The loan is right: the money that went out was never recorded. Adds it on the first cycle's start. */
-    public function addMissingDisbursement(int $loanId, ?string $note = null, ?float $amount = null, ?string $date = null): string
+    public function addMissingDisbursement(int $loanId, ?string $note = null, ?float $amount = null, ?string $date = null, ?string $why = null): string
     {
-        return $this->onLoan($loanId, function (Loan $loan) use ($amount, $date) {
+        return $this->onLoan($loanId, function (Loan $loan) use ($amount, $date, $why) {
             $c1 = LoanCycle::where('loan_id', $loan->id)->orderBy('cycle_number')->firstOrFail();
             $cash = Disbursement::where('loan_id', $loan->id)->get()->filter(fn ($d) => CustomerWallets::kindOf($d) === 'cash')->sum('amount');
             $missing = $amount !== null ? round($amount, 2) : round($c1->lentPrincipal() - $cash, 2);
@@ -187,8 +187,8 @@ class LoanRepair
             $day = $date ? Carbon::parse($date)->toDateString() : $c1->start_date->toDateString();
             $cycle = LoanCycle::where('loan_id', $loan->id)->where('start_date', '<=', $day)->orderByDesc('cycle_number')->first() ?? $c1;
             Disbursement::create(['loan_id' => $loan->id, 'loan_cycle_id' => $cycle->id, 'amount' => $missing, 'net_amount' => $missing,
-                'transaction' => 'BACKFILL: not recorded at the time', 'mode' => 'other', 'disburse_date' => $day, 'payment_date' => $day,
-                'kind' => 'cash', 'notes' => 'Owner decision 21 Oct 2026 (2b): the loan was right; the disbursement was never recorded']);
+                'transaction' => $why ? 'ADDED: ' . mb_substr($why, 0, 60) : 'BACKFILL: not recorded at the time', 'mode' => 'other', 'disburse_date' => $day, 'payment_date' => $day,
+                'kind' => 'cash', 'notes' => $why ?? 'Owner decision 21 Oct 2026 (2b): the loan was right; the disbursement was never recorded']);
 
             return 'recorded KES ' . number_format($missing, 2) . ' sent on ' . $day;
         }, $note);
@@ -513,12 +513,20 @@ class LoanRepair
      * is what cycle 1 lent; every later cash row is added to the cycle running that day, at that cycle's rate; each
      * later cycle carries the extra (its principal moves by exactly what the cycle before now owes more or less).
      */
-    public function rebuildFromCash(int $loanId, ?string $note = null): string
+    public function rebuildFromCash(int $loanId, ?string $note = null, bool $keepPlan = false): string
     {
-        return $this->onLoan($loanId, function (Loan $loan) {
+        return $this->onLoan($loanId, function (Loan $loan) use ($keepPlan) {
             $cycles = LoanCycle::where('loan_id', $loan->id)->orderBy('cycle_number')->lockForUpdate()->get()->values();
             abort_if($cycles->isEmpty(), 422, 'The loan has no cycles.');
-            abort_if($this->agreed($loan, $cycles), 422, 'This loan is in forbearance or on a payment plan the owner agreed; its cycles are not rebuilt.');
+            // owner, 14 Nov 2026 (loan 458): the cycles before an agreed plan can be rebuilt; the plan cycle stays as agreed
+            $plan = $keepPlan ? $cycles->last() : null;
+            if ($plan) {
+                abort_unless($plan->penalty_waived_until !== null || str_contains(strtoupper((string) $plan->notes), 'PAYMENT PLAN'), 422, 'The last cycle is not a payment plan.');
+                abort_if($cycles->count() < 2, 422, 'There is no cycle before the plan to rebuild.');
+                $cycles = $cycles->slice(0, -1)->values();
+            } else {
+                abort_if($this->agreed($loan, $cycles), 422, 'This loan is in forbearance or on a payment plan the owner agreed; its cycles are not rebuilt.');
+            }
             $cash = Disbursement::where('loan_id', $loan->id)->orderBy('disburse_date')->get()->filter(fn ($d) => CustomerWallets::kindOf($d) === 'cash');
             abort_if($cash->isEmpty(), 422, 'No cash was recorded: use "Add the missing disbursement".');
 

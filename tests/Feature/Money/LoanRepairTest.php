@@ -80,6 +80,24 @@ class LoanRepairTest extends TestCase
         }
     }
 
+    public function test_cycles_before_an_agreed_plan_can_be_rebuilt_and_the_plan_stays(): void
+    {
+        // like #458 (owner, 14 Nov 2026): a partner's 44,000 added from day one, cycles readjusted, the plan untouched
+        $this->loanRow(459, 1, 200000, 200000, '2026-06-30', '2026-07-22', 'forbearance', 3, 0);
+        $this->cycleRow(4591, 459, 1, 0, 40000, 240000, 20, '2026-06-30', '2026-07-10', 'completed', 'Initial');
+        $this->cycleRow(4592, 459, 2, 240000, 48000, 288000, 20, '2026-07-10', '2026-07-20', 'completed', 'Rollover');
+        $this->cycleRow(4593, 459, 3, 250000, 0, 250000, 0, '2026-07-20', '2026-07-22', 'active', 'PAYMENT PLAN agreed by the owner');
+        $this->disburse(459, 200000, '2026-06-30');
+        $this->disburse(459, 44000, '2026-06-30', 'ISIRO share');
+
+        app(LoanRepair::class)->rebuildFromCash(459, keepPlan: true);
+
+        $this->assertMoney(244000, LoanCycle::findOrFail(4591)->lentPrincipal());
+        $this->assertMoney(292800, LoanCycle::findOrFail(4592)->lentPrincipal(), 'cycle 2 carries what cycle 1 now owes');
+        $this->assertMoney(58560, LoanCycle::findOrFail(4592)->interest_capitalized);
+        $this->assertMoney(250000, LoanCycle::findOrFail(4593)->lentPrincipal(), 'the agreed plan keeps its amount');
+    }
+
     public function test_a_write_off_bigger_than_the_debt_is_cut_to_what_was_owed(): void
     {
         $this->loanRow(220, 1, 10000, 10000, '2025-10-24', '2025-11-03', 'repaid', 1, 0);
