@@ -10,7 +10,7 @@ class ApiKey extends Model
 {
     public const PREFIX = 'azk_live_';
 
-    protected $fillable = ['name', 'prefix', 'token_hash', 'last_four', 'status', 'created_by', 'last_used_at', 'last_used_ip'];
+    protected $fillable = ['name', 'client', 'prefix', 'token_hash', 'last_four', 'status', 'created_by', 'last_used_at', 'last_used_ip'];
 
     protected $hidden = ['token_hash'];
 
@@ -20,11 +20,14 @@ class ApiKey extends Model
     }
 
     /** Makes a key; returns [model, the plain key to show once]. */
-    public static function issue(string $name, ?int $by): array
+    // what uses a key (owner, 11 Nov 2026): the mobile app, or another system
+    public const CLIENTS = ['mobile' => 'Mobile app', 'system' => 'Other system'];
+
+    public static function issue(string $name, ?int $by, string $client = 'system'): array
     {
         $plain = self::PREFIX . Str::random(40);
 
-        return [self::create(['name' => $name, 'prefix' => self::PREFIX, 'token_hash' => hash('sha256', $plain),
+        return [self::create(['name' => $name, 'client' => array_key_exists($client, self::CLIENTS) ? $client : 'system', 'prefix' => self::PREFIX, 'token_hash' => hash('sha256', $plain),
             'last_four' => substr($plain, -4), 'status' => 'active', 'created_by' => $by]), $plain];
     }
 

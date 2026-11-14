@@ -8,6 +8,7 @@
     @include('home.partials.head', [
       'title' => $title ?? 'Aimzone Ventures — Emergency funding and trade finance in Kenya',
       'description' => $description ?? 'Emergency bridge finance, asset-backed lending, CRB resolution and trade finance for businesses across East Africa. Fast, discreet, from Nairobi.',
+      'noindex' => $noindex ?? false,
     ])
   </head>
   <body>

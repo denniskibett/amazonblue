@@ -10,6 +10,7 @@
         "bavix/laravel-wallet": "^11.5",
         "blade-ui-kit/blade-heroicons": "^2.6",
         "laravel/framework": "^12.0",
+        "laravel/sanctum": "^4.4",
         "laravel/tinker": "^2.10.1",
         "league/iso3166": "^4.3",
         "moneyphp/money": "^4.8",

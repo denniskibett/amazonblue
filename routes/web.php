@@ -19,6 +19,9 @@ use App\Http\Controllers\CaseController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/robots.txt', [HomeController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [HomeController::class, 'sitemap'])->name('sitemap');
+// the test APK of the mobile app (owner, 11 Nov 2026): Android only, outside the stores for now
+Route::get('/app', [\App\Http\Controllers\MobileAppController::class, 'show'])->name('app.download');
+Route::get('/app/download', [\App\Http\Controllers\MobileAppController::class, 'download'])->middleware('throttle:20,1')->name('app.download.file');
 Route::get('/{page}', [HomeController::class, 'page'])
     ->whereIn('page', HomeController::PAGES)
     ->name('site.page');
@@ -544,6 +547,9 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             Route::delete('integrations/{slug}', [\App\Http\Controllers\Staff\IntegrationsController::class, 'destroy'])->name('integrations.destroy');
         });
         Route::middleware('permission:manage API tokens')->group(function () {
+            // the test APK behind /app (owner, 14 Nov 2026)
+            Route::post('api-keys/apk', [\App\Http\Controllers\Staff\ApiKeysController::class, 'uploadApk'])->name('api-keys.apk');
+            Route::delete('api-keys/apk', [\App\Http\Controllers\Staff\ApiKeysController::class, 'removeApk'])->name('api-keys.apk.remove');
             Route::get('api-keys', [\App\Http\Controllers\Staff\ApiKeysController::class, 'index'])->name('api-keys');
             Route::post('api-keys', [\App\Http\Controllers\Staff\ApiKeysController::class, 'store'])->name('api-keys.store');
             Route::post('api-keys/{apiKey}/regenerate', [\App\Http\Controllers\Staff\ApiKeysController::class, 'regenerate'])->name('api-keys.regenerate');

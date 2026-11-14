@@ -16,7 +16,7 @@ use Bavix\Wallet\Traits\HasWallets;
 
 class User extends Authenticatable implements MustVerifyEmail, Wallet
 {
-    use HasFactory, Notifiable, SoftDeletes, HasRoles, HasWallet, HasWallets;
+    use HasFactory, Notifiable, SoftDeletes, HasRoles, HasWallet, HasWallets, \Laravel\Sanctum\HasApiTokens;
 
     protected static function booted(): void
     {

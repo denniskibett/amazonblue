@@ -53,7 +53,8 @@
         <div class="footer-col footer-connect">
           <h2 class="footer-h">Connect</h2>
           <a href="{{ route('site.page', 'contact') }}">Contact us</a><a href="tel:+254701607959">24/7 support</a
-          ><a href="{{ route('login') }}">Client login</a>
+          ><a href="{{ route('login') }}">Client login</a
+          >{{-- the Android test app, linked only while an APK is up (owner, 14 Nov 2026) --}}@if (is_file(\App\Http\Controllers\MobileAppController::path()))<a href="{{ route('app.download') }}">Android app</a>@endif
         </div>
       </div>
     </div>

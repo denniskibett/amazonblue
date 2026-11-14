@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'staff' => \App\Http\Middleware\EnsureStaff::class,
             // /api/v1 keys from /staff/api-keys (owner, 3 Nov 2026)
             'api.key' => \App\Http\Middleware\AuthenticateApiKey::class,
+            'mobile.enabled' => \App\Http\Middleware\MobileApiEnabled::class,
         ]);
         
         // ============ ADD GLOBAL MIDDLEWARE ============
