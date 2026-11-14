@@ -60,7 +60,6 @@ class Investment extends Model
         'stakeholders' => 'array',
         'legal_docs' => 'array',
         'swot_analysis' => 'array',
-        'notes' => 'array',
         'milestones' => 'array',
         'funding_partners' => 'array',
         'updates' => 'array',
@@ -604,5 +603,34 @@ class Investment extends Model
     public function scopePreInvestmentEbitda($query, $minEbitda = 0)
     {
         return $query->where('ebitda_pre_investment', '>=', $minEbitda);
+    }
+
+    /**
+     * Notes are a list of [author, date, content, category]. Partner lines used to save one plain sentence, which the
+     * investment page could not loop over (owner, 15 Nov 2026); a sentence is read and saved as one internal note
+     * (internal: the partner portal does not show it).
+     */
+    protected function notes(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn ($value) => self::noteList(is_string($value) ? (json_decode($value, true) ?? $value) : $value),
+            set: fn ($value) => ($list = self::noteList($value)) ? json_encode($list) : null,
+        );
+    }
+
+    public static function noteList(mixed $value): array
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return [];
+        }
+        if (is_string($value)) {
+            return [['author' => 'System', 'date' => null, 'content' => $value, 'category' => 'internal']];
+        }
+        if (is_array($value) && isset($value['content'])) {
+            return [$value];
+        }
+
+        return array_values(array_filter(array_map(fn ($n) => is_string($n) ? ['author' => 'System', 'date' => null, 'content' => $n, 'category' => 'internal'] : $n,
+            (array) $value), fn ($n) => is_array($n)));
     }
 }

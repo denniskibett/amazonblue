@@ -151,4 +151,21 @@ class FixedReturnAndFacilityScreenTest extends TestCase
             ->assertSee('Partner numbers')->assertSee('Yvonne Numbers')->assertSee('108,000.00');
         \Illuminate\Support\Carbon::setTestNow();
     }
+
+    public function test_a_line_with_a_plain_note_opens_on_the_investment_page_and_the_note_stays_internal(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole('partner');
+        $p = Partner::create(['name' => 'Noted Partner', 'email' => 'np@example.test', 'type' => 'individual', 'user_id' => $user->id]);
+        $this->actingAs($this->staff)->post(route('staff.partners.lines.store', $p), ['amount' => 5000, 'code' => 'NOTE1', 'date' => '2026-11-14',
+            'term' => 'short_term', 'kind' => 'fixed_return', 'fixed_rate' => 4, 'fixed_share' => 20, 'fixed_days' => 1, 'note' => 'Sent to the owner M-Pesa'])->assertSessionHasNoErrors();
+        $line = Investment::where('name', 'like', 'Noted Partner%')->firstOrFail();
+        $this->assertSame('internal', $line->notes[0]['category']);
+        // a sentence saved the old way still reads as one note
+        \Illuminate\Support\Facades\DB::table('investments')->where('id', $line->id)->update(['notes' => json_encode('Recorded for loan #540')]);
+        $this->assertSame('Recorded for loan #540', $line->fresh()->notes[0]['content']);
+
+        $this->actingAs($this->staff)->get(route('investments.show', $line))->assertOk()->assertSee('Recorded for loan #540');
+        $this->actingAs($user)->get(route('account.partner.investment', $line))->assertOk()->assertDontSee('Recorded for loan #540');
+    }
 }

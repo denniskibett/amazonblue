@@ -170,7 +170,8 @@ class PartnerLines
             if ($fromLineId) {
                 $this->drawPayout($funding, $fromLineId, $paid);
             }
-            $line->forceFill(['status' => 'matured', 'exit_date' => $date, 'current_value' => 0, 'notes' => trim(($line->notes ?? '') . "\nPaid back {$date}: KES " . number_format($paid, 2) . " ({$code})" . ($note ? '. ' . $note : '')),
+            $line->forceFill(['status' => 'matured', 'exit_date' => $date, 'current_value' => 0, 'notes' => array_merge($line->notes, [['author' => $by?->name ?? 'System', 'date' => $date, 'category' => 'internal',
+                'content' => "Paid back {$date}: KES " . number_format($paid, 2) . " ({$code})" . ($note ? '. ' . $note : '')]]),
                 'updated_by' => $by?->id])->save();
             AuditTrail::record('investments', $line->id, 'update', ['status' => 'active'], ['event' => 'fixed_paid_back', 'paid' => $paid, 'return' => $return, 'date' => $date, 'reference' => $code]);
 
