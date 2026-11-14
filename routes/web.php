@@ -572,6 +572,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::post('mpesa/read-sms', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'parseSms'])->name('mpesa.read-sms');
         Route::post('partners/{partner}/lines', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'storeLine'])->name('partners.lines.store')->middleware('permission:edit partners');
         Route::post('partners/{partner}/lines/{line}/pay-back', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'payBackLine'])->name('partners.lines.pay-back')->middleware('permission:edit partners');
+        Route::post('partners/{partner}/lines/{line}/payout-source', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'payoutSource'])->name('partners.lines.payout-source')->middleware('permission:edit partners');
+        Route::post('partners/{partner}/lines/{line}/terms', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'fixedTerms'])->name('partners.lines.terms')->middleware('permission:edit partners');
         // which part of a loan a partner line paid for, and the house settling a partner's slice (owner, 3 Nov 2026)
         Route::post('partners/{partner}/slices', [\App\Http\Controllers\Staff\PartnerSlicesController::class, 'fund'])->name('partners.slices.fund')->middleware('permission:edit partners');
         Route::post('partners/{partner}/slices/{slice}/settle', [\App\Http\Controllers\Staff\PartnerSlicesController::class, 'settle'])->whereNumber('slice')->name('partners.slices.settle')->middleware('permission:edit partners');

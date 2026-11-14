@@ -94,4 +94,41 @@ class FixedReturnAndFacilityScreenTest extends TestCase
         $this->actingAs($this->staff)->delete(route('staff.loans.facility-split.destroy', 458))->assertSessionHasNoErrors();
         $this->assertSame(0, FacilitySplit::count());
     }
+
+    public function test_an_investor_paid_from_another_line_takes_that_lines_money_and_terms_can_change(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow('2026-11-14 12:00');
+        $yvonne = Partner::create(['name' => 'Yvonne Test', 'email' => 'yv@example.test', 'type' => 'individual']);
+        $ruth = Partner::create(['name' => 'Ruth Test', 'email' => 'ru@example.test', 'type' => 'individual']);
+        $this->actingAs($this->staff)->post(route('staff.partners.lines.store', $yvonne), ['amount' => 100000, 'code' => 'BANK1', 'date' => '2026-11-14',
+            'term' => 'short_term', 'kind' => 'fixed_return', 'fixed_rate' => 8, 'fixed_share' => 40, 'fixed_days' => 10])->assertSessionHasNoErrors();
+        $this->actingAs($this->staff)->post(route('staff.partners.lines.store', $ruth), ['amount' => 10000, 'code' => 'MPESA1', 'date' => '2026-11-13',
+            'term' => 'short_term', 'kind' => 'fixed_return', 'fixed_rate' => 4, 'fixed_share' => 20, 'fixed_days' => 1])->assertSessionHasNoErrors();
+        [$yl, $rl] = [Investment::where('name', 'like', 'Yvonne%')->first(), Investment::where('name', 'like', 'Ruth%')->first()];
+        $this->assertStringContainsString('Fixed 40% of 20% interest · 10 days', $yl->name);
+
+        // Ruth is paid back on our money, then the payout is placed on Yvonne's line
+        $this->actingAs($this->staff)->post(route('staff.partners.lines.pay-back', [$ruth, $rl]), ['paid' => 10400, 'date' => '2026-11-14', 'code' => 'PAYR'])->assertSessionHasNoErrors();
+        $this->assertEquals(100000, $yl->fresh()->remainingCommitted());
+        $this->actingAs($this->staff)->post(route('staff.partners.lines.payout-source', [$ruth, $rl]), ['from_line' => $yl->id])->assertSessionHasNoErrors();
+        $this->assertEquals(89600, $yl->fresh()->remainingCommitted());
+        // saving it twice does not take it twice; moving it back gives the money back
+        $this->actingAs($this->staff)->post(route('staff.partners.lines.payout-source', [$ruth, $rl]), ['from_line' => $yl->id])->assertSessionHasNoErrors();
+        $this->assertEquals(89600, $yl->fresh()->remainingCommitted());
+        $this->actingAs($this->staff)->post(route('staff.partners.lines.payout-source', [$ruth, $rl]), ['from_line' => null])->assertSessionHasNoErrors();
+        $this->assertEquals(100000, $yl->fresh()->remainingCommitted());
+
+        // terms: 20% x 50% for 12 days -> 10%, due 26 Nov
+        $this->actingAs($this->staff)->post(route('staff.partners.lines.terms', [$yvonne, $yl]), ['gross' => 20, 'share' => 50, 'days' => 12])->assertSessionHasNoErrors();
+        $yl->refresh();
+        $this->assertEquals(10, (float) $yl->interest_rate);
+        $this->assertSame('2026-11-26', $yl->maturity_date->toDateString());
+        $this->actingAs($this->staff)->get(route('partners.show', $yvonne))->assertOk()->assertSee('Fixed 50% of 20% interest · 12 days');
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
+    public function test_the_loans_list_can_receive_a_payment(): void
+    {
+        $this->actingAs($this->staff)->get(route('loans.index'))->assertOk()->assertSee('window.openRepaymentModal', false);
+    }
 }

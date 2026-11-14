@@ -17,6 +17,8 @@ class InvestmentFunding extends Model
         'amount_committed',
         'amount_disbursed',
         'amount_returned',
+        'amount_paid_out',
+        'paid_from_investment_id',
         'status',
         'notes',
     ];
@@ -25,6 +27,7 @@ class InvestmentFunding extends Model
         'amount_committed' => 'decimal:2',
         'amount_disbursed' => 'decimal:2',
         'amount_returned' => 'decimal:2',
+        'amount_paid_out' => 'decimal:2',
     ];
 
     // ============ RELATIONSHIPS ============
@@ -49,11 +52,13 @@ class InvestmentFunding extends Model
     public function getRemainingToDisburseAttribute(): float
     {
         // a long-term partner line lends its principal again once it is paid back (owner, 23 Oct 2026)
+        // money this line paid to other investors is no longer free to lend (owner, 15 Nov 2026)
+        $paidOut = (float) ($this->amount_paid_out ?? 0);
         if ($this->recycles()) {
-            return max(0, (float) $this->amount_committed - (float) $this->amount_disbursed + (float) $this->amount_returned);
+            return max(0, (float) $this->amount_committed - (float) $this->amount_disbursed + (float) $this->amount_returned - $paidOut);
         }
 
-        return max(0, (float) $this->amount_committed - (float) $this->amount_disbursed);
+        return max(0, (float) $this->amount_committed - (float) $this->amount_disbursed - $paidOut);
     }
 
     /** Long-term loan-share lines recycle what comes back; everything else draws down once. */

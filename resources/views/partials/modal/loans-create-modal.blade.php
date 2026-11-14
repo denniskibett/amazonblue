@@ -27,7 +27,7 @@
         x-transition:leave-start="transform translate-x-0"
         x-transition:leave-end="transform translate-x-full"
         class="az-sheet az-sheet-wide fixed right-0 top-0 h-full w-full max-w-3xl bg-white dark:bg-gray-900 shadow-2xl z-[99999] overflow-y-auto"
-        @click.away="close()"
+        @click.away="if (!isSubmitting) close()"
     >
         <div class="flex flex-col h-full">
             <!-- Header -->
@@ -592,12 +592,13 @@ function loansCreateModal() {
                 }
                 flatpickr(input, {
                     dateFormat: 'Y-m-d',
+                    defaultDate: this.form.borrow_date ? this.formatDate(this.form.borrow_date) : null,
                     altInput: true, altFormat: 'j M Y',   // shows 23 Oct 2026, sends 2026-10-23
                     maxDate: 'today',
                     locale: { firstDayOfWeek: 1 },
                     onChange: (selectedDates) => {
                         if (selectedDates.length > 0) {
-                            this.form.borrow_date = selectedDates[0];
+                            this.form.borrow_date = this.formatDate(selectedDates[0]);
                             this.calculateDueDate();
                         }
                     }
@@ -869,11 +870,13 @@ function loansCreateModal() {
                     this.borrowerName = '{{ auth()->user()->name }}';
                 }
 
-                const now = new Date();
+                // Y-m-d, not a Date object: x-model writes the object's long text into the input and the picker
+                // misread it (a new loan opened on 24 Jan 2026; owner, 15 Nov 2026)
+                const now = this.formatDate(new Date());
                 this.form.borrow_date = now;
                 this.$nextTick(() => {
                     const input = this.$refs.datepicker;
-                    if (input && input._flatpickr) input._flatpickr.setDate(now);
+                    if (input && input._flatpickr) input._flatpickr.setDate(now, false);
                 });
 
                 if (userRole === 'broker') {
@@ -1067,6 +1070,9 @@ function loansCreateModal() {
             }
 
             this.isSubmitting = true;
+            // what was sent, captured now: the "create another loan?" dialog sits outside this modal, and nothing
+            // that happens while it is open may lose these (owner, 15 Nov 2026)
+            const sendNow = { ...this.send, loanAmount: this.form.amount, loanDate: this.formatDate(this.form.borrow_date) };
 
             try {
                 const formData = new FormData();
@@ -1107,7 +1113,7 @@ function loansCreateModal() {
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    const sent = this.editId ? '' : await this.recordSend(data.loan || { id: data.loan_id });
+                    const sent = this.editId ? '' : await this.recordSend(data.loan || { id: data.loan_id }, sendNow);
                     if (typeof window.showAlert === 'function') {
                         window.showAlert(sent.includes('not recorded') ? 'warning' : 'success', 'Success!', (data.message || (this.editId ? 'Loan updated successfully!' : 'Loan created successfully!')) + sent);
                     } else {
@@ -1143,7 +1149,7 @@ function loansCreateModal() {
 
                             const retryData = await retryResponse.json();
                             if (retryResponse.ok && retryData.success) {
-                                const sent = await this.recordSend(retryData.loan || { id: retryData.loan_id });
+                                const sent = await this.recordSend(retryData.loan || { id: retryData.loan_id }, sendNow);
                                 if (typeof window.showAlert === 'function') {
                                     window.showAlert(sent.includes('not recorded') ? 'warning' : 'success', 'Success!', 'Loan created successfully!' + sent);
                                 } else {
@@ -1172,21 +1178,24 @@ function loansCreateModal() {
         },
 
         /** Records the money sent on a new loan through the disbursement form's endpoint; returns a line for the alert. */
-        async recordSend(loan) {
-            if (!this.send.on || !loan || !loan.id) return '';
+        async recordSend(loan, send) {
+            send = send || { ...this.send, loanAmount: this.form.amount, loanDate: this.formatDate(this.form.borrow_date) };
+            if (!send.on || !loan || !loan.id) return '';
+            const amount = send.amount || send.loanAmount;
+            const day = send.date || send.loanDate;
             const fd = new FormData();
             fd.append('loan_id', loan.id);
-            fd.append('amount', this.send.amount || this.form.amount);
-            fd.append('disburse_date', this.send.date || this.formatDate(this.form.borrow_date));
-            fd.append('payment_date', this.send.date || this.formatDate(this.form.borrow_date));
-            fd.append('mode', this.send.mode);
+            fd.append('amount', amount);
+            fd.append('disburse_date', day);
+            fd.append('payment_date', day);
+            fd.append('mode', send.mode);
             fd.append('kind', 'cash');
-            if (this.send.bank_ref) fd.append('bank_ref', this.send.bank_ref.trim());
-            if (this.send.mpesa_ref) fd.append('mpesa_ref', this.send.mpesa_ref.trim().toUpperCase());
-            fd.append('transaction', (this.send.ref || this.send.mpesa_ref || this.send.bank_ref || '').trim());
-            if (this.send.notes) fd.append('notes', this.send.notes);
-            fd.append('funding_mode', this.send.line ? 'line' : 'house');
-            if (this.send.line) { fd.append('investment_id', this.send.line); fd.append('funding_source', 'partner'); }
+            if (send.bank_ref) fd.append('bank_ref', send.bank_ref.trim());
+            if (send.mpesa_ref) fd.append('mpesa_ref', send.mpesa_ref.trim().toUpperCase());
+            fd.append('transaction', (send.ref || send.mpesa_ref || send.bank_ref || '').trim());
+            if (send.notes) fd.append('notes', send.notes);
+            fd.append('funding_mode', send.line ? 'line' : 'house');
+            if (send.line) { fd.append('investment_id', send.line); fd.append('funding_source', 'partner'); }
             const r = await fetch('{{ route("disbursements.store") }}', { method: 'POST', body: fd, headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
             const d = await r.json().catch(() => ({}));
@@ -1194,7 +1203,7 @@ function loansCreateModal() {
                 const why = d.errors ? Object.values(d.errors).flat().join(' ') : (d.message || 'it was not saved');
                 return ' The loan was created, but the disbursement was not recorded: ' + why + ' Record it on loan #' + loan.id + '.';
             }
-            return ' KES ' + Number(this.send.amount || this.form.amount).toLocaleString() + ' sent is recorded.';
+            return ' KES ' + Number(amount).toLocaleString() + ' sent is recorded.';
         },
 
         formatDate(date) {

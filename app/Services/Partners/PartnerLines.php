@@ -70,7 +70,9 @@ class PartnerLines
                 throw new \DomainException('A fixed return needs a % above 0 and at least 1 day.');
             }
             $maturity = Carbon::parse($date)->addDays($fixed['days'])->toDateString();
-            [$shareRate, $penaltyRate] = [0.0, 0.0];
+            // their share of the interest (owner, 15 Nov 2026: "Fixed 40% of interest · 10 days"); kept on the line for
+            // the label and for editing. A fixed line takes no share of what its loans earn, whatever this says.
+            [$shareRate, $penaltyRate] = [round((float) ($fixed['share'] ?? 0), 2), 0.0];
         }
         if ($term === 'long_term' && ! $maturity) {
             throw new \DomainException('A long-term line needs the date it is to be paid back.');
@@ -85,7 +87,7 @@ class PartnerLines
 
         return DB::transaction(function () use ($partner, $amount, $term, $maturity, $code, $date, $by, $note, $shareRate, $penaltyRate, $fixed) {
             $line = Investment::create([
-                'name' => $partner->name . ' · ' . ($fixed ? 'Fixed ' . rtrim(rtrim(number_format($fixed['rate'], 4, '.', ''), '0'), '.') . '% / ' . $fixed['days'] . 'd' : self::TERMS[$term]) . ' · ' . $code,
+                'name' => $partner->name . ' · ' . ($fixed ? self::fixedLabel($fixed['rate'], $shareRate, $fixed['days']) : self::TERMS[$term]) . ' · ' . $code,
                 'type' => 'other',
                 'facility_type' => $term,
                 'return_type' => $fixed ? 'fixed_return' : 'loan_share',
@@ -133,7 +135,7 @@ class PartnerLines
      * capital leaves the principal wallet; the rest is their return, credited to the interest wallet and paid out
      * of it. The line closes (matured). Paying more or less than agreed is allowed and shows as the return.
      */
-    public function payBack(Investment $line, float $paid, string $date, string $code, ?User $by = null, ?string $note = null): array
+    public function payBack(Investment $line, float $paid, string $date, string $code, ?User $by = null, ?string $note = null, ?int $fromLineId = null): array
     {
         if ($line->return_type !== 'fixed_return' || $line->status !== 'active') {
             throw new \DomainException('Only an open fixed-return line can be paid back here.');
@@ -149,7 +151,11 @@ class PartnerLines
         }
         $return = round($paid - $principal, 2);
 
-        return DB::transaction(function () use ($line, $paid, $principal, $return, $date, $code, $by, $note) {
+        if ($fromLineId) {
+            $this->assertCanPayFrom($line, $fromLineId, $paid);
+        }
+
+        return DB::transaction(function () use ($line, $paid, $principal, $return, $date, $code, $by, $note, $fromLineId) {
             $line = Investment::whereKey($line->id)->lockForUpdate()->first();
             $funding = $line->fundings()->whereHas('partner', fn ($q) => $q->where('is_house_account', false))->orderBy('id')->firstOrFail();
             $partner = Partner::findOrFail($funding->partner_id);
@@ -161,12 +167,120 @@ class PartnerLines
             }
             $partner->withdrawPartnerBalance($principal, 'PAYOUT-' . $code, 'Capital paid back on line #' . $line->id . ' (' . $code . ')', 'principal', $date);
             $funding->forceFill(['amount_returned' => $principal, 'status' => 'settled'])->save();
+            if ($fromLineId) {
+                $this->drawPayout($funding, $fromLineId, $paid);
+            }
             $line->forceFill(['status' => 'matured', 'exit_date' => $date, 'current_value' => 0, 'notes' => trim(($line->notes ?? '') . "\nPaid back {$date}: KES " . number_format($paid, 2) . " ({$code})" . ($note ? '. ' . $note : '')),
                 'updated_by' => $by?->id])->save();
             AuditTrail::record('investments', $line->id, 'update', ['status' => 'active'], ['event' => 'fixed_paid_back', 'paid' => $paid, 'return' => $return, 'date' => $date, 'reference' => $code]);
 
             return ['principal' => $principal, 'return' => $return, 'paid' => $paid];
         });
+    }
+
+    /** "Fixed 40% of 20% interest · 10 days" (or "Fixed 8% · 10 days" with no share recorded). */
+    public static function fixedLabel(float $rate, ?float $share, int $days): string
+    {
+        $n = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+        $gross = $share > 0 ? $rate * 100 / $share : null;
+
+        return 'Fixed ' . ($gross ? $n($share) . '% of ' . $n($gross) . '% interest' : $n($rate) . '%') . ' · ' . $days . ' day' . ($days === 1 ? '' : 's');
+    }
+
+    /** What a paid-back fixed line was paid in all: capital back plus the return posted for it. */
+    public function paidOut(Investment $line): float
+    {
+        $funding = $line->fundings()->whereHas('partner', fn ($q) => $q->where('is_house_account', false))->orderBy('id')->first();
+        $return = (float) PartnerTransaction::where('investment_id', $line->id)->where('reference', 'FIXED-' . $line->id)->sum('amount');
+
+        return round((float) ($funding->amount_returned ?? 0) + $return, 2);
+    }
+
+    private function assertCanPayFrom(Investment $paidLine, int $fromLineId, float $amount): void
+    {
+        $from = Investment::find($fromLineId) ?? throw new \DomainException('That line was not found.');
+        if ($from->id === $paidLine->id) {
+            throw new \DomainException('A line cannot pay itself back.');
+        }
+        if ($from->isHouseLine() || $from->status !== 'active') {
+            throw new \DomainException('Choose an open partner line, or our own money.');
+        }
+        // what it has free now, plus anything this payout already took from it
+        $already = (int) InvestmentFunding::where('investment_id', $paidLine->id)->value('paid_from_investment_id') === $from->id ? $amount : 0.0;
+        if ($from->remainingCommitted() + $already + 0.004 < $amount) {
+            throw new \DomainException('Line #' . $from->id . ' has only KES ' . number_format($from->remainingCommitted(), 2) . ' free.');
+        }
+    }
+
+    /** Takes $amount out of line $fromLineId for paying $paid back, undoing any earlier source first (safe to repeat). */
+    private function drawPayout(InvestmentFunding $paid, ?int $fromLineId, float $amount): void
+    {
+        if ($paid->paid_from_investment_id) {
+            $old = InvestmentFunding::where('investment_id', $paid->paid_from_investment_id)->whereHas('partner', fn ($q) => $q->where('is_house_account', false))
+                ->orderBy('id')->lockForUpdate()->first();
+            $old?->forceFill(['amount_paid_out' => max(0, round((float) $old->amount_paid_out - $amount, 2))])->save();
+        }
+        if ($fromLineId) {
+            $src = InvestmentFunding::where('investment_id', $fromLineId)->whereHas('partner', fn ($q) => $q->where('is_house_account', false))
+                ->orderBy('id')->lockForUpdate()->firstOrFail();
+            $src->forceFill(['amount_paid_out' => round((float) $src->amount_paid_out + $amount, 2)])->save();
+        }
+        $paid->forceFill(['paid_from_investment_id' => $fromLineId])->save();
+    }
+
+    /**
+     * Says, after the fact, whose money paid a fixed line back (owner, 15 Nov 2026: Buosti and Ruth were paid out of
+     * Yvonne's line). Null = our own money. Moving it gives the old line its money back.
+     */
+    public function setPayoutSource(Investment $paidLine, ?int $fromLineId, ?User $by = null): float
+    {
+        if ($paidLine->return_type !== 'fixed_return' || $paidLine->status === 'active') {
+            throw new \DomainException('Only a fixed line that has been paid back has a payout to place.');
+        }
+        $amount = $this->paidOut($paidLine);
+        if ($fromLineId) {
+            $this->assertCanPayFrom($paidLine, $fromLineId, $amount);
+        }
+
+        return DB::transaction(function () use ($paidLine, $fromLineId, $amount, $by) {
+            $funding = $paidLine->fundings()->whereHas('partner', fn ($q) => $q->where('is_house_account', false))->orderBy('id')->lockForUpdate()->firstOrFail();
+            $before = $funding->paid_from_investment_id;
+            $this->drawPayout($funding, $fromLineId, $amount);
+            AuditTrail::record('investment_fundings', $funding->id, 'update', ['paid_from_investment_id' => $before],
+                ['paid_from_investment_id' => $fromLineId, 'amount' => $amount, 'by' => $by?->id]);
+
+            return $amount;
+        });
+    }
+
+    /**
+     * Changes a fixed line's terms (owner, 15 Nov 2026): the rate on the money, their share of it and the days. The %
+     * owed, the due day and the label follow. A line already paid back keeps what it was paid.
+     */
+    public function updateFixedTerms(Investment $line, float $gross, float $share, int $days, ?User $by = null): Investment
+    {
+        if ($line->return_type !== 'fixed_return') {
+            throw new \DomainException('Only a fixed-return line has these terms.');
+        }
+        if ($gross <= 0 || $share <= 0 || $share > 100 || $days < 1) {
+            throw new \DomainException('Give a rate above 0, a share between 0 and 100% and at least 1 day.');
+        }
+        $rate = round($gross * $share / 100, 2);
+        if ($rate > 100) {
+            throw new \DomainException('That is more than 100% of the money.');
+        }
+        $old = $line->only(['interest_rate', 'partner_share_rate', 'duration_days', 'maturity_date', 'name']);
+        $code = trim((string) \Illuminate\Support\Str::afterLast((string) $line->name, '·'));
+        $partner = $line->fundings()->whereHas('partner', fn ($q) => $q->where('is_house_account', false))->first()?->partner;
+        $line->forceFill([
+            'interest_rate' => $rate, 'expected_return' => $rate, 'partner_share_rate' => round($share, 2), 'duration_days' => $days,
+            'maturity_date' => $line->status === 'active' ? Carbon::parse($line->purchase_date)->addDays($days)->toDateString() : $line->maturity_date,
+            'name' => ($partner?->name ?? 'Partner') . ' · ' . self::fixedLabel($rate, $share, $days) . ' · ' . $code,
+            'updated_by' => $by?->id,
+        ])->save();
+        AuditTrail::record('investments', $line->id, 'update', $old, ['event' => 'fixed_terms', 'gross' => $gross, 'share' => $share, 'rate' => $rate, 'days' => $days]);
+
+        return $line->fresh();
     }
 
     public function codeUsed(string $code): bool
@@ -217,7 +331,8 @@ class PartnerLines
 
         return [
             'funding' => $funding, 'partner_id' => $funding?->partner_id, 'committed' => $committed, 'lent' => $lent, 'back' => $back,
-            'out' => max(0, round($lent - $back, 2)), 'idle' => max(0, round($committed - $lent + $back, 2)), 'earned' => round($earned, 2),
+            'out' => max(0, round($lent - $back, 2)), 'idle' => max(0, round($committed - $lent + $back - (float) ($funding->amount_paid_out ?? 0), 2)), 'earned' => round($earned, 2),
+            'paid_out' => round((float) ($funding->amount_paid_out ?? 0), 2),
             'loans' => $loans->count(), 'open_loans' => $open->count(), 'closable' => $closable,
             // closed loans that did not pay back their principal (written off)
             'shortfall' => $loans->isNotEmpty() && $open->isEmpty() ? max(0, round($lent - $back, 2)) : 0.0,

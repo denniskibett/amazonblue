@@ -232,6 +232,13 @@
                 </svg>
               </a>
 
+              {{-- receive a payment from the list (owner, 15 Nov 2026): the loan page's own modal --}}
+              @if (in_array($loan->status, ['disbursed', 'active', 'overdue', 'forbearance', 'defaulted'], true) && auth()->user()->can('create repayments'))
+              <button type="button" onclick="window.openRepaymentModal && window.openRepaymentModal({{ $loan->id }})" class="text-emerald-600 hover:text-emerald-800" title="Receive payment" aria-label="Receive a payment on loan #{{ $loan->id }}">
+                <x-ui.icon name="hand-coins" class="inline size-4" />
+              </button>
+              @endif
+
               @if($loan->consent && auth()->user()->hasAnyRole(['admin', 'teller', 'broker']))
               <button @click="openPdfModal({{ $loan->id }}, '{{ addslashes($loan->user->name) }}\'s Loan (KES {{ number_format($loan->amount, 2) }})')" class="text-purple-600 hover:text-purple-900" title="View Agreement">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -335,6 +342,7 @@
 
   <!-- Loans Create Modal (Slideover) -->
   @include('partials.modal.loans-create-modal')
+  @can('create repayments')@include('partials.modal.repayment-create-modal')@endcan
 
   <!-- PDF Agreement Modal -->
   <div x-show="isPdfModalOpen" class="fixed inset-0 flex items-center justify-center p-5 overflow-y-auto modal z-99999" style="display: none;">

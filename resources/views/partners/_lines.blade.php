@@ -33,10 +33,10 @@
         @forelse ($lines as ['line' => $l, 's' => $s])
           <tr class="border-b border-gray-100 dark:border-gray-700">
             <td class="px-4 py-2 text-gray-800 dark:text-white/90">#{{ $l->id }} <span class="block text-theme-xs text-gray-500">{{ $s['loans'] }} loan(s){{ $s['open_loans'] ? ', ' . $s['open_loans'] . ' open' : '' }}</span></td>
-            <td class="px-4 py-2">@if ($l->return_type === 'fixed_return')Fixed {{ rtrim(rtrim(number_format((float) $l->interest_rate, 4, '.', ''), '0'), '.') }}% · {{ $l->duration_days }} day{{ $l->duration_days == 1 ? '' : 's' }}@else{{ \App\Services\Partners\PartnerLines::TERMS[$l->facility_type] ?? '—' }}@endif</td>
+            <td class="px-4 py-2">@if ($l->return_type === 'fixed_return'){{ \App\Services\Partners\PartnerLines::fixedLabel((float) $l->interest_rate, (float) $l->partner_share_rate, (int) $l->duration_days) }}<span class="block text-theme-xs text-gray-500">= {{ rtrim(rtrim(number_format((float) $l->interest_rate, 2, '.', ''), '0'), '.') }}% of the money</span>@else{{ \App\Services\Partners\PartnerLines::TERMS[$l->facility_type] ?? '—' }}@endif</td>
             <td class="px-4 py-2 text-right font-outfit">{{ $kes($s['committed']) }}</td>
             <td class="px-4 py-2 text-right font-outfit">{{ $kes($s['out']) }}</td>
-            <td class="px-4 py-2 text-right font-outfit">{{ $kes($s['idle']) }}</td>
+            <td class="px-4 py-2 text-right font-outfit">{{ $kes($s['idle']) }}@if (($s['paid_out'] ?? 0) > 0)<span class="block text-theme-xs text-gray-500">{{ $kes($s['paid_out']) }} paid to other investors</span>@endif</td>
             <td class="px-4 py-2 text-right font-outfit">@if ($l->return_type === 'fixed_return'){{ $kes($plines->fixedDue($l)[1]) }}<span class="block text-theme-xs text-gray-500">fixed, due {{ $kes($plines->fixedDue($l)[2]) }}</span>@else{{ $kes($s['earned']) }}@endif</td>
             <td class="px-4 py-2">{{ $l->maturity_date?->format('j M Y') ?? '—' }}</td>
             <td class="px-4 py-2">
@@ -55,8 +55,48 @@
                   <label>Paid (KES)<input name="paid" type="number" step="0.01" min="1" required value="{{ old('paid', $plines->fixedDue($l)[2]) }}" class="mt-1 block h-9 w-32 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
                   <label>On<input name="date" type="date" required max="{{ now()->toDateString() }}" value="{{ old('date', min(now()->toDateString(), $l->maturity_date?->toDateString() ?? now()->toDateString())) }}" class="mt-1 block h-9 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
                   <label>Payout code<input name="code" required maxlength="40" value="{{ old('code') }}" class="mt-1 block h-9 w-40 rounded-md border border-gray-300 px-2 uppercase dark:border-gray-700 dark:bg-gray-900"></label>
+                  <label>Paid from<select name="from_line" class="mt-1 block h-9 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900">
+                    <option value="">Our money</option>
+                    @foreach ($plines->openLines() as $o)@if ($o->line->id !== $l->id)<option value="{{ $o->line->id }}" @selected(old('from_line') == $o->line->id)>#{{ $o->line->id }} {{ $o->partner?->name }} · KES {{ $kes($o->room) }} free</option>@endif @endforeach
+                  </select></label>
                   <button type="submit" class="h-9 rounded-md bg-brand-500 px-3 font-medium text-white" data-confirm="Record that {{ $partner->name }} was paid back on line #{{ $l->id }} and close it?">Record payout</button>
                 </form>
+              </td></tr>
+            @endcan
+          @endif
+          @if ($l->return_type === 'fixed_return')
+            @can('edit partners')
+              {{-- a fixed line's terms, and whose money paid it back (owner, 15 Nov 2026) --}}
+              @php
+                $lf = $l->fundings()->where('partner_id', $partner->id)->first();
+                $gross = (float) $l->partner_share_rate > 0 ? round((float) $l->interest_rate * 100 / (float) $l->partner_share_rate, 2) : (float) $l->interest_rate;
+              @endphp
+              <tr class="border-b border-gray-100 text-theme-xs dark:border-gray-700"><td colspan="8" class="px-4 py-2">
+                <div class="flex flex-wrap items-end gap-4">
+                  <details class="group">
+                    <summary class="cursor-pointer font-medium text-brand-500">Edit terms</summary>
+                    <form method="POST" action="{{ route('staff.partners.lines.terms', [$partner, $l]) }}" class="mt-2 flex flex-wrap items-end gap-2">@csrf
+                      <label>Rate on the money (%)<input name="gross" type="number" step="0.01" min="0.01" required value="{{ $gross }}" class="mt-1 block h-9 w-28 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
+                      <label>Their share (%)<input name="share" type="number" step="0.01" min="0.01" max="100" required value="{{ (float) $l->partner_share_rate > 0 ? (float) $l->partner_share_rate : 100 }}" class="mt-1 block h-9 w-24 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
+                      <label>Days<input name="days" type="number" min="1" required value="{{ $l->duration_days }}" class="mt-1 block h-9 w-20 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
+                      <button type="submit" class="h-9 rounded-md border border-gray-300 px-3 font-medium dark:border-gray-700"{!! $l->status !== 'active' ? ' data-confirm="Line #' . $l->id . ' is paid back; this changes its terms and label, not what was paid."' : '' !!}>Save terms</button>
+                    </form>
+                  </details>
+                  @if ($l->status !== 'active')
+                    <form method="POST" action="{{ route('staff.partners.lines.payout-source', [$partner, $l]) }}" class="flex flex-wrap items-end gap-2">@csrf
+                      <label>Paid back from<select name="from_line" class="mt-1 block h-9 rounded-md border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900">
+                        <option value="">Our money</option>
+                        @foreach (\App\Models\Investment::whereIn('return_type', ['loan_share', 'fixed_return'])->where('status', 'active')->where('id', '!=', $l->id)->orderByDesc('id')->get() as $src)
+                          <option value="{{ $src->id }}" @selected((int) $lf?->paid_from_investment_id === $src->id)>#{{ $src->id }} {{ $src->name }}</option>
+                        @endforeach
+                      </select></label>
+                      <button type="submit" class="h-9 rounded-md border border-gray-300 px-3 font-medium dark:border-gray-700">Save</button>
+                      @if ($lf?->paid_from_investment_id)<span class="self-center text-gray-500">KES {{ $kes($plines->paidOut($l)) }} came out of line #{{ $lf->paid_from_investment_id }}</span>@endif
+                    </form>
+                  @endif
+                  @error('terms')<span class="text-error-600">{{ $message }}</span>@enderror
+                  @error('from_line')<span class="text-error-600">{{ $message }}</span>@enderror
+                </div>
               </td></tr>
             @endcan
           @endif
@@ -150,7 +190,7 @@
         <p class="mb-3 text-theme-sm font-semibold text-gray-800 dark:text-white/90">Return calculator</p>
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <label class="text-theme-xs text-gray-600 dark:text-gray-400">Rate on the money (%)<input type="number" step="0.01" min="0" x-model.number="gross" @input="calc()" class="{{ $input_ }} mt-1"></label>
-          <label class="text-theme-xs text-gray-600 dark:text-gray-400">Their share of it (%)<input type="number" step="0.01" min="0" max="100" x-model.number="cut" @input="calc()" class="{{ $input_ }} mt-1"></label>
+          <label class="text-theme-xs text-gray-600 dark:text-gray-400">Their share of it (%)<input name="fixed_share" type="number" step="0.01" min="0" max="100" x-model.number="cut" @input="calc()" class="{{ $input_ }} mt-1"></label>
           <label class="text-theme-xs text-gray-600 dark:text-gray-400">= Their return (%)<input name="fixed_rate" type="number" step="0.01" min="0" x-model.number="rate" :required="kind === 'fixed_return'" class="{{ $input_ }} mt-1 font-semibold"></label>
           <label class="text-theme-xs text-gray-600 dark:text-gray-400">For (days)<input name="fixed_days" type="number" min="1" x-model.number="days" :required="kind === 'fixed_return'" class="{{ $input_ }} mt-1"></label>
           <div class="text-theme-xs text-gray-600 dark:text-gray-400">Due<span class="mt-1 block h-11 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-theme-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" x-text="due"></span></div>

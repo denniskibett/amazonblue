@@ -100,9 +100,10 @@ class PartnerFundingController extends Controller
             'kind' => ['nullable', Rule::in(['loan_share', 'fixed_return'])],
             'fixed_rate' => ['nullable', 'required_if:kind,fixed_return', 'numeric', 'gt:0', 'max:100'],
             'fixed_days' => ['nullable', 'required_if:kind,fixed_return', 'integer', 'min:1', 'max:3650'],
+            'fixed_share' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ], ['maturity.required_if' => 'A long-term line needs the date it is to be paid back.',
             'fixed_rate.required_if' => 'A fixed return needs its %.', 'fixed_days.required_if' => 'A fixed return needs its number of days.']);
-        $fixed = ($data['kind'] ?? null) === 'fixed_return' ? ['rate' => (float) $data['fixed_rate'], 'days' => (int) $data['fixed_days']] : null;
+        $fixed = ($data['kind'] ?? null) === 'fixed_return' ? ['rate' => (float) $data['fixed_rate'], 'days' => (int) $data['fixed_days'], 'share' => (float) ($data['fixed_share'] ?? 0)] : null;
         if ($fixed) {
             $data['maturity'] = null;   // worked out from the days
         }
@@ -127,15 +128,47 @@ class PartnerFundingController extends Controller
             'date' => ['required', 'date', 'before_or_equal:today'],
             'code' => ['required', 'string', 'max:40'],
             'note' => ['nullable', 'string', 'max:300'],
+            'from_line' => ['nullable', 'integer', 'exists:investments,id'],
         ]);
         try {
-            $r = $lines->payBack($line, (float) $data['paid'], $data['date'], $data['code'], $request->user(), $data['note'] ?? null);
+            $r = $lines->payBack($line, (float) $data['paid'], $data['date'], $data['code'], $request->user(), $data['note'] ?? null, $data['from_line'] ?? null);
         } catch (\DomainException|\RuntimeException $e) {
             return back()->withInput()->withErrors(['paid' => $e->getMessage()]);
         }
 
         return back()->with('alert', ['type' => 'success', 'title' => 'Paid back',
             'message' => 'Line #' . $line->id . ' is closed: KES ' . number_format($r['principal'], 2) . ' capital and KES ' . number_format($r['return'], 2) . ' return to ' . $partner->name . '.']);
+    }
+
+    /** Whose money paid a fixed line back (owner, 15 Nov 2026): another partner's line, or ours. */
+    public function payoutSource(Request $request, Partner $partner, Investment $line, PartnerLines $lines): RedirectResponse
+    {
+        abort_unless($request->user()->can('edit partners'), 403);
+        abort_unless($line->fundings()->where('partner_id', $partner->id)->exists(), 404);
+        $data = $request->validate(['from_line' => ['nullable', 'integer', 'exists:investments,id']]);
+        try {
+            $amount = $lines->setPayoutSource($line, $data['from_line'] ?? null, $request->user());
+        } catch (\DomainException $e) {
+            return back()->withErrors(['from_line' => $e->getMessage()]);
+        }
+
+        return back()->with('alert', ['type' => 'success', 'title' => 'Payout placed',
+            'message' => 'KES ' . number_format($amount, 2) . ' paid to ' . $partner->name . ' now comes out of ' . (($data['from_line'] ?? null) ? 'line #' . $data['from_line'] : 'our own money') . '.']);
+    }
+
+    /** A fixed line's terms: rate on the money, their share of it, days (owner, 15 Nov 2026). */
+    public function fixedTerms(Request $request, Partner $partner, Investment $line, PartnerLines $lines): RedirectResponse
+    {
+        abort_unless($request->user()->can('edit partners'), 403);
+        abort_unless($line->fundings()->where('partner_id', $partner->id)->exists(), 404);
+        $data = $request->validate(['gross' => ['required', 'numeric', 'gt:0', 'max:1000'], 'share' => ['required', 'numeric', 'gt:0', 'max:100'], 'days' => ['required', 'integer', 'min:1', 'max:3650']]);
+        try {
+            $line = $lines->updateFixedTerms($line, (float) $data['gross'], (float) $data['share'], (int) $data['days'], $request->user());
+        } catch (\DomainException $e) {
+            return back()->withErrors(['terms' => $e->getMessage()]);
+        }
+
+        return back()->with('alert', ['type' => 'success', 'title' => 'Terms changed', 'message' => 'Line #' . $line->id . ': ' . PartnerLines::fixedLabel((float) $line->interest_rate, (float) $line->partner_share_rate, (int) $line->duration_days) . '.']);
     }
 
     /** One loan's partner links: current state, the form, and (with ?preview) the dry run. */
