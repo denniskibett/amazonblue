@@ -467,6 +467,8 @@ function loanTable() {
             window.azOn('open-loan-edit', (e) => e.detail && this.openEditModal(e.detail.id));
             // ?new_loan=1 on a borrower's page opens the modal for them (owner, 15 Nov 2026)
             if (new URLSearchParams(location.search).get('new_loan')) {
+                // once: a refresh after saving must not open it again
+                history.replaceState(null, '', location.pathname + location.hash);
                 this.$nextTick(() => { const b = document.querySelector('[data-create-loan-for]'); b && b.click(); });
             }
             this.allLoans = Array.from(document.querySelectorAll('.loan-row'));

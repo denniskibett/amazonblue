@@ -51,6 +51,7 @@ class FixedReturnAndFacilityScreenTest extends TestCase
             ->assertSessionHasNoErrors();
         $line->refresh();
         $this->assertSame('matured', $line->status);
+        $this->assertEquals(0, app(\App\Services\Partners\PartnerLines::class)->status($line)['idle'], 'a paid-back fixed line has nothing free');
         $this->assertEquals(8000, (float) PartnerTransaction::where('partner_id', $yvonne->id)->where('type', 'profit_distribution')->sum('amount'));
         $this->assertEqualsWithDelta(0, (float) $yvonne->getWallet('principal')->refresh()->balanceFloat, 0.001);
         $this->assertEqualsWithDelta(0, (float) $yvonne->getWallet('interest')->refresh()->balanceFloat, 0.001);

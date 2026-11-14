@@ -331,7 +331,13 @@ class PartnerLines
 
         return [
             'funding' => $funding, 'partner_id' => $funding?->partner_id, 'committed' => $committed, 'lent' => $lent, 'back' => $back,
-            'out' => max(0, round($lent - $back, 2)), 'idle' => max(0, round($committed - $lent + $back - (float) ($funding->amount_paid_out ?? 0), 2)), 'earned' => round($earned, 2),
+            // a fixed line's amount_returned is the capital paid back to the investor, not money back on the line: a paid-back
+            // fixed line has nothing free (owner, 15 Nov 2026)
+            'out' => max(0, round($lent - $back, 2)),
+            'idle' => $line->return_type === 'fixed_return'
+                ? ($line->status === 'active' ? max(0, round($committed - $lent - (float) ($funding->amount_paid_out ?? 0), 2)) : 0.0)
+                : max(0, round($committed - $lent + $back - (float) ($funding->amount_paid_out ?? 0), 2)),
+            'earned' => round($earned, 2),
             'paid_out' => round((float) ($funding->amount_paid_out ?? 0), 2),
             'loans' => $loans->count(), 'open_loans' => $open->count(), 'closable' => $closable,
             // closed loans that did not pay back their principal (written off)
