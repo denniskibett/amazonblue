@@ -49,7 +49,7 @@
       <div class="section-head">
         <span class="chip sand">Test app</span>
         <h2>The Aimzone app for Android</h2>
-        <p class="muted" style="max-width:62ch">Borrow, repay and see your statement from your phone. A test version for invited testers: not on the Play Store yet, it shows a TEST ribbon, and screens may change between builds. Your account, loans and payments in it are real, the same as on this website.</p>
+        <p class="muted" style="max-width:62ch">Borrow, repay and see your statement from your phone. A test version for invited testers: not on the Play Store yet, and screens may change between builds. Your account, loans and payments in it are real, the same as on this website.</p>
       </div>
       <div class="grid g2 gap-lg">
         <div class="card">
