@@ -8,7 +8,7 @@
 @section('content')
   <section class="page-hero">
     <div class="wrap">
-      <span class="chip sand">For lenders and partners</span>
+      <span class="chip sand" style="white-space:nowrap">For lenders and partners</span>
       <h1>White label &amp; API</h1>
       <p class="muted" style="max-width:62ch">The loan system we run Aimzone on, for your own lending: your name in front, your own data behind it. Or keep your system and connect it to ours.</p>
     </div>
