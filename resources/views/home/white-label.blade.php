@@ -8,7 +8,7 @@
 @section('content')
   <section class="page-hero">
     <div class="wrap">
-      <span class="chip sand" style="white-space:nowrap">For lenders and partners</span>
+      <span class="tag sand" style="white-space:nowrap">For lenders and partners</span>
       <h1>White label &amp; API</h1>
       <p class="muted" style="max-width:62ch">The loan system we run Aimzone on, for your own lending: your name in front, your own data behind it. Or keep your system and connect it to ours.</p>
     </div>
@@ -17,7 +17,7 @@
   <section class="section pt-md">
     <div class="wrap grid g2 gap-lg">
       <div class="card">
-        <span class="chip sage">White label</span>
+        <span class="tag sage" style="white-space:nowrap">White label</span>
         <h2 style="margin-top:10px">Your lending, on our system</h2>
         <ul class="ticks">
           <li>Your brand on the borrower website, the staff desk and the app.</li>
@@ -29,7 +29,7 @@
         <p><a class="btn btn-primary" href="{{ route('site.page', 'contact') }}">Talk to us</a></p>
       </div>
       <div class="card">
-        <span class="chip apricot">API</span>
+        <span class="tag apricot" style="white-space:nowrap">API</span>
         <h2 style="margin-top:10px">Connect your systems</h2>
         <ul class="ticks">
           <li>Your own key, issued by us. Each key opens only the part it is for, and can be switched off at any time.</li>
@@ -47,7 +47,7 @@
   <section class="section section-tint" id="app">
     <div class="wrap">
       <div class="section-head">
-        <span class="chip sand">Test app</span>
+        <span class="tag sand" style="white-space:nowrap">Test app</span>
         <h2>The Aimzone app for Android</h2>
         <p class="muted" style="max-width:62ch">Borrow, repay and see your statement from your phone. A test version for invited testers: not on the Play Store yet, and screens may change between builds. Your account, loans and payments in it are real, the same as on this website.</p>
       </div>
