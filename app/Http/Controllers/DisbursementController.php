@@ -62,7 +62,7 @@ class DisbursementController extends Controller
         if (! empty($f['q'])) {
             $term = '%' . $f['q'] . '%';
             $q->where(fn ($w) => $w->where('transaction', 'like', $term)->when(\App\Models\Disbursement::hasRefColumns(), fn ($x) => $x->orWhere('bank_ref', 'like', $term)->orWhere('mpesa_ref', 'like', $term))->orWhere('loan_id', ltrim($f['q'], '#'))
-                ->orWhereHas('loan.user', fn ($u) => $u->where('name', 'like', $term)->orWhere('phone', 'like', $term)));
+                ->orWhereHas('loan.user', fn ($u) => $u->where('name', 'like', $term)->orWhere('phone', 'like', \App\Support\Phone::like($f['q']))));
         }
 
         $totals = (clone $q)->toBase()->selectRaw('count(*) as n, sum(amount) as amount, sum(coalesce(processing_fee,0)) as fees')->first();

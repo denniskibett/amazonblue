@@ -39,7 +39,7 @@ class CashDeskController extends Controller
                     }
                     $w->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%")
                         ->orWhere('email', 'like', "%{$q}%")
-                        ->orWhere('phone', 'like', "%{$q}%")
+                        ->orWhere('phone', 'like', \App\Support\Phone::like($q))
                         ->orWhere('id_number', 'like', "%{$q}%"));
                 })
                 ->latest('id')->limit(15)->get();

@@ -104,6 +104,12 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
             ?? (array_key_exists($key, self::ID_TYPES) ? $key : $value);
     }
 
+    /** Phones are stored as +2547… (owner, 16 Nov 2026), so 07… and +254 7… are the same number everywhere. */
+    protected function phone(): Attribute
+    {
+        return Attribute::make(set: fn ($value) => \App\Support\Phone::normal($value));
+    }
+
     /** Reads and writes id_type in the standard form, so "National ID" on old rows matches the KYC form's national_id. */
     protected function idType(): Attribute
     {

@@ -28,7 +28,7 @@ class RegisteredUserController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $request->merge(['phone' => preg_replace('/[\s-]/', '', (string) $request->input('phone'))]);
+        $request->merge(['phone' => \App\Support\Phone::normal(preg_replace('/[\s-]/', '', (string) $request->input('phone')))]);
         $request->validate([
             'account_type' => ['required', Rule::in(['individual'])],
             'name' => ['required', 'string', 'max:255'],

@@ -60,6 +60,7 @@ class CollectionAgenciesController extends Controller
 
     public function storeCollector(Request $request, CollectionAgency $agency): RedirectResponse
     {
+        $request->merge(['phone' => \App\Support\Phone::normal($request->input('phone'))]);
         $data = $request->validate([
             'name' => 'required|string|max:120', 'email' => 'required|email|max:160|unique:users,email', 'phone' => 'required|string|max:30|unique:users,phone',
             'password' => ['required', Password::min(10)],

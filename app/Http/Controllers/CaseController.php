@@ -74,7 +74,7 @@ class CaseController extends Controller
                   ->orWhereHas('user', function ($uq) use ($search) {
                       $uq->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%");
+                        ->orWhere('phone', 'like', \App\Support\Phone::like($search));
                   });
             });
         }

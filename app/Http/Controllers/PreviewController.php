@@ -25,7 +25,7 @@ class PreviewController extends Controller
         // real accounts of every role except super-admin (owner, 3 Nov 2026): walk a journey as the person who does it
         $accounts = User::role($only ? [$only] : $roles)->whereNull('deleted_at')
             ->whereDoesntHave('roles', fn ($r) => $r->where('name', 'super-admin'))
-            ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%")->orWhere('phone', 'like', "%{$q}%")))
+            ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%")->orWhere('phone', 'like', \App\Support\Phone::like($q))))
             ->with('roles:id,name')->withCount('loans')->orderByDesc('loans_count')->limit(80)->get(['id', 'name', 'email', 'phone']);
 
         return view('preview.index', ['roles' => Preview::staffRoles(), 'customers' => $accounts, 'q' => $q, 'only' => $only, 'filterRoles' => $roles, 'active' => Preview::active()]);

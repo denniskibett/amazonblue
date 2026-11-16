@@ -446,6 +446,9 @@ class UserController extends Controller
         Log::info('Validating user data for user ID: ' . $userId);
         Log::info('Request method: ' . $request->method());
         
+        if ($request->filled('phone')) {
+            $request->merge(['phone' => \App\Support\Phone::normal($request->input('phone'))]);
+        }
         $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $userId,
