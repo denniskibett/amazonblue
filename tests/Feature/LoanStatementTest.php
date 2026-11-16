@@ -92,7 +92,7 @@ class LoanStatementTest extends TestCase
         $url = $page->viewData('share')['url'];
         auth()->logout();
 
-        $this->get($url)->assertOk()->assertSee('Loan Statement')->assertSee('Download PDF')->assertSee('End of statement')->assertSee('noindex', false);
+        $this->get($url)->assertOk()->assertSee('Loan Statement')->assertSee('Download PDF')->assertSee('Clear your loan')->assertSee(config('lending.partner_funding.bank_account_number'))->assertSee('Loan 529')->assertSee('End of statement')->assertSee('noindex', false);
         $this->get(route('statement.shared', 529))->assertForbidden();                 // no signature
         $this->get(str_replace('/statement/529', '/statement/528', $url))->assertForbidden();   // another loan with this signature
         Carbon::setTestNow(now()->addDays(31));
