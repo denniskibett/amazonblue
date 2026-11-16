@@ -252,10 +252,10 @@
             </td>
             <td class="py-3 text-right">
               <div class="inline-flex items-center gap-2">
-              <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="View loan #{{ $loan->id }}"><x-ui.icon name="eye" class="size-3.5" />View loan</a>
+              <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-gray-300 bg-white p-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="View loan #{{ $loan->id }}"><x-ui.icon name="eye" class="size-4" /><span class="sr-only">View loan</span></a>
               {{-- copy the borrower's statement link (owner, 16 Nov 2026) --}}
-              <button type="button" data-copy="{{ \App\Http\Controllers\LoanStatementController::share($loan)['url'] }}" onclick="azCopyLink(this)" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="Copy the statement link for loan #{{ $loan->id }}">
-                <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Link</span>
+              <button type="button" data-copy="{{ \App\Http\Controllers\LoanStatementController::share($loan)['url'] }}" onclick="azCopyLink(this)" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-gray-300 bg-white p-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="Copy the statement link for loan #{{ $loan->id }}">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span class="sr-only">Copy link</span>
               </button>
               </div>
             </td>
@@ -383,10 +383,10 @@
             </td>
             <td class="py-3 text-right">
               <div class="inline-flex items-center gap-2">
-              <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="View loan #{{ $loan->id }}"><x-ui.icon name="eye" class="size-3.5" />View loan</a>
+              <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-gray-300 bg-white p-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="View loan #{{ $loan->id }}"><x-ui.icon name="eye" class="size-4" /><span class="sr-only">View loan</span></a>
               {{-- copy the borrower's statement link (owner, 16 Nov 2026) --}}
-              <button type="button" data-copy="{{ \App\Http\Controllers\LoanStatementController::share($loan)['url'] }}" onclick="azCopyLink(this)" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="Copy the statement link for loan #{{ $loan->id }}">
-                <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Link</span>
+              <button type="button" data-copy="{{ \App\Http\Controllers\LoanStatementController::share($loan)['url'] }}" onclick="azCopyLink(this)" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-gray-300 bg-white p-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="Copy the statement link for loan #{{ $loan->id }}">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span class="sr-only">Copy link</span>
               </button>
               </div>
             </td>
@@ -513,10 +513,10 @@
             </td>
             <td class="py-3 text-right">
               <div class="inline-flex items-center gap-2">
-              <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="View loan #{{ $loan->id }}"><x-ui.icon name="eye" class="size-3.5" />View loan</a>
+              <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-gray-300 bg-white p-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="View loan #{{ $loan->id }}"><x-ui.icon name="eye" class="size-4" /><span class="sr-only">View loan</span></a>
               {{-- copy the borrower's statement link (owner, 16 Nov 2026) --}}
-              <button type="button" data-copy="{{ \App\Http\Controllers\LoanStatementController::share($loan)['url'] }}" onclick="azCopyLink(this)" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="Copy the statement link for loan #{{ $loan->id }}">
-                <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Link</span>
+              <button type="button" data-copy="{{ \App\Http\Controllers\LoanStatementController::share($loan)['url'] }}" onclick="azCopyLink(this)" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-gray-300 bg-white p-2 text-theme-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]" title="Copy the statement link for loan #{{ $loan->id }}">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span class="sr-only">Copy link</span>
               </button>
               </div>
             </td>
@@ -851,7 +851,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // copy a statement link from the due-loans table (owner, 16 Nov 2026)
   window.azCopyLink = window.azCopyLink || function (b) {
     navigator.clipboard.writeText(b.dataset.copy).then(() => {
-      const t = b.querySelector('span'); const was = t.textContent; t.textContent = 'Copied'; setTimeout(() => t.textContent = was, 1500);
+      const s = b.querySelector("svg"), was = s.innerHTML;
+      s.innerHTML = '<path d="M20 6 9 17l-5-5"/>'; b.classList.add("!text-success-600", "!border-success-500"); b.setAttribute("aria-label", "Copied");
+      setTimeout(() => { s.innerHTML = was; b.classList.remove("!text-success-600", "!border-success-500"); b.removeAttribute("aria-label"); }, 1500);
     });
   };
 </script>
