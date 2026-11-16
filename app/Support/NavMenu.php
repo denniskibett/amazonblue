@@ -24,6 +24,8 @@ class NavMenu
         $groups['Overview'] = [
           ['Dashboard', 'dashboard', 'grid', true, ['dashboard'], null],
           ['My Inbox', 'staff.inbox', 'inbox', $u->isStaff(), ['staff.inbox'], null],
+          // staff mail (owner, 16 Nov 2026): only staff on the mail domain
+          ['Mail', 'staff.mail.index', 'mail', $u->canUseStaffMail(), ['staff.mail.*'], null],
         ];
         if ($staff) {
           $groups['Needs Attention'] = [

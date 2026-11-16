@@ -174,6 +174,24 @@ Route::middleware('auth')->prefix('account')->name('account.')->group(function (
 });
 
 // ============ STAFF DASHBOARD (business processes; customers are sent to /account) ============
+// ============ STAFF MAIL (owner, 16 Nov 2026) ============
+// Staff on the mail domain read and send their own mail (IMAP/SMTP to the VPS mail server, nothing stored).
+// Everyone else gets a 404 (EnsureStaffMail).
+Route::middleware(['auth', 'verified', 'staff.mail'])->prefix('staff/mail')->name('staff.mail.')
+    ->controller(\App\Http\Controllers\Staff\MailController::class)->group(function () {
+        $folders = array_keys(\App\Services\StaffMail\Mailbox::FOLDERS);
+        Route::get('/', 'index')->name('index');
+        Route::get('unlock', 'unlockForm')->name('unlock');
+        Route::post('unlock', 'unlock')->middleware('throttle:5,1')->name('unlock.store');
+        Route::post('lock', 'lock')->name('lock');
+        Route::get('compose', 'compose')->name('compose');
+        Route::post('send', 'send')->middleware('throttle:20,10')->name('send');
+        Route::post('{folder}/bulk', 'bulk')->whereIn('folder', $folders)->name('bulk');
+        Route::get('{folder}/{uid}', 'show')->whereIn('folder', $folders)->whereNumber('uid')->name('show');
+        Route::get('{folder}/{uid}/attachments/{index}', 'attachment')->whereIn('folder', $folders)
+            ->whereNumber('uid')->whereNumber('index')->name('attachment');
+    });
+
 Route::middleware(['auth', 'verified', 'staff'])->group(function () {
     
     // Dashboard - All authenticated users
@@ -564,6 +582,9 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             Route::post('integrations/{slug}', [\App\Http\Controllers\Staff\IntegrationsController::class, 'update'])->name('integrations.update');
             Route::post('integrations/{slug}/toggle', [\App\Http\Controllers\Staff\IntegrationsController::class, 'toggle'])->name('integrations.toggle');
             Route::delete('integrations/{slug}', [\App\Http\Controllers\Staff\IntegrationsController::class, 'destroy'])->name('integrations.destroy');
+            // staff mail (16 Nov 2026): reaches IMAP and SMTP with the saved settings; logs in to nothing
+            Route::post('integrations/staff-mail/test', [\App\Http\Controllers\Staff\StaffMailIntegrationController::class, 'test'])
+                ->middleware('throttle:10,1')->name('integrations.staff-mail.test');
         });
         Route::middleware('permission:manage API tokens')->group(function () {
             // the test APK behind /app (owner, 14 Nov 2026)

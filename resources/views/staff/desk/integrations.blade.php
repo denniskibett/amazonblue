@@ -29,7 +29,7 @@
               {{-- Sharet Pay: Not connected / On · tested 5 minutes ago / On · last test failed / Off · … --}}
               @php
                 $t = $c['test'];
-                $status = ! $c['connected'] ? 'Not connected' : (($c['enabled'] ? 'On' : 'Off') . ' · ' . (! $t ? 'not tested yet' : ($t['ok'] ? 'tested ' . $t['when'] : 'last test failed')) . ' · ' . $c['key_mode']);
+                $status = ! $c['connected'] ? 'Not connected' : (($c['enabled'] ? 'On' : 'Off') . ' · ' . (! $t ? 'not tested yet' : ($t['ok'] ? 'tested ' . $t['when'] : 'last test failed')) . ($c['key_mode'] ? ' · ' . $c['key_mode'] : ''));
                 $dot = ! $c['connected'] ? 'bg-gray-300 dark:bg-gray-600' : ($t && ! $t['ok'] ? 'bg-warning-500' : ($c['enabled'] ? 'bg-success-500' : 'bg-gray-400'));
               @endphp
               <p class="mt-3 flex items-center gap-2 text-theme-xs font-medium text-gray-500 dark:text-gray-400" data-integration-status="{{ $c['slug'] }}">
@@ -65,7 +65,7 @@
                 @csrf
                 <button type="submit" role="switch" aria-checked="{{ $c['enabled'] ? 'true' : 'false' }}" aria-label="Switch {{ $c['name'] }} {{ $c['enabled'] ? 'off' : 'on' }}"
                   @disabled($locked) title="{{ $locked ? 'Connect first' : ($c['enabled'] ? 'Switch off' : 'Switch on') }}"
-                  data-confirm="{{ $c['enabled'] ? 'Switch ' . $c['name'] . ' off? Its saved values stop applying' . ($c['slug'] === 'mpesa' ? ' and M-Pesa payments stop.' : ($c['slug'] === 'sharet' ? ' and borrowers no longer see Sharet Pay. The own paybill keeps working.' : ' and .env is used.')) : 'Switch ' . $c['name'] . ' on?' . ($c['slug'] === 'sharet' ? ' Borrowers then see Sharet Pay on their repay screen.' : '') }}"
+                  data-confirm="{{ $c['enabled'] ? 'Switch ' . $c['name'] . ' off? Its saved values stop applying' . ($c['slug'] === 'mpesa' ? ' and M-Pesa payments stop.' : ($c['slug'] === 'sharet' ? ' and borrowers no longer see Sharet Pay. The own paybill keeps working.' : ($c['slug'] === 'staff-mail' ? ' and the Mail page closes for everyone. No mail is lost: it stays on the mail server.' : ' and .env is used.'))) : 'Switch ' . $c['name'] . ' on?' . ($c['slug'] === 'sharet' ? ' Borrowers then see Sharet Pay on their repay screen.' : ($c['slug'] === 'staff-mail' ? ' Staff on the allowed domain then see Mail.' : '')) }}"
                   class="relative inline-flex h-6 w-[52px] shrink-0 items-center rounded-full p-0.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40 {{ $c['enabled'] ? 'bg-brand-500 hover:bg-brand-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700' }}">
                   <span class="block h-5 w-[30px] rounded-full bg-white shadow-theme-sm transition-transform {{ $c['enabled'] ? 'translate-x-[18px]' : '' }}"></span>
                 </button>

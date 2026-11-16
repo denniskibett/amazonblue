@@ -45,9 +45,11 @@ class IntegrationsController extends Controller
                 'configured' => $fields->where('set', true)->count(), 'updated' => $row?->updated_at?->diffForHumans(),
                 // Sharet Pay's card: connected = a key is saved; the last Test connection
                 'switch_on' => ! empty($def['switch_on']), 'removable' => ! empty($def['removable']),
+                'required' => array_key_first($def['fields']), 'intro' => $def['intro'] ?? null,
+                'test_url' => ! empty($def['test']) && Route::has($def['test']) ? route($def['test']) : null,
                 'connected' => filled($saved[array_key_first($def['fields'])] ?? null),
                 // which kind of key is saved (its prefix only): live or test
-                'key_mode' => str_starts_with((string) ($saved[array_key_first($def['fields'])] ?? ''), 'sk_live_') ? 'live key' : 'test key',
+                'key_mode' => $slug !== 'sharet' ? null : (str_starts_with((string) ($saved[array_key_first($def['fields'])] ?? ''), 'sk_live_') ? 'live key' : 'test key'),
                 'test' => $test ? ['ok' => (bool) $test['ok'], 'message' => (string) $test['message'], 'when' => Carbon::parse($test['at'])->diffForHumans()] : null];
         })->values();
 
@@ -70,6 +72,16 @@ class IntegrationsController extends Controller
             $rules['fields.SHARET_API_KEY'][] = 'regex:/^sk_(test|live)_[A-Za-z0-9_]+$/';
             $rules['fields.SHARET_BASE_URL'] = ['nullable', 'url:https', 'max:255'];
             $rules['fields.SHARET_PAY_LINK_MINUTES'] = ['nullable', 'integer', 'min:15', 'max:43200'];
+        }
+        if ($slug === 'staff-mail') {
+            $host = ['nullable', 'string', 'max:253', 'regex:/^[A-Za-z0-9.-]+$|^\[?[0-9a-fA-F:]+\]?$/'];
+            $rules['fields.STAFF_MAIL_DOMAIN'] = ['nullable', 'string', 'max:253', 'regex:/^(?=.{3,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i'];
+            $rules['fields.STAFF_MAIL_IMAP_HOST'] = $host;
+            $rules['fields.STAFF_MAIL_SMTP_HOST'] = $host;
+            $rules['fields.STAFF_MAIL_IMAP_PORT'] = ['nullable', 'integer', 'min:1', 'max:65535'];
+            $rules['fields.STAFF_MAIL_SMTP_PORT'] = ['nullable', 'integer', 'min:1', 'max:65535'];
+            $rules['fields.STAFF_MAIL_IDLE_MINUTES'] = ['nullable', 'integer', 'min:5', 'max:1440'];
+            $request->merge(['fields' => array_merge((array) $request->input('fields'), ['STAFF_MAIL_DOMAIN' => strtolower(ltrim(trim((string) $request->input('fields.STAFF_MAIL_DOMAIN')), '@'))])]);
         }
         $data = $request->validate($rules, ['fields.SHARET_API_KEY.regex' => 'A Sharet API key starts with sk_test_ or sk_live_.'])['fields'] ?? [];
 
@@ -118,7 +130,7 @@ class IntegrationsController extends Controller
         $settings = $row->settings ?? [];
         $on = ! ($row->exists ? Integrations::on($slug, $row->enabled, $settings) : empty($def['switch_on']));
         if ($on && ! empty($def['switch_on']) && blank($settings[array_key_first($def['fields'])] ?? null)) {
-            return back()->with('error', 'Connect ' . $def['name'] . ' first: save its API key.');
+            return back()->with('error', 'Connect ' . $def['name'] . ' first: save its ' . ($slug === 'sharet' ? 'API key.' : strtolower($def['fields'][array_key_first($def['fields'])][0]) . '.'));
         }
         unset($settings[Integrations::SHARET_LEGACY_SWITCH]);
         $this->save($row, $def, $request, $settings, $on);

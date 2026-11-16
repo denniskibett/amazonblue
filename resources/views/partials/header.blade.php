@@ -487,6 +487,16 @@
                 Support
               </a>
             </li>
+            {{-- staff mail (owner, 16 Nov 2026): only staff on the mail domain --}}
+            @if (auth()->user()?->canUseStaffMail())
+            <li>
+              <a href="{{ route('staff.mail.index') }}"
+                class="group flex items-center gap-3 rounded-lg px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300">
+                <x-ui.icon name="mail" class="size-6 text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300" />
+                Mail
+              </a>
+            </li>
+            @endif
             {{-- the public website, in a new tab (owner, 16 Nov 2026) --}}
             <li>
               <a href="{{ route('home') }}" target="_blank" rel="noopener"

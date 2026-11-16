@@ -18,7 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
 class TrackPageView
 {
     private const SKIP = ['up', 'mpesa/*', 'preview', 'preview/*', 'assets/*', 'build/*', 'storage/*', 'vendor/*',
-        'telescope*', 'pulse*', '_debugbar/*', 'livewire/*', 'favicon.ico', 'robots.txt', 'sitemap.xml'];
+        'telescope*', 'staff/mail*', 'pulse*', '_debugbar/*', 'livewire/*', 'favicon.ico', 'robots.txt', 'sitemap.xml'];
 
     private const BOTS = '/bot|crawl|spider|slurp|curl|wget|python|httpclient|okhttp|java\/|go-http|headless|lighthouse|pingdom|uptime|monitor|facebookexternalhit|whatsapp|preview|scan/i';
 

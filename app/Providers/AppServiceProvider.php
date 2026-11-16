@@ -26,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
         // The wallet tables are created by our own migrations (database/migrations, 0001_01_02_*),
         // so the package must not load its vendor copies as well.
         WalletConfigure::ignoreMigrations();
+
+        // staff mail talks to the VPS mail server; tests bind a fake
+        $this->app->bind(\App\Services\StaffMail\MailServer::class, \App\Services\StaffMail\ImapMailServer::class);
     }
 
     /**
@@ -223,6 +226,10 @@ class AppServiceProvider extends ServiceProvider
             $audited::observe(\App\Observers\AuditObserver::class);
         }
         // Spatie role changes on users (needs permission.events_enabled = true)
+        // signing out locks the staff mailbox too (the session that held the ciphertext is gone; drop the key cookie)
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Logout::class, function () {
+            \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget(\App\Services\StaffMail\MailCredentials::COOKIE, '/staff/mail'));
+        });
         \Illuminate\Support\Facades\Event::listen(\Spatie\Permission\Events\RoleAttachedEvent::class, function ($event) {
             \App\Services\AuditTrail::record($event->model->getTable(), $event->model->getKey(), 'update', null,
                 ['roles_attached' => \App\Services\AuditTrail::roleNames($event->rolesOrIds)]);

@@ -216,6 +216,16 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet
         return $this->hasAnyRole(self::STAFF_ROLES);
     }
 
+    /** Staff mail (owner, 16 Nov 2026): staff whose own address is on our mail domain (config staffmail.domain). */
+    public function canUseStaffMail(): bool
+    {
+        $domain = strtolower(ltrim(trim((string) config('staffmail.domain')), '@'));
+
+        return config('staffmail.enabled') && $domain !== ''
+            && str_ends_with(strtolower(trim((string) $this->email)), '@' . $domain)
+            && $this->isStaff();
+    }
+
     // staff who see every loan/borrower (not limited to their own clients like brokers)
     public const BACK_OFFICE_ROLES = ['super-admin', 'admin', 'manager', 'loan-officer', 'accountant', 'recovery-officer', 'auditor', 'investment-manager'];
 

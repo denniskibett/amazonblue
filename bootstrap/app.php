@@ -24,6 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.role' => CheckRole::class,
             // dashboard = staff only; borrowers and partners use /account
             'staff' => \App\Http\Middleware\EnsureStaff::class,
+            // staff mail: only staff on the mail domain; everyone else gets a 404 (owner, 16 Nov 2026)
+            'staff.mail' => \App\Http\Middleware\EnsureStaffMail::class,
             // /api/v1 keys from /staff/api-keys (owner, 3 Nov 2026)
             'api.key' => \App\Http\Middleware\AuthenticateApiKey::class,
             'mobile.enabled' => \App\Http\Middleware\MobileApiEnabled::class,
