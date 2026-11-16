@@ -76,4 +76,26 @@ class LoanStatementTest extends TestCase
         $this->assertSame($c->due_date->toDateString(), $interest->date, 'interest is posted at the end of the cycle');
         $this->assertStringContainsString('on ' . number_format((float) \App\Services\Loans\CycleBalance::at($c)['principal'], 2), $interest->text);
     }
+
+    public function test_the_borrower_opens_the_statement_by_its_signed_link_only(): void
+    {
+        $this->seed(RoleSeeder::class);
+        config(['lending.engine' => 'v2']);
+        $this->loanTypes();
+        Carbon::setTestNow('2026-10-17 10:00');
+        $this->loan529();
+        $loan = Loan::findOrFail(529);
+        $staff = User::factory()->create();
+        $staff->assignRole('manager');
+
+        $page = $this->actingAs($staff)->get(route('users.loans.statement', [$loan->user_id, 529]))->assertOk()->assertSee('Share this statement');
+        $url = $page->viewData('shareUrl');
+        auth()->logout();
+
+        $this->get($url)->assertOk()->assertSee('Loan Statement')->assertSee('Download PDF')->assertSee('End of statement')->assertSee('noindex', false);
+        $this->get(route('statement.shared', 529))->assertForbidden();                 // no signature
+        $this->get(str_replace('/statement/529', '/statement/528', $url))->assertForbidden();   // another loan with this signature
+        Carbon::setTestNow(now()->addDays(31));
+        $this->get($url)->assertForbidden();                                           // expired
+    }
 }

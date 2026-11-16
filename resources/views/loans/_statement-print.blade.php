@@ -1,0 +1,3 @@
+{{-- Print styles for the full statement (staff page and the borrower's link). --}}
+  @include('loans._print-css')
+  <style>@page { margin: 9mm; } @media print { .az-line { break-inside: avoid; page-break-inside: avoid; } .az-statement thead { display: table-header-group; } .az-statement .az-ledger { break-inside: auto !important; page-break-inside: auto !important; } .az-statement .az-ledger table { font-size: 10.5px; } .az-statement .az-ledger td, .az-statement .az-ledger th { padding: 2px 6px !important; line-height: 1.25; } .az-statement .az-ledger td span.block { line-height: 1.2; } }</style>

@@ -10,6 +10,7 @@ use App\Services\Loans\CycleBalance;
 use App\Services\Loans\GraceFix;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 
 /**
@@ -23,9 +24,36 @@ class LoanStatementController extends Controller
 {
     private const KIND = ['discount' => 'Discount', 'bad_debt' => 'Written off', 'non_cash' => 'Non-cash credit'];
 
+    /** How long a shared statement link works (owner, 16 Nov 2026). */
+    public const SHARE_DAYS = 30;
+
     public function show(int $user, int $loan): View
     {
         $loan = Loan::with(['user', 'loanType', 'cycles'])->where('user_id', $user)->findOrFail($loan);
+        $until = now()->addDays(self::SHARE_DAYS)->endOfDay();
+        $url = URL::temporarySignedRoute('statement.shared', $until, ['loan' => $loan->id]);
+        $phone = preg_replace('/\D/', '', (string) $loan->user?->phone);
+        $phone = str_starts_with($phone, '0') ? '254' . substr($phone, 1) : $phone;
+        $text = 'Hello ' . trim(explode(' ', (string) $loan->user?->name)[0]) . ', here is your Aimzone loan statement for loan #' . $loan->id
+            . '. You can view, print or save it as a PDF: ' . $url;
+
+        return view('loans.statement', $this->data($loan) + [
+            'shareUrl' => $url, 'shareUntil' => $until,
+            'waUrl' => strlen($phone) >= 11 ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($text) : null,
+        ]);
+    }
+
+    /** The borrower's link: no sign-in, the signature and expiry are checked by the route (owner, 16 Nov 2026). */
+    public function shared(int $loan): View
+    {
+        $loan = Loan::with(['user', 'loanType', 'cycles'])->findOrFail($loan);
+        \Illuminate\Support\Facades\Log::info('Statement link opened', ['loan' => $loan->id, 'ip' => request()->ip()]);
+
+        return view('loans.statement-shared', $this->data($loan));
+    }
+
+    private function data(Loan $loan): array
+    {
         $cycles = $loan->cycles->sortBy('cycle_number')->values();
         $firstCycleId = $cycles->first()?->id;
         $byCycle = fn ($rows) => $rows->groupBy(fn ($r) => $r->loan_cycle_id ?: $firstCycleId);
@@ -116,7 +144,7 @@ class LoanStatementController extends Controller
             $last = $b;
         }
 
-        return view('loans.statement', [
+        return [
             'status' => $this->status($loan, $cycles->last()),
             'loan' => $loan,
             'lines' => $lines,
@@ -124,7 +152,7 @@ class LoanStatementController extends Controller
             'balance' => $last ? (float) $last['final_outstanding'] : 0.0,
             'dueDate' => $cycles->last()?->due_date,
             'totals' => $totals,
-        ]);
+        ];
     }
 
     /** The latest line of the cycle's notes that matches, e.g. "Payment plan agreed by the owner … PENALTIES WAIVED". */

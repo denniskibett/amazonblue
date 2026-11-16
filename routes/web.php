@@ -20,6 +20,9 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/robots.txt', [HomeController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [HomeController::class, 'sitemap'])->name('sitemap');
 // White label & API, with the Android test app on it (owner, 15 Nov 2026; the app page was /app since 11 Nov)
+// a borrower's loan statement, shared by staff as a signed link that expires (owner, 16 Nov 2026)
+Route::get('/statement/{loan}', [\App\Http\Controllers\LoanStatementController::class, 'shared'])
+    ->whereNumber('loan')->middleware(['signed', 'throttle:30,1'])->name('statement.shared');
 Route::get('/white-label', [\App\Http\Controllers\MobileAppController::class, 'show'])->name('site.white-label');
 Route::get('/app', fn () => redirect()->to(route('site.white-label') . '#app', 301))->name('app.download');
 Route::get('/app/download', [\App\Http\Controllers\MobileAppController::class, 'download'])->middleware('throttle:20,1')->name('app.download.file');
