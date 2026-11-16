@@ -21,6 +21,8 @@ class Disbursement extends Model
         'transaction',
         'bank_ref',      // bank Transaction Ref ID (owner, 23 Oct 2026: bank ↔ M-Pesa keeps both references)
         'mpesa_ref',     // M-Pesa code
+        'bank_code',     // our bank, id from resources/data/banks-kenya.txt (owner, 16 Nov 2026)
+        'bank_name',     // its full name as it read that day
         'mode',
         'disburse_date',
         'payment_date',

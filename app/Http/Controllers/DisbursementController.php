@@ -28,7 +28,7 @@ class DisbursementController extends Controller
         $user = $request->user();
         $f = $request->validate([
             'from' => 'nullable|date', 'to' => 'nullable|date', 'q' => 'nullable|string|max:100',
-            'kind' => 'nullable|in:cash,non_cash', 'mode' => 'nullable|string|max:20',
+            'kind' => 'nullable|in:cash,non_cash', 'mode' => 'nullable|string|max:20', 'bank' => 'nullable|string|max:20',
         ]);
 
         $q = Disbursement::query()->with(['loan:id,user_id,loan_type_id,status', 'loan.user:id,name,phone', 'loan.loanType:id,name']);
@@ -47,6 +47,12 @@ class DisbursementController extends Controller
         }
         if (! empty($f['mode'])) {
             $q->where('mode', $f['mode']);
+        }
+        // which bank, or bank payments with no bank recorded yet (owner, 16 Nov 2026)
+        if (($f['bank'] ?? '') === 'missing') {
+            $q->whereIn('mode', array_merge(\App\Support\PaymentModes::BANK, \App\Support\PaymentModes::BOTH))->whereNull('bank_code');
+        } elseif (! empty($f['bank'])) {
+            $q->where('bank_code', $f['bank']);
         }
         if (($f['kind'] ?? null) === 'cash') {
             \App\Services\CustomerWallets::whereCash($q);

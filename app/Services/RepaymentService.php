@@ -42,6 +42,9 @@ class RepaymentService
                 'transaction' => $data['transaction'] ?? 'REPAYMENT',
                 // both references when the money crossed between a bank and M-Pesa (owner, 23 Oct 2026)
                 ...(Repayment::hasRefColumns() ? ['bank_ref' => $data['bank_ref'] ?? null, 'mpesa_ref' => $data['mpesa_ref'] ?? null] : []),
+                // which bank the money went through (owner, 16 Nov 2026)
+                'bank_code' => $data['bank_code'] ?? null,
+                'bank_name' => $data['bank_name'] ?? null,
                 'kind' => $data['kind'] ?? null,
                 'repayment_date' => $data['repayment_date'] ?? now(),
                 'mode' => $data['mode'] ?? 'bank_transfer',

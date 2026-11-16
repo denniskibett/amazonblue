@@ -13,6 +13,9 @@ class Banks
 {
     public const OTHER = 'Other';
 
+    /** Saved as bank_code when staff type a bank that is not on the list (its name goes in bank_name). */
+    public const OTHER_CODE = 'other';
+
     /**
      * @return array<int, array{name: string, code: ?string}>
      */
@@ -46,5 +49,37 @@ class Banks
     public static function names(): array
     {
         return array_column(self::all(), 'name');
+    }
+
+    /** One bank by its id (or its full name, for older forms that sent the name). */
+    public static function find(string $codeOrName): ?array
+    {
+        $key = mb_strtolower(trim($codeOrName));
+        foreach (self::all() as $b) {
+            if (($b['code'] !== null && mb_strtolower($b['code']) === $key) || mb_strtolower($b['name']) === $key) {
+                return $b;
+            }
+        }
+
+        return null;
+    }
+
+    /** id => name for dropdowns (banks with an id only). */
+    public static function options(): array
+    {
+        return collect(self::all())->filter(fn ($b) => $b['code'])->mapWithKeys(fn ($b) => [$b['code'] => $b['name']])->all();
+    }
+
+    /** A short name for statements and lists: "Equity Bank Kenya Limited" -> "Equity Bank". */
+    public static function short(?string $name): ?string
+    {
+        if (! $name) {
+            return null;
+        }
+        $n = preg_replace('/\s*\((K|Kenya)\)\s*/i', ' ', $name);
+        $n = preg_replace('/\s+(PLC|Limited|Ltd\.?)$/i', '', trim($n));
+        $n = preg_replace('/\s+(of\s+)?Kenya$/i', '', trim($n));
+
+        return trim($n) ?: $name;
     }
 }

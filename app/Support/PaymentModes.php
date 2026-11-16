@@ -29,6 +29,40 @@ class PaymentModes
 
     public const BANK = ['bank_transfer', 'pesalink', 'cheque'];
 
+    /** Modes where money goes through our bank, so the bank is recorded (owner, 16 Nov 2026). */
+    public static function needsBank(?string $mode): bool
+    {
+        $mode = self::normalise($mode);
+
+        return in_array($mode, self::BANK, true) || in_array($mode, self::BOTH, true);
+    }
+
+    /**
+     * Which bank (owner, 16 Nov 2026): the id from resources/data/banks-kenya.txt, or "other" with the name typed.
+     * Returns ['bank_code' => …, 'bank_name' => …] (both null when the mode does not go through a bank).
+     */
+    public static function bankFrom(?string $mode, ?string $code, ?string $other = null): array
+    {
+        if (! self::needsBank($mode)) {
+            return ['bank_code' => null, 'bank_name' => null];
+        }
+        $code = trim((string) $code);
+        if ($code === \App\Support\Banks::OTHER_CODE) {
+            $name = trim((string) $other);
+            if ($name === '') {
+                throw \Illuminate\Validation\ValidationException::withMessages(['bank_other' => 'Type the bank\'s name.']);
+            }
+
+            return ['bank_code' => \App\Support\Banks::OTHER_CODE, 'bank_name' => mb_substr($name, 0, 120)];
+        }
+        $bank = $code !== '' ? \App\Support\Banks::find($code) : null;
+        if (! $bank) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['bank_code' => 'Pick the bank the money went through (' . self::label($mode) . ').']);
+        }
+
+        return ['bank_code' => $bank['code'], 'bank_name' => $bank['name']];
+    }
+
     public static function label(?string $mode): string
     {
         return self::MODES[self::normalise($mode)] ?? ucfirst(str_replace('_', ' ', (string) $mode));
@@ -121,6 +155,9 @@ class PaymentModes
         $out = ['mode' => $mode, 'transaction' => $t];
         if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'mpesa_ref')) {
             $out += ['bank_ref' => $bank, 'mpesa_ref' => $mpesa];
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'bank_code')) {
+            $out += self::bankFrom($mode, $request->input('bank_code'), $request->input('bank_other'));
         }
 
         return $out;

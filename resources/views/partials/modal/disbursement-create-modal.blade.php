@@ -180,6 +180,16 @@
                             @foreach (\App\Support\PaymentModes::MODES as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach
                         </select>
                     </div>
+                    {{-- which bank (owner, 16 Nov 2026): required when the money goes through a bank --}}
+                    <div x-show="@js(array_merge(\App\Support\PaymentModes::BANK, \App\Support\PaymentModes::BOTH)).includes(form.mode)">
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Our bank <span class="text-red-500">*</span></label>
+                        <select x-model="form.bank_code" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                            <option value="">Pick the bank…</option>
+                            @foreach (\App\Support\Banks::options() as $code => $name)<option value="{{ $code }}">{{ $name }}</option>@endforeach
+                            <option value="other">Other (type it)</option>
+                        </select>
+                        <input type="text" x-show="form.bank_code === 'other'" x-model="form.bank_other" maxlength="120" class="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" placeholder="The bank's full name">
+                    </div>
 
                     <div x-show="!['bank_to_mpesa', 'mpesa_to_bank'].includes(form.mode)">
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Transaction Reference <span class="text-red-500">*</span></label>
@@ -256,7 +266,7 @@ function disbursementModal() {
             amount: '',
             disburse_date: '',
             transaction: '',
-            bank_ref: '',
+            bank_ref: '', bank_code: '', bank_other: '',
             mpesa_ref: '',
             mode: '',
             payment_date: '',
@@ -529,6 +539,8 @@ function disbursementModal() {
                 this.form.transaction = data.transaction || '';
                 this.form.bank_ref = data.bank_ref || '';
                 this.form.mpesa_ref = data.mpesa_ref || '';
+                this.form.bank_code = data.bank_code || '';
+                this.form.bank_other = data.bank_code === 'other' ? (data.bank_name || '') : '';
                 this.form.mode = data.mode || '';
                 this.form.funding_source = data.funding_source || 'internal';
 
@@ -631,7 +643,7 @@ function disbursementModal() {
                 amount: '',
                 disburse_date: '',
                 transaction: '',
-                bank_ref: '',
+                bank_ref: '', bank_code: '', bank_other: '',
                 mpesa_ref: '',
                 mode: '',
                 payment_date: '',
@@ -836,6 +848,8 @@ function disbursementModal() {
                 formData.append('bank_ref', this.form.bank_ref || '');
                 formData.append('mpesa_ref', this.form.mpesa_ref || '');
                 formData.append('mode', this.form.mode || '');
+                formData.append('bank_code', this.form.bank_code || '');
+                formData.append('bank_other', this.form.bank_other || '');
                 formData.append('payment_date', this.formatDate(this.form.payment_date) || '');
                 formData.append('loan_id', this.loanId);
                 formData.append('loan_cycle_id', this.selectedCycleId);

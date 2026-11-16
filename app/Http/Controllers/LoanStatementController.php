@@ -32,7 +32,9 @@ class LoanStatementController extends Controller
         $disbursements = $byCycle(Disbursement::where('loan_id', $loan->id)->orderBy('disburse_date')->orderBy('id')->get());
         $repayments = $byCycle(Repayment::where('loan_id', $loan->id)->orderBy('repayment_date')->orderBy('id')->get());
         $isCash = fn ($x) => in_array($x->kind, ['cash', null], true);
-        $ref = fn ($x) => trim(ucfirst(str_replace('_', ' ', (string) $x->mode)) . ($x->transaction ? ' · ' . $x->transaction : ''), ' ·') ?: null;
+        // how, which bank (owner, 16 Nov 2026) and the reference: "Bank → M-Pesa · Equity Bank · 5291DJTU6274"
+        $ref = fn ($x) => implode(' · ', array_filter([$x->mode ? \App\Support\PaymentModes::label($x->mode) : null,
+            \App\Support\Banks::short($x->bank_name ?? null), $x->transaction])) ?: null;
 
         $lines = [];
         $balance = 0.0;

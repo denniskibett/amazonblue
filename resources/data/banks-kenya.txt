@@ -3,49 +3,50 @@
 # and Authorised Non-Operating Bank Holding Companies" (July 2026, centralbank.go.ke).
 #
 # Edit freely: one bank per line as   Name | code
-#   - the code is optional (bank / Pesalink code); leave it blank until you need it
+#   - the code is our short id for the bank: it is saved on payments (with the name as it read that day),
+#     so never change or reuse an id once used; a new bank gets a new id (owner, 16 Nov 2026)
 #   - lines starting with # are ignored; keep the list alphabetical
 #   - people whose bank is missing can still pick "Other" and type it
 #
 # Commercial banks
-ABSA Bank Kenya PLC |
-Access Bank (Kenya) PLC |
-African Banking Corporation Limited |
-Bank of Africa Kenya Limited |
-Bank of Baroda (Kenya) Limited |
-Bank of India |
-Citibank N.A Kenya |
-Commercial International Bank (CIB) Kenya Limited |
-Consolidated Bank of Kenya Limited |
-Co-operative Bank of Kenya Limited |
-Credit Bank PLC |
-Development Bank of Kenya Limited |
-Diamond Trust Bank Kenya Limited |
-DIB Bank Kenya Limited |
-Ecobank Kenya Limited |
-Equity Bank Kenya Limited |
-Family Bank Limited |
-Guaranty Trust Bank (K) Ltd |
-Guardian Bank Limited |
-Gulf African Bank Limited |
-Habib Bank A.G Zurich |
-I&M Bank Limited |
-KCB Bank Kenya Limited |
-Kingdom Bank Limited |
-Middle East Bank (K) Limited |
-M-Oriental Bank Limited |
-National Bank of Kenya Limited |
-NCBA Bank Kenya PLC |
-Paramount Bank Limited |
-Premier Bank Kenya Limited |
-Prime Bank Limited |
-SBM Bank Kenya Limited |
-Sidian Bank Limited |
-Spire Bank Ltd |
-Stanbic Bank Kenya Limited |
-Standard Chartered Bank Kenya Limited |
-UBA Kenya Bank Limited |
-Victoria Commercial Bank PLC |
+ABSA Bank Kenya PLC | absa
+Access Bank (Kenya) PLC | access
+African Banking Corporation Limited | abc
+Bank of Africa Kenya Limited | boa
+Bank of Baroda (Kenya) Limited | baroda
+Bank of India | boi
+Citibank N.A Kenya | citi
+Commercial International Bank (CIB) Kenya Limited | cib
+Consolidated Bank of Kenya Limited | consolidated
+Co-operative Bank of Kenya Limited | coop
+Credit Bank PLC | credit
+Development Bank of Kenya Limited | dbk
+Diamond Trust Bank Kenya Limited | dtb
+DIB Bank Kenya Limited | dib
+Ecobank Kenya Limited | ecobank
+Equity Bank Kenya Limited | equity
+Family Bank Limited | family
+Guaranty Trust Bank (K) Ltd | gtbank
+Guardian Bank Limited | guardian
+Gulf African Bank Limited | gulf
+Habib Bank A.G Zurich | habib
+I&M Bank Limited | im
+KCB Bank Kenya Limited | kcb
+Kingdom Bank Limited | kingdom
+Middle East Bank (K) Limited | meb
+M-Oriental Bank Limited | moriental
+National Bank of Kenya Limited | nbk
+NCBA Bank Kenya PLC | ncba
+Paramount Bank Limited | paramount
+Premier Bank Kenya Limited | premier
+Prime Bank Limited | prime
+SBM Bank Kenya Limited | sbm
+Sidian Bank Limited | sidian
+Spire Bank Ltd | spire
+Stanbic Bank Kenya Limited | stanbic
+Standard Chartered Bank Kenya Limited | stanchart
+UBA Kenya Bank Limited | uba
+Victoria Commercial Bank PLC | victoria
 
 # Mortgage finance institutions
-HFCB Limited |
+HFCB Limited | hfc

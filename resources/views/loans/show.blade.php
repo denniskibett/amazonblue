@@ -375,7 +375,7 @@
                                         @endif
                                     </div>
                                     <div class="text-right">
-                                        <p class="text-xs text-gray-500">{{ $disbursement->transaction ?? 'N/A' }}@if ($disbursement->bank_ref && $disbursement->mpesa_ref) <span class="whitespace-nowrap">· M-Pesa {{ $disbursement->mpesa_ref }}</span>@endif</p>
+                                        <p class="text-xs text-gray-500">{{ $disbursement->transaction ?? 'N/A' }}@if ($disbursement->bank_name) <span class="whitespace-nowrap">· {{ \App\Support\Banks::short($disbursement->bank_name) }}</span>@endif @if ($disbursement->bank_ref && $disbursement->mpesa_ref) <span class="whitespace-nowrap">· M-Pesa {{ $disbursement->mpesa_ref }}</span>@endif</p>
                                         <p class="text-xs text-gray-400"><x-pay-mode :mode="$disbursement->mode">{{ $disbursement->mode ?? '' }}</x-pay-mode></p>
                                         @if(! auth()->user()->hasRole('borrower'))
                                         <div class="flex space-x-1 mt-1 justify-end">
@@ -435,7 +435,7 @@
                                         <p class="text-xs text-green-600">Cycle #{{ $activeCycle->cycle_number ?? 1 }}</p>
                                     </div>
                                     <div class="text-right">
-                                        <p class="text-xs text-gray-500">{{ $repayment->transaction ?? 'N/A' }}@if ($repayment->bank_ref && $repayment->mpesa_ref) <span class="whitespace-nowrap">· bank {{ $repayment->bank_ref }}</span>@endif</p>
+                                        <p class="text-xs text-gray-500">{{ $repayment->transaction ?? 'N/A' }}@if ($repayment->bank_name) <span class="whitespace-nowrap">· {{ \App\Support\Banks::short($repayment->bank_name) }}</span>@endif @if ($repayment->bank_ref && $repayment->mpesa_ref) <span class="whitespace-nowrap">· bank {{ $repayment->bank_ref }}</span>@endif</p>
                                         <p class="text-xs text-gray-400"><x-pay-mode :mode="$repayment->mode">{{ $repayment->mode ?? '' }}</x-pay-mode></p>
                                         @if(! auth()->user()->hasRole('borrower'))
                                         <div class="flex space-x-1 mt-1 justify-end">

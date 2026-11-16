@@ -22,7 +22,7 @@
   ]" />
 
   <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-    <form method="GET" class="grid grid-cols-1 gap-3 border-b border-gray-200 p-5 dark:border-gray-800 sm:grid-cols-2 lg:grid-cols-6">
+    <form method="GET" class="grid grid-cols-1 gap-3 border-b border-gray-200 p-5 dark:border-gray-800 sm:grid-cols-2 lg:grid-cols-7">
       <input class="{{ $input }} lg:col-span-2" type="search" name="q" value="{{ $f['q'] ?? '' }}" placeholder="Borrower, phone, loan # or reference">
       <input class="{{ $input }}" type="date" data-range-end="to" name="from" value="{{ $f['from'] ?? '' }}" title="Dates" placeholder="Dates">
       <input class="{{ $input }}" type="date" name="to" value="{{ $f['to'] ?? '' }}" title="To">
@@ -30,6 +30,12 @@
         <option value="">Cash and book entries</option>
         <option value="cash" @selected(($f['kind'] ?? '') === 'cash')>Cash only</option>
         <option value="non_cash" @selected(($f['kind'] ?? '') === 'non_cash')>Book entries only</option>
+      </select>
+      <select class="{{ $input }}" name="bank" title="Our bank">
+        <option value="">All banks</option>
+        <option value="missing" @selected(($f['bank'] ?? '') === 'missing')>Bank not recorded</option>
+        @foreach (\App\Support\Banks::options() as $bc => $bn)<option value="{{ $bc }}" @selected(($f['bank'] ?? '') === $bc)>{{ \App\Support\Banks::short($bn) }}</option>@endforeach
+        <option value="other" @selected(($f['bank'] ?? '') === 'other')>Other banks</option>
       </select>
       <div class="flex gap-2">
         <button class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-theme-sm font-medium text-white hover:bg-brand-600"><x-ui.icon name="filter" class="size-4" /> Filter</button>
@@ -60,7 +66,7 @@
                 <td class="whitespace-nowrap px-5 py-3 text-right text-gray-600 dark:text-gray-400">{{ (float) $d->processing_fee ? number_format((float) $d->processing_fee, 2) : '' }}</td>
                 <td class="px-5 py-3 capitalize text-gray-600 dark:text-gray-400"><x-pay-mode :mode="$d->mode">{{ str_replace('_', ' ', (string) $d->mode) }}</x-pay-mode></td>
                 <td class="px-5 py-3"><span class="whitespace-nowrap rounded-full px-2.5 py-0.5 text-theme-xs font-medium {{ $kindTone[$kind] ?? $kindTone['non_cash'] }}">{{ str_replace('_', ' ', $kind) }}</span></td>
-                <td class="max-w-[220px] truncate px-5 py-3 font-mono text-theme-xs text-gray-500 dark:text-gray-400" title="{{ $d->transaction }}">{{ $d->transaction }}@if ($d->bank_ref && $d->mpesa_ref)<span class="block">M-Pesa {{ $d->mpesa_ref }}</span>@endif</td>
+                <td class="max-w-[220px] truncate px-5 py-3 font-mono text-theme-xs text-gray-500 dark:text-gray-400" title="{{ $d->transaction }}">{{ $d->transaction }}@if ($d->bank_name)<span class="block font-sans">{{ \App\Support\Banks::short($d->bank_name) }}</span>@endif @if ($d->bank_ref && $d->mpesa_ref)<span class="block">M-Pesa {{ $d->mpesa_ref }}</span>@endif</td>
                 <td class="px-5 py-3 text-right"><a href="{{ route('disbursements.show', $d->id) }}" class="text-gray-500 hover:text-brand-500 dark:text-gray-400" title="Open"><x-ui.icon name="eye" class="size-4" /></a></td>
               </tr>
             @endforeach

@@ -33,7 +33,8 @@ class TopUpController extends Controller
         $amount = (float) (json_decode((string) $r->payload, true)['amount'] ?? 0);
         $loan = Loan::findOrFail($r->loan_id);
         try {
-            $plan = $topUp->execute($loan, $amount, ['transaction' => $data['transaction'], 'mode' => $data['mode']], $request->user(), $id);
+            $plan = $topUp->execute($loan, $amount, ['transaction' => $data['transaction'], 'mode' => $data['mode']]
+                + \App\Support\PaymentModes::bankFrom($data['mode'], $request->input('bank_code'), $request->input('bank_other')), $request->user(), $id);
         } catch (\DomainException $e) {
             return back()->with('error', 'Top-up not sent: ' . $e->getMessage());
         }

@@ -61,10 +61,14 @@ class PaymentRefsTest extends TestCase
         $base = ['loan_id' => 901, 'amount' => 10000, 'disburse_date' => '2026-10-23', 'mode' => 'bank_to_mpesa'];
         $this->actingAs($this->admin)->postJson(route('disbursements.store'), $base + ['bank_ref' => '5690NMQS2509'])
             ->assertStatus(422)->assertJsonValidationErrors('mpesa_ref');
-        $this->actingAs($this->admin)->postJson(route('disbursements.store'), $base + ['bank_ref' => '5690NMQS2509', 'mpesa_ref' => 'ujh6oa6drb'])->assertCreated();
+        // which bank is required when money goes through a bank (owner, 16 Nov 2026)
+        $this->actingAs($this->admin)->postJson(route('disbursements.store'), $base + ['bank_ref' => '5690NMQS2509', 'mpesa_ref' => 'ujh6oa6drb'])
+            ->assertStatus(422)->assertJsonValidationErrors('bank_code');
+        $this->actingAs($this->admin)->postJson(route('disbursements.store'), $base + ['bank_ref' => '5690NMQS2509', 'mpesa_ref' => 'ujh6oa6drb', 'bank_code' => 'equity'])->assertCreated();
 
         $d = Disbursement::where('loan_id', 901)->firstOrFail();
         $this->assertSame(['5690NMQS2509', '5690NMQS2509', 'UJH6OA6DRB', 'bank_to_mpesa'], [$d->transaction, $d->bank_ref, $d->mpesa_ref, $d->mode]);
+        $this->assertSame(['equity', 'Equity Bank Kenya Limited'], [$d->bank_code, $d->bank_name]);
     }
 
     public function test_the_same_money_is_refused_twice_on_a_loan_and_an_mpesa_code_fills_mpesa_ref(): void
@@ -92,5 +96,20 @@ class PaymentRefsTest extends TestCase
         $this->artisan('payments:refs', ['--apply' => true])->assertSuccessful();
         $row = DB::table('disbursements')->where('loan_id', 903)->first();
         $this->assertSame(['5690NMQS2509', null, 'bank_to_mpesa'], [$row->bank_ref, $row->mpesa_ref, $row->mode]);
+    }
+
+    public function test_a_bank_not_on_the_list_is_typed_and_mpesa_needs_no_bank(): void
+    {
+        $this->loanRow(904, 1, 10000, 10000, '2026-10-20', '2026-10-30', 'disbursed', 1, 30);
+        $this->cycleRow(904, 904, 1, 0, 2000, 12000, 20, '2026-10-20', '2026-10-30', 'active', 'Initial');
+        $pay = fn (array $extra) => $this->actingAs($this->admin)->postJson(route('repayments.store'), $extra + ['loan_id' => 904, 'loan_cycle_id' => 904, 'amount' => 1000, 'repayment_date' => '2026-10-23']);
+
+        $pay(['transaction' => 'FT26XY00001', 'mode' => 'bank_transfer', 'bank_code' => 'other'])->assertStatus(422)->assertJsonValidationErrors('bank_other');
+        $pay(['transaction' => 'FT26XY00001', 'mode' => 'bank_transfer', 'bank_code' => 'other', 'bank_other' => 'Rafiki Microfinance Bank'])->assertOk();
+        $pay(['transaction' => 'TJN4H7K2LX', 'mode' => 'mpesa', 'bank_code' => 'equity'])->assertOk();
+
+        $rows = Repayment::where('loan_id', 904)->orderBy('id')->get();
+        $this->assertSame(['other', 'Rafiki Microfinance Bank'], [$rows[0]->bank_code, $rows[0]->bank_name]);
+        $this->assertSame([null, null], [$rows[1]->bank_code, $rows[1]->bank_name], 'M-Pesa money does not go through our bank');
     }
 }

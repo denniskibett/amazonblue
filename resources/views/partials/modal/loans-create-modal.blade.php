@@ -328,6 +328,13 @@
                                 <option value="">Our money (house)</option>
                                 @foreach ($sendLines as $ln)<option value="{{ $ln['id'] }}">#{{ $ln['id'] }} {{ $ln['name'] }} · KES {{ number_format($ln['free'], 2) }} free</option>@endforeach
                             </select></label>
+                        <label class="text-xs text-gray-600 dark:text-gray-400" x-show="['bank_to_mpesa','mpesa_to_bank','bank_transfer','pesalink','cheque'].includes(send.mode)">Our bank <span class="text-red-500">*</span>
+                            <select x-model="send.bank_code" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                <option value="">Pick the bank…</option>
+                                @foreach (\App\Support\Banks::options() as $bc => $bn)<option value="{{ $bc }}">{{ $bn }}</option>@endforeach
+                                <option value="other">Other (type it)</option>
+                            </select>
+                            <input x-show="send.bank_code === 'other'" x-model="send.bank_other" maxlength="120" placeholder="The bank's full name" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
                         <label class="text-xs text-gray-600 dark:text-gray-400" x-show="['bank_to_mpesa','mpesa_to_bank','bank_transfer','pesalink','cheque'].includes(send.mode)">Bank reference
                             <input x-model="send.bank_ref" maxlength="100" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm uppercase dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
                         <label class="text-xs text-gray-600 dark:text-gray-400" x-show="['bank_to_mpesa','mpesa_to_bank','mpesa'].includes(send.mode)">M-Pesa code
@@ -492,7 +499,7 @@ function loansCreateModal() {
         borrowerName: '',
 
         // money sent with the loan (owner, 15 Nov 2026)
-        send: { on: false, amount: '', date: '', mode: 'mpesa', bank_ref: '', mpesa_ref: '', ref: '', line: '', notes: '' },
+        send: { on: false, amount: '', date: '', mode: 'mpesa', bank_ref: '', mpesa_ref: '', ref: '', line: '', notes: '', bank_code: '', bank_other: '' },
 
         // Loan data
         loanId: null,
@@ -898,7 +905,7 @@ function loansCreateModal() {
         },
 
         resetForm() {
-            this.send = { on: false, amount: '', date: '', mode: 'mpesa', bank_ref: '', mpesa_ref: '', ref: '', line: '', notes: '' };
+            this.send = { on: false, amount: '', date: '', mode: 'mpesa', bank_ref: '', mpesa_ref: '', ref: '', line: '', notes: '', bank_code: '', bank_other: '' };
             this.form = {
                 amount: '',
                 borrow_date: '',
@@ -1069,6 +1076,14 @@ function loansCreateModal() {
                 return;
             }
 
+            // which bank (owner, 16 Nov 2026): checked before the loan is saved, so the money row can't fail after it
+            if (!this.editId && this.send.on && @js(array_merge(\App\Support\PaymentModes::BANK, \App\Support\PaymentModes::BOTH)).includes(this.send.mode)
+                && (!this.send.bank_code || (this.send.bank_code === 'other' && !this.send.bank_other.trim()))) {
+                if (typeof window.showAlert === 'function') window.showAlert('error', 'Which bank?', 'Pick the bank the money went through, under Money sent.');
+                else alert('Pick the bank the money went through, under Money sent.');
+                return;
+            }
+
             this.isSubmitting = true;
             // what was sent, captured now: the "create another loan?" dialog sits outside this modal, and nothing
             // that happens while it is open may lose these (owner, 15 Nov 2026)
@@ -1191,6 +1206,8 @@ function loansCreateModal() {
             fd.append('mode', send.mode);
             fd.append('kind', 'cash');
             if (send.bank_ref) fd.append('bank_ref', send.bank_ref.trim());
+            fd.append('bank_code', send.bank_code || '');
+            fd.append('bank_other', send.bank_other || '');
             if (send.mpesa_ref) fd.append('mpesa_ref', send.mpesa_ref.trim().toUpperCase());
             fd.append('transaction', (send.ref || send.mpesa_ref || send.bank_ref || '').trim());
             if (send.notes) fd.append('notes', send.notes);
