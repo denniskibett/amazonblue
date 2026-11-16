@@ -16,9 +16,19 @@
       <button type="button" @click="close()" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800" aria-label="Close"><x-ui.icon name="x" class="size-5" /></button>
     </div>
 
-    <form method="POST" :action="submitUrl" class="space-y-5 p-6 text-sm" @submit="if (! (d && d.ok)) { $event.preventDefault(); }">
+    <form method="POST" :action="submitUrl" class="space-y-5 p-6 text-sm" @submit="if (! canSubmit()) { $event.preventDefault(); }">
       <input type="hidden" name="_token" :value="token">
       <input type="hidden" name="decision" value="approve">
+      <input type="hidden" name="merge" :value="mode === 'merge' ? 1 : 0">
+
+      {{-- already rolled over (owner, 16 Nov 2026): staff booked a rollover just before (or after) this request --}}
+      <template x-if="d && d.rolled">
+        <div class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+          <p class="flex items-center gap-2 font-semibold"><x-ui.icon name="alert" class="size-4" /> Seems this loan has already been rolled over</p>
+          <p class="mt-1 text-theme-xs" x-text="'Cycle ' + d.rolled.n + ' (' + fmt(d.rolled.start) + ' → ' + fmt(d.rolled.due) + ') was booked on ' + fmt(d.rolled.booked)
+            + (d.rolled.after ? ', after the borrower asked on ' : ', before the borrower asked on ') + fmt(d.rolled.asked) + '. Merge this request into it, or treat it as a new request below.'"></p>
+        </div>
+      </template>
 
       <template x-if="d && d.cycle">
         <div class="grid grid-cols-2 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
@@ -30,7 +40,13 @@
       </template>
 
       <fieldset class="space-y-2">
-        <legend class="mb-1 font-medium text-gray-800 dark:text-white/90">The new cycle starts</legend>
+        <legend class="mb-1 font-medium text-gray-800 dark:text-white/90" x-text="d && d.rolled ? 'What to do with this request' : 'The new cycle starts'"></legend>
+        <label x-show="d && d.rolled" class="flex items-start gap-3 rounded-lg border p-3" :class="mode === 'merge' ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-500/10' : 'border-gray-200 dark:border-gray-700'">
+          <input type="radio" value="merge" x-model="mode" class="mt-1">
+          <span><span class="font-medium text-gray-800 dark:text-white/90" x-text="d && d.rolled ? 'Merge into the rollover already booked (cycle ' + d.rolled.n + ', due ' + fmt(d.rolled.due) + ')' : ''"></span>
+            <span class="block text-theme-xs text-gray-500">Recommended: nothing new is booked. The request is closed as covered and the borrower is told their due date.</span></span>
+        </label>
+        <p x-show="d && d.rolled" class="pt-2 text-theme-xs font-medium uppercase tracking-wide text-gray-500">A new request altogether: ignore that rollover and extend again from</p>
         <label class="flex items-start gap-3 rounded-lg border p-3" :class="mode === 'due' ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-500/10' : 'border-gray-200 dark:border-gray-700'">
           <input type="radio" value="due" x-model="mode" @change="preview()" class="mt-1">
           <span><span class="font-medium text-gray-800 dark:text-white/90" x-text="'From the last due date' + (d && d.cycle ? ' (' + fmt(d.cycle.due) + ')' : '')"></span>
@@ -46,7 +62,7 @@
         <input type="hidden" name="date" :value="mode === 'pick' ? date : (d && d.cycle ? (d.cycle.due <= d.today ? d.cycle.due : d.today) : '')">
       </fieldset>
 
-      <div x-show="d && d.needs_rate">
+      <div x-show="d && d.needs_rate && mode !== 'merge'">
         <label class="font-medium text-gray-800 dark:text-white/90">Rate for the new cycle (%)
           <input type="number" name="interest_rate" step="0.01" min="0" max="100" x-model="rate" @change="preview()"
                  class="mt-1 block h-10 w-32 rounded-lg border border-gray-300 px-3 dark:border-gray-700 dark:bg-gray-900"></label>
@@ -54,9 +70,19 @@
       </div>
 
       <div x-show="loading" class="text-gray-500">Working out the new cycle…</div>
-      <div x-show="d && ! d.ok && ! loading" class="rounded-lg bg-amber-50 px-3 py-2 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200" x-text="d && d.message"></div>
+      <div x-show="d && ! d.ok && ! loading && mode !== 'merge'" class="rounded-lg bg-amber-50 px-3 py-2 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200" x-text="d && d.message"></div>
 
-      <template x-if="d && d.ok && ! loading">
+      <template x-if="mode === 'merge' && d && d.rolled">
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+          <p class="mb-2 font-semibold text-emerald-900 dark:text-emerald-100">Nothing new will be booked</p>
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-1 tabular-nums">
+            <dt class="text-gray-600 dark:text-gray-300">Stays on</dt><dd x-text="'Cycle ' + d.rolled.n"></dd>
+            <dt class="text-gray-600 dark:text-gray-300">Runs</dt><dd x-text="fmt(d.rolled.start) + ' → ' + fmt(d.rolled.due)"></dd>
+            <dt class="font-semibold text-gray-800 dark:text-white">To repay by the due date</dt><dd class="font-semibold" x-text="'KES ' + money(d.cycle.owed_on_due)"></dd>
+          </dl>
+        </div>
+      </template>
+      <template x-if="d && d.ok && ! loading && mode !== 'merge'">
         <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/30 dark:bg-emerald-500/10">
           <p class="mb-2 font-semibold text-emerald-900 dark:text-emerald-100" x-text="'Cycle ' + d.plan.new_cycle + ' will be booked'"></p>
           <dl class="grid grid-cols-2 gap-x-4 gap-y-1 tabular-nums">
@@ -75,7 +101,7 @@
 
       <div class="flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
         <button type="button" @click="close()" class="rounded-lg border border-gray-300 px-4 py-2 font-medium dark:border-gray-700">Cancel</button>
-        <button type="submit" :disabled="! (d && d.ok) || loading" class="rounded-lg bg-brand-500 px-4 py-2 font-medium text-white hover:bg-brand-600 disabled:opacity-40">Approve and extend</button>
+        <button type="submit" :disabled="! canSubmit()" class="rounded-lg bg-brand-500 px-4 py-2 font-medium text-white hover:bg-brand-600 disabled:opacity-40" x-text="mode === 'merge' ? 'Merge with that rollover' : 'Approve and extend'"></button>
       </div>
     </form>
   </div>
@@ -85,7 +111,8 @@
   function extendModal(previewUrl, decideUrl, token) {
     return {
       open: false, id: null, d: null, loading: false, mode: 'due', date: '', rate: '', token, submitUrl: '',
-      async load(id) { this.id = id; this.open = true; this.d = null; this.mode = 'due'; this.date = ''; this.rate = ''; this.submitUrl = decideUrl.replace('__ID__', id); await this.preview(); },
+      async load(id) { this.id = id; this.open = true; this.d = null; this.mode = 'due'; this.date = ''; this.rate = ''; this.submitUrl = decideUrl.replace('__ID__', id); await this.preview(); if (this.d && this.d.rolled) this.mode = 'merge'; },
+      canSubmit() { return ! this.loading && !! this.d && (this.mode === 'merge' ? !! this.d.rolled : !! this.d.ok); },
       close() { this.open = false; },
       async preview() {
         this.loading = true;

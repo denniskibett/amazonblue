@@ -74,7 +74,18 @@ class Requests
             if (! $r || $r->status !== 'open') {
                 throw new \DomainException('This request is no longer open.');
             }
-            if ($approve && $r->type === 'extension') {
+            $merged = null;
+            if ($approve && $r->type === 'extension' && ! empty($options['merge'])) {
+                // the loan was already rolled over by staff (owner, 16 Nov 2026): this request is folded into that
+                // rollover; nothing new is booked
+                $merged = $this->earlierRollover($r);
+                if (! $merged) {
+                    throw new \DomainException('This loan has no recent rollover to merge the request into.');
+                }
+                $merged->update(['notes' => trim(($merged->notes ? $merged->notes . "\n" : '') . 'Borrower request #' . $id
+                    . ' (' . Carbon::parse($r->created_at)->format('j M Y') . ') merged into this rollover by ' . $by->name . '.')]);
+                $note = $note ?: 'Your loan was already extended: cycle ' . $merged->cycle_number . ' is due ' . $merged->due_date->format('j M Y') . '.';
+            } elseif ($approve && $r->type === 'extension') {
                 if (! $by->can('rollover loans')) {
                     throw new \DomainException('You need the "rollover loans" permission to extend a loan.');
                 }
@@ -96,13 +107,35 @@ class Requests
                 'decision_note' => $note, 'decided_by' => $by->id, 'decided_at' => now(), 'updated_at' => now()]);
             AuditTrail::record('borrower_requests', $id, 'update', ['status' => 'open'], ['status' => $approve ? 'approved' : 'declined', 'note' => $note]);
             if ($r->loan_id && ($loan = Loan::find($r->loan_id))) {
-                $text = $approve ? 'We agreed your ' . $r->type . ' request on loan ' . $loan->id . '. Your account shows the new terms.'
-                    : 'We couldn\'t agree your ' . $r->type . ' request on loan ' . $loan->id . '. ' . ($note ?: 'Talk to us about other options.');
+                $text = $merged ? 'Your extension request on loan ' . $loan->id . ' is covered: it was already extended to '
+                        . $merged->due_date->format('j M Y') . '.'
+                    : ($approve ? 'We agreed your ' . $r->type . ' request on loan ' . $loan->id . '. Your account shows the new terms.'
+                    : 'We couldn\'t agree your ' . $r->type . ' request on loan ' . $loan->id . '. ' . ($note ?: 'Talk to us about other options.'));
                 DB::afterCommit(fn () => app(CustomerEvents::class)->loan('request_decided', $loan, ['approved' => $approve, 'text' => $text]));
             }
         });
     }
 
+
+    /**
+     * The rollover staff already booked that an extension request most likely asks for again (owner, 16 Nov 2026):
+     * the loan's latest cycle is a rollover booked within a week before the request (or after it), and the request
+     * came before that cycle is due. Null when the request looks like a new one.
+     */
+    public function earlierRollover(object $r): ?\App\Models\LoanCycle
+    {
+        if ($r->type !== 'extension' || ! $r->loan_id) {
+            return null;
+        }
+        $cycle = \App\Models\LoanCycle::where('loan_id', $r->loan_id)->orderByDesc('cycle_number')->first();
+        $asked = Carbon::parse($r->created_at);
+        if (! $cycle || $cycle->cycle_number < 2 || ! $cycle->created_at
+            || $cycle->created_at->lt($asked->copy()->subDays(7)) || $asked->copy()->startOfDay()->gt($cycle->due_date)) {
+            return null;
+        }
+
+        return $cycle;
+    }
 
     /**
      * The options an extension is booked with: from the cycle's due date unless another day is chosen. A day before

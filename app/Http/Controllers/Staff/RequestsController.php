@@ -27,10 +27,11 @@ class RequestsController extends Controller
     public function borrower(Request $request, int $id, Requests $requests): RedirectResponse
     {
         $data = $request->validate(['decision' => 'required|in:approve,decline', 'note' => 'required_if:decision,decline|nullable|string|max:500',
-            'date' => 'nullable|date|before_or_equal:today', 'interest_rate' => 'nullable|numeric|min:0|max:100']);
+            'date' => 'nullable|date|before_or_equal:today', 'interest_rate' => 'nullable|numeric|min:0|max:100', 'merge' => 'nullable|boolean']);
+        $merge = $data['decision'] === 'approve' && ! empty($data['merge']);
         try {
             $requests->decideBorrower($id, $request->user(), $data['decision'] === 'approve', $data['note'] ?? null,
-                array_intersect_key($data, array_flip(['date', 'interest_rate'])));
+                $merge ? ['merge' => true] : array_intersect_key($data, array_flip(['date', 'interest_rate'])));
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -38,7 +39,8 @@ class RequestsController extends Controller
         $type = DB::table('borrower_requests')->where('id', $id)->value('type');
 
         return back()->with('success', $data['decision'] !== 'approve' ? 'Declined. The borrower sees your note.'
-            : ($type === 'business_change' ? 'Business reopened. The owner can change it and resubmit.' : 'Extension booked. The borrower sees it on their account.'));
+            : ($merge ? 'Merged with the rollover already booked. The borrower sees their due date.'
+            : ($type === 'business_change' ? 'Business reopened. The owner can change it and resubmit.' : 'Extension booked. The borrower sees it on their account.')));
     }
 
     /** What approving an extension would book, from the day chosen (default: the cycle's due date). JSON for the modal. */
@@ -54,6 +56,9 @@ class RequestsController extends Controller
                 'rate' => (float) $cycle->interest_rate,
                 'owed_today' => round(\App\Services\Loans\CycleBalance::at($cycle)['final_outstanding'], 2),
                 'owed_on_due' => round(\App\Services\Loans\CycleBalance::at($cycle, $cycle->due_date->toDateString())['final_outstanding'], 2)] : null,
+            'rolled' => ($earlier = $requests->earlierRollover($r)) ? ['n' => $earlier->cycle_number, 'start' => $earlier->start_date->toDateString(),
+                'due' => $earlier->due_date->toDateString(), 'booked' => $earlier->created_at->toDateString(), 'asked' => \Illuminate\Support\Carbon::parse($r->created_at)->toDateString(),
+                'after' => $earlier->created_at->gt(\Illuminate\Support\Carbon::parse($r->created_at))] : null,
             'rate_from_cycle' => (int) config('lending.rollover.same_rate_cycles', 4) + 1, 'today' => now()->toDateString()];
         try {
             $plan = app(\App\Services\Loans\Rollover::class)->preview($loan, $requests->extensionOptions($loan, $data));

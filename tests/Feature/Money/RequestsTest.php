@@ -103,4 +103,41 @@ class RequestsTest extends TestCase
         $this->actingAs($this->manager)->post(route('staff.requests.borrower', $id), ['decision' => 'approve', 'date' => '2026-10-16'])->assertSessionHas('success');
         $this->assertSame('2026-10-16', \Illuminate\Support\Carbon::parse(DB::table('loan_cycles')->where('loan_id', 529)->where('cycle_number', 3)->value('start_date'))->toDateString());
     }
+    public function test_a_request_after_staff_already_rolled_the_loan_over_can_be_merged_into_that_rollover(): void
+    {
+        $this->loan529();   // cycle 2 runs 6 Oct -> 16 Oct
+        DB::table('loan_cycles')->where('loan_id', 529)->where('cycle_number', 2)->update(['created_at' => '2026-10-14 09:00:00']);
+        Carbon::setTestNow('2026-10-15 10:00');   // the borrower asks a day after staff booked cycle 2
+        $borrower = User::findOrFail(Loan::findOrFail(529)->user_id);
+        $borrower->assignRole('borrower');
+        $this->actingAs($borrower)->post(route('account.extension.request', 529), ['reason' => 'Salary comes on the 28th', 'confirm' => '1']);
+        $id = DB::table('borrower_requests')->value('id');
+
+        $p = $this->actingAs($this->manager)->getJson(route('staff.requests.preview', $id))->assertOk()->json();
+        $this->assertSame(2, $p['rolled']['n']);
+        $this->assertSame('2026-10-16', $p['rolled']['due']);
+        $this->assertFalse($p['rolled']['after']);
+
+        $this->actingAs($this->manager)->post(route('staff.requests.borrower', $id), ['decision' => 'approve', 'merge' => '1'])
+            ->assertSessionHas('success', 'Merged with the rollover already booked. The borrower sees their due date.');
+        $this->assertSame('approved', DB::table('borrower_requests')->value('status'));
+        $this->assertStringContainsString('16 Oct 2026', DB::table('borrower_requests')->value('decision_note'));
+        $this->assertSame(2, (int) LoanCycle::where('loan_id', 529)->max('cycle_number'), 'nothing new booked');
+        $this->assertStringContainsString('Borrower request #' . $id, (string) LoanCycle::where('loan_id', 529)->where('cycle_number', 2)->value('notes'));
+    }
+
+    public function test_an_older_rollover_is_not_flagged_and_cannot_be_merged(): void
+    {
+        $this->loan529();
+        DB::table('loan_cycles')->where('loan_id', 529)->where('cycle_number', 2)->update(['created_at' => '2026-10-01 09:00:00']);
+        Carbon::setTestNow('2026-10-15 10:00');
+        $borrower = User::findOrFail(Loan::findOrFail(529)->user_id);
+        $borrower->assignRole('borrower');
+        $this->actingAs($borrower)->post(route('account.extension.request', 529), ['reason' => 'Need time', 'confirm' => '1']);
+        $id = DB::table('borrower_requests')->value('id');
+
+        $this->assertNull($this->actingAs($this->manager)->getJson(route('staff.requests.preview', $id))->json('rolled'));
+        $this->actingAs($this->manager)->post(route('staff.requests.borrower', $id), ['decision' => 'approve', 'merge' => '1'])->assertSessionHas('error');
+        $this->assertSame('open', DB::table('borrower_requests')->value('status'));
+    }
 }
