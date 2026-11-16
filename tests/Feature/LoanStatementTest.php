@@ -39,13 +39,20 @@ class LoanStatementTest extends TestCase
 
         $page = $this->actingAs($staff)->get(route('users.loans.statement', [$loan->user_id, 529]))->assertOk()
             ->assertSee('Full Loan Statement')->assertSee('Print full statement');
-        $page->assertSeeInOrder(['Cycle #1', 'Cycle #2']);
-        foreach (Disbursement::where('loan_id', 529)->get() as $d) {
+        $page->assertSeeInOrder(['Date', 'Cycle', 'Description', 'Charges', 'Payments', 'Balance (KES)', 'Rolled over from #1']);
+        foreach (Disbursement::where('loan_id', 529)->where('kind', 'cash')->get() as $d) {
             $page->assertSee(number_format((float) $d->amount, 2));
         }
-        foreach (Repayment::where('loan_id', 529)->get() as $r) {
+        foreach (Repayment::where('loan_id', 529)->where('kind', 'cash')->get() as $r) {
             $page->assertSee(number_format((float) $r->amount, 2));
         }
+
+        // the running balance ends on what the loan engine says is owed
+        $lines = $page->viewData('lines');
+        $owed = \App\Services\Loans\CycleBalance::at($cycles->last())['final_outstanding'];
+        $this->assertEqualsWithDelta($owed, end($lines)->balance, 0.01);
+        $this->assertEqualsWithDelta($owed, $page->viewData('balance'), 0.01);
+        $this->assertEqualsWithDelta(end($lines)->balance, collect($lines)->sum('charge') - collect($lines)->sum('payment'), 0.01);
 
         $this->actingAs($staff)->get(route('users.loans.show', [$loan->user_id, 529]))->assertOk()
             ->assertSee(route('users.loans.statement', [$loan->user_id, 529]), false);
