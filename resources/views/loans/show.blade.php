@@ -48,7 +48,7 @@
                         From
                     </span>
                     <h5 class="mb-2 text-base font-semibold text-gray-800 dark:text-white/90">
-                        AmazonBlue Capital
+                        Aimzone Ventures Capital
                     </h5>
                     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
                         G.P.O 50054 - 00100,<br>

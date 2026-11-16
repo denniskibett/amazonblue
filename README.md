@@ -1,6 +1,6 @@
-# Amazonblue Capital: loan system
+# Aimzone Ventures Capital: loan system
 
-Short-term lending for a Kenyan non-bank lender (Amazonblue Capital / Aimzone Ventures, KES), live at
+Short-term lending for a Kenyan non-bank lender (Aimzone Ventures Capital, KES), live at
 **loans.sharet.africa**. One Laravel app serves the public website, the borrower and partner accounts, and the staff back
 office.
 

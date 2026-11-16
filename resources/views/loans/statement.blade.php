@@ -23,7 +23,7 @@
     <div class="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <span class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-400">From</span>
-        <h5 class="mb-2 text-base font-semibold text-gray-800 dark:text-white/90">AmazonBlue Capital</h5>
+        <h5 class="mb-2 text-base font-semibold text-gray-800 dark:text-white/90">Aimzone Ventures Capital</h5>
         <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">G.P.O 50054 - 00100,<br>Nairobi, Kenya</p>
         <span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Issued On:</span>
         <span class="block text-sm text-gray-500 dark:text-gray-400">{{ \Carbon\Carbon::parse($loan->borrow_date)->format('D, M d, Y') }}</span>

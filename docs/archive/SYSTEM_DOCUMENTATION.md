@@ -1,4 +1,4 @@
-# Amazonblue Capital — System Documentation (current state)
+# Aimzone Ventures Capital — System Documentation (current state)
 
 **Codebase:** `amazonblue` (git HEAD `457a703`, 34 commits)
 **Live at:** loans.sharet.africa (CyberPanel)
@@ -20,7 +20,7 @@ Status legend used below:
 
 ## 1. What the system is
 
-Amazonblue is a **short-term consumer lending and debt-recovery platform** for a Kenyan non-bank lender (brand: *Amazonblue Capital / Aimzone Ventures*, currency KES). It covers:
+Amazonblue is a **short-term consumer lending and debt-recovery platform** for a Kenyan non-bank lender (brand: *Aimzone Ventures Capital / Aimzone Ventures*, currency KES). It covers:
 
 - a public marketing website with enquiry form
 - borrower self-registration, a 4-step KYC flow, and self-service loan applications

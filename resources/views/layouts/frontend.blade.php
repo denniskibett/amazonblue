@@ -11,7 +11,7 @@
     <link rel="icon" href="{{ \App\Helpers\SystemHelper::faviconUrl() }}" sizes="32x32">
     <link rel="apple-touch-icon" href="{{ asset('assets/images/logo/apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ asset('assets/images/logo/site.webmanifest') }}">
-    <title>@yield('title', 'AmazonBlue Capital | We Sell Convenience')</title>
+    <title>@yield('title', 'Aimzone Ventures Capital | We Sell Convenience')</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
