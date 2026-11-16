@@ -387,6 +387,84 @@
             @endif
             @endcan
 
+            <!-- Forbear (owner, 16 Nov 2026): a late or defaulted loan stops ballooning; penalty already charged goes too -->
+            @can('grant forbearance')
+            @if(in_array($loan->status, ['overdue', 'defaulted', 'recovery', 'disbursed', 'active', 'forbearance']))
+            @php
+                $fbCycle = $loan->cycles()->orderByDesc('cycle_number')->first();
+                $fbBal = $fbCycle ? \App\Services\Loans\CycleBalance::at($fbCycle) : null;
+                $fbLate = $fbCycle && $fbCycle->due_date->lt(now()->startOfDay());
+            @endphp
+            @if($fbCycle && ($fbLate || ($fbBal['penalty'] ?? 0) > 0 || $loan->isInForbearance()))
+            <details class="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/10" @if($loan->isDefaulted()) open @endif>
+                <summary class="flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-amber-900 dark:text-amber-200">
+                    <x-ui.icon name="clock" class="size-4" /> {{ $loan->isInForbearance() ? 'Extend forbearance' : 'Forbearance' }}
+                </summary>
+                <form method="POST" action="{{ route('loans.forbear', $loan) }}" class="space-y-2 p-3">
+                    @csrf
+                    @if(($fbBal['penalty'] ?? 0) > 0)
+                        <p class="rounded-md bg-white px-2 py-1.5 text-xs text-amber-900 dark:bg-gray-900 dark:text-amber-200">Removes <strong>KES {{ number_format($fbBal['penalty'], 2) }}</strong> penalty on cycle {{ $fbCycle->cycle_number }} and stops new penalty. Principal and interest (KES {{ number_format($fbBal['full_balance'] - $fbBal['total_repayments'], 2) }}) stay owed.</p>
+                    @else
+                        <p class="text-xs text-amber-900 dark:text-amber-200">No penalty will accrue until the date you pick. Principal and interest stay owed.</p>
+                    @endif
+                    <x-staff.field name="until" type="date" label="No penalty until" :value="old('until', now()->addDays(30)->toDateString())" :min="now()->addDay()->toDateString()" required />
+                    <x-staff.field name="reason" label="Reason" :value="old('reason')" placeholder="Agreed to pay in instalments; lost job" required />
+                    <button class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700">{{ $loan->isInForbearance() ? 'Extend forbearance' : 'Forbear this loan' }}</button>
+                </form>
+            </details>
+            @endif
+            @endif
+            @endcan
+
+            <!-- Step-down calculator (owner, 16 Nov 2026): what rolling over costs at 20, 20, 20, 10, 5 then forbearance,
+                 against keeping the same rate; the rollover modal's "Use step-down" sets each cycle's rate -->
+            @php
+                $sdRate = (float) ($loan->loanType->interest_rate ?? 20);
+                $sdFirst = $loan->cycles()->orderBy('cycle_number')->first();
+                $sdPrincipal = $sdFirst ? $sdFirst->lentPrincipal() : (float) $loan->original_amount;
+            @endphp
+            <details class="rounded-lg border border-gray-300 dark:border-gray-700"
+                     x-data="{ principal: {{ round($sdPrincipal, 2) }}, base: {{ $sdRate }}, cycles: 8,
+                               steps: @js(implode(', ', array_map(fn ($f) => round($sdRate * $f, 2), \App\Support\StepDown::factors()))),
+                               rows() {
+                                 const st = String(this.steps).split(',').map(v => parseFloat(v)).filter(v => !isNaN(v));
+                                 let a = Number(this.principal) || 0, b = a, out = [];
+                                 for (let n = 1; n <= Math.min(24, Number(this.cycles) || 0); n++) {
+                                   const r = n <= st.length ? st[n - 1] : null;
+                                   const i = r === null ? 0 : Math.round(a * r) / 100; a = Math.round((a + i) * 100) / 100;
+                                   const fi = Math.round(b * this.base) / 100; b = Math.round((b + fi) * 100) / 100;
+                                   out.push({ n, r, i, a, b });
+                                 }
+                                 return out;
+                               },
+                               kes(v) { return Number(v).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } }">
+                <summary class="flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <x-ui.icon name="trending-down" class="size-4" /> Step-down calculator
+                </summary>
+                <div class="space-y-2 p-3 text-xs">
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="text-gray-600 dark:text-gray-400">Lent (KES)<input type="number" step="0.01" x-model="principal" class="mt-1 h-9 w-full rounded-lg border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
+                        <label class="text-gray-600 dark:text-gray-400">Cycles<input type="number" min="1" max="24" x-model="cycles" class="mt-1 h-9 w-full rounded-lg border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
+                    </div>
+                    <label class="block text-gray-600 dark:text-gray-400">Rates by cycle (%)<input x-model="steps" class="mt-1 h-9 w-full rounded-lg border border-gray-300 px-2 dark:border-gray-700 dark:bg-gray-900"></label>
+                    <table class="w-full tabular-nums">
+                        <thead class="text-gray-500"><tr><th class="text-left">#</th><th class="text-left">Rate</th><th class="text-right">Step-down</th><th class="text-right" x-text="'Same ' + base + '%'"></th></tr></thead>
+                        <tbody>
+                            <template x-for="row in rows()" :key="row.n">
+                                <tr class="border-t border-gray-100 dark:border-gray-800">
+                                    <td x-text="row.n"></td>
+                                    <td :class="row.r === null ? 'text-amber-700' : ''" x-text="row.r === null ? 'forbear' : row.r + '%'"></td>
+                                    <td class="text-right font-medium" x-text="kes(row.a)"></td>
+                                    <td class="text-right text-gray-400" x-text="kes(row.b)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <p class="text-gray-500" x-show="rows().length" x-text="'After ' + rows().length + ' cycles the step-down saves the borrower KES ' + kes(rows()[rows().length - 1].b - rows()[rows().length - 1].a) + '. Penalties are not included.'"></p>
+                    <p class="text-gray-500">Use it on a rollover with "Use step-down" next to the rate. After the last step, forbear the loan; in duplum only after negotiation.</p>
+                </div>
+            </details>
+
             <!-- Grace days on the current cycle: no penalty for a short delay (owner, 1 Nov 2026) -->
             @can('grant forbearance')
             @if(in_array($loan->status, ['active', 'overdue', 'disbursed', 'forbearance', 'defaulted', 'repaid']))

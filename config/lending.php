@@ -263,6 +263,10 @@ return [
     'rollover' => [
         // cycles 2..N keep the previous cycle's rate; from cycle N+1 staff must set a rate or use a payment plan (owner)
         'same_rate_cycles' => 4,
+        // step-down (owner, 16 Nov 2026), an option on a rollover: the product's rate times these, cycle by cycle
+        // (20, 20, 20, then 10, then 5 for a 20% product); after the last step the loan goes to forbearance
+        // (in duplum only after negotiation with the borrower)
+        'stepdown' => [1, 1, 1, 0.5, 0.25],
     ],
 
     // short payments (owner, 1 Nov 2026): when a borrower pays all but a little of a cycle, staff may accept it as paid

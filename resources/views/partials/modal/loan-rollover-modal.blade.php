@@ -116,6 +116,11 @@
       // a new product brings its own period and rate: the due date and rate follow it until staff type their own
       pickProduct() { this.form.due_date = ''; this.defaults.due_date = ''; this.form.interest_rate = ''; this.changed(); },
       needsRate() { return (this.p.new_cycle || 0) > (this.p.same_rate_cycles || 4); },
+      // step-down (owner, 16 Nov 2026): the product's rate x the step for the new cycle; null once the steps are over
+      stepFactors: @js(\App\Support\StepDown::factors()),
+      stepRate() { const f = this.stepFactors[(this.p.new_cycle || 0) - 1]; const base = Number((window.loanData || {}).interest_rate || 0);
+        return f === undefined || !base ? null : Math.round(base * f * 100) / 100; },
+      useStep() { const r = this.stepRate(); if (r !== null) { this.form.interest_rate = r; this.changed(); } },
       async submit() {
         if (this.saving) return;
         this.saving = true; this.errors = [];
@@ -237,6 +242,9 @@
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300" for="ro-rate">Interest rate (%)</label>
             <input id="ro-rate" type="number" step="0.01" min="0" max="100" x-model="form.interest_rate" @input="changed()"
                    class="bg-gray-50/70 h-11 w-full rounded-xl border border-gray-200 px-4 text-sm focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white">
+            <button type="button" x-show="stepRate() !== null" @click="useStep()" class="mt-2 inline-flex items-center rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300"
+                    x-text="'Use step-down: ' + stepRate() + '% for cycle ' + p.new_cycle"></button>
+            <p x-show="p.new_cycle && stepRate() === null" class="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">The step-down is over at cycle <span x-text="p.new_cycle"></span>: forbear the loan instead (Forbearance in the side panel). In duplum only after negotiation.</p>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="needsRate() ? 'Cycle ' + p.new_cycle + ': set the rate for this cycle (or use a payment plan).' : (productChanged() ? 'The product\'s rate; change it if agreed otherwise.' : 'The previous rate; change it if agreed otherwise.')"></p>
           </div>
           <label class="flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50/60 p-4 text-sm dark:border-amber-500/20 dark:bg-amber-500/5">

@@ -56,7 +56,51 @@ class LoanStatementController extends Controller
         $loan = Loan::with(['user', 'loanType', 'cycles'])->findOrFail($loan);
         \Illuminate\Support\Facades\Log::info('Statement link opened', ['loan' => $loan->id, 'ip' => request()->ip()]);
 
-        return view('loans.statement-shared', $this->data($loan));
+        $data = $this->data($loan);
+
+        return view('loans.statement-shared', $loan->isInForbearance() ? self::withoutWaivedPenalties($data) : $data);
+    }
+
+    /**
+     * The borrower's link for a loan in forbearance (owner, 16 Nov 2026): penalties that were charged and then taken off
+     * again (a carry-over or closing adjustment) are left out, with the matching part of the adjustment, and the
+     * forbearance line does not say how much was waived. Penalty still owed stays. The running balance is worked out
+     * again; the closing balance is the same.
+     */
+    public static function withoutWaivedPenalties(array $data): array
+    {
+        $lines = array_values(array_map(fn ($l) => clone $l, $data['lines']));
+        $removed = 0.0;
+        foreach ($lines as $i => $l) {
+            if (! str_starts_with($l->text, 'Late penalty') || $l->charge <= 0) {
+                continue;
+            }
+            foreach ($lines as $j => $adj) {
+                if ($j <= $i || $adj->payment <= 0 || ! str_contains($adj->text, 'djustment') || $adj->n > $l->n + 1) {
+                    continue;
+                }
+                $off = min($l->charge, $adj->payment);
+                $l->charge = round($l->charge - $off, 2);
+                $adj->payment = round($adj->payment - $off, 2);
+                $removed += $off;
+                if ($l->charge <= 0) {
+                    break;
+                }
+            }
+        }
+        $lines = array_values(array_filter($lines, fn ($l) => ! (($l->charge <= 0 && $l->payment <= 0) && (str_starts_with($l->text, 'Late penalty') || str_contains($l->text, 'djustment')))));
+        $balance = 0.0;
+        foreach ($lines as $l) {
+            if (in_array($l->text, ['Forbearance', 'Payment plan'], true) && $l->ref) {
+                $l->ref = implode(' · ', array_filter(explode(' · ', $l->ref), fn ($p) => ! str_ends_with($p, ' waived')));
+            }
+            $balance = round($balance + $l->charge - $l->payment, 2);
+            $l->balance = $balance;
+        }
+        $data['lines'] = $lines;
+        $data['totals']['penalty'] = max(0, round($data['totals']['penalty'] - $removed, 2));
+
+        return $data;
     }
 
     private function data(Loan $loan): array

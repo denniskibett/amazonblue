@@ -1555,6 +1555,35 @@ class LoanController extends Controller
      * Grace days on the current cycle (owner, 1 Nov 2026): a borrower who pays a day or two late gets that many days
      * with no penalty. The due date stays as it is; the cycle's penalty, status and partner split follow at once.
      */
+    /**
+     * Forbear (owner, 16 Nov 2026): a late or defaulted loan stops ballooning. Penalty on the current cycle is waived
+     * up to the date chosen (so penalty already charged goes too) and none accrues until then; the balance (principal
+     * and interest) is still owed. Form post from the loan sidebar.
+     */
+    public function forbear(Loan $loan, Request $request)
+    {
+        $data = $request->validate([
+            'until' => 'required|date|after:today|before_or_equal:' . now()->addDays(365)->toDateString(),
+            'reason' => 'required|string|min:3|max:300',
+        ]);
+        abort_if($loan->isFinal(), 422, 'This loan is closed.');
+        $cycle = $loan->cycles()->orderByDesc('cycle_number')->firstOrFail();
+        $before = (float) \App\Services\Loans\CycleBalance::at($cycle)['penalty'];
+        $days = (int) now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($data['until'])->startOfDay());
+        DB::transaction(function () use ($loan, $cycle, $days, $data) {
+            $loan->grantForbearance($days, $data['reason']);
+            $cycle->refresh();
+            $cycle->forceFill(['notes' => trim($cycle->notes . "\nForbearance to " . \Illuminate\Support\Carbon::parse($data['until'])->format('j M Y')
+                . ': ' . $data['reason'] . ' (' . auth()->user()->name . ', ' . now()->format('j M Y') . ')')])->save();
+            \App\Services\AuditTrail::record('loans', $loan->id, 'update', null, ['forbearance_until' => $data['until'], 'reason' => $data['reason']]);
+            \App\Services\Loans\LoanStatus::apply($loan->fresh());
+        });
+        $after = (float) \App\Services\Loans\CycleBalance::at($cycle->fresh())['penalty'];
+
+        return back()->with('success', 'Forbearance to ' . \Illuminate\Support\Carbon::parse($data['until'])->format('j M Y') . '. '
+            . ($before - $after >= 0.01 ? 'KES ' . number_format($before - $after, 2) . ' penalty removed; ' : '') . 'no penalty until then.');
+    }
+
     public function setGraceDays(Loan $loan, Request $request)
     {
         $data = $request->validate([

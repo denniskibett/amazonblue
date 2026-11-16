@@ -304,6 +304,11 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('forbearance.grant')
             ->middleware('permission:grant forbearance');
         
+        // forbear a late or defaulted loan from the sidebar (owner, 16 Nov 2026)
+        Route::post('/forbear', [LoanController::class, 'forbear'])
+            ->name('forbear')
+            ->middleware('permission:grant forbearance');
+
         Route::patch('/forbearance/end', [LoanController::class, 'endForbearance'])
             ->name('forbearance.end')
             ->middleware('permission:end forbearance');
