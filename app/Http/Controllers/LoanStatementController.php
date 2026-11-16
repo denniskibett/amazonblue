@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Disbursement;
 use App\Models\Loan;
 use App\Models\Repayment;
+use App\Models\LoanCycle;
 use App\Services\Loans\CycleBalance;
+use App\Services\Loans\GraceFix;
+use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
@@ -56,17 +59,30 @@ class LoanStatementController extends Controller
             $totals['lent'] += $sent;
             $gap = round((float) $b['principal'] - ($i === 0 ? 0 : $balance) - $sent, 2);
             if (abs($gap) >= 0.01) {
-                $rows[] = [$start, 2, $i === 0 ? ($sent == 0.0 ? 'Loan principal' : 'Principal adjustment') : 'Carry-over adjustment', null, max(0, $gap), max(0, -$gap), false];
+                $why = $this->reason($c, '/written|write|waiv|discount|adjust|merged|plan|forbear/i')
+                    ?? ($gap < 0 ? 'less was carried than was owed' : 'more was carried than was owed');
+                $rows[] = [$start, 2, $i === 0 ? ($sent == 0.0 ? 'Loan principal' : 'Principal adjustment') : 'Carry-over adjustment', $why, max(0, $gap), max(0, -$gap), false];
                 if ($i === 0 && $sent == 0.0) {
                     $totals['lent'] += $gap;
                 }
             }
 
-            $rows[] = [$start, 3, 'Interest ' . $rate . '% to ' . Carbon::parse($due)->format('j M Y'), null, (float) $b['interest'], 0.0, false];
+            // interest is posted at the end of the cycle, on the principal the cycle lent (owner, 16 Nov 2026)
+            $rows[] = [$due, 6, 'Interest ' . $rate . '% on ' . number_format((float) $b['principal'], 2), null, (float) $b['interest'], 0.0, false];
             $totals['interest'] += (float) $b['interest'];
             if ((float) $b['penalty'] > 0) {
-                $rows[] = [$b['last_penalty_day'] ?? $due, 5, 'Late penalty' . ($b['days_subject_to_penalty'] ? ' · ' . $b['days_subject_to_penalty'] . ' days' : ''), null, (float) $b['penalty'], 0.0, false];
+                $rows[] = [$b['last_penalty_day'] ?? $due, 7, 'Late penalty' . ($b['days_subject_to_penalty'] ? ' · ' . $b['days_subject_to_penalty'] . ' days' : ''), null, (float) $b['penalty'], 0.0, false];
                 $totals['penalty'] += (float) $b['penalty'];
+            }
+            // forbearance or a payment plan paused the penalty: say so, why, and what it saved the borrower
+            if ($c->penalty_waived_until && $c->penalty_waived_until->toDateString() > $due) {
+                $waived = $this->penaltyWithoutPause($c) - (float) $b['penalty'];
+                $why = $this->reason($c, '/forbear|payment plan|plan|waiv|pay by/i') ?? $this->forbearanceNote($loan, $c);
+                $kind = preg_match('/plan/i', (string) $why) ? 'Payment plan' : 'Forbearance';
+                $until = $c->penalty_waived_until->toDateString() >= GraceFix::OPEN_ENDED ? 'open-ended' : 'to ' . $c->penalty_waived_until->format('j M Y');
+                // one line (owner, 16 Nov 2026): what, how long, what it saved, then why
+                $rows[] = [$due, 8, $kind, implode(' · ', array_filter([$until, $waived >= 0.01 ? number_format($waived, 2) . ' waived' : null,
+                    $why ? preg_replace(['/\s*\((owner|staff)[^)]*\)/i', '/^(forbearance|payment plan)[,:\s-]*/i'], '', $why) : null])), 0.0, 0.0, true];
             }
             foreach ($repayments->get($c->id, collect()) as $r) {
                 if ($r->kind === 'rollover' && $b['carried_forward'] !== null) {
@@ -80,6 +96,7 @@ class LoanStatementController extends Controller
 
             usort($rows, fn ($a, $z) => [$a[0], $a[1]] <=> [$z[0], $z[1]]);
             foreach ($rows as [$date, , $text, $refText, $charge, $payment, $note]) {
+                $refText = $refText ? Str::limit($refText, 160) : null;
                 $balance = round($balance + $charge - $payment, 2);
                 $lines[] = (object) ['date' => $date, 'n' => $n, 'text' => $text, 'ref' => $refText, 'charge' => $charge, 'payment' => $payment, 'balance' => $balance, 'note' => $note];
             }
@@ -89,7 +106,9 @@ class LoanStatementController extends Controller
             if (abs($balance - $owed) >= 0.01) {
                 $diff = round($owed - $balance, 2);
                 $balance = $owed;
-                $lines[] = (object) ['date' => $b['closed_on'] ?? now()->toDateString(), 'n' => $n, 'text' => 'Adjustment', 'ref' => null,
+                $why = (float) $b['overpaid'] >= 0.01 ? 'overpaid by KES ' . number_format((float) $b['overpaid'], 2)
+                    : (abs($diff) < 1 ? 'rounding' : (Str::limit((string) $this->reason($c, '/written|write|waiv|discount|adjust|cap|plan|forbear/i'), 70) ?: 'how payments were applied'));
+                $lines[] = (object) ['date' => $b['closed_on'] ?? now()->toDateString(), 'n' => $n, 'text' => 'Adjustment', 'ref' => $why,
                     'charge' => max(0, $diff), 'payment' => max(0, -$diff), 'balance' => $balance, 'note' => false];
             }
             $last = $b;
@@ -103,5 +122,33 @@ class LoanStatementController extends Controller
             'dueDate' => $cycles->last()?->due_date,
             'totals' => $totals,
         ]);
+    }
+
+    /** The latest line of the cycle's notes that matches, e.g. "Payment plan agreed by the owner … PENALTIES WAIVED". */
+    private function reason(LoanCycle $c, string $pattern): ?string
+    {
+        $parts = preg_split('/\n|\s\|\s/', (string) $c->notes) ?: [];
+        $hit = collect($parts)->map(fn ($p) => trim($p))->filter(fn ($p) => $p !== '' && preg_match($pattern, $p))->last();
+
+        return $hit ?: null;
+    }
+
+    /** The reason staff gave when granting forbearance ("Forbearance granted: <reason> until <date>"). */
+    private function forbearanceNote(Loan $loan, LoanCycle $c): ?string
+    {
+        preg_match_all('/Forbearance granted: (.+?) until (\d{4}-\d{2}-\d{2})/', (string) $loan->recovery_notes, $m, PREG_SET_ORDER);
+        $hit = collect($m)->first(fn ($x) => $x[2] === $c->penalty_waived_until->toDateString()) ?? collect($m)->last();
+
+        return $hit[1] ?? null;
+    }
+
+    /** The penalty the cycle would carry with no pause, to show what forbearance saved. */
+    private function penaltyWithoutPause(LoanCycle $c): float
+    {
+        $copy = $c->replicate();
+        $copy->id = $c->id;
+        $copy->penalty_waived_until = null;
+
+        return (float) CycleBalance::at($copy)['penalty'];
     }
 }

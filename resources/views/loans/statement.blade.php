@@ -49,7 +49,8 @@
 
     {{-- the ledger: cycle is a column, the balance runs down (owner, 16 Nov 2026) --}}
     <div class="az-ledger mb-6 overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800">
-      <table class="w-full whitespace-nowrap text-xs">
+      <table class="w-full table-fixed whitespace-nowrap text-xs">
+        <colgroup><col style="width:11%"><col style="width:6%"><col><col style="width:12%"><col style="width:12%"><col style="width:13%"></colgroup>
         <thead class="bg-gray-50 text-left dark:bg-white/[0.02]">
           <tr class="text-gray-700 dark:text-gray-400">
             <th class="px-3 py-2.5 font-medium">Date</th>
@@ -66,9 +67,12 @@
             <tr class="az-line border-t {{ $newCycle ? 'border-gray-300 dark:border-gray-600' : 'border-gray-100 dark:border-gray-800' }}">
               <td class="whitespace-nowrap px-3 py-2 text-gray-500 dark:text-gray-400">{{ \Carbon\Carbon::parse($l->date)->format('j M Y') }}</td>
               <td class="px-2 py-2 text-gray-500 dark:text-gray-400">#{{ $l->n }}</td>
-              <td class="px-2 py-2 {{ $l->note ? 'italic text-gray-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $l->text }}@if ($l->ref)<span class="not-italic text-gray-400"> · {{ $l->ref }}</span>@endif</td>
+              @php $block = $l->ref && str_contains($l->text, 'djustment'); $wide = $l->note && $l->charge == 0 && $l->payment == 0; @endphp
+              <td @if ($wide) colspan="3" @endif class="w-full px-2 py-2 {{ $block ? 'whitespace-normal' : 'truncate' }} {{ $l->note ? 'italic text-gray-400' : 'text-gray-700 dark:text-gray-300' }}" @if ($l->ref) title="{{ $l->text }} · {{ $l->ref }}" @endif><span>{{ $l->text }}@if ($l->ref && ! $block)<span class="not-italic text-gray-400"> · {{ $l->ref }}</span>@endif</span>@if ($block)<span class="block text-[11px] not-italic leading-snug text-gray-400">{{ $l->ref }}</span>@endif</td>
+              @unless ($wide)
               <td class="whitespace-nowrap px-2 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{{ $l->charge > 0 ? $kes($l->charge) : '' }}</td>
               <td class="whitespace-nowrap px-2 py-2 text-right tabular-nums text-emerald-600">{{ $l->payment > 0 ? $kes($l->payment) : '' }}</td>
+              @endunless
               <td class="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-gray-800 dark:text-white/90">{{ $kes($l->balance) }}</td>
             </tr>
           @endforeach
@@ -93,5 +97,5 @@
 
 @push('scripts')
   @include('loans._print-css')
-  <style>@media print { .az-line { break-inside: avoid; page-break-inside: avoid; } .az-statement thead { display: table-header-group; } .az-statement .az-ledger { break-inside: auto !important; page-break-inside: auto !important; } }</style>
+  <style>@media print { .az-line { break-inside: avoid; page-break-inside: avoid; } .az-statement thead { display: table-header-group; } .az-statement .az-ledger { break-inside: auto !important; page-break-inside: auto !important; } .az-statement .az-ledger table { font-size: 10.5px; } .az-statement .az-ledger td, .az-statement .az-ledger th { padding-left: 6px !important; padding-right: 6px !important; } }</style>
 @endpush

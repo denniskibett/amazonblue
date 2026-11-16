@@ -58,4 +58,22 @@ class LoanStatementTest extends TestCase
             ->assertSee(route('users.loans.statement', [$loan->user_id, 529]), false);
         $this->actingAs($staff)->get(route('users.loans.statement', [$loan->user_id + 999, 529]))->assertNotFound();
     }
+    public function test_forbearance_shows_with_its_reason_and_interest_is_posted_on_the_due_date(): void
+    {
+        $this->seed(RoleSeeder::class);
+        config(['lending.engine' => 'v2']);
+        $this->loanTypes();
+        Carbon::setTestNow('2026-10-25 10:00');
+        $this->loan529();   // cycle 2 was due 16 Oct
+        $c = LoanCycle::where('loan_id', 529)->orderByDesc('cycle_number')->first();
+        $c->update(['penalty_waived_until' => '2026-10-30', 'notes' => "Loan rollover\nForbearance, pay by 30 Oct 2026 (owner, 17 Oct 2026)"]);
+        $staff = User::factory()->create();
+        $staff->assignRole('manager');
+
+        $page = $this->actingAs($staff)->get(route('users.loans.statement', [Loan::findOrFail(529)->user_id, 529]))->assertOk()
+            ->assertSee('to 30 Oct 2026')->assertSee('waived · pay by 30 Oct 2026');
+        $interest = collect($page->viewData('lines'))->first(fn ($l) => $l->n === $c->cycle_number && str_starts_with($l->text, 'Interest'));
+        $this->assertSame($c->due_date->toDateString(), $interest->date, 'interest is posted at the end of the cycle');
+        $this->assertStringContainsString('on ' . number_format((float) \App\Services\Loans\CycleBalance::at($c)['principal'], 2), $interest->text);
+    }
 }
