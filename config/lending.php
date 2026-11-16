@@ -96,9 +96,9 @@ return [
         'bank_account_number' => env('PARTNER_FUNDING_BANK_ACCOUNT_NUMBER', '01104493106350'),
         'bank_branch' => env('PARTNER_FUNDING_BANK_BRANCH', 'Wilson'),
         'bank_swift' => env('PARTNER_FUNDING_BANK_SWIFT'),
-        // I&M's bank paybill: the M-Pesa "Account no." is the bank account number, not the partner reference
+        // I&M's bank paybill 542542 with Account no. 23849 (owner, 16 Nov 2026)
         'mpesa_paybill' => env('PARTNER_FUNDING_MPESA_PAYBILL', '542542'),
-        'mpesa_account' => env('PARTNER_FUNDING_MPESA_ACCOUNT', '01104493106350'),
+        'mpesa_account' => env('PARTNER_FUNDING_MPESA_ACCOUNT', '23849'),   // owner, 16 Nov 2026
         // what the partner types as reference / M-Pesa "Account no.": this prefix + their partner number (e.g. AZP-0009)
         'reference_prefix' => env('PARTNER_FUNDING_REFERENCE_PREFIX', 'AZP-'),
         // smallest top-up / withdrawal request a partner can send
