@@ -81,7 +81,8 @@
   </div>
 
   @php
-    $lineCount = \App\Models\Investment::whereIn('return_type', ['loan_share', 'fixed_return'])->whereHas('fundings', fn ($q) => $q->where('partner_id', $partner->id))->count();
+    $lineCount = \App\Models\Investment::whereIn('return_type', ['loan_share', 'fixed_return'])->whereHas('fundings', fn ($q) => $q->where('partner_id', $partner->id))->count()
+      + \Illuminate\Support\Facades\DB::table('loan_fundings')->where('partner_id', $partner->id)->whereNull('investment_id')->count();
     $clientCount = \App\Models\Loan::where(fn ($q) => $q->where('broker_status', 1)->where('partner_id', $partner->id))->when($partner->user_id, fn ($q) => $q->orWhere('user_id', $partner->user_id))->count();
   @endphp
   <x-staff.tabs class="mt-6" :tabs="['lines' => ['Investments', $lineCount], 'clients' => ['Clients and own loans', $clientCount], 'journal' => ['Journal', $tx->count()], 'details' => 'Details and banking', 'login' => ['Portal login', $partner->user ? 'on' : 'none']]">

@@ -96,6 +96,36 @@ class PartnerSlicesTest extends TestCase
         $this->assertSame('2026-10-13', substr((string) PartnerTransaction::where('partner_id', $this->buosti->id)->where('type', 'contribution')->value('transaction_date'), 0, 10));
     }
 
+    /** partners:fund-loan books a partner's money for one loan as a line slice: dry run by default, idempotent (owner, 17 Nov 2026). */
+    public function test_partner_money_for_one_loan_is_booked_as_a_line_slice(): void
+    {
+        $this->houseLoan(915);
+        $this->artisan('partners:fund-loan', ['partner' => $this->buosti->id, 'loan' => 915, '--amount' => 35000, '--code' => 'QISIRO915'])->assertSuccessful();
+        $this->assertSame(0, Investment::where('name', 'like', '%QISIRO915%')->count(), 'a dry run saves nothing');
+
+        $this->artisan('partners:fund-loan', ['partner' => $this->buosti->id, 'loan' => 915, '--amount' => 35000, '--code' => 'QISIRO915', '--apply' => true])->assertSuccessful();
+        $line = Investment::where('name', 'like', '%QISIRO915%')->firstOrFail();
+        $this->assertSame([35000.0, 65000.0], DB::table('loan_fundings')->where('loan_id', 915)->orderBy('amount')->pluck('amount')->map(fn ($a) => (float) $a)->all());
+        $this->assertSame(35000.0, (float) DB::table('loan_fundings')->where('loan_id', 915)->where('investment_id', $line->id)->value('amount'));
+        $this->assertSame(1, app(PartnerLines::class)->status($line)['loans']);
+
+        $this->artisan('partners:fund-loan', ['partner' => $this->buosti->id, 'loan' => 915, '--amount' => 35000, '--code' => 'QISIRO915', '--apply' => true])->assertSuccessful();
+        $this->assertSame(1, Investment::where('name', 'like', '%QISIRO915%')->count(), 'run twice, booked once');
+        $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertOk()->assertSee('#915')->assertSee('35,000.00');
+    }
+
+    /** A partner's own share of a loan with no line (ISIRO's 44,000 on facility 458) shows on the Investments tab (owner, 17 Nov 2026). */
+    public function test_money_in_a_loan_without_a_line_shows_on_the_investments_tab(): void
+    {
+        $this->houseLoan(914);
+        $d = DB::table('disbursements')->where('loan_id', 914)->value('id');
+        DB::table('loan_fundings')->insert(['loan_id' => 914, 'investment_id' => null, 'partner_id' => $this->buosti->id, 'amount' => 44000, 'share' => 0.18,
+            'disbursement_id' => $d, 'source' => 'slices', 'notes' => 'their share, no line', 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertOk()
+            ->assertSee('Money in a loan, not on a line')->assertSee('#914')->assertSee('44,000.00')->assertSee('18%');
+    }
+
     /** A line that paid for a loan alone, in cash (no loan_fundings rows), lists that loan when opened (live, 17 Nov 2026). */
     public function test_a_line_that_paid_for_a_loan_alone_lists_it(): void
     {

@@ -174,6 +174,48 @@
   </table>
 </div>
 
+{{-- money in a loan with no line (owner, 17 Nov 2026): a partner's own share of a facility (e.g. ISIRO's 44,000 on
+     loan 458) is a loan_fundings slice with no investment line, shared out by the facility split, not by a line --}}
+@php
+  $hasSplits = \Illuminate\Support\Facades\Schema::hasTable('facility_splits') && \Illuminate\Support\Facades\Schema::hasTable('facility_split_parties');
+  $noLine = \Illuminate\Support\Facades\DB::table('loan_fundings as f')->join('loans as l', 'l.id', '=', 'f.loan_id')->join('users as u', 'u.id', '=', 'l.user_id')
+    ->leftJoin('disbursements as d', 'd.id', '=', 'f.disbursement_id')
+    ->when($hasSplits, fn ($q) => $q->leftJoin('facility_splits as fs', 'fs.loan_id', '=', 'f.loan_id')
+      ->leftJoin('facility_split_parties as fp', fn ($j) => $j->on('fp.facility_split_id', '=', 'fs.id')->on('fp.partner_id', '=', 'f.partner_id')))
+    ->where('f.partner_id', $partner->id)->whereNull('f.investment_id')->orderBy('f.id')
+    ->get(array_merge(['f.id', 'f.loan_id', 'f.amount', 'f.share', 'f.settled_on', 'l.status as loan_status', 'u.id as borrower_id', 'u.name as borrower', 'u.phone as borrower_phone',
+      'd.id as disbursement_id', 'd.disburse_date', 'd.transaction as d_ref'], $hasSplits ? ['fp.pi_entitled', 'fp.penalty_pct', 'fp.received_before', 'fs.total_cap'] : []));
+@endphp
+@if ($noLine->isNotEmpty())
+  <div class="border-t border-gray-100 px-4 py-4 dark:border-gray-800 sm:px-6">
+    <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Money in a loan, not on a line</h3>
+    <p class="text-theme-sm text-gray-500 dark:text-gray-400">Their own share of a loan. What it earns follows the loan's split, not a line's terms. KES {{ $kes($noLine->sum('amount')) }} in {{ $noLine->count() }} {{ \Illuminate\Support\Str::plural('loan', $noLine->count()) }}.</p>
+  </div>
+  <div class="max-w-full overflow-x-auto" tabindex="0" aria-label="Money in a loan, not on a line">
+    <table class="w-full min-w-[960px] text-left text-theme-sm text-gray-700 dark:text-gray-300" data-no-line>
+      <thead class="border-y border-gray-100 bg-gray-50 text-theme-xs font-medium text-gray-500 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-400">
+        <tr><th class="py-3 pl-4 pr-4 sm:pl-6">Loan</th><th class="py-3 pr-4">Borrower</th><th class="py-3 pr-4 text-right">Put in</th><th class="py-3 pr-4 text-right">Share of the loan</th>
+          <th class="py-3 pr-4">Disbursed</th><th class="py-3 pr-4 text-right">Principal and interest due to them</th><th class="py-3 pr-4 text-right">Received</th><th class="py-3 pr-4 sm:pr-6">Status</th></tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+        @foreach ($noLine as $nl)
+          @php $got = (float) ($nl->received_before ?? 0) + (float) \App\Models\PartnerTransaction::where('partner_id', $partner->id)->where('loan_id', $nl->loan_id)->whereIn('type', ['profit_distribution', 'penalty_share', 'capital_return'])->sum('amount'); @endphp
+          <tr>
+            <td class="py-3 pl-4 pr-4 sm:pl-6"><a class="font-medium text-brand-500 hover:underline" href="{{ route('loans.show', $nl->loan_id) }}">#{{ $nl->loan_id }}</a></td>
+            <td class="py-3 pr-4"><x-staff.person :name="$nl->borrower" :id="$nl->borrower_id" :sub="$nl->borrower_phone" /></td>
+            <td class="py-3 pr-4 text-right font-outfit tabular-nums">{{ $kes($nl->amount) }}</td>
+            <td class="py-3 pr-4 text-right font-outfit tabular-nums">{{ $nl->share !== null ? rtrim(rtrim(number_format((float) $nl->share * 100, 2), '0'), '.') . '%' : '—' }}</td>
+            <td class="whitespace-nowrap py-3 pr-4 text-theme-xs text-gray-500 dark:text-gray-400">@if ($nl->disbursement_id)#{{ $nl->disbursement_id }}<span class="block">{{ $nl->disburse_date ? \Illuminate\Support\Carbon::parse($nl->disburse_date)->format('j M Y') : '' }}</span>@else—@endif</td>
+            <td class="py-3 pr-4 text-right font-outfit tabular-nums">{{ isset($nl->pi_entitled) && $nl->pi_entitled !== null ? $kes($nl->pi_entitled) : '—' }}@if (isset($nl->penalty_pct) && $nl->penalty_pct !== null)<span class="block font-sans text-theme-xs text-gray-500">then {{ rtrim(rtrim(number_format((float) $nl->penalty_pct, 2), '0'), '.') }}% of the penalty</span>@endif</td>
+            <td class="py-3 pr-4 text-right font-outfit tabular-nums">{{ $got > 0 ? $kes($got) : '—' }}</td>
+            <td class="py-3 pr-4 sm:pr-6">@if ($nl->settled_on)<x-staff.pill tone="green" dot>House settled</x-staff.pill>@elseif (in_array($nl->loan_status, $final, true))<x-staff.pill tone="green" dot>Paid back</x-staff.pill>@else<x-staff.pill tone="blue" dot>Out on the loan</x-staff.pill>@endif</td>
+          </tr>
+        @endforeach
+      </tbody>
+    </table>
+  </div>
+@endif
+
 @can('edit partners')
   @foreach ($rows as $r)
     @php extract($r); @endphp
