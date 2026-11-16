@@ -487,6 +487,16 @@
                 Support
               </a>
             </li>
+            {{-- the public website, in a new tab (owner, 16 Nov 2026) --}}
+            <li>
+              <a href="{{ route('home') }}" target="_blank" rel="noopener"
+                class="group flex items-center gap-3 rounded-lg px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300">
+                <svg class="size-6 stroke-gray-500 group-hover:stroke-gray-700 dark:stroke-gray-400 dark:group-hover:stroke-gray-300" viewBox="0 0 24 24" fill="none" stroke-width="1.5" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.3 2.4 3.5 5.2 3.5 8.5s-1.2 6.1-3.5 8.5c-2.3-2.4-3.5-5.2-3.5-8.5s1.2-6.1 3.5-8.5Z"/>
+                </svg>
+                Visit website
+              </a>
+            </li>
           </ul>
           @if (auth()->user()?->hasRole('super-admin') || app()->bound('az.preview'))
             {{-- sysadmin "view as" (owner, 23 Oct 2026) --}}
