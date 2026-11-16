@@ -5,60 +5,39 @@
     <x-ui.page-header title="KYC Reviews" sub="Borrowers verify themselves; approve them after calling their next of kin and guarantor." />
     <x-ui.page-metrics page="kyc-reviews" />
 
-    {{-- status tabs --}}
-    <div class="mb-5 flex flex-wrap gap-2">
-        @foreach ($statuses as $key => $label)
-            <a href="{{ route('kyc-reviews.index', ['status' => $key]) }}"
-               class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors
-                      {{ $status === $key ? 'bg-brand-500 text-white' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
-                {{ $label }}
-                <span class="rounded-full px-2 py-0.5 text-xs {{ $status === $key ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700' }}">{{ $counts[$key] ?? 0 }}</span>
-            </a>
-        @endforeach
-    </div>
-
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        @if ($users->isEmpty())
-            <div class="p-10 text-center text-sm text-gray-500 dark:text-gray-400">
-                Nothing {{ strtolower($statuses[$status]) }} right now.
-            </div>
-        @else
-            <div class="overflow-x-auto">
-                <table data-table data-table-search="Search people" class="min-w-full text-left text-sm">
-                    <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
-                        <tr>
-                            <th class="px-5 py-3 font-medium">Borrower</th>
-                            <th class="px-5 py-3 font-medium">Phone</th>
-                            <th class="px-5 py-3 font-medium">ID number</th>
-                            <th class="px-5 py-3 font-medium">{{ $status === 'submitted' ? 'Submitted' : 'Reviewed' }}</th>
-                            <th class="px-5 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @foreach ($users as $u)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                                <td class="px-5 py-3">
-                                    <p class="font-medium text-gray-800 dark:text-white/90">{{ $u->name }}</p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ $u->email }}</p>
-                                </td>
-                                <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ $u->phone }}</td>
-                                <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ $u->id_number ?? '—' }}</td>
-                                <td class="px-5 py-3 text-gray-700 dark:text-gray-300">
-                                    {{ optional($status === 'submitted' ? $u->kyc_submitted_at : $u->kyc_reviewed_at)->diffForHumans() ?? '—' }}
-                                </td>
-                                <td class="px-5 py-3 text-right">
-                                    <a href="{{ route('kyc-reviews.show', $u) }}"
-                                       class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-xs font-medium text-white hover:bg-brand-600">
-                                        {{ $status === 'submitted' ? 'Review' : 'View' }}
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
-    </div>
+    {{-- Alpine tablines (owner, 16 Nov 2026): all three lists are on the page, so a tab opens at once; ?status= still picks the first one --}}
+    @php
+      $tabs = collect($statuses)->map(fn ($label, $key) => [$label, $counts[$key] ?? 0])->all();
+    @endphp
+    <x-staff.tabs :tabs="$tabs" :active="$status">
+      @foreach ($statuses as $key => $label)
+        @php $when = $key === 'submitted' ? 'Submitted' : 'Reviewed'; @endphp
+        <x-staff.tab :name="$key">
+          <x-staff.table :title="$label" caption="KYC {{ strtolower($label) }}" :headers="['Borrower', 'Phone', 'ID number', $when, '']">
+            @forelse ($lists[$key] as $u)
+              @php $at = $key === 'submitted' ? $u->kyc_submitted_at : $u->kyc_reviewed_at; @endphp
+              <tr>
+                <td data-sort-value="{{ $u->name }}"><x-staff.person :user="$u" :sub="$u->email" /></td>
+                <td>{{ $u->phone ?: '—' }}</td>
+                <td>{{ $u->id_number ?? '—' }}</td>
+                <td data-sort-value="{{ $at?->timestamp }}">
+                  <span class="text-theme-sm text-gray-700 dark:text-gray-300">{{ $at?->diffForHumans(short: true) ?? '—' }}</span>
+                  @if ($at)<span class="block text-theme-xs text-gray-500 dark:text-gray-400">{{ $at->format('j M, H:i') }}</span>@endif
+                </td>
+                <td class="text-right" data-actions>
+                  <a href="{{ route('kyc-reviews.show', $u) }}"
+                     class="inline-flex items-center rounded-lg {{ $key === 'submitted' ? 'bg-brand-500 text-white hover:bg-brand-600' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300' }} px-3 py-2 text-theme-xs font-medium">
+                    {{ $key === 'submitted' ? 'Review' : 'View' }}
+                  </a>
+                </td>
+              </tr>
+            @empty
+              <tr data-table-skip><td colspan="5"><x-staff.empty title="Nothing here" message="Nothing {{ strtolower($label) }} right now." /></td></tr>
+            @endforelse
+          </x-staff.table>
+        </x-staff.tab>
+      @endforeach
+    </x-staff.tabs>
 </div>
 
 @include('partials.modal.flash-alert')

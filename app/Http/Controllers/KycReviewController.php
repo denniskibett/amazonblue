@@ -54,16 +54,21 @@ class KycReviewController extends Controller
     {
         $status = array_key_exists($request->query('status'), self::STATUSES) ? $request->query('status') : 'submitted';
 
-        $users = User::with('borrower')
-            ->where('kyc_status', $status)
-            ->orderBy($status === 'submitted' ? 'kyc_submitted_at' : 'kyc_reviewed_at', $status === 'submitted' ? 'asc' : 'desc')
-            ->limit(1000)->get();
+        // all three lists at once so the Alpine tablines switch without a reload (owner, 16 Nov 2026)
+        $lists = [];
+        foreach (array_keys(self::STATUSES) as $key) {
+            $lists[$key] = User::with('borrower')
+                ->where('kyc_status', $key)
+                ->orderBy($key === 'submitted' ? 'kyc_submitted_at' : 'kyc_reviewed_at', $key === 'submitted' ? 'asc' : 'desc')
+                ->limit(1000)->get();
+        }
 
         $counts = User::whereIn('kyc_status', array_keys(self::STATUSES))
             ->select('kyc_status', DB::raw('count(*) as total'))->groupBy('kyc_status')->pluck('total', 'kyc_status');
 
         return view('kyc-reviews.index', [
-            'users' => $users,
+            'lists' => $lists,
+            'users' => $lists[$status],
             'status' => $status,
             'statuses' => self::STATUSES,
             'counts' => $counts,
