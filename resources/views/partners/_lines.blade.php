@@ -24,9 +24,23 @@
     ['line' => $l, 's' => $s] = $row;
     $fixed = $l->return_type === 'fixed_return';
     $due = $fixed ? $plines->fixedDue($l) : null;
+    // the same loans the "N loans" count reads (LoanFundings::loanIdsFor): slices in loan_fundings, and loans this line
+    // paid for alone in cash (disbursements.investment_id, no loan_fundings rows) (owner, 17 Nov 2026)
+    $loanIds = $plines->loanIds($l)->map(fn ($id) => (int) $id);
     $slicesOf = \Illuminate\Support\Facades\DB::table('loan_fundings as f')->join('loans as l', 'l.id', '=', 'f.loan_id')->join('users as u', 'u.id', '=', 'l.user_id')
       ->leftJoin('disbursements as d', 'd.id', '=', 'f.disbursement_id')->where('f.investment_id', $l->id)->orderBy('f.id')
       ->get(['f.*', 'l.status as loan_status', 'u.id as borrower_id', 'u.name as borrower', 'u.phone as borrower_phone', 'd.disburse_date', 'd.transaction as d_ref']);
+    $cashOnly = $loanIds->diff($slicesOf->pluck('loan_id')->map(fn ($id) => (int) $id))->values();
+    if ($cashOnly->isNotEmpty()) {
+      $slicesOf = $slicesOf->concat(\Illuminate\Support\Facades\DB::table('disbursements as d')->join('loans as l', 'l.id', '=', 'd.loan_id')->join('users as u', 'u.id', '=', 'l.user_id')
+        ->where('d.investment_id', $l->id)->where('d.kind', 'cash')->whereIn('d.loan_id', $cashOnly)->orderBy('d.id')
+        ->get(['d.id as disbursement_id', 'd.loan_id', 'd.amount', 'd.disburse_date', 'd.transaction as d_ref', 'l.status as loan_status', 'u.id as borrower_id', 'u.name as borrower', 'u.phone as borrower_phone'])
+        ->groupBy('loan_id')->map(function ($ds) {
+          $first = $ds->first();
+          // no slice row: nothing to settle; id null keeps it off the "House settles" list
+          return (object) array_merge((array) $first, ['id' => null, 'amount' => round((float) $ds->sum('amount'), 2), 'settled_on' => null, 'settled_interest' => null]);
+        })->values())->sortBy('loan_id')->values();
+    }
     $loanIds = $slicesOf->pluck('loan_id')->unique();
     $multi = \Illuminate\Support\Facades\DB::table('loan_fundings')->whereIn('loan_id', $loanIds)->groupBy('loan_id')->havingRaw('count(*) > 1')->pluck('loan_id')->all();
     // what the borrower paid on each loan and the last day they paid, and what this partner earned from it

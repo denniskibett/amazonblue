@@ -96,6 +96,22 @@ class PartnerSlicesTest extends TestCase
         $this->assertSame('2026-10-13', substr((string) PartnerTransaction::where('partner_id', $this->buosti->id)->where('type', 'contribution')->value('transaction_date'), 0, 10));
     }
 
+    /** A line that paid for a loan alone, in cash (no loan_fundings rows), lists that loan when opened (live, 17 Nov 2026). */
+    public function test_a_line_that_paid_for_a_loan_alone_lists_it(): void
+    {
+        $line = $this->line();
+        $this->loanRow(913, 1, 15000, 15000, '2026-10-13', '2026-10-23', 'approved', 1, 30);
+        $this->cycleRow(913, 913, 1, 0, 3000, 18000, 20, '2026-10-13', '2026-10-23', 'active', 'Initial');
+        $this->actingAs($this->admin)->postJson(route('disbursements.store'), ['loan_id' => 913, 'amount' => 15000, 'disburse_date' => '2026-10-13',
+            'transaction' => 'QD913', 'mode' => 'mpesa', 'funding_mode' => 'line', 'investment_id' => $line->id])->assertCreated();
+        $this->assertSame(0, DB::table('loan_fundings')->where('loan_id', 913)->count(), 'paid for by one line: no slice rows');
+        $this->assertSame(1, app(PartnerLines::class)->status($line->refresh())['loans']);
+
+        $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertOk()
+            ->assertSee('#913')->assertSee('QD913')->assertSee('15,000.00')->assertSee('Out on the loan')
+            ->assertDontSee('This line has not funded a loan yet.');
+    }
+
     /** The partner page (owner, 16 Nov 2026): every form sits in a right-side sheet, and a line lists the loans it funded. */
     public function test_the_partner_page_keeps_forms_in_sheets_and_shows_what_each_line_funded(): void
     {
