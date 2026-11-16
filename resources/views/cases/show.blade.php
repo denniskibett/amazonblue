@@ -181,7 +181,7 @@
                     <div class="grid grid-cols-1 gap-8 p-5 sm:p-6 lg:grid-cols-2">
             <div>
                 <div class="flex items-center gap-3">
-                    <span class="flex size-12 items-center justify-center rounded-full bg-brand-50 font-semibold text-brand-600 dark:bg-brand-500/15">{{ $caseJs['user_initials'] }}</span>
+                    <x-ui.avatar :user="$caseUser" class="size-12" text="text-theme-sm" />
                     <div class="min-w-0"><p class="truncate font-semibold text-gray-800 dark:text-white/90">{{ $caseUser->name ?? '—' }}</p><p class="truncate text-theme-sm text-gray-500">{{ $phone ?? 'no phone' }}</p></div>
                 </div>
                 <div class="mt-4 grid grid-cols-2 gap-2">

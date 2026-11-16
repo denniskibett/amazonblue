@@ -36,6 +36,7 @@
     left: '<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
     right: '<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
     more: '<svg class="size-5" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
+    chev: '<svg class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
     sort: '<svg class="ml-1 inline size-3 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>',
   };
   const text = (el) => (el ? el.textContent : '').replace(/\s+/g, ' ').trim();
@@ -158,20 +159,21 @@
       || Array.from(card.querySelectorAll('h2, h3')).find(h => !h.closest('table') && (h.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING));
     const bar = make('div', 'mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between');
     const left = make('div', 'min-w-0');
-    const right = make('div', 'flex flex-wrap items-center gap-3');
+    const right = make('div', 'flex flex-wrap items-center gap-3 sm:justify-end');
     const counter = make('p', 'mt-1 text-sm text-gray-500 dark:text-gray-400');
     const titleWrap = title ? title.parentElement : null;
     if (title) { left.append(title); left.append(counter); } else { left.append(counter); }
 
-    const sizeSel = make('select', 'appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200');
+    // Show: 10 ⌄ sits at the far top right of every table (owner, 16 Nov 2026)
+    const sizeSel = make('select', 'h-11 cursor-pointer appearance-none rounded-xl border border-gray-300 bg-white pl-4 pr-10 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]');
     sizeSel.setAttribute('aria-label', 'Rows per page');
     sizeSel.addEventListener('change', () => { state.size = parseInt(sizeSel.value, 10); state.page = 1; render(); });
-    const sizeWrap = make('div', 'flex items-center', '<span class="mr-2 hidden text-sm text-gray-500 dark:text-gray-400 sm:inline">Show:</span>');
-    const selBox = make('div', 'relative');
+    const sizeWrap = make('div', 'order-last flex items-center', '<span class="mr-2 text-sm text-gray-500 dark:text-gray-400">Show:</span>');
+    const selBox = make('div', 'relative', icon.chev);
     selBox.prepend(sizeSel); sizeWrap.append(selBox); right.append(sizeWrap);
 
-    const sWrap = make('div', 'relative min-w-[150px] flex-1', '<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">' + icon.search.replace('size-4', 'size-5') + '</span>');
-    const search = make('input', 'w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-theme-sm font-medium text-gray-700 shadow-theme-xs placeholder:text-gray-400 hover:bg-gray-50 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]');
+    const sWrap = make('div', 'relative min-w-[150px] flex-1 sm:w-64 sm:flex-none', '<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">' + icon.search.replace('size-4', 'size-5') + '</span>');
+    const search = make('input', 'h-11 w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-theme-sm font-medium text-gray-700 shadow-theme-xs placeholder:text-gray-400 hover:bg-gray-50 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]');
     search.type = 'search'; search.placeholder = (table.dataset.tableSearch || 'Search') + '...'; search.setAttribute('aria-label', table.dataset.tableSearch || 'Search');
     sWrap.append(search); right.append(sWrap);
     let t; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { state.q = search.value.trim().toLowerCase(); state.page = 1; render(); }, 120); });
@@ -180,11 +182,11 @@
       if (!('filter' in th.dataset)) return;
       const values = [...new Set(groups.map(g => cellVal(cellOf(g, col), 'filterValue')).filter(Boolean))].sort();
       if (values.length < 2) return;
-      const sel = make('select', 'appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-8 text-theme-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400');
+      const sel = make('select', 'h-11 cursor-pointer appearance-none rounded-xl border border-gray-300 bg-white pl-4 pr-10 text-theme-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400');
       sel.append(new Option('All ' + (th.dataset.filter || text(th)).toLowerCase(), ''));
       values.forEach(v => sel.append(new Option(v, v)));
       sel.addEventListener('change', () => { state.filters[col] = sel.value; state.page = 1; render(); });
-      const w = make('div', 'relative');
+      const w = make('div', 'relative', icon.chev);
       w.prepend(sel); right.append(w);
     });
     (table.dataset.tableButtons ? document.querySelectorAll(table.dataset.tableButtons) : []).forEach(b => right.append(b));
@@ -193,11 +195,14 @@
     // footer: "Showing 1 to 10 of N results" on the left, Previous / pages / Next on the right
     const foot = make('div', 'flex flex-col items-center justify-between gap-3 px-2 py-4 sm:flex-row sm:px-0');
     const info = make('p', 'text-sm text-gray-700 dark:text-gray-400');
-    const nav = make('div', 'flex items-center');
-    const btnCls = 'relative inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700';
-    const prev = make('button', btnCls, 'Previous'); prev.type = 'button';
-    const next = make('button', btnCls + ' ml-3', 'Next'); next.type = 'button';
-    const pages = make('div', 'ml-3 hidden items-center gap-1 sm:flex');
+    const nav = make('nav', 'flex items-center gap-2'); nav.setAttribute('aria-label', 'Pages');
+    const sq = 'inline-flex size-11 shrink-0 items-center justify-center rounded-xl border text-theme-sm font-medium transition-colors';
+    const sqOff = sq + ' border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]';
+    const sqOn = sq + ' border-brand-500 bg-brand-500 text-white';
+    const arrow = sqOff + ' disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-300 disabled:hover:bg-white dark:disabled:border-gray-800 dark:disabled:text-gray-600';
+    const prev = make('button', arrow, icon.left.replace('size-4', 'size-5')); prev.type = 'button'; prev.setAttribute('aria-label', 'Previous page');
+    const next = make('button', arrow, icon.right.replace('size-4', 'size-5')); next.type = 'button'; next.setAttribute('aria-label', 'Next page');
+    const pages = make('div', 'hidden items-center gap-2 sm:flex');
     nav.append(prev, pages, next); foot.append(info, nav);
     prev.addEventListener('click', () => { state.page--; render(true); });
     next.addEventListener('click', () => { state.page++; render(true); });
@@ -228,11 +233,11 @@
         });
       }
       const total = list.length;
-      const options = SIZES.filter((s, i) => s < total || (SIZES[i - 1] || 0) < total || i === 0);
+      const options = SIZES.filter((s, i) => (s >= 10 && s <= 100) || (s > 100 && (SIZES[i - 1] || 0) < total) || s === state.size);
       sizeSel.innerHTML = ''; options.forEach(s => sizeSel.append(new Option(s, s)));
       if (!options.includes(state.size)) state.size = options.filter(s => s <= state.size).pop() || options[0];
       sizeSel.value = state.size;
-      sizeWrap.classList.toggle('hidden', options.length < 2);
+      sizeWrap.classList.toggle('hidden', groups.length === 0);
       const last = Math.max(1, Math.ceil(total / state.size));
       state.page = Math.min(Math.max(1, state.page), last);
       const from = (state.page - 1) * state.size, shown = list.slice(from, from + state.size);
@@ -243,18 +248,22 @@
 
       prev.disabled = state.page <= 1; next.disabled = state.page >= last;
       pages.innerHTML = '';
-      const nums = [];
-      for (let p = 1; p <= last; p++) if (p === 1 || p === last || Math.abs(p - state.page) <= 1) nums.push(p);
-      nums.forEach((p, i) => {
-        if (i && p - nums[i - 1] > 1) pages.append(make('span', 'relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-400', '...'));
-        const b = make('button', 'relative inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium ' + (p === state.page ? 'bg-brand-500 text-white' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700'), String(p));
+      // up to 7 boxes: all pages when they fit, else 1 2 3 4 5 … 10 / 1 … 4 5 6 … 10 / 1 … 6 7 8 9 10
+      let nums;
+      if (last <= 7) nums = Array.from({length: last}, (_, i) => i + 1);
+      else if (state.page <= 4) nums = [1, 2, 3, 4, 5, 0, last];
+      else if (state.page >= last - 3) nums = [1, 0, last - 4, last - 3, last - 2, last - 1, last];
+      else nums = [1, 0, state.page - 1, state.page, state.page + 1, 0, last];
+      nums.forEach((p) => {
+        if (!p) { pages.append(make('span', sqOff + ' pointer-events-none', '…')); return; }
+        const b = make('button', p === state.page ? sqOn : sqOff, String(p));
         b.type = 'button'; if (p === state.page) b.setAttribute('aria-current', 'page');
         b.addEventListener('click', () => { state.page = p; render(true); });
         pages.append(b);
       });
       const a1 = total ? from + 1 : 0, a2 = Math.min(from + state.size, total), extra = total !== groups.length ? ` (filtered from ${groups.length})` : '';
       counter.textContent = `Showing ${a1} to ${a2} of ${total} entries` + extra;
-      info.textContent = `Showing ${a1} to ${a2} of ${total} results`;
+      info.innerHTML = `Showing <span class="font-medium text-gray-800 dark:text-white/90">${a1}–${a2}</span> of <span class="font-medium text-gray-800 dark:text-white/90">${total}</span>`;
       nav.classList.toggle('invisible', last < 2);
       foot.classList.toggle('hidden', groups.length === 0);
       sWrap.classList.toggle('hidden', groups.length === 0);

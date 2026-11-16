@@ -168,11 +168,7 @@
           @if($showUserColumn && auth()->user()->hasAnyRole(['admin', 'broker', 'teller']))
           <td class="py-3 hidden sm:table-cell">
             <div class="flex items-center gap-3">
-              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}">
-                  <span class="text-blue-600 font-medium">{{ ucfirst(substr($loan->user->name, 0, 1)) }}</span>
-                </a>    
-              </div>
+              <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="shrink-0"><x-ui.avatar :user="$loan->user" /></a>
               <div>
                 <a href="{{ route('users.loans.show', ['user' => $loan->user_id, 'loan' => $loan->id]) }}" class="loan-borrower">
                   <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $loan->user_id }}">{{ $loan->user->name }}</p>

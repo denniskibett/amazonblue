@@ -479,17 +479,7 @@
           <!-- Desktop cells -->
           <td class="py-3 hidden sm:table-cell">
             <div class="flex items-center gap-3">
-              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden">
-                <a href="{{ route('users.show', $user->id) }}">
-                  @if($avatarUrl)
-                    <img src="{{ $avatarUrl }}" 
-                         alt="{{ $user->name }}" 
-                         class="h-10 w-10 object-cover">
-                  @else
-                    <span class="text-indigo-600 font-medium text-lg">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
-                  @endif
-                </a>    
-              </div>
+              <a href="{{ route('users.show', $user->id) }}" class="shrink-0"><x-ui.avatar :user="$user" /></a>
               <div>
                 <a href="{{ route('users.show', $user->id) }}" class="user-name">
                   <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">
@@ -628,17 +618,7 @@
           <!-- Mobile cells (simplified view) -->
           <td class="py-3 sm:hidden">
             <div class="flex items-center gap-3">
-              <div class="h-[40px] w-[40px] overflow-hidden rounded-full bg-indigo-100 flex items-center justify-center">
-                <a href="{{ route('users.show', $user->id) }}">
-                  @if($avatarUrl)
-                    <img src="{{ $avatarUrl }}" 
-                         alt="{{ $user->name }}" 
-                         class="h-10 w-10 object-cover">
-                  @else
-                    <span class="text-indigo-600 font-medium text-lg">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
-                  @endif
-                </a>
-              </div>
+              <a href="{{ route('users.show', $user->id) }}" class="shrink-0"><x-ui.avatar :user="$user" /></a>
               <div>
                 <a href="{{ route('users.show', $user->id) }}" class="user-name">
                   <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">

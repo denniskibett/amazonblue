@@ -70,9 +70,7 @@
                     </td>
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-2">
-                            <div class="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-medium">
-                                {{ $case->user->getInitialsAttribute() ?? 'U' }}
-                            </div>
+                            <x-ui.avatar :user="$case->user" class="size-8" />
                             <div>
                                 <p class="text-sm font-medium text-gray-800 dark:text-white/90 cursor-pointer hover:text-brand-500" data-user-peek="{{ $case->user_id }}">{{ $case->user->name }}</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $case->user->phone ?? 'No phone' }}</p>

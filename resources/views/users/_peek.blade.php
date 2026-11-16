@@ -10,11 +10,7 @@
 @endphp
 <div class="space-y-5">
   <div class="flex items-center gap-4">
-    @if ($id['photo'])
-      <img src="{{ $id['photo'] }}" alt="{{ $id['name'] }}" class="size-16 shrink-0 rounded-full object-cover">
-    @else
-      <span class="flex size-16 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xl font-semibold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">{{ $id['initials'] }}</span>
-    @endif
+    <x-ui.avatar :user="$user ?? null" :name="$id['name']" class="size-16" text="text-xl" />
     <div class="min-w-0">
       <h3 class="truncate text-lg font-semibold text-gray-800 dark:text-white/90">{{ $id['name'] }}</h3>
       <div class="mt-1 flex flex-wrap gap-1.5">
