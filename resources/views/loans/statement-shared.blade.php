@@ -43,7 +43,6 @@
         @if (filled($pay['bank_account_number'] ?? null))
           <div class="rounded-xl bg-gray-50 px-3 py-2">
             <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Bank transfer · {{ $pay['bank_name'] }}</p>
-            {!! $copyRow('Account name', $pay['bank_account_name'] ?? null) !!}
             {!! $copyRow('Account number', $pay['bank_account_number']) !!}
             {!! $copyRow('Branch', $pay['bank_branch'] ?? null) !!}
             {!! $copyRow('SWIFT', $pay['bank_swift'] ?? null) !!}
