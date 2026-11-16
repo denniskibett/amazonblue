@@ -96,6 +96,39 @@ class PartnerSlicesTest extends TestCase
         $this->assertSame('2026-10-13', substr((string) PartnerTransaction::where('partner_id', $this->buosti->id)->where('type', 'contribution')->value('transaction_date'), 0, 10));
     }
 
+    /** The partner page (owner, 16 Nov 2026): every form sits in a right-side sheet, and a line lists the loans it funded. */
+    public function test_the_partner_page_keeps_forms_in_sheets_and_shows_what_each_line_funded(): void
+    {
+        $this->houseLoan(912);
+        $line = $this->line();
+        $d = DB::table('disbursements')->where('loan_id', 912)->value('id');
+        $show = route('partners.show', $this->buosti);
+
+        // Preview from the "part of a loan" sheet comes back to the same sheet, with the journal rows in it
+        $this->actingAs($this->admin)->from($show)->followingRedirects()
+            ->post(route('staff.partners.slices.fund', $this->buosti), ['_sheet' => 'part-of-loan', 'line' => $line->id, 'loan' => 912, 'disbursement' => $d, 'amount' => 20000, 'mode' => 'preview'])
+            ->assertOk()->assertSee('Preview: the journal rows this would post');
+        $this->actingAs($this->admin)->post(route('staff.partners.slices.fund', $this->buosti), ['line' => $line->id, 'loan' => 912, 'disbursement' => $d, 'amount' => 20000, 'mode' => 'save'])
+            ->assertSessionHas('success');
+        $borrower = DB::table('users')->where('id', Loan::findOrFail(912)->user_id)->value('name');
+        $slice = DB::table('loan_fundings')->where('loan_id', 912)->where('investment_id', $line->id)->value('id');
+
+        $this->actingAs($this->admin)->get($show)->assertOk()
+            ->assertSee('data-sheet="record-money"', false)->assertSee('data-sheet="part-of-loan"', false)->assertSee('data-sheet="settle-' . $slice . '"', false)
+            ->assertSee('Investments')->assertSee('Clients and own loans')
+            ->assertSee('#912')->assertSee($borrower)->assertSee('Out on the loan')
+            ->assertDontSee('partners:own-loans');
+
+        // paid in full: the line says so, how much the borrower paid and when, and their share
+        $this->pay(912, 120000, 'QK912', '2026-10-23');
+        $this->actingAs($this->admin)->get($show)->assertOk()
+            ->assertSee('Paid back')->assertSee('120,000.00')->assertSee('23 Oct 2026')->assertSee('2,400.00')
+            ->assertDontSee('data-sheet="settle-' . $slice . '"', false);
+
+        $this->actingAs($this->admin)->get(route('partners.index'))->assertOk()
+            ->assertSee('Funding lines')->assertSee('Introducers')->assertSee('BUOSTI AGENCY');
+    }
+
     public function test_a_line_paying_for_part_of_a_house_loan_earns_its_share_of_that_part(): void
     {
         $loan = $this->houseLoan(910);

@@ -149,7 +149,7 @@ class PartnerFundingController extends Controller
         try {
             $amount = $lines->setPayoutSource($line, $data['from_line'] ?? null, $request->user());
         } catch (\DomainException $e) {
-            return back()->withErrors(['from_line' => $e->getMessage()]);
+            return back()->withInput()->withErrors(['from_line' => $e->getMessage()]);
         }
 
         return back()->with('alert', ['type' => 'success', 'title' => 'Payout placed',
@@ -165,7 +165,7 @@ class PartnerFundingController extends Controller
         try {
             $line = $lines->updateFixedTerms($line, (float) $data['gross'], (float) $data['share'], (int) $data['days'], $request->user());
         } catch (\DomainException $e) {
-            return back()->withErrors(['terms' => $e->getMessage()]);
+            return back()->withInput()->withErrors(['terms' => $e->getMessage()]);
         }
 
         return back()->with('alert', ['type' => 'success', 'title' => 'Terms changed', 'message' => 'Line #' . $line->id . ': ' . PartnerLines::fixedLabel((float) $line->interest_rate, (float) $line->partner_share_rate, (int) $line->duration_days) . '.']);

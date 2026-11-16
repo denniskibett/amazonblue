@@ -35,8 +35,8 @@
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        @can('edit partners')<a href="?tab=money#record-capital" class="{{ $ghost }}">Record money</a>@endcan
-        <button type="button" @click="window.dispatchEvent(new CustomEvent('edit-partner', { detail: { partner: @js($data) } }))" class="{{ $primary }}">Edit partner</button>
+        @can('edit partners')<button type="button" @click="$dispatch('open-sheet', 'record-money')" class="{{ $primary }}">Record money</button>@endcan
+        <button type="button" @click="window.dispatchEvent(new CustomEvent('edit-partner', { detail: { partner: @js($data) } }))" class="{{ $ghost }}">Edit partner</button>
         <button type="button" @click="window.dispatchEvent(new CustomEvent('delete-partner', { detail: { id: {{ $partner->id }}, name: @js($partner->name) } }))"
           class="inline-flex items-center rounded-lg border border-error-300 px-4 py-2.5 text-theme-sm font-medium text-error-600 hover:bg-error-50 dark:border-error-500/40 dark:hover:bg-error-500/10">Delete</button>
       </div>
@@ -80,9 +80,17 @@
     ]" />
   </div>
 
-  <x-staff.tabs :tabs="['money' => 'Money, clients and loans', 'journal' => ['Journal', $tx->count()], 'details' => 'Details and banking', 'login' => ['Portal login', $partner->user ? 'on' : 'none']]">
-    <x-staff.tab name="money">
+  @php
+    $lineCount = \App\Models\Investment::whereIn('return_type', ['loan_share', 'fixed_return'])->whereHas('fundings', fn ($q) => $q->where('partner_id', $partner->id))->count();
+    $clientCount = \App\Models\Loan::where(fn ($q) => $q->where('broker_status', 1)->where('partner_id', $partner->id))->when($partner->user_id, fn ($q) => $q->orWhere('user_id', $partner->user_id))->count();
+  @endphp
+  <x-staff.tabs class="mt-6" :tabs="['lines' => ['Investments', $lineCount], 'clients' => ['Clients and own loans', $clientCount], 'journal' => ['Journal', $tx->count()], 'details' => 'Details and banking', 'login' => ['Portal login', $partner->user ? 'on' : 'none']]">
+    <x-staff.tab name="lines">
       @include('partners._lines')
+    </x-staff.tab>
+
+    <x-staff.tab name="clients">
+      @include('partners._clients')
     </x-staff.tab>
 
     <x-staff.tab name="journal">
