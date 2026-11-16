@@ -117,6 +117,7 @@ class LoanStatementController extends Controller
         }
 
         return view('loans.statement', [
+            'status' => $this->status($loan, $cycles->last()),
             'loan' => $loan,
             'lines' => $lines,
             'cycleCount' => $cycles->count(),
@@ -152,5 +153,31 @@ class LoanStatementController extends Controller
         $copy->penalty_waived_until = null;
 
         return (float) CycleBalance::at($copy)['penalty'];
+    }
+
+    /** The loan's status in words, for the statement (owner, 16 Nov 2026). */
+    private function status(Loan $loan, ?LoanCycle $cycle): array
+    {
+        $until = $cycle?->penalty_waived_until && $cycle->penalty_waived_until->toDateString() < GraceFix::OPEN_ENDED
+            ? 'until ' . $cycle->penalty_waived_until->format('j M Y') : 'for now';
+        $due = $cycle ? $cycle->due_date->format('j M Y') : null;
+        [$label, $tone, $means] = match ($loan->status) {
+            Loan::STATUS_FORBEARANCE => ['Forbearance', 'bg-amber-100 text-amber-800',
+                'We have paused late penalties ' . $until . ' to give you time to pay. The balance below is still owed and must be paid.'],
+            Loan::STATUS_OVERDUE => ['Overdue', 'bg-red-100 text-red-700',
+                'The due date' . ($due ? ' (' . $due . ')' : '') . ' has passed. A late penalty is added each day until the balance is paid.'],
+            Loan::STATUS_DEFAULTED => ['Defaulted', 'bg-red-100 text-red-700',
+                'The loan has stayed unpaid past the default period. The full balance is due now and may be passed to recovery.'],
+            Loan::STATUS_RECOVERY => ['In recovery', 'bg-red-100 text-red-700',
+                'The loan is with our recovery team. Pay the balance or agree a plan with us to stop further action.'],
+            Loan::STATUS_REPAID => ['Repaid', 'bg-emerald-100 text-emerald-700', 'The loan is paid in full. Nothing more is owed.'],
+            Loan::STATUS_WRITTEN_OFF => ['Written off', 'bg-gray-200 text-gray-700',
+                'We have written the balance off in our books. This does not cancel the debt.'],
+            Loan::STATUS_DISBURSED, Loan::STATUS_ACTIVE => ['Running', 'bg-blue-100 text-blue-700',
+                'The loan is running. Pay the balance by ' . ($due ?? 'the due date') . ' to avoid a late penalty, or ask us to extend it.'],
+            default => [ucfirst(str_replace('_', ' ', (string) $loan->status)), 'bg-gray-100 text-gray-700', 'The loan has not been paid out yet.'],
+        };
+
+        return ['label' => $label, 'tone' => $tone, 'means' => $means];
     }
 }

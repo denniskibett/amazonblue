@@ -14,41 +14,50 @@
 </div>
 
 <div class="az-statement rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-  <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-    <h3 class="text-xl font-medium text-gray-800 dark:text-white/90">Full Loan Statement</h3>
-    <h4 class="text-base font-medium text-gray-700 dark:text-gray-400">ID : #{{ str_pad($loan->id, 5, '0', STR_PAD_LEFT) }}</h4>
+  {{-- letterhead (owner, 16 Nov 2026): logo top left, compact so the statement fits one page --}}
+  <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3 dark:border-gray-800">
+    <img src="{{ asset('assets/images/logo/aimzone-horizontal-blue.svg') }}" alt="Aimzone Ventures Capital" class="h-7 w-auto">
+    <div class="text-right">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Loan Statement</h3>
+      <p class="text-xs text-gray-500">#{{ str_pad($loan->id, 5, '0', STR_PAD_LEFT) }} · as at {{ now()->format('j M Y') }}</p>
+    </div>
   </div>
 
-  <div class="p-5 xl:p-8">
-    <div class="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+  <div class="p-5">
+    <div class="mb-2 grid grid-cols-3 gap-4 text-xs text-gray-500 dark:text-gray-400">
       <div>
-        <span class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-400">From</span>
-        <h5 class="mb-2 text-base font-semibold text-gray-800 dark:text-white/90">Aimzone Ventures Capital</h5>
-        <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">G.P.O 50054 - 00100,<br>Nairobi, Kenya</p>
-        <span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Issued On:</span>
-        <span class="block text-sm text-gray-500 dark:text-gray-400">{{ \Carbon\Carbon::parse($loan->borrow_date)->format('D, M d, Y') }}</span>
+        <p class="font-medium text-gray-700 dark:text-gray-300">From</p>
+        <p class="font-semibold text-gray-800 dark:text-white/90">Aimzone Ventures Capital</p>
+        <p>G.P.O 50054 - 00100, Nairobi, Kenya</p>
       </div>
-      <div class="h-px w-full bg-gray-200 dark:bg-gray-800 sm:h-[158px] sm:w-px"></div>
-      <div class="sm:text-right">
-        <span class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-400">To</span>
-        <h5 class="mb-2 text-base font-semibold text-gray-800 dark:text-white/90">{{ $loan->user->name ?? 'N/A' }}</h5>
-        <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">{{ $loan->user->phone ?? '' }}<br>{{ $loan->user->email ?? '' }}</p>
-        <span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Due On:</span>
-        <span class="block text-sm text-gray-500 dark:text-gray-400">{{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('D, M d, Y') : 'N/A' }}</span>
+      <div>
+        <p class="font-medium text-gray-700 dark:text-gray-300">To</p>
+        <p class="font-semibold text-gray-800 dark:text-white/90">{{ $loan->user->name ?? 'N/A' }}</p>
+        <p>{{ $loan->user->phone ?? '' }}@if ($loan->user?->email) · {{ $loan->user->email }}@endif</p>
       </div>
+      <div class="text-right">
+        <p><span class="font-medium text-gray-700 dark:text-gray-300">Issued</span> {{ \Carbon\Carbon::parse($loan->borrow_date)->format('j M Y') }}</p>
+        <p><span class="font-medium text-gray-700 dark:text-gray-300">Due</span> {{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('j M Y') : 'N/A' }}</p>
+        <p><span class="font-medium text-gray-700 dark:text-gray-300">Product</span> {{ $loan->loanType->name ?? '—' }}</p>
+      </div>
+    </div>
+
+    {{-- the loan's status and what it means (owner, 16 Nov 2026) --}}
+    <div class="mb-2 flex items-start gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5 text-xs dark:border-gray-800 dark:bg-white/[0.02]">
+      <span class="shrink-0 rounded-full px-2 py-0.5 font-semibold {{ $status['tone'] }}">{{ $status['label'] }}</span>
+      <span class="text-gray-600 dark:text-gray-300">{{ $status['means'] }}</span>
     </div>
 
     {{-- the whole loan at a glance --}}
-    <div class="mb-6 grid grid-cols-2 gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-5 sm:grid-cols-5 print:grid-cols-5 dark:border-gray-800 dark:bg-white/[0.02]">
-      <div><p class="text-xs text-gray-500">Product</p><p class="whitespace-nowrap text-sm font-semibold text-gray-800 dark:text-white/90">{{ $loan->loanType->name ?? '—' }}</p></div>
-      <div><p class="text-xs text-gray-500">Cycles</p><p class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ $cycleCount }}</p></div>
-      <div><p class="text-xs text-gray-500">Loan sent</p><p class="text-sm font-semibold tabular-nums text-gray-800 dark:text-white/90">{{ $kes($totals['lent']) }}</p></div>
-      <div><p class="text-xs text-gray-500">Interest + penalty</p><p class="text-sm font-semibold tabular-nums text-gray-800 dark:text-white/90">{{ $kes($totals['interest'] + $totals['penalty']) }}</p></div>
-      <div><p class="text-xs text-gray-500">Paid</p><p class="text-sm font-semibold tabular-nums text-emerald-600">{{ $kes($totals['paid']) }}</p></div>
+    <div class="mb-2 grid grid-cols-4 gap-3 rounded-lg border border-gray-100 px-3 py-1.5 dark:border-gray-800">
+      <div><p class="text-[11px] text-gray-500">Cycles</p><p class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ $cycleCount }}</p></div>
+      <div><p class="text-[11px] text-gray-500">Loan sent</p><p class="text-sm font-semibold tabular-nums text-gray-800 dark:text-white/90">{{ $kes($totals['lent']) }}</p></div>
+      <div><p class="text-[11px] text-gray-500">Interest + penalty</p><p class="text-sm font-semibold tabular-nums text-gray-800 dark:text-white/90">{{ $kes($totals['interest'] + $totals['penalty']) }}</p></div>
+      <div><p class="text-[11px] text-gray-500">Paid</p><p class="text-sm font-semibold tabular-nums text-emerald-600">{{ $kes($totals['paid']) }}</p></div>
     </div>
 
     {{-- the ledger: cycle is a column, the balance runs down (owner, 16 Nov 2026) --}}
-    <div class="az-ledger mb-6 overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800">
+    <div class="az-ledger mb-3 overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800">
       <table class="w-full table-fixed whitespace-nowrap text-xs">
         <colgroup><col style="width:11%"><col style="width:6%"><col><col style="width:12%"><col style="width:12%"><col style="width:13%"></colgroup>
         <thead class="bg-gray-50 text-left dark:bg-white/[0.02]">
@@ -86,16 +95,20 @@
       </table>
     </div>
 
-    <div class="flex items-center justify-between border-t border-gray-200 pt-5 dark:border-gray-800">
-      <span class="text-lg font-semibold text-gray-800 dark:text-white/90">Balance Due:</span>
-      <span class="text-xl font-bold tabular-nums {{ $balance > 0 ? 'text-red-600' : 'text-emerald-600' }}">KES {{ $kes($balance) }}</span>
+    <div class="flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-800">
+      <span class="text-sm font-semibold text-gray-800 dark:text-white/90">Balance due</span>
+      <span class="text-base font-bold tabular-nums {{ $balance > 0 ? 'text-red-600' : 'text-emerald-600' }}">KES {{ $kes($balance) }}</span>
     </div>
-    <p class="mt-2 text-xs text-gray-400">Printed {{ now()->format('j M Y, H:i') }}. A rollover carries the balance into the next cycle; no money changes hands.</p>
+    <p class="mt-1 text-[11px] text-gray-400">A rollover carries the balance into the next cycle; no money changes hands. Printed {{ now()->format('j M Y, H:i') }}.</p>
+    {{-- a statement is a legal document: it ends visibly so nothing can be added below (owner, 16 Nov 2026) --}}
+    <div class="mt-2 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+      <span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>End of statement<span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>
+    </div>
   </div>
 </div>
 @endsection
 
 @push('scripts')
   @include('loans._print-css')
-  <style>@media print { .az-line { break-inside: avoid; page-break-inside: avoid; } .az-statement thead { display: table-header-group; } .az-statement .az-ledger { break-inside: auto !important; page-break-inside: auto !important; } .az-statement .az-ledger table { font-size: 10.5px; } .az-statement .az-ledger td, .az-statement .az-ledger th { padding-left: 6px !important; padding-right: 6px !important; } }</style>
+  <style>@page { margin: 9mm; } @media print { .az-line { break-inside: avoid; page-break-inside: avoid; } .az-statement thead { display: table-header-group; } .az-statement .az-ledger { break-inside: auto !important; page-break-inside: auto !important; } .az-statement .az-ledger table { font-size: 10.5px; } .az-statement .az-ledger td, .az-statement .az-ledger th { padding: 2px 6px !important; line-height: 1.25; } .az-statement .az-ledger td span.block { line-height: 1.2; } }</style>
 @endpush
