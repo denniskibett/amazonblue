@@ -10,12 +10,14 @@
 
     <!-- Loan Details Main Content -->
     <div class="az-statement rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] xl:w-4/5">
-        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4 dark:border-gray-800">
             <h3 class="text-xl font-medium text-gray-800 dark:text-white/90">
                 Loan Statement: #{{ str_pad($loan->id, 5, '0', STR_PAD_LEFT) }}
             </h3>
         {{-- the statement's buttons sit top right (owner, 16 Nov 2026) --}}
-        <div class="no-print flex items-center justify-end gap-3">
+        <div class="no-print flex flex-wrap items-center justify-end gap-2">
+            {{-- the borrower's statement link (owner, 16 Nov 2026) --}}
+            @include('loans._share-buttons', ['share' => \App\Http\Controllers\LoanStatementController::share($loan)])
             {{-- every cycle with its own disbursements and repayments (owner, 16 Nov 2026) --}}
             <a href="{{ route('users.loans.statement', [$loan->user_id, $loan->id]) }}"
                 class="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">

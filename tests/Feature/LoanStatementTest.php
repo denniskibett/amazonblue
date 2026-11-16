@@ -88,8 +88,8 @@ class LoanStatementTest extends TestCase
         $staff = User::factory()->create();
         $staff->assignRole('manager');
 
-        $page = $this->actingAs($staff)->get(route('users.loans.statement', [$loan->user_id, 529]))->assertOk()->assertSee('Share this statement');
-        $url = $page->viewData('shareUrl');
+        $page = $this->actingAs($staff)->get(route('users.loans.statement', [$loan->user_id, 529]))->assertOk()->assertSee('Copy link');
+        $url = $page->viewData('share')['url'];
         auth()->logout();
 
         $this->get($url)->assertOk()->assertSee('Loan Statement')->assertSee('Download PDF')->assertSee('End of statement')->assertSee('noindex', false);

@@ -30,6 +30,16 @@ class LoanStatementController extends Controller
     public function show(int $user, int $loan): View
     {
         $loan = Loan::with(['user', 'loanType', 'cycles'])->where('user_id', $user)->findOrFail($loan);
+
+        return view('loans.statement', $this->data($loan) + ['share' => self::share($loan)]);
+    }
+
+    /**
+     * The borrower's statement link (owner, 16 Nov 2026): url, until, and a WhatsApp link with a short message.
+     * Used by the full statement page and the loan page.
+     */
+    public static function share(Loan $loan): array
+    {
         $until = now()->addDays(self::SHARE_DAYS)->endOfDay();
         $url = URL::temporarySignedRoute('statement.shared', $until, ['loan' => $loan->id]);
         $phone = preg_replace('/\D/', '', (string) $loan->user?->phone);
@@ -37,10 +47,7 @@ class LoanStatementController extends Controller
         $text = 'Hello ' . trim(explode(' ', (string) $loan->user?->name)[0]) . ', here is your Aimzone loan statement for loan #' . $loan->id
             . '. You can view, print or save it as a PDF: ' . $url;
 
-        return view('loans.statement', $this->data($loan) + [
-            'shareUrl' => $url, 'shareUntil' => $until,
-            'waUrl' => strlen($phone) >= 11 ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($text) : null,
-        ]);
+        return ['url' => $url, 'until' => $until, 'wa' => strlen($phone) >= 11 ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($text) : null];
     }
 
     /** The borrower's link: no sign-in, the signature and expiry are checked by the route (owner, 16 Nov 2026). */
