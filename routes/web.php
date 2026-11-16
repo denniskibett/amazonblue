@@ -243,6 +243,11 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('loans.show')
             ->middleware('permission:view loans');
         
+        // the full statement: every cycle with its own disbursements and repayments (owner, 16 Nov 2026)
+        Route::get('/loans/{loan}/statement', [\App\Http\Controllers\LoanStatementController::class, 'show'])
+            ->name('loans.statement')
+            ->middleware('permission:view loans');
+
         Route::get('/loans/{loan}/edit', [LoanController::class, 'edit'])
             ->name('loans.edit')
             ->middleware('permission:edit loans');

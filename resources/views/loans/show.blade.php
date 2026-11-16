@@ -348,7 +348,7 @@
             @endif
 
             <!-- Disbursements and Repayments - Current Cycle Only -->
-            <div class="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-6 mb-8">
+            <div class="no-print grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <!-- Disbursements -->
                 <div class="bg-white p-4 rounded-lg shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
                     <div class="flex justify-between items-center mb-3">
@@ -462,6 +462,11 @@
 
             <!-- Print Button -->
             <div class="no-print flex items-center justify-end gap-3">
+                {{-- every cycle with its own disbursements and repayments (owner, 16 Nov 2026) --}}
+                <a href="{{ route('users.loans.statement', [$loan->user_id, $loan->id]) }}"
+                    class="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                    Full statement (all cycles)
+                </a>
                 <button onclick="window.print()"
                     class="flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600">
                     <svg class="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -488,34 +493,14 @@
 @include('partials.modal.alert-modal')
 
 @push('scripts')
+@include('loans._print-css')
 <style>
     .loan-status-badge {
         font-size: 0.8rem;
         font-weight: 600;
         text-transform: uppercase;
     }
-    /* Print Statement (owner, 16 Nov 2026): only the statement card, portrait A4, as it looks on screen */
-    @page { size: A4 portrait; margin: 12mm; }
-    @media print {
-        html, body { background: #fff !important; }
-        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        .no-print { display: none !important; }
-        /* everything that is not the statement, not inside it and not on the way to it */
-        body *:not(:has(.az-statement)):not(.az-statement):not(.az-statement *) { display: none !important; }
-        /* the wrappers around it: no sidebar offsets, padding, fixed heights or scrolling */
-        body *:has(.az-statement) {
-            display: block !important; position: static !important; margin: 0 !important; padding: 0 !important;
-            width: auto !important; max-width: none !important; height: auto !important; min-height: 0 !important;
-            overflow: visible !important; border: 0 !important; box-shadow: none !important; transform: none !important; background: #fff !important;
-        }
-        .az-statement { width: 100% !important; max-width: none !important; margin: 0 !important; border-radius: 12px; }
-        .az-statement > .p-5 { padding: 20px 24px !important; }
-        .az-statement .grid > div, .az-statement .rounded-2xl, .az-statement .rounded-xl { break-inside: avoid; page-break-inside: avoid; }
-        .az-statement .animate-pulse { animation: none !important; }
-        .az-statement [class*="min-w-"] { min-width: 0 !important; }
-        .az-statement .overflow-x-auto, .az-statement .overflow-hidden { overflow: visible !important; }
-        .az-statement button, .az-statement form, .az-statement a[href*="/edit"] { display: none !important; }
-    }
+
 </style>
 @endpush
 
@@ -559,13 +544,6 @@ function openForbearanceModal() {
     const event = new CustomEvent('open-forbearance-modal');
     window.dispatchEvent(event);
 }
-
-// print in light mode even when the desk is dark (owner, 16 Nov 2026)
-(function () {
-    let wasDark = false;
-    window.addEventListener('beforeprint', () => { wasDark = document.body.classList.contains('dark'); document.body.classList.remove('dark'); document.documentElement.classList.remove('dark'); });
-    window.addEventListener('afterprint', () => { if (wasDark) document.body.classList.add('dark'); });
-})();
 
 // Available immediately, not only after Alpine runs init()
 window.loanData = @json($loanJsData);

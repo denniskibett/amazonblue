@@ -585,7 +585,7 @@
                 @if($loan->consent)
                 <div class="mb-3">
                     <p class="text-sm font-medium text-gray-600">Consent Given</p>
-                    <p class="text-sm text-green-600"><x-ui.icon name="check" class="inline-block size-4 align-[-3px]" /> Agreed on {{ $loan->consent_date->format('M d, Y') }}</p>
+                    <p class="text-sm text-green-600"><x-ui.icon name="check" class="inline-block size-4 align-[-3px]" /> Agreed{{ $loan->consent_date ? ' on ' . $loan->consent_date->format('M d, Y') : '' }}</p>
                 </div>
                 @endif
                 
