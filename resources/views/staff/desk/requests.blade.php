@@ -46,10 +46,11 @@
                     @endif
                     <x-slot:fields>
                       @if ($tu)
-                        <div x-data="{ viaBank: false, bankCode: '' }" @change="if ($event.target.name === 'mode') viaBank = ['bank_transfer', 'cheque'].includes($event.target.value)" class="space-y-3">
+                        <div x-data="{ viaBank: false, bankCode: '', clientBankCode: '' }" @change="if ($event.target.name === 'mode') viaBank = ['bank_transfer', 'cheque'].includes($event.target.value)" class="space-y-3">
                         <x-staff.field name="transaction" id="tu-ref-{{ $r->id }}" label="M-Pesa code of the payment sent" required maxlength="64" />
                         <x-staff.field name="mode" id="tu-mode-{{ $r->id }}" label="Sent by" type="select" :options="['mpesa' => 'M-Pesa', 'bank_transfer' => 'Bank transfer', 'cash' => 'Cash', 'cheque' => 'Cheque']" value="mpesa" />
                         @include('components.staff._bank-select', ['show' => 'viaBank', 'model' => 'bankCode'])
+                        @include('components.staff._bank-select', ['show' => 'viaBank', 'model' => 'clientBankCode', 'prefix' => 'client_', 'label' => "Client's bank", 'required' => false])
                         </div>
                       @endif
                     </x-slot:fields>

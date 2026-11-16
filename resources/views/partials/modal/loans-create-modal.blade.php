@@ -335,6 +335,13 @@
                                 <option value="other">Other (type it)</option>
                             </select>
                             <input x-show="send.bank_code === 'other'" x-model="send.bank_other" maxlength="120" placeholder="The bank's full name" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
+                        <label class="text-xs text-gray-600 dark:text-gray-400" x-show="['bank_transfer','pesalink','cheque'].includes(send.mode)">Client's bank <span class="text-gray-400">(optional)</span>
+                            <select x-model="send.client_bank_code" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                <option value="">Not known</option>
+                                @foreach (\App\Support\Banks::options() as $bc => $bn)<option value="{{ $bc }}">{{ $bn }}</option>@endforeach
+                                <option value="other">Other (type it)</option>
+                            </select>
+                            <input x-show="send.client_bank_code === 'other'" x-model="send.client_bank_other" maxlength="120" placeholder="The bank's full name" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
                         <label class="text-xs text-gray-600 dark:text-gray-400" x-show="['bank_to_mpesa','mpesa_to_bank','bank_transfer','pesalink','cheque'].includes(send.mode)">Bank reference
                             <input x-model="send.bank_ref" maxlength="100" class="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 text-sm uppercase dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></label>
                         <label class="text-xs text-gray-600 dark:text-gray-400" x-show="['bank_to_mpesa','mpesa_to_bank','mpesa'].includes(send.mode)">M-Pesa code
@@ -499,7 +506,7 @@ function loansCreateModal() {
         borrowerName: '',
 
         // money sent with the loan (owner, 15 Nov 2026)
-        send: { on: false, amount: '', date: '', mode: 'mpesa', bank_ref: '', mpesa_ref: '', ref: '', line: '', notes: '', bank_code: '', bank_other: '' },
+        send: { on: false, amount: '', date: '', mode: 'mpesa', bank_ref: '', mpesa_ref: '', ref: '', line: '', notes: '', bank_code: '', bank_other: '', client_bank_code: '', client_bank_other: '' },
 
         // Loan data
         loanId: null,
@@ -905,7 +912,7 @@ function loansCreateModal() {
         },
 
         resetForm() {
-            this.send = { on: false, amount: '', date: '', mode: 'mpesa', bank_ref: '', mpesa_ref: '', ref: '', line: '', notes: '', bank_code: '', bank_other: '' };
+            this.send = { on: false, amount: '', date: '', mode: 'mpesa', bank_ref: '', mpesa_ref: '', ref: '', line: '', notes: '', bank_code: '', bank_other: '', client_bank_code: '', client_bank_other: '' };
             this.form = {
                 amount: '',
                 borrow_date: '',
@@ -1208,6 +1215,8 @@ function loansCreateModal() {
             if (send.bank_ref) fd.append('bank_ref', send.bank_ref.trim());
             fd.append('bank_code', send.bank_code || '');
             fd.append('bank_other', send.bank_other || '');
+            fd.append('client_bank_code', send.client_bank_code || '');
+            fd.append('client_bank_other', send.client_bank_other || '');
             if (send.mpesa_ref) fd.append('mpesa_ref', send.mpesa_ref.trim().toUpperCase());
             fd.append('transaction', (send.ref || send.mpesa_ref || send.bank_ref || '').trim());
             if (send.notes) fd.append('notes', send.notes);

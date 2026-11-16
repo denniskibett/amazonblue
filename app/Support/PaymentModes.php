@@ -38,6 +38,26 @@ class PaymentModes
     }
 
     /**
+     * The client's bank (owner, 16 Nov 2026), optional: only on bank transfer, Pesalink and cheque (on bank <-> M-Pesa
+     * the client's side is M-Pesa). Returns ['client_bank_code' => …, 'client_bank_name' => …].
+     */
+    public static function clientBankFrom(?string $mode, ?string $code, ?string $other = null): array
+    {
+        $none = ['client_bank_code' => null, 'client_bank_name' => null];
+        if (! in_array(self::normalise($mode), self::BANK, true) || trim((string) $code) === '') {
+            return $none;
+        }
+        try {
+            $b = self::bankFrom($mode, $code, $other);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw \Illuminate\Validation\ValidationException::withMessages([trim((string) $code) === \App\Support\Banks::OTHER_CODE ? 'client_bank_other' : 'client_bank_code'
+                => trim((string) $code) === \App\Support\Banks::OTHER_CODE ? 'Type the client\'s bank.' : 'Pick the client\'s bank from the list.']);
+        }
+
+        return ['client_bank_code' => $b['bank_code'], 'client_bank_name' => $b['bank_name']];
+    }
+
+    /**
      * Which bank (owner, 16 Nov 2026): the id from resources/data/banks-kenya.txt, or "other" with the name typed.
      * Returns ['bank_code' => …, 'bank_name' => …] (both null when the mode does not go through a bank).
      */
@@ -158,6 +178,9 @@ class PaymentModes
         }
         if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'bank_code')) {
             $out += self::bankFrom($mode, $request->input('bank_code'), $request->input('bank_other'));
+            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'client_bank_code')) {
+                $out += self::clientBankFrom($mode, $request->input('client_bank_code'), $request->input('client_bank_other'));
+            }
         }
 
         return $out;

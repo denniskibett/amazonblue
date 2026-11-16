@@ -82,4 +82,22 @@ class Banks
 
         return trim($n) ?: $name;
     }
+
+    /** "I&M Bank → Stanbic Bank": money we sent goes ours → client's, money we received client's → ours (owner, 16 Nov 2026). */
+    public static function route(object $row, bool $weSent): ?string
+    {
+        $ours = self::short($row->bank_name ?? null);
+        $theirs = self::short($row->client_bank_name ?? null);
+        if (! $ours && ! $theirs) {
+            return null;
+        }
+        if (! $theirs) {
+            return $ours;
+        }
+        if (! $ours) {
+            return $weSent ? '→ ' . $theirs : $theirs . ' →';
+        }
+
+        return $weSent ? $ours . ' → ' . $theirs : $theirs . ' → ' . $ours;
+    }
 }

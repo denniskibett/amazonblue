@@ -148,7 +148,7 @@ class TopUp
             $line?->assertCanDisburse($plan['amount'], null);
             $disbursement = app(DisbursementService::class)->createDisbursement($locked, [
                 'amount' => $plan['amount'], 'transaction' => $sent['transaction'], 'kind' => 'cash', 'mode' => $sent['mode'] ?? 'mpesa',
-                'bank_code' => $sent['bank_code'] ?? null, 'bank_name' => $sent['bank_name'] ?? null,
+                'bank_code' => $sent['bank_code'] ?? null, 'bank_name' => $sent['bank_name'] ?? null, 'client_bank_code' => $sent['client_bank_code'] ?? null, 'client_bank_name' => $sent['client_bank_name'] ?? null,
                 'disburse_date' => $plan['start_date'], 'payment_date' => $sent['disburse_date'] ?? $plan['start_date'],
                 'investment_id' => $line?->id, 'funding_source' => $first?->funding_source,
                 'notes' => 'Top-up on loan #' . $locked->id . ' (cycle ' . $plan['new_cycle'] . ')',

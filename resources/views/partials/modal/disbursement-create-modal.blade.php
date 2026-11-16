@@ -190,6 +190,15 @@
                         </select>
                         <input type="text" x-show="form.bank_code === 'other'" x-model="form.bank_other" maxlength="120" class="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" placeholder="The bank's full name">
                     </div>
+                    <div x-show="@js(\App\Support\PaymentModes::BANK).includes(form.mode)">
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Client's bank <span class="font-normal text-gray-400">(optional)</span></label>
+                        <select x-model="form.client_bank_code" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                            <option value="">Not known</option>
+                            @foreach (\App\Support\Banks::options() as $code => $name)<option value="{{ $code }}">{{ $name }}</option>@endforeach
+                            <option value="other">Other (type it)</option>
+                        </select>
+                        <input type="text" x-show="form.client_bank_code === 'other'" x-model="form.client_bank_other" maxlength="120" class="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" placeholder="The bank's full name">
+                    </div>
 
                     <div x-show="!['bank_to_mpesa', 'mpesa_to_bank'].includes(form.mode)">
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Transaction Reference <span class="text-red-500">*</span></label>
@@ -266,7 +275,7 @@ function disbursementModal() {
             amount: '',
             disburse_date: '',
             transaction: '',
-            bank_ref: '', bank_code: '', bank_other: '',
+            bank_ref: '', bank_code: '', bank_other: '', client_bank_code: '', client_bank_other: '',
             mpesa_ref: '',
             mode: '',
             payment_date: '',
@@ -541,6 +550,8 @@ function disbursementModal() {
                 this.form.mpesa_ref = data.mpesa_ref || '';
                 this.form.bank_code = data.bank_code || '';
                 this.form.bank_other = data.bank_code === 'other' ? (data.bank_name || '') : '';
+                this.form.client_bank_code = data.client_bank_code || '';
+                this.form.client_bank_other = data.client_bank_code === 'other' ? (data.client_bank_name || '') : '';
                 this.form.mode = data.mode || '';
                 this.form.funding_source = data.funding_source || 'internal';
 
@@ -643,7 +654,7 @@ function disbursementModal() {
                 amount: '',
                 disburse_date: '',
                 transaction: '',
-                bank_ref: '', bank_code: '', bank_other: '',
+                bank_ref: '', bank_code: '', bank_other: '', client_bank_code: '', client_bank_other: '',
                 mpesa_ref: '',
                 mode: '',
                 payment_date: '',
@@ -850,6 +861,8 @@ function disbursementModal() {
                 formData.append('mode', this.form.mode || '');
                 formData.append('bank_code', this.form.bank_code || '');
                 formData.append('bank_other', this.form.bank_other || '');
+                formData.append('client_bank_code', this.form.client_bank_code || '');
+                formData.append('client_bank_other', this.form.client_bank_other || '');
                 formData.append('payment_date', this.formatDate(this.form.payment_date) || '');
                 formData.append('loan_id', this.loanId);
                 formData.append('loan_cycle_id', this.selectedCycleId);

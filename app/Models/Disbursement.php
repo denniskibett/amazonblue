@@ -23,6 +23,8 @@ class Disbursement extends Model
         'mpesa_ref',     // M-Pesa code
         'bank_code',     // our bank, id from resources/data/banks-kenya.txt (owner, 16 Nov 2026)
         'bank_name',     // its full name as it read that day
+        'client_bank_code', // the client's bank (owner, 16 Nov 2026)
+        'client_bank_name',
         'mode',
         'disburse_date',
         'payment_date',

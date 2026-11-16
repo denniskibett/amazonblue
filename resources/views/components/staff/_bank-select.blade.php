@@ -4,22 +4,24 @@
      $value / $otherValue: what is saved already (editing). --}}
 @php
   $show ??= 'viaBank'; $model ??= 'bankCode'; $value ??= null; $otherValue ??= null;
+  // the client's bank uses the same list (owner, 16 Nov 2026): prefix 'client_', optional
+  $prefix ??= ''; $label ??= 'Our bank'; $required ??= true;
   $in = 'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-theme-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
   $lb = 'mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400';
 @endphp
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2" x-show="{{ $show }}" x-cloak
      x-init="{{ $model }} = {{ $model }} || @js($value ?? '')">
   <div>
-    <label class="{{ $lb }}">Our bank<span class="text-error-500"> *</span></label>
-    <select name="bank_code" x-model="{{ $model }}" :disabled="!({{ $show }})" :required="{{ $show }}" class="{{ $in }}">
-      <option value="">Pick the bank…</option>
+    <label class="{{ $lb }}">{{ $label }}@if ($required)<span class="text-error-500"> *</span>@else <span class="font-normal text-gray-400">(optional)</span>@endif</label>
+    <select name="{{ $prefix }}bank_code" x-model="{{ $model }}" :disabled="!({{ $show }})" @if ($required) :required="{{ $show }}" @endif class="{{ $in }}">
+      <option value="">{{ $required ? 'Pick the bank…' : 'Not known' }}</option>
       @foreach (\App\Support\Banks::options() as $code => $name)<option value="{{ $code }}">{{ $name }}</option>@endforeach
       <option value="{{ \App\Support\Banks::OTHER_CODE }}">Other (type it)</option>
     </select>
   </div>
   <div x-show="{{ $model }} === @js(\App\Support\Banks::OTHER_CODE)">
     <label class="{{ $lb }}">Bank name<span class="text-error-500"> *</span></label>
-    <input name="bank_other" value="{{ $otherValue }}" maxlength="120" :disabled="!({{ $show }}) || {{ $model }} !== @js(\App\Support\Banks::OTHER_CODE)"
+    <input name="{{ $prefix }}bank_other" value="{{ $otherValue }}" maxlength="120" :disabled="!({{ $show }}) || {{ $model }} !== @js(\App\Support\Banks::OTHER_CODE)"
            :required="({{ $show }}) && {{ $model }} === @js(\App\Support\Banks::OTHER_CODE)" class="{{ $in }}" placeholder="The bank's full name">
   </div>
 </div>

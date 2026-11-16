@@ -112,4 +112,18 @@ class PaymentRefsTest extends TestCase
         $this->assertSame(['other', 'Rafiki Microfinance Bank'], [$rows[0]->bank_code, $rows[0]->bank_name]);
         $this->assertSame([null, null], [$rows[1]->bank_code, $rows[1]->bank_name], 'M-Pesa money does not go through our bank');
     }
+
+    public function test_our_bank_and_the_clients_bank_are_both_kept(): void
+    {
+        $this->approved(905);
+        $base = ['loan_id' => 905, 'amount' => 30000, 'disburse_date' => '2026-11-14', 'mode' => 'pesalink', 'transaction' => 'PL26CYN0001', 'bank_code' => 'im'];
+        $this->actingAs($this->admin)->postJson(route('disbursements.store'), $base + ['client_bank_code' => 'nope'])
+            ->assertStatus(422)->assertJsonValidationErrors('client_bank_code');
+        $this->actingAs($this->admin)->postJson(route('disbursements.store'), $base + ['client_bank_code' => 'stanbic'])->assertCreated();
+
+        $d = Disbursement::where('loan_id', 905)->firstOrFail();
+        $this->assertSame(['im', 'I&M Bank Limited', 'stanbic', 'Stanbic Bank Kenya Limited'], [$d->bank_code, $d->bank_name, $d->client_bank_code, $d->client_bank_name]);
+        $this->assertSame('I&M Bank → Stanbic Bank', \App\Support\Banks::route($d, true));
+        $this->assertSame('Stanbic Bank → I&M Bank', \App\Support\Banks::route($d, false), 'money received reads client first');
+    }
 }

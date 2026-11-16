@@ -45,6 +45,8 @@ class RepaymentService
                 // which bank the money went through (owner, 16 Nov 2026)
                 'bank_code' => $data['bank_code'] ?? null,
                 'bank_name' => $data['bank_name'] ?? null,
+                'client_bank_code' => $data['client_bank_code'] ?? null,
+                'client_bank_name' => $data['client_bank_name'] ?? null,
                 'kind' => $data['kind'] ?? null,
                 'repayment_date' => $data['repayment_date'] ?? now(),
                 'mode' => $data['mode'] ?? 'bank_transfer',

@@ -8,8 +8,9 @@
   $mode = \App\Support\PaymentModes::normalise($mode) ?? 'mpesa';
 @endphp
 <div class="space-y-4" x-data="{
-    mode: @js($mode), sms: '', msg: '', ok: false, bank: '', mpesa: '', ref: '', bankCode: '',
+    mode: @js($mode), sms: '', msg: '', ok: false, bank: '', mpesa: '', ref: '', bankCode: '', clientBankCode: '',
     get both() { return ['bank_to_mpesa', 'mpesa_to_bank'].includes(this.mode); },
+    get clientBank() { return @js(\App\Support\PaymentModes::BANK).includes(this.mode); },
     get viaBank() { return @js(array_merge(\App\Support\PaymentModes::BANK, \App\Support\PaymentModes::BOTH)).includes(this.mode); },
     set(name, value) { const el = this.$root.closest('form')?.querySelector(`[name='${name}']`); if (el && value !== undefined && value !== null) { el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); } },
     async read() {
@@ -47,6 +48,7 @@
     </div>
   </div>
   @include('components.staff._bank-select', ['show' => 'viaBank', 'model' => 'bankCode'])
+  @include('components.staff._bank-select', ['show' => 'clientBank', 'model' => 'clientBankCode', 'prefix' => 'client_', 'label' => "Client's bank", 'required' => false])
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2" x-show="both" x-cloak>
     <div>
       <label class="{{ $label }}" for="pr-bank-{{ $direction }}">Bank Transaction Ref ID<span class="text-error-500"> *</span></label>

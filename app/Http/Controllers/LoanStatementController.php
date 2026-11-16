@@ -69,7 +69,7 @@ class LoanStatementController extends Controller
         $isCash = fn ($x) => in_array($x->kind, ['cash', null], true);
         // how, which bank (owner, 16 Nov 2026) and the reference: "Bank → M-Pesa · Equity Bank · 5291DJTU6274"
         $ref = fn ($x) => implode(' · ', array_filter([$x->mode ? \App\Support\PaymentModes::label($x->mode) : null,
-            \App\Support\Banks::short($x->bank_name ?? null), $x->transaction])) ?: null;
+            \App\Support\Banks::route($x, $x instanceof Disbursement), $x->transaction])) ?: null;
 
         $lines = [];
         $balance = 0.0;
