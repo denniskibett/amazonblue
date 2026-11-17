@@ -112,6 +112,51 @@ class FacilityStatement
         return ['rows' => $rows, 'next' => $next, 'balance' => $balance];
     }
 
+    /**
+     * When the facility has to be cleared, and what needs doing or fixing (owner, 17 Nov 2026). Fixed and long-term
+     * lines clear on their pay-back date; a short-term share line when its last open loan is due.
+     *
+     * @param array $s PartnerLines::status($line)  @param array $stmt self::for($line)
+     * @return array{date: ?string, done: bool, flags: array<int, array{0: string, 1: string}>}
+     */
+    public function clearBy(Investment $line, array $s, array $stmt): array
+    {
+        if ($line->status !== 'active') {
+            return ['date' => $line->exit_date ? substr((string) $line->exit_date, 0, 10) : null, 'done' => true, 'flags' => []];
+        }
+        $short = $line->return_type === 'loan_share' && $line->facility_type === 'short_term';
+        $openLoans = $stmt['next']->pluck('loan_id')->filter()->all();
+        $date = $short
+            ? (Loan::whereIn('id', $openLoans ?: [0])->get(['due_date', 'calculated_due_date'])->map(fn ($l) => $l->calculated_due_date ?? $l->due_date)->filter()->max())
+            : $line->maturity_date;
+        $date = $date ? substr((string) $date, 0, 10) : null;
+
+        $flags = [];
+        if ($date) {
+            $days = (int) now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($date), false);
+            if ($days < 0) {
+                $flags[] = ['Overdue ' . abs($days) . ' ' . ($days === -1 ? 'day' : 'days') . ': pay out or extend', 'red'];
+            } elseif ($days <= 3) {
+                $flags[] = [$days === 0 ? 'Due today' : 'Due in ' . $days . ' ' . ($days === 1 ? 'day' : 'days'), 'amber'];
+            }
+        } elseif (! $short) {
+            $flags[] = ['No pay-back date set', 'amber'];
+        }
+        if ($short && $s['loans'] > 0 && $s['open_loans'] === 0) {
+            $flags[] = ['All loans repaid: close and pay out', 'amber'];
+        }
+        $firstIn = $stmt['rows']->firstWhere('kind', 'in')['date'] ?? null;
+        $firstLent = $stmt['rows']->firstWhere('kind', 'lent')['date'] ?? null;
+        if ($firstIn && $firstLent && $firstIn > $firstLent) {
+            $flags[] = ['Check dates: money in after it was lent', 'amber'];
+        }
+        if ($stmt['balance'] < -0.009) {
+            $flags[] = ['Check amounts: KES ' . number_format(-$stmt['balance'], 2) . ' more out than in', 'red'];
+        }
+
+        return ['date' => $date, 'done' => false, 'flags' => $flags];
+    }
+
     private function row(?string $date, string $what, ?string $ref, float $debit, float $credit, ?int $loanId, string $kind): array
     {
         return ['date' => $date, 'what' => $what, 'ref' => $ref, 'debit' => round($debit, 2), 'credit' => round($credit, 2), 'loan_id' => $loanId, 'kind' => $kind];

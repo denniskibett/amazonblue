@@ -186,7 +186,7 @@ class PartnerSlicesTest extends TestCase
             'disbursement_id' => $d, 'source' => 'slices', 'notes' => 'their share, no line', 'created_at' => now(), 'updated_at' => now()]);
 
         $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertOk()
-            ->assertDontSee('Money in a loan, not on a line')->assertSee('data-share=', false)->assertSee('Loan #914 share')->assertSee('#914')->assertSee('44,000.00')->assertSee('18%');
+            ->assertDontSee('Money in a loan, not on a line')->assertSee('data-share=', false)->assertSee('Loan #914 share')->assertSee('data-clear-by=', false)->assertSee('#914')->assertSee('44,000.00')->assertSee('18%');
     }
 
     /** A line that paid for a loan alone, in cash (no loan_fundings rows), lists that loan when opened (live, 17 Nov 2026). */
@@ -212,6 +212,14 @@ class PartnerSlicesTest extends TestCase
         $this->assertSame(round($st['rows']->sum('credit') - 15000, 2), $st['balance']);
         $this->assertNotEmpty($st['next'], 'the loan still out shows as what comes next');
         $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertSee('Statement of facility #' . $line->id)->assertSee('Lent to loan #913');
+
+        // clear by (owner, 17 Nov 2026): a date, and a flag once it is past or close
+        $c = app(\App\Services\Partners\FacilityStatement::class)->clearBy($line, app(PartnerLines::class)->status($line), $st);
+        $this->assertFalse($c['done']);
+        if ($c['date'] && $c['date'] < now()->toDateString()) {
+            $this->assertStringStartsWith('Overdue', $c['flags'][0][0]);
+        }
+        $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertSee('Clear by')->assertDontSee('Back by');
 
         // the index reads the same money out on loans (was the never-filled investment_tracker wallet), and the two cards add it up
         $this->actingAs($this->admin)->get(route('partners.index'))->assertOk()

@@ -52,8 +52,9 @@
 
     // the facility as a statement: credits in, debits out, running balance (owner, 17 Nov 2026)
     $stmt = app(\App\Services\Partners\FacilityStatement::class)->for($l);
+    $clear = app(\App\Services\Partners\FacilityStatement::class)->clearBy($l, $s, $stmt);
 
-    return compact('l', 's', 'fixed', 'due', 'slicesOf', 'paid', 'theirs', 'settle', 'stmt');
+    return compact('l', 's', 'fixed', 'due', 'slicesOf', 'paid', 'theirs', 'settle', 'stmt', 'clear');
   })->values();
 @endphp
 @include('partials.ui.partner-funding-js')
@@ -69,9 +70,12 @@
       ->leftJoin('facility_split_parties as fp', fn ($j) => $j->on('fp.facility_split_id', '=', 'fs.id')->on('fp.partner_id', '=', 'f.partner_id')))
     ->where('f.partner_id', $partner->id)->whereNull('f.investment_id')->orderBy('f.id')
     ->get(array_merge(['f.id', 'f.loan_id', 'f.amount', 'f.share', 'f.settled_on', 'l.status as loan_status', 'u.id as borrower_id', 'u.name as borrower', 'u.phone as borrower_phone',
-      'd.id as disbursement_id', 'd.disburse_date', 'd.transaction as d_ref'], $hasSplits ? ['fp.pi_entitled', 'fp.penalty_pct', 'fp.received_before'] : []))
+      'd.id as disbursement_id', 'd.disburse_date', 'd.transaction as d_ref', 'l.due_date', 'l.calculated_due_date'], $hasSplits ? ['fp.pi_entitled', 'fp.penalty_pct', 'fp.received_before'] : []))
     ->map(function ($nl) use ($partner, $final) {
       $nl->open = ! $nl->settled_on && ! in_array($nl->loan_status, $final, true);
+      // clear by: the loan's due date while it is open; overdue when past it (owner, 17 Nov 2026)
+      $nl->clear = $nl->open ? substr((string) ($nl->calculated_due_date ?? $nl->due_date ?? ''), 0, 10) ?: null : null;
+      $nl->late = $nl->clear ? (int) now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($nl->clear), false) : null;
       $nl->got = (float) ($nl->received_before ?? 0) + (float) \App\Models\PartnerTransaction::where('partner_id', $partner->id)->where('loan_id', $nl->loan_id)
         ->whereIn('type', ['profit_distribution', 'penalty_share', 'capital_return'])->sum('amount');
       $nl->paid = \Illuminate\Support\Facades\DB::table('repayments')->where('loan_id', $nl->loan_id)->whereNull('deleted_at')->selectRaw('sum(amount) as total, max(repayment_date) as last_on')->first();
@@ -104,7 +108,7 @@
       <tr class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">
         <th class="w-12 py-3 pl-4 sm:pl-6"><span class="sr-only">Open</span></th>
         <th class="py-3 pr-4">Investment</th><th class="py-3 pr-4 text-right">Put in</th><th class="py-3 pr-4 text-right">Lent now</th>
-        <th class="py-3 pr-4 text-right">Free</th><th class="py-3 pr-4 text-right">Earned</th><th class="py-3 pr-4">Back by</th>
+        <th class="py-3 pr-4 text-right">Free</th><th class="py-3 pr-4 text-right">Earned</th><th class="py-3 pr-4">Clear by</th>
         <th class="py-3 pr-4">Status</th><th class="py-3 pr-4 sm:pr-6"><span class="sr-only">Actions</span></th>
       </tr>
     </thead>
@@ -130,7 +134,11 @@
             @if ($fixed){{ $kes($due[1]) }}<span class="block text-theme-xs text-gray-500">fixed, due {{ $kes($due[2]) }}</span>
             @else{{ $kes($s['earned']) }}<span class="block text-theme-xs text-gray-500">{{ rtrim(rtrim(number_format((float) $l->partner_share_rate, 2, '.', ''), '0'), '.') ?: '—' }}% of interest</span>@endif
           </td>
-          <td class="whitespace-nowrap py-3.5 pr-4">{{ $l->maturity_date?->format('j M Y') ?? '—' }}</td>
+          {{-- when it has to be cleared, and what needs doing or fixing (owner, 17 Nov 2026) --}}
+          <td class="py-3.5 pr-4" data-clear-by="{{ $clear['date'] }}">
+            <span class="whitespace-nowrap">{{ $clear['date'] ? ($clear['done'] ? 'Cleared ' : '') . \Illuminate\Support\Carbon::parse($clear['date'])->format('j M Y') : '—' }}</span>
+            @foreach ($clear['flags'] as [$text, $t])<span class="mt-1 block"><x-staff.pill :tone="$t">{{ $text }}</x-staff.pill></span>@endforeach
+          </td>
           <td class="py-3.5 pr-4">
             @if ($l->status === 'active' && $fixed && $l->maturity_date?->isPast())<x-staff.pill tone="amber" dot>Due</x-staff.pill>
             @elseif ($l->status === 'active')<x-staff.pill tone="blue" dot>Open</x-staff.pill>
@@ -252,7 +260,9 @@
           <td class="py-3.5 pr-4 text-right font-outfit tabular-nums">{{ $kes(0) }}</td>
           <td class="py-3.5 pr-4 text-right font-outfit tabular-nums">{{ $nl->got > 0 ? $kes($nl->got) : '—' }}
             <span class="block font-sans text-theme-xs text-gray-500">@if (($nl->pi_entitled ?? null) !== null)received of {{ $kes($nl->pi_entitled) }}@if (($nl->penalty_pct ?? null) !== null), then {{ $pct($nl->penalty_pct) }}% of penalty @endif @else received @endif</span></td>
-          <td class="whitespace-nowrap py-3.5 pr-4">—</td>
+          <td class="py-3.5 pr-4" data-clear-by="{{ $nl->clear }}"><span class="whitespace-nowrap">{{ $nl->clear ? \Illuminate\Support\Carbon::parse($nl->clear)->format('j M Y') : '—' }}</span>
+            @if ($nl->late !== null && $nl->late < 0)<span class="mt-1 block"><x-staff.pill tone="red">Loan overdue {{ abs($nl->late) }} {{ abs($nl->late) === 1 ? 'day' : 'days' }}</x-staff.pill></span>
+            @elseif ($nl->late !== null && $nl->late <= 3)<span class="mt-1 block"><x-staff.pill tone="amber">{{ $nl->late === 0 ? 'Due today' : 'Due in ' . $nl->late . ' ' . ($nl->late === 1 ? 'day' : 'days') }}</x-staff.pill></span>@endif</td>
           <td class="py-3.5 pr-4">@if ($nl->settled_on)<x-staff.pill tone="green" dot>House settled</x-staff.pill>@elseif ($nl->open)<x-staff.pill tone="blue" dot>Open</x-staff.pill>@else<x-staff.pill tone="green" dot>Paid back</x-staff.pill>@endif</td>
           <td class="py-3.5 pr-4 sm:pr-6"><div class="flex justify-end"><button type="button" class="{{ $btnSm }}" @click="open = ! open" x-text="open ? 'Hide' : 'View'">View</button></div></td>
         </tr>
