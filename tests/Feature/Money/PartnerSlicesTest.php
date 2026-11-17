@@ -164,7 +164,7 @@ class PartnerSlicesTest extends TestCase
             'disbursement_id' => $d, 'source' => 'slices', 'notes' => 'their share, no line', 'created_at' => now(), 'updated_at' => now()]);
 
         $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertOk()
-            ->assertSee('Money in a loan, not on a line')->assertSee('#914')->assertSee('44,000.00')->assertSee('18%');
+            ->assertDontSee('Money in a loan, not on a line')->assertSee('data-share=', false)->assertSee('Loan #914 share')->assertSee('#914')->assertSee('44,000.00')->assertSee('18%');
     }
 
     /** A line that paid for a loan alone, in cash (no loan_fundings rows), lists that loan when opened (live, 17 Nov 2026). */
