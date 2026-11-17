@@ -289,7 +289,7 @@
                 </tbody>
                 @if (($nl->pi_entitled ?? null) !== null)
                   <tfoot><tr><td colspan="8" class="bg-gray-50 px-5 py-2.5 text-theme-xs text-gray-500 dark:bg-white/[0.02] dark:text-gray-400">
-                    Agreed split for this loan: KES {{ $kes($nl->pi_entitled) }} principal and interest to them first@if (($nl->penalty_pct ?? null) !== null), then {{ $pct($nl->penalty_pct) }}% of the penalty@endif.
+                    Agreed split for this loan: KES {{ $kes($nl->pi_entitled) }} principal and interest to them first{{ ($nl->penalty_pct ?? null) !== null ? ', then ' . $pct($nl->penalty_pct) . '% of the penalty' : '' }}.
                     KES {{ $kes($nl->got) }} received · KES {{ $kes(max(0, $nl->pi_entitled - $nl->got)) }} still due.
                   </td></tr></tfoot>
                 @endif

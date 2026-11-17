@@ -84,8 +84,13 @@ class FacilityStatement
             }
             $paid = PartnerTransaction::where('partner_id', $partnerId)->where('type', 'withdrawal')->where('notes', 'like', '%line #' . $line->id . ' %')->get();
             $paid = $paid->concat(PartnerTransaction::where('partner_id', $partnerId)->where('type', 'withdrawal')->where('notes', 'like', '%line #' . $line->id . ')')->get())->unique('id');
-            foreach ($paid as $t) {
-                $rows->push($this->row($day($t->transaction_date), 'Paid back to them', $this->code($t->reference), abs((float) $t->amount), 0, null, 'paid'));
+            // one row per payout: capital and return go out under the same code (owner, 17 Nov 2026)
+            foreach ($paid->groupBy(fn ($t) => $day($t->transaction_date) . '|' . $this->code($t->reference)) as $group) {
+                $t = $group->first();
+                $return = abs((float) $group->filter(fn ($x) => str_ends_with((string) $x->reference, '-R'))->sum('amount'));
+                $total = abs((float) $group->sum('amount'));
+                $what = 'Paid back to them' . ($return > 0 ? ': ' . number_format($total - $return, 2) . ' capital + ' . number_format($return, 2) . ' return' : '');
+                $rows->push($this->row($day($t->transaction_date), $what, $this->code($t->reference), $total, 0, null, 'paid'));
             }
             $done = DB::table('partner_requests')->where('reference', 'like', 'LINE-' . $line->id . '-%')->where('status', 'done')->get();
             foreach ($done as $q) {
