@@ -204,6 +204,15 @@ class PartnerSlicesTest extends TestCase
             ->assertSee('#913')->assertSee('QD913')->assertSee('15,000.00')->assertSee('Out on the loan')
             ->assertDontSee('This line has not funded a loan yet.');
 
+        // the facility statement (owner, 17 Nov 2026): the money lent is a debit, the balance is what is left
+        $st = app(\App\Services\Partners\FacilityStatement::class)->for($line->refresh());
+        $lentRow = $st['rows']->firstWhere('kind', 'lent');
+        $this->assertSame(913, $lentRow['loan_id']);
+        $this->assertSame(15000.0, $lentRow['debit']);
+        $this->assertSame(round($st['rows']->sum('credit') - 15000, 2), $st['balance']);
+        $this->assertNotEmpty($st['next'], 'the loan still out shows as what comes next');
+        $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertSee('Statement of facility #' . $line->id)->assertSee('Lent to loan #913');
+
         // the index reads the same money out on loans (was the never-filled investment_tracker wallet), and the two cards add it up
         $this->actingAs($this->admin)->get(route('partners.index'))->assertOk()
             ->assertSee('Out on loans')->assertSee('Owed to partners')->assertSee('data-sort-value="15000"', false);

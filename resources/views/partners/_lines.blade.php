@@ -50,7 +50,10 @@
       ->groupBy('loan_id')->selectRaw('loan_id, sum(amount) as total')->pluck('total', 'loan_id');
     $settle = $slicesOf->filter(fn ($sl) => ! ($sl->settled_on ?? null) && ! in_array($sl->loan_status, $final, true) && in_array($sl->loan_id, $multi))->pluck('id')->all();
 
-    return compact('l', 's', 'fixed', 'due', 'slicesOf', 'paid', 'theirs', 'settle');
+    // the facility as a statement: credits in, debits out, running balance (owner, 17 Nov 2026)
+    $stmt = app(\App\Services\Partners\FacilityStatement::class)->for($l);
+
+    return compact('l', 's', 'fixed', 'due', 'slicesOf', 'paid', 'theirs', 'settle', 'stmt');
   })->values();
 @endphp
 @include('partials.ui.partner-funding-js')
@@ -146,6 +149,43 @@
         </tr>
         <tr x-show="open" x-cloak class="bg-brand-50/40 dark:bg-white/[0.02]">
           <td colspan="9" class="px-4 pb-4 sm:pl-16 sm:pr-6">
+            {{-- the facility's statement (owner, 17 Nov 2026): money in and back is a credit, money lent or paid out a debit --}}
+            <div class="mb-3 overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900" data-statement="{{ $l->id }}">
+              <div class="flex flex-wrap items-baseline gap-x-3 px-5 pt-4 pb-2"><p class="text-theme-sm font-semibold text-gray-800 dark:text-white/90">Statement of facility #{{ $l->id }}</p>
+                <p class="text-theme-xs text-gray-500 dark:text-gray-400">Credit = money in (from them, back from a loan, earned). Debit = money out (lent, paid to another investor, paid back to them).</p></div>
+              <table class="w-full text-theme-sm">
+                <caption class="sr-only">Statement of facility #{{ $l->id }}</caption>
+                <thead class="bg-gray-50 text-left text-theme-xs font-medium text-gray-500 dark:bg-white/[0.02] dark:text-gray-400">
+                  <tr><th class="py-2.5 pl-5 pr-4">Date</th><th class="py-2.5 pr-4">What happened</th><th class="py-2.5 pr-4">Ref</th><th class="py-2.5 pr-4 text-right">Debit (out)</th><th class="py-2.5 pr-4 text-right">Credit (in)</th><th class="py-2.5 pr-5 text-right">Balance</th></tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                  @forelse ($stmt['rows'] as $t)
+                    <tr>
+                      <td class="whitespace-nowrap py-2.5 pl-5 pr-4">{{ $t['date'] ? \Illuminate\Support\Carbon::parse($t['date'])->format('j M Y') : '—' }}</td>
+                      <td class="py-2.5 pr-4">@if ($t['loan_id'])<a class="hover:underline" href="{{ route('loans.show', $t['loan_id']) }}">{{ $t['what'] }}</a>@else{{ $t['what'] }}@endif</td>
+                      <td class="py-2.5 pr-4 text-theme-xs text-gray-500 dark:text-gray-400">{{ $t['ref'] ?: '' }}</td>
+                      <td class="py-2.5 pr-4 text-right font-outfit tabular-nums text-error-600">{{ $t['debit'] ? $kes($t['debit']) : '' }}</td>
+                      <td class="py-2.5 pr-4 text-right font-outfit tabular-nums text-success-600">{{ $t['credit'] ? $kes($t['credit']) : '' }}</td>
+                      <td class="py-2.5 pr-5 text-right font-outfit tabular-nums text-gray-800 dark:text-white/90">{{ $kes($t['balance']) }}</td>
+                    </tr>
+                  @empty
+                    <tr><td colspan="6" class="px-5 py-4 text-center text-theme-sm text-gray-500">Nothing has moved in this facility yet.</td></tr>
+                  @endforelse
+                  @foreach ($stmt['next'] as $t)
+                    <tr class="text-gray-400 dark:text-gray-500">
+                      <td class="whitespace-nowrap py-2.5 pl-5 pr-4">{{ $t['date'] ? \Illuminate\Support\Carbon::parse($t['date'])->format('j M Y') : 'next' }}</td>
+                      <td class="py-2.5 pr-4">{{ $t['what'] }}</td><td></td>
+                      <td class="py-2.5 pr-4 text-right font-outfit tabular-nums">{{ $t['debit'] ? $kes($t['debit']) : '' }}</td>
+                      <td class="py-2.5 pr-4 text-right font-outfit tabular-nums">{{ $t['credit'] ? $kes($t['credit']) : '' }}</td><td></td>
+                    </tr>
+                  @endforeach
+                </tbody>
+                <tfoot><tr><td colspan="6" class="bg-gray-50 px-5 py-2.5 text-theme-xs text-gray-500 dark:bg-white/[0.02] dark:text-gray-400">
+                  In the facility now KES {{ $kes($stmt['balance']) }} · credits KES {{ $kes($stmt['rows']->sum('credit')) }} · debits KES {{ $kes($stmt['rows']->sum('debit')) }}@if ($stmt['next']->isNotEmpty()) · grey rows are what comes next @endif
+                </td></tr></tfoot>
+              </table>
+            </div>
+            <p class="mb-2 pl-1 text-theme-xs font-medium text-gray-500 dark:text-gray-400">Loans it paid for</p>
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
               <table class="w-full text-theme-sm">
                 <caption class="sr-only">Loans line #{{ $l->id }} funded</caption>
