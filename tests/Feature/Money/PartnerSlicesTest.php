@@ -177,6 +177,44 @@ class PartnerSlicesTest extends TestCase
         $this->assertLessThan(strpos($html, 'WHO IS BEHIND THIS LOAN'), strpos($html, 'TRANSACTION DETAILS'), 'transaction details come first');
     }
 
+    /** Recording payouts after the fact (owner, 17 Nov 2026): funding rows match the cash, a top-up raises what is owed, a new loan opens. */
+    public function test_payouts_after_the_fact_keep_the_funding_rows_and_balances_right(): void
+    {
+        $line = $this->line();
+        $this->loanRow(919, 1, 15000, 15000, '2026-10-13', '2026-12-13', 'approved', 1, 30);
+        $this->cycleRow(919, 919, 1, 0, 900, 15900, 6, '2026-10-13', '2026-12-13', 'active', 'Initial');
+        $this->actingAs($this->admin)->postJson(route('disbursements.store'), ['loan_id' => 919, 'amount' => 15000, 'disburse_date' => '2026-10-13',
+            'transaction' => 'QD919', 'mode' => 'mpesa', 'funding_mode' => 'line', 'investment_id' => $line->id])->assertCreated();
+        $this->assertSame(0, DB::table('loan_fundings')->where('loan_id', 919)->count());
+
+        // the funding row the payout lacked
+        $this->artisan('loans:sync-fundings', ['loans' => [919]])->assertSuccessful();
+        $this->assertSame(0, DB::table('loan_fundings')->where('loan_id', 919)->count(), 'a dry run saves nothing');
+        $this->artisan('loans:sync-fundings', ['loans' => [919], '--apply' => true])->assertSuccessful();
+        $this->assertSame([[(int) $line->id, 15000.0]], DB::table('loan_fundings')->where('loan_id', 919)->get()->map(fn ($r) => [(int) $r->investment_id, (float) $r->amount])->all());
+        $this->assertSame(15000.0, app(PartnerLines::class)->status($line->refresh())['lent'], 'the line keeps what it lent');
+        $this->artisan('loans:sync-fundings', ['loans' => [919], '--apply' => true])->expectsOutputToContain('Nothing to do')->assertSuccessful();
+
+        // a further payout from the line raises what the borrower owes, at the cycle's rate
+        $this->artisan('loans:add-payout', ['loan' => 919, '--amount' => 1000, '--date' => '2026-10-14', '--mode' => 'bank_to_mpesa',
+            '--bank-ref' => 'B919', '--mpesa-ref' => 'M919', '--line' => $line->id, '--raise' => true, '--apply' => true])->assertSuccessful();
+        $c = DB::table('loan_cycles')->where('loan_id', 919)->first();
+        $this->assertSame([16000.0, 960.0, 16960.0], [(float) $c->principal, (float) $c->interest_capitalized, (float) $c->new_balance]);
+        $this->assertSame(16000.0, (float) DB::table('loans')->where('id', 919)->value('amount'));
+        $this->assertSame(16000.0, app(PartnerLines::class)->status($line->refresh())['lent']);
+        $this->artisan('loans:add-payout', ['loan' => 919, '--amount' => 1000, '--date' => '2026-10-14', '--bank-ref' => 'B919', '--line' => $line->id, '--raise' => true, '--apply' => true])
+            ->expectsOutputToContain('already has a payout')->assertSuccessful();
+
+        // a new loan for a new borrower, approved, with its first cycle
+        $type = DB::table('loan_types')->insertGetId(['name' => 'Family 3 months 2% monthly', 'audience' => 'individual', 'period' => 3, 'unit' => 'months',
+            'interest_rate' => 6, 'penalty_rate' => 10, 'grace_period_days' => 0, 'default_threshold_days' => 30, 'created_at' => now(), 'updated_at' => now()]);
+        $this->artisan('loans:open-for', ['email' => 'agency919@example.test', '--name' => 'Agency 919', '--phone' => '+254700919919', '--type' => $type,
+            '--amount' => 3230, '--date' => '2026-11-14', '--reason' => 'Business costs paid from a line', '--by' => $this->admin->id, '--apply' => true])->assertSuccessful();
+        $loan = DB::table('loans')->where('user_id', DB::table('users')->where('email', 'agency919@example.test')->value('id'))->first();
+        $this->assertSame('approved', $loan->status);
+        $this->assertSame(3423.8, (float) DB::table('loan_cycles')->where('loan_id', $loan->id)->value('new_balance'));
+    }
+
     /** A partner's own share of a loan with no line (ISIRO's 44,000 on facility 458) shows on the Investments tab (owner, 17 Nov 2026). */
     public function test_money_in_a_loan_without_a_line_shows_on_the_investments_tab(): void
     {
