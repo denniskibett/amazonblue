@@ -85,9 +85,14 @@
       + \Illuminate\Support\Facades\DB::table('loan_fundings')->where('partner_id', $partner->id)->whereNull('investment_id')->count();
     $clientCount = \App\Models\Loan::where(fn ($q) => $q->where('broker_status', 1)->where('partner_id', $partner->id))->when($partner->user_id, fn ($q) => $q->orWhere('user_id', $partner->user_id))->count();
   @endphp
-  <x-staff.tabs class="mt-6" :tabs="['lines' => ['Investments', $lineCount], 'clients' => ['Clients and own loans', $clientCount], 'journal' => ['Journal', $tx->count()], 'details' => 'Details and banking', 'login' => ['Portal login', $partner->user ? 'on' : 'none']]">
+  <x-staff.tabs class="mt-6" :tabs="['lines' => ['Investments', $lineCount], 'allocation' => 'Where the money is', 'clients' => ['Clients and own loans', $clientCount], 'journal' => ['Journal', $tx->count()], 'details' => 'Details and banking', 'login' => ['Portal login', $partner->user ? 'on' : 'none']]">
     <x-staff.tab name="lines">
       @include('partners._lines')
+    </x-staff.tab>
+
+    {{-- a Sankey of where their money is (owner, 17 Nov 2026) --}}
+    <x-staff.tab name="allocation">
+      @include('partners._allocation')
     </x-staff.tab>
 
     <x-staff.tab name="clients">

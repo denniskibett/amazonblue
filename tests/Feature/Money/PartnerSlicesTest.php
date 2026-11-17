@@ -260,6 +260,14 @@ class PartnerSlicesTest extends TestCase
         }
         $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertSee('Clear by')->assertDontSee('Back by');
 
+        // where the money is (owner, 17 Nov 2026): every band adds up to what came in
+        $a = app(\App\Services\Partners\PartnerAllocation::class)->for($this->buosti);
+        $in = collect($a['links'])->filter(fn ($l) => in_array($l['from'], ['Money they put in', 'What it earned'], true))->sum('value');
+        $outs = collect($a['links'])->filter(fn ($l) => ! in_array($l['from'], ['Money they put in', 'What it earned'], true))->sum('value');
+        $this->assertEqualsWithDelta($in, $outs, 0.01);
+        $this->assertTrue(collect($a['links'])->contains(fn ($l) => str_starts_with($l['to'], 'Loan #913')));
+        $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertSee('Where the money is')->assertSee('class="sk-band"', false);
+
         // the index reads the same money out on loans (was the never-filled investment_tracker wallet), and the two cards add it up
         $this->actingAs($this->admin)->get(route('partners.index'))->assertOk()
             ->assertSee('Out on loans')->assertSee('Owed to partners')->assertSee('data-sort-value="15000"', false);
