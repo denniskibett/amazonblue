@@ -16,7 +16,7 @@
   $kes = fn ($n) => number_format((float) $n, 2);
   // old input belongs to the sheet that was sent; the other sheets keep their own defaults
   $old = fn ($sheet, $key, $def = null) => old('_sheet') === $sheet ? old($key, $def) : $def;
-  $sheetError = fn ($sheet) => old('_sheet') === $sheet && $errors->any() ? $errors->first() : null;
+  $sheetError = fn ($sheet) => old('_sheet') === $sheet ? ($errors->first() ?: session('error')) : null;
   $final = \App\Models\Loan::STATUS_FINAL_LIST;
   $open = $lines->where('line.status', 'active');
   $openLines = $plines->openLines();
@@ -65,7 +65,7 @@
   </div>
   @can('edit partners')
     <div class="flex flex-wrap gap-2">
-      @if ($lines->isNotEmpty())<button type="button" class="{{ $ghostBtn }}" @click="$dispatch('open-sheet', 'part-of-loan')">Part of a loan…</button>@endif
+      <button type="button" class="{{ $ghostBtn }}" @click="$dispatch('open-sheet', 'part-of-loan')">Money in a loan…</button>
       <button type="button" class="{{ $primaryBtn }}" @click="$dispatch('open-sheet', 'record-money')"><x-ui.icon name="plus" class="size-4" />Record money sent</button>
     </div>
   @endcan
@@ -299,24 +299,77 @@
 @endcan
 
 @can('edit partners')
-  @if ($lines->isNotEmpty())
-    {{-- a line paid for part of a loan (owner, 3 Nov 2026): that part comes out of the house's share --}}
-    <x-staff.sheet name="part-of-loan" title="Their money paid for part of a loan" sub="The part comes out of the house's share of the loan; every repayment of the loan is re-split." :action="route('staff.partners.slices.fund', $partner)">
-      <div><label class="{{ $label }}" for="pol-line">Line</label>
-        <select id="pol-line" name="line" required class="{{ $input_ }}">@foreach ($lines as ['line' => $l, 's' => $s])<option value="{{ $l->id }}" @selected($old('part-of-loan', 'line') == $l->id)>#{{ $l->id }} {{ $l->name }} · KES {{ $kes($s['idle']) }} free</option>@endforeach</select></div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div><label class="{{ $label }}" for="pol-loan">Loan #</label><input id="pol-loan" name="loan" type="number" min="1" required value="{{ $old('part-of-loan', 'loan') }}" class="{{ $input_ }}"></div>
-        <div><label class="{{ $label }}" for="pol-disb">Disbursement #</label><input id="pol-disb" name="disbursement" type="number" min="1" required value="{{ $old('part-of-loan', 'disbursement') }}" class="{{ $input_ }}"></div>
+  {{-- their money paid for part of a loan (owner, 3 Nov 2026): from one of their lines, or new money that opens a
+       short-term line for it; when they took their part straight from the borrower's repayment, the payouts are recorded
+       as made (owner, 17 Nov 2026; ISIRO on loan 547). Same service as partners:fund-loan and payment automation. --}}
+  @php
+    $polSource = $old('part-of-loan', 'source', $lines->isEmpty() ? 'new' : 'line');
+    $polPaid = (bool) $old('part-of-loan', 'paid', false);
+    $seg = 'flex-1 rounded-md px-3 py-2 text-center text-theme-sm font-medium transition';
+  @endphp
+  <x-staff.sheet name="part-of-loan" title="Their money in a loan" sub="Their part comes out of the house's share of the loan, and every repayment of the loan is re-split between them." :action="route('staff.partners.slices.fund', $partner)"
+    x-data="{ source: @js($polSource), paid: @js($polPaid) }">
+    <fieldset>
+      <legend class="{{ $label }}">Where the money came from</legend>
+      <div class="flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800" role="radiogroup">
+        <label class="{{ $seg }}" :class="source === 'line' ? 'bg-white text-gray-800 shadow-theme-xs dark:bg-gray-900 dark:text-white' : 'text-gray-500 {{ $lines->isEmpty() ? 'cursor-not-allowed opacity-50' : 'cursor-pointer' }}'">
+          <input type="radio" name="source" value="line" x-model="source" class="sr-only" @disabled($lines->isEmpty())>One of their lines</label>
+        <label class="{{ $seg }} cursor-pointer" :class="source === 'new' ? 'bg-white text-gray-800 shadow-theme-xs dark:bg-gray-900 dark:text-white' : 'text-gray-500'">
+          <input type="radio" name="source" value="new" x-model="source" class="sr-only">New money for this loan</label>
       </div>
-      <div><label class="{{ $label }}" for="pol-amt">Amount (KES)</label><input id="pol-amt" name="amount" type="number" step="0.01" min="1" required value="{{ $old('part-of-loan', 'amount') }}" class="{{ $input_ }}"></div>
-      @if (old('_sheet') === 'part-of-loan')@include('partners._slice-preview')@endif
-      @if ($e = $sheetError('part-of-loan'))<x-staff.alert type="err">{{ $e }}</x-staff.alert>@endif
-      <x-slot:footer>
-        <button name="mode" value="preview" class="{{ $ghostBtn }}">Preview</button>
-        <button name="mode" value="save" class="{{ $primaryBtn }}">Save</button>
-      </x-slot:footer>
-    </x-staff.sheet>
-  @endif
+    </fieldset>
+
+    @if ($lines->isNotEmpty())
+      <div x-show="source === 'line'"><label class="{{ $label }}" for="pol-line">Line</label>
+        <select id="pol-line" name="line" class="{{ $input_ }}" :disabled="source !== 'line'">@foreach ($lines as ['line' => $l, 's' => $s])<option value="{{ $l->id }}" @selected($old('part-of-loan', 'line') == $l->id)>#{{ $l->id }} {{ $l->name }} · KES {{ $kes($s['idle']) }} free</option>@endforeach</select></div>
+    @endif
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div><label class="{{ $label }}" for="pol-loan">Loan #</label><input id="pol-loan" name="loan" type="number" min="1" required value="{{ $old('part-of-loan', 'loan') }}" class="{{ $input_ }}"></div>
+      <div><label class="{{ $label }}" for="pol-amt">Their part (KES)</label><input id="pol-amt" name="amount" type="number" step="0.01" min="1" required value="{{ $old('part-of-loan', 'amount') }}" class="{{ $input_ }}"></div>
+      <div><label class="{{ $label }}" for="pol-disb">Disbursement #</label><input id="pol-disb" name="disbursement" type="number" min="1" placeholder="the first" value="{{ $old('part-of-loan', 'disbursement') }}" class="{{ $input_ }}"></div>
+    </div>
+
+    <div x-show="source === 'new'" class="space-y-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div><label class="{{ $label }}" for="pol-code">Reference of their money</label>
+          <input id="pol-code" name="code" maxlength="60" value="{{ $old('part-of-loan', 'code') }}" :required="source === 'new'" :disabled="source !== 'new'" class="{{ $input_ }} uppercase" placeholder="M-Pesa or bank code">
+          <p class="mt-1 text-theme-xs text-gray-500">If it went straight to the borrower, the payout's code.</p></div>
+        <div><label class="{{ $label }}" for="pol-date">Day it went in</label>
+          <input id="pol-date" name="date" type="date" max="{{ now()->toDateString() }}" value="{{ $old('part-of-loan', 'date') }}" :disabled="source !== 'new'" class="{{ $input_ }}">
+          <p class="mt-1 text-theme-xs text-gray-500">Blank: the day the loan was paid out.</p></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="{{ $label }}" for="pol-share">Their share of interest (%)</label>
+          <input id="pol-share" name="share" type="number" step="0.01" min="0" max="100" value="{{ $old('part-of-loan', 'share') }}" :disabled="source !== 'new'" placeholder="{{ rtrim(rtrim(number_format((float) ($partner->profit_share_rate ?: 60), 2, '.', ''), '0'), '.') }}" class="{{ $input_ }}"></div>
+        <div><label class="{{ $label }}" for="pol-pen">Their share of penalty (%)</label>
+          <input id="pol-pen" name="penalty" type="number" step="0.01" min="0" max="100" value="{{ $old('part-of-loan', 'penalty') }}" :disabled="source !== 'new'" placeholder="50" class="{{ $input_ }}"></div>
+      </div>
+
+      <div class="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+        <label class="flex cursor-pointer items-start gap-3">
+          <input type="hidden" name="paid" value="0" :disabled="source !== 'new'">
+          <input type="checkbox" name="paid" value="1" x-model="paid" :disabled="source !== 'new'" class="mt-0.5 size-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/20">
+          <span><span class="block text-theme-sm font-medium text-gray-800 dark:text-white/90">They already got their part back</span>
+            <span class="block text-theme-xs text-gray-500">The loan is repaid and they took their money and earnings straight from the borrower's repayment. Their payouts are recorded as made, so nothing waits on Partner Payouts.</span></span>
+        </label>
+        <div x-show="paid" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div><label class="{{ $label }}" for="pol-paid-on">Paid on</label>
+            <input id="pol-paid-on" name="paid_on" type="date" max="{{ now()->toDateString() }}" value="{{ $old('part-of-loan', 'paid_on') }}" :required="source === 'new' && paid" :disabled="source !== 'new' || ! paid" class="{{ $input_ }}"></div>
+          <div><label class="{{ $label }}" for="pol-paid-ref">Reference</label>
+            <input id="pol-paid-ref" name="paid_ref" maxlength="60" value="{{ $old('part-of-loan', 'paid_ref') }}" :required="source === 'new' && paid" :disabled="source !== 'new' || ! paid" placeholder="the repayment's code" class="{{ $input_ }} uppercase"></div>
+        </div>
+      </div>
+    </div>
+
+    <x-staff.alert type="info">Preview shows the journal rows it would post; nothing is saved until you press Save. New money is booked once: the same reference, or a second part of the same loan, is skipped.</x-staff.alert>
+    @if (old('_sheet') === 'part-of-loan')@include('partners._slice-preview')@endif
+    @if ($e = $sheetError('part-of-loan'))<x-staff.alert type="err">{{ $e }}</x-staff.alert>@endif
+    <x-slot:footer>
+      <button name="mode" value="preview" class="{{ $ghostBtn }}">Preview</button>
+      <button name="mode" value="save" class="{{ $primaryBtn }}">Save</button>
+    </x-slot:footer>
+  </x-staff.sheet>
 
   {{-- money a partner sent, read from the M-Pesa SMS (owner, 23 Oct 2026); what they earn: a share or a fixed return --}}
   @php $rm = old('_sheet') === 'record-money'; @endphp

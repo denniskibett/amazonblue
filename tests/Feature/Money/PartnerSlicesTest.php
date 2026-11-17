@@ -114,6 +114,47 @@ class PartnerSlicesTest extends TestCase
         $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertOk()->assertSee('#915')->assertSee('35,000.00');
     }
 
+    /** The partner took their part straight from the borrower's repayment (ISIRO on loan 547, owner, 17 Nov 2026): the closed line's payouts are recorded as made. */
+    public function test_a_partner_paid_from_the_repayment_has_nothing_left_waiting(): void
+    {
+        $this->houseLoan(916);
+        $this->pay(916, 120000, 'QK916', '2026-10-23');
+        $args = ['partner' => $this->buosti->id, 'loan' => 916, '--amount' => 35000, '--code' => 'QISIRO916', '--paid-on' => '2026-10-23', '--paid-ref' => 'QK916', '--by' => $this->admin->id];
+        $this->artisan('partners:fund-loan', $args + ['--apply' => true])->assertSuccessful();
+
+        $line = Investment::where('name', 'like', '%QISIRO916%')->firstOrFail();
+        $this->assertSame('matured', $line->status);
+        $reqs = DB::table('partner_requests')->where('partner_id', $this->buosti->id)->where('type', 'withdrawal')->get();
+        $this->assertNotEmpty($reqs);
+        $this->assertSame(['done'], $reqs->pluck('status')->unique()->values()->all(), 'nothing left waiting on Requests');
+        $this->assertSame(-35000.0, (float) DB::table('partner_transactions')->where('partner_id', $this->buosti->id)->where('wallet_slug', 'principal')->where('type', 'withdrawal')->sum('amount'));
+        $this->assertSame(0.0, round((float) DB::table('partner_transactions')->where('partner_id', $this->buosti->id)->where('wallet_slug', 'principal')->sum('amount'), 2), 'their capital went back out');
+
+        $this->artisan('partners:fund-loan', $args + ['--apply' => true])->assertSuccessful();
+        $this->assertSame($reqs->count(), DB::table('partner_requests')->where('partner_id', $this->buosti->id)->where('type', 'withdrawal')->count(), 'run twice, paid once');
+    }
+
+    /** The same from the partner page's "Their money in a loan" sheet: new money, already paid back from the repayment (owner, 17 Nov 2026). */
+    public function test_the_money_in_a_loan_sheet_books_new_money_already_paid_back(): void
+    {
+        $this->houseLoan(917);
+        $this->pay(917, 120000, 'QK917', '2026-10-23');
+        $show = route('partners.show', $this->buosti);
+        $form = ['_sheet' => 'part-of-loan', 'source' => 'new', 'loan' => 917, 'amount' => 35000, 'code' => 'qisiro917', 'paid' => 1, 'paid_on' => '2026-10-23', 'paid_ref' => 'QK917'];
+
+        $this->actingAs($this->admin)->get($show)->assertOk()->assertSee('Money in a loan…')->assertSee('New money for this loan')->assertSee('They already got their part back');
+        $this->actingAs($this->admin)->from($show)->followingRedirects()->post(route('staff.partners.slices.fund', $this->buosti), $form + ['mode' => 'preview'])
+            ->assertOk()->assertSee('Preview: the journal rows this would post')->assertSee('MPESA-QISIRO917');
+        $this->assertSame(0, Investment::where('name', 'like', '%QISIRO917%')->count(), 'preview saves nothing');
+
+        $this->actingAs($this->admin)->from($show)->post(route('staff.partners.slices.fund', $this->buosti), $form + ['mode' => 'save'])->assertSessionHas('success');
+        $this->assertSame(35000.0, (float) DB::table('loan_fundings')->where('loan_id', 917)->where('partner_id', $this->buosti->id)->value('amount'));
+        $this->assertSame(0, DB::table('partner_requests')->where('partner_id', $this->buosti->id)->whereIn('status', ['pending', 'prepared'])->count(), 'nothing waits on Partner Payouts');
+
+        $this->actingAs($this->admin)->from($show)->post(route('staff.partners.slices.fund', $this->buosti), $form + ['mode' => 'save'])->assertSessionHas('error');
+        $this->assertSame(1, Investment::where('name', 'like', '%QISIRO917%')->count(), 'saved twice, booked once');
+    }
+
     /** A partner's own share of a loan with no line (ISIRO's 44,000 on facility 458) shows on the Investments tab (owner, 17 Nov 2026). */
     public function test_money_in_a_loan_without_a_line_shows_on_the_investments_tab(): void
     {
