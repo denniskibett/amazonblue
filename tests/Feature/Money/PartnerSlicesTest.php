@@ -202,6 +202,7 @@ class PartnerSlicesTest extends TestCase
         $this->assertSame([16000.0, 960.0, 16960.0], [(float) $c->principal, (float) $c->interest_capitalized, (float) $c->new_balance]);
         $this->assertSame(16000.0, (float) DB::table('loans')->where('id', 919)->value('amount'));
         $this->assertSame(16000.0, app(PartnerLines::class)->status($line->refresh())['lent']);
+        $this->assertSame(16000.0, (float) DB::table('loan_fundings')->where('loan_id', 919)->sum('amount'), 'the payout got its funding row');
         $this->artisan('loans:add-payout', ['loan' => 919, '--amount' => 1000, '--date' => '2026-10-14', '--bank-ref' => 'B919', '--line' => $line->id, '--raise' => true, '--apply' => true])
             ->expectsOutputToContain('already has a payout')->assertSuccessful();
 

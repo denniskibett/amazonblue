@@ -70,6 +70,8 @@ class LoansAddPayout extends Command
                 'mode' => (string) $this->option('mode'), 'notes' => $this->option('note') ?: 'Recorded after the fact (loans:add-payout)'], $cycle);
             $d->update(['investment_id' => $line->id, 'funding_source' => $line->isHouseLine() ? 'internal' : 'partner']);
             $line->recordFundingDisbursement($amount);
+            // its funding row too, so loan_fundings keeps matching the cash paid out (owner, 17 Nov 2026)
+            \Illuminate\Support\Facades\Artisan::call('loans:sync-fundings', ['loans' => [$loan->id], '--apply' => true]);
 
             if ($this->option('raise') && ($cycle = LoanCycle::find($d->loan_cycle_id))) {
                 // what they owe goes up by what they got, at the cycle's own rate
