@@ -266,7 +266,7 @@ class PartnerSlicesTest extends TestCase
         $outs = collect($a['links'])->filter(fn ($l) => ! in_array($l['from'], ['Money they put in', 'What it earned'], true))->sum('value');
         $this->assertEqualsWithDelta($in, $outs, 0.01);
         $this->assertTrue(collect($a['links'])->contains(fn ($l) => str_starts_with($l['to'], 'Loan #913')));
-        $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertSee('Where the money is')->assertSee('class="sk-band"', false);
+        $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertSee('Where the money is')->assertSee('data-sankey', false)->assertSee('echarts-5.5.1.min.js');
 
         // the index reads the same money out on loans (was the never-filled investment_tracker wallet), and the two cards add it up
         $this->actingAs($this->admin)->get(route('partners.index'))->assertOk()
