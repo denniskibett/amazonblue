@@ -57,6 +57,8 @@ class NavMenu
           $groups['Management'] = [
             $mods['reports'],
             ['Audit Log', 'audit-log.index', 'list', $u->can('view audit log'), ['audit-log.*'], null],
+            // the feature tracker and suggestions, sysadmin only (owner, 17 Nov 2026)
+            ['Features & suggestions', 'staff.features', 'check', $u->hasRole('super-admin'), ['staff.features'], null],
             ['User Management', 'users.index', 'users', $u->can('view users'), ['users.index', 'users.show', 'users.edit', 'users.create'], null],
             ['Roles & Permissions', 'staff.roles', 'key', $u->canAny(['manage roles', 'view audit log']), ['staff.roles'], null],
             $mods['integrations'],

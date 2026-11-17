@@ -361,6 +361,7 @@
 @include('partials.ui.datatable')
 @include('partials.ui.swap')
 @include('partials.ui.user-panel')
+@include('partials.ui.suggest')
 {{-- the page's own scripts sit between these two markers, so a sidebar swap can run the next page's (partials.ui.swap) --}}
 <script type="text/x-az-page-scripts" data-start></script>
 @stack('scripts')

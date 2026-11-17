@@ -96,6 +96,9 @@ Route::middleware(['auth', 'role:borrower'])->prefix('account')->name('account.'
 });
 
 // ============ SYSADMIN "VIEW AS" (owner, 23 Oct 2026): preview a role or account; nothing is saved ============
+// a suggestion from any page, by anyone signed in (owner, 17 Nov 2026)
+Route::post('/suggestions', [\App\Http\Controllers\SuggestionController::class, 'store'])->middleware(['auth', 'throttle:10,1'])->name('suggestions.store');
+
 Route::middleware('auth')->prefix('preview')->name('preview.')->controller(\App\Http\Controllers\PreviewController::class)->group(function () {
     Route::get('/', 'index')->name('index');
     Route::post('/', 'start')->name('start');
@@ -619,6 +622,11 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
         Route::get('loans/{loan}/partner-options', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'options'])->name('loans.partner-options')->middleware('permission:create disbursements');
         Route::get('loans/{loan}/partners', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'show'])->name('loans.partners')->middleware('permission:edit partners');
         Route::post('loans/{loan}/partners', [\App\Http\Controllers\Staff\PartnerFundingController::class, 'apply'])->name('loans.partners.apply')->middleware('permission:edit partners');
+        // features and suggestions, sysadmin only (owner, 17 Nov 2026)
+        Route::get('features', [\App\Http\Controllers\Staff\FeaturesController::class, 'index'])->name('features');
+        Route::post('features', [\App\Http\Controllers\Staff\FeaturesController::class, 'store'])->name('features.store');
+        Route::post('features/{feature}', [\App\Http\Controllers\Staff\FeaturesController::class, 'update'])->whereNumber('feature')->name('features.update');
+        Route::post('suggestions/{suggestion}', [\App\Http\Controllers\Staff\FeaturesController::class, 'reply'])->whereNumber('suggestion')->name('suggestions.reply');
         // a facility's own split (owner, 14 Nov 2026)
         Route::post('loans/{loan}/facility-split', [\App\Http\Controllers\Staff\FacilitySplitController::class, 'store'])->name('loans.facility-split')->middleware('permission:edit partners');
         Route::delete('loans/{loan}/facility-split', [\App\Http\Controllers\Staff\FacilitySplitController::class, 'destroy'])->name('loans.facility-split.destroy')->middleware('permission:edit partners');
