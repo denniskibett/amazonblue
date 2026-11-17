@@ -68,7 +68,7 @@
                         class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
                         <option value="">-- Select Cycle --</option>
                         <template x-for="cycle in cycles" :key="cycle.id">
-                            <option :value="cycle.id" x-text="'Cycle #' + cycle.cycle_number + ' - Balance: KES ' + Number(cycle.new_balance).toFixed(2) + ' (' + cycle.status + ')'"></option>
+                            <option :value="cycle.id" :selected="String(cycle.id) === String(selectedCycleId)" x-text="'Cycle #' + cycle.cycle_number + ' - Balance: KES ' + Number(cycle.new_balance).toFixed(2) + ' (' + cycle.status + ')'"></option>
                         </template>
                     </select>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -78,83 +78,9 @@
                     </p>
                 </div>
 
-                <!-- ============ WHO IS BEHIND THIS LOAN (owner, 23 Oct 2026) ============ -->
-                <div x-show="mode === 'loan'" class="mb-4 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
-                    <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Who is behind this loan</p>
-                    <p x-show="editId && opts.has_repayments" class="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
-                        Payments on this loan are already split, so a change here would move shares already paid.
-                        <a :href="opts.links_url" data-drawer class="font-medium underline" @click="close()">Change it with a preview</a>.
-                    </p>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Brought in by (broker)</label>
-                            <select x-model.number="broker" :disabled="editId && opts.has_repayments" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
-                                <option :value="0">Nobody: our own client</option>
-                                <template x-for="p in opts.partners" :key="p.id"><option :value="p.id" x-text="p.name" :selected="Number(p.id) === Number(broker)"></option></template>
-                            </select>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="opts.own && Number(broker) === Number(opts.own.id) ? 'Their own loan: full rate, their broker share of each repayment comes back to them.' : 'The broker earns their share of the interest and penalty on every repayment.'"></p>
-                        </div>
-                        <div>
-                            <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Funded by</span>
-                            <div class="flex flex-wrap gap-2 text-sm">
-                                <template x-for="[k, l] in (editId ? [['house', 'Our money'], ['line', 'A partner line']] : [['house', 'Our money'], ['line', 'A partner line'], ['new', 'New partner money'], ['split', 'Several sources']])" :key="k">
-                                    <button type="button" @click="fund = k; if (k === 'split' && !parts.length) parts = [{ id: opts.house || '', amount: '' }, { id: opts.lines.length ? opts.lines[0].id : '', amount: '' }]" :disabled="(['line', 'split'].includes(k) && opts.lines.length === 0) || (editId && opts.has_repayments)"
-                                        :class="fund === k ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'"
-                                        class="rounded-lg border px-3 py-2 font-medium disabled:opacity-40" x-text="l"></button>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                    <div x-show="fund === 'line'" class="mt-4">
-                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Partner line</label>
-                        <select x-model="lineId" :disabled="editId && opts.has_repayments" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
-                            <template x-for="l in opts.lines" :key="l.id"><option :value="l.id" x-text="l.label"></option></template>
-                        </select>
-                    </div>
-                    <div x-show="fund === 'split' && !editId" class="mt-4">
-                        <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Funding lines</span>
-                        <template x-for="(p, i) in parts" :key="i">
-                            <div class="mb-2 flex flex-wrap items-center gap-2">
-                                <select x-model="p.id" class="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
-                                    <option x-show="opts.house" :value="opts.house" :selected="String(p.id) === String(opts.house)">House (our money)</option>
-                                    <template x-for="l in opts.lines" :key="l.id"><option :value="l.id" x-text="l.label" :selected="String(p.id) === String(l.id)"></option></template>
-                                </select>
-                                <input type="number" step="0.01" min="0.01" x-model="p.amount" placeholder="KES" aria-label="Amount from this source" class="w-36 rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
-                                <span class="w-16 text-right text-xs tabular-nums text-gray-500 dark:text-gray-400" x-text="partPct(p)"></span>
-                                <button type="button" x-show="parts.length > 1" @click="parts.splice(i, 1)" class="text-xs text-red-600 hover:underline">Remove</button>
-                            </div>
-                        </template>
-                        <button type="button" @click="parts.push({ id: opts.house || '', amount: '' })" class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">+ Add a source</button>
-                        <p class="mt-1 text-xs" :class="Math.abs(partsTotal() - (Number(form.amount) || 0)) < 0.005 ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'"
-                            x-text="'Lines add up to KES ' + partsTotal().toLocaleString('en-KE', { minimumFractionDigits: 2 }) + ' of KES ' + (Number(form.amount) || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 }) + ' sent.'"></p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Each source earns its share of the interest and gets its share of the principal back, by what it put in. The broker's penalty share stays on the whole penalty.</p>
-                    </div>
-                    <div x-show="fund === 'new'" class="mt-4 space-y-4">
-                        <div>
-                            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">The partner's M-Pesa or bank message</label>
-                            <textarea x-model="np.sms" @input.debounce.500ms="readPartnerSms()" rows="2" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" placeholder="Paste the message for the money the partner sent"></textarea>
-                            <p class="mt-1 text-xs" :class="np.ok ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'" x-show="np.msg" x-text="np.msg"></p>
-                        </div>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Partner who sent it</label>
-                                <select x-model="np.partner" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"><option value="">Choose…</option>
-                                    <template x-for="p in opts.partners" :key="p.id"><option :value="p.id" x-text="p.name"></option></template></select></div>
-                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Amount received (KES)</label><input type="number" step="0.01" min="1" x-model="np.amount" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></div>
-                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Reference (M-Pesa or bank)</label><input type="text" x-model="np.code" maxlength="40" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" style="text-transform:uppercase"></div>
-                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Date received</label><input type="date" x-model="np.date" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></div>
-                            <div><span class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">How long</span>
-                                <div class="flex gap-2 text-sm">
-                                    <button type="button" @click="np.term = 'short_term'; np.maturity = opts.maturity" :class="np.term === 'short_term' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'" class="rounded-lg border px-3 py-2 font-medium">Short term</button>
-                                    <button type="button" @click="np.term = 'long_term'; np.maturity = ''" :class="np.term === 'long_term' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'" class="rounded-lg border px-3 py-2 font-medium">Long term</button>
-                                </div></div>
-                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Pay back by</label><input type="date" x-model="np.maturity" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="np.term === 'short_term' ? 'Closes and pays out when its loans are repaid.' : 'Lends again what comes back until this date.'"></p></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ============ FORM FIELDS ============ -->
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <!-- ============ TRANSACTION DETAILS (owner, 17 Nov 2026: before who is behind the loan) ============ -->
+                <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Transaction details</p>
+                <div class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Amount (KES) <span class="text-red-500">*</span>
@@ -225,6 +151,102 @@
 
                 </div>
 
+                <!-- ============ WHO IS BEHIND THIS LOAN (owner, 23 Oct 2026) ============ -->
+                <div x-show="mode === 'loan'" class="mb-4 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
+                    <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Who is behind this loan</p>
+                    <p x-show="editId && opts.has_repayments" class="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                        Payments on this loan are already split, so a change here would move shares already paid.
+                        <a :href="opts.links_url" data-drawer class="font-medium underline" @click="close()">Change it with a preview</a>.
+                    </p>
+                    <div class="grid grid-cols-1 gap-4" :class="editId && 'md:grid-cols-2'">
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Brought in by (broker)</label>
+                            <select x-model.number="broker" :disabled="editId && opts.has_repayments" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                <option :value="0">Nobody: our own client</option>
+                                <template x-for="p in opts.partners" :key="p.id"><option :value="p.id" x-text="p.name" :selected="Number(p.id) === Number(broker)"></option></template>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="opts.own && Number(broker) === Number(opts.own.id) ? 'Their own loan: full rate, their broker share of each repayment comes back to them.' : 'The broker earns their share of the interest and penalty on every repayment.'"></p>
+                        </div>
+                        <div x-show="editId">
+                            <span class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Funded by</span>
+                            <div class="flex flex-wrap gap-2 text-sm">
+                                <template x-for="[k, l] in (editId ? [['house', 'Our money'], ['line', 'A partner line']] : [['house', 'Our money'], ['line', 'A partner line'], ['new', 'New partner money'], ['split', 'Several sources']])" :key="k">
+                                    <button type="button" @click="fund = k; if (k === 'split' && !parts.length) parts = [{ id: opts.house || '', amount: '' }, { id: opts.lines.length ? opts.lines[0].id : '', amount: '' }]" :disabled="(['line', 'split'].includes(k) && opts.lines.length === 0) || (editId && opts.has_repayments)"
+                                        :class="fund === k ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'"
+                                        class="rounded-lg border px-3 py-2 font-medium disabled:opacity-40" x-text="l"></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    <div x-show="editId && fund === 'line'" class="mt-4">
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Partner line</label>
+                        <select x-model="lineId" :disabled="editId && opts.has_repayments" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                            <template x-for="l in opts.lines" :key="l.id"><option :value="l.id" x-text="l.label"></option></template>
+                        </select>
+                    </div>
+                    {{-- who put in what (owner, 17 Nov 2026): one row per source, its share of the loan, and the broker's row marked.
+                         One row of our money = "our money", one partner row = "a partner line", more rows = several sources. --}}
+                    <div x-show="!editId && fund !== 'new'" class="mt-4">
+                        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 text-left text-xs font-medium text-gray-500 dark:bg-white/[0.03] dark:text-gray-400">
+                                    <tr><th class="px-3 py-2">Whose money</th><th class="px-3 py-2 text-right">Put in (KES)</th><th class="px-3 py-2 text-right">Share</th><th class="px-3 py-2"><span class="sr-only">Remove</span></th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    <template x-for="(p, i) in parts" :key="i">
+                                        <tr>
+                                            <td class="px-3 py-2">
+                                                <select x-model="p.id" aria-label="Whose money" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                                    <option x-show="opts.house" :value="opts.house" :selected="String(p.id) === String(opts.house)">Our money (house)</option>
+                                                    <template x-for="l in opts.lines" :key="l.id"><option :value="l.id" x-text="l.label" :selected="String(p.id) === String(l.id)"></option></template>
+                                                </select>
+                                                <span x-show="isBrokerRow(p)" class="mt-1 inline-flex rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-500/15 dark:text-purple-300">Brought the client</span>
+                                            </td>
+                                            <td class="w-40 px-3 py-2 text-right">
+                                                <input x-show="parts.length > 1" type="number" step="0.01" min="0.01" x-model="p.amount" placeholder="KES" aria-label="Amount from this source" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white text-right">
+                                                <span x-show="parts.length === 1" class="tabular-nums" x-text="money(form.amount)"></span>
+                                            </td>
+                                            <td class="w-20 px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-300" x-text="parts.length === 1 ? '100%' : partPct(p)"></td>
+                                            <td class="w-16 px-3 py-2 text-right"><button type="button" x-show="parts.length > 1" @click="parts.splice(i, 1)" class="text-xs font-medium text-red-600 hover:underline">Remove</button></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                            <div class="flex flex-wrap items-center gap-4 border-t border-gray-100 bg-gray-50 px-3 py-2 text-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                                <button type="button" @click="if (parts.length === 1 && !parts[0].amount) parts[0].amount = form.amount; parts.push({ id: opts.lines.length ? opts.lines[0].id : (opts.house || ''), amount: '' })" class="font-medium text-brand-600 hover:underline dark:text-brand-400">+ Add a source</button>
+                                <button type="button" @click="fund = 'new'" class="font-medium text-brand-600 hover:underline dark:text-brand-400">+ New money from a partner</button>
+                                <span class="flex-1"></span>
+                                <span x-show="parts.length > 1" :class="Math.abs(partsTotal() - (Number(form.amount) || 0)) < 0.01 ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'"
+                                    x-text="money(partsTotal()) + ' of ' + money(form.amount) + (Math.abs(partsTotal() - (Number(form.amount) || 0)) < 0.01 ? ' · adds up' : ' · must add up to the amount')"></span>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Each source gets its share of the principal back and earns its share of the interest, by what it put in. The broker's share of the penalty is on the whole penalty.</p>
+                    </div>
+                    <div x-show="fund === 'new'" class="mt-4 space-y-4">
+                        <button type="button" x-show="!editId" @click="fund = 'house'" class="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">← Back to whose money</button>
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">The partner's M-Pesa or bank message</label>
+                            <textarea x-model="np.sms" @input.debounce.500ms="readPartnerSms()" rows="2" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" placeholder="Paste the message for the money the partner sent"></textarea>
+                            <p class="mt-1 text-xs" :class="np.ok ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'" x-show="np.msg" x-text="np.msg"></p>
+                        </div>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Partner who sent it</label>
+                                <select x-model="np.partner" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"><option value="">Choose…</option>
+                                    <template x-for="p in opts.partners" :key="p.id"><option :value="p.id" x-text="p.name"></option></template></select></div>
+                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Amount received (KES)</label><input type="number" step="0.01" min="1" x-model="np.amount" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></div>
+                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Reference (M-Pesa or bank)</label><input type="text" x-model="np.code" maxlength="40" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white" style="text-transform:uppercase"></div>
+                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Date received</label><input type="date" x-model="np.date" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white"></div>
+                            <div><span class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">How long</span>
+                                <div class="flex gap-2 text-sm">
+                                    <button type="button" @click="np.term = 'short_term'; np.maturity = opts.maturity" :class="np.term === 'short_term' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'" class="rounded-lg border px-3 py-2 font-medium">Short term</button>
+                                    <button type="button" @click="np.term = 'long_term'; np.maturity = ''" :class="np.term === 'long_term' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'" class="rounded-lg border px-3 py-2 font-medium">Long term</button>
+                                </div></div>
+                            <div><label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Pay back by</label><input type="date" x-model="np.maturity" class="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white">
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="np.term === 'short_term' ? 'Closes and pays out when its loans are repaid.' : 'Lends again what comes back until this date.'"></p></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div x-show="errors.length" class="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
                     <template x-for="e in errors" :key="e"><p x-text="e"></p></template>
                 </div>
@@ -289,6 +311,17 @@ function disbursementModal() {
         // part funding (owner, 1 Nov 2026): [{ id, amount }], House or partner lines, adding up to the amount sent
         parts: [],
         partsTotal() { return this.parts.reduce((t, p) => t + (Number(p.amount) || 0), 0); },
+        money(v) { return 'KES ' + (Number(v) || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+        // the row whose money is the broker's own line (owner, 17 Nov 2026)
+        isBrokerRow(p) { const l = (this.opts.lines || []).find(x => String(x.id) === String(p.id)); return !!(l && Number(this.broker) && Number(l.partner_id) === Number(this.broker)); },
+        // the sources table saves as before: one row of our money = house, one partner row = a line, more rows = split
+        fundFromParts() {
+            if (this.fund === 'new') return;
+            if (this.parts.length > 1) { this.fund = 'split'; return; }
+            const id = this.parts[0]?.id;
+            if (!id || String(id) === String(this.opts.house)) { this.fund = 'house'; return; }
+            this.fund = 'line'; this.lineId = id;
+        },
         partPct(p) { const a = Number(this.form.amount) || 0; return a > 0 ? ((Number(p.amount) || 0) / a * 100).toFixed(2) + '%' : ''; },
         np: { sms: '', msg: '', ok: false, partner: '', amount: '', code: '', date: '', term: 'short_term', maturity: '' },
         readMsg: '',
@@ -660,7 +693,7 @@ function disbursementModal() {
                 payment_date: '',
                 funding_source: 'internal'
             };
-            this.broker = 0; this.fund = 'house'; this.lineId = ''; this.parts = []; this.errors = []; this.readMsg = ''; this.readOk = false;
+            this.broker = 0; this.fund = 'house'; this.lineId = ''; this.parts = [{ id: '', amount: '' }]; this.errors = []; this.readMsg = ''; this.readOk = false;
             this.np = { sms: '', msg: '', ok: false, partner: '', amount: '', code: '', date: '', term: 'short_term', maturity: '' };
             this.message = '';
             this.parsedData = {};
@@ -688,6 +721,8 @@ function disbursementModal() {
                 } else {
                     this.broker = Number(this.opts.broker || 0);
                     this.lineId = this.opts.lines.length ? this.opts.lines[0].id : '';
+                    this.fund = 'house';
+                    this.parts = [{ id: this.opts.house || '', amount: '' }];
                 }
             } catch (e) { /* the modal still records the money as before */ }
         },
@@ -878,7 +913,8 @@ function disbursementModal() {
                         if (this.selectedInvestmentId) formData.append('investment_id', this.selectedInvestmentId);
                     }
                 } else {
-                    // who is behind the loan (owner, 23 Oct 2026)
+                    // who is behind the loan (owner, 23 Oct 2026); the sources table picks the mode (17 Nov 2026)
+                    this.fundFromParts();
                     formData.append('broker_partner_id', Number(this.broker) || 0);
                     formData.append('funding_mode', this.fund);
                     if (this.fund === 'house' && this.opts.house) formData.append('investment_id', this.opts.house);

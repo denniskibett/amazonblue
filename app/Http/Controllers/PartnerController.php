@@ -98,7 +98,7 @@ class PartnerController extends Controller
             ...(function () use ($partner) {
                 $sum = app(\App\Services\PartnerPortfolio::class)->summary($partner);
 
-                return ['available' => (float) $sum['available'], 'earned' => (float) $sum['earned'], 'committed' => (float) $sum['committed'], 'is_house' => (bool) $partner->is_house_account];
+                return ['available' => (float) $sum['available'], 'lent_out' => (float) $sum['lent_out'], 'earned' => (float) $sum['earned'], 'committed' => (float) $sum['committed'], 'is_house' => (bool) $partner->is_house_account];
             })(),
 
             // Legacy fields still referenced by the show modal

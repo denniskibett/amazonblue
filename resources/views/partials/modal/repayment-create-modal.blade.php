@@ -74,7 +74,7 @@
                         required>
                         <option value="">-- Select Cycle --</option>
                         <template x-for="cycle in cycles" :key="cycle.id">
-                            <option :value="cycle.id" x-text="'Cycle #' + cycle.cycle_number + ' - Balance: KES ' + Number(cycle.new_balance).toFixed(2) + ' (' + cycle.status + ')'"></option>
+                            <option :value="cycle.id" :selected="String(cycle.id) === String(selectedCycleId)" x-text="'Cycle #' + cycle.cycle_number + ' - Balance: KES ' + Number(cycle.new_balance).toFixed(2) + ' (' + cycle.status + ')'"></option>
                         </template>
                     </select>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -83,7 +83,8 @@
                     </p>
                 </div>
 
-                <!-- Form Fields -->
+                <!-- Transaction details (owner, 17 Nov 2026) -->
+                <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Transaction details</p>
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -162,6 +163,31 @@
                     </div>
                 </div>
 
+                <!-- Who it goes back to (owner, 17 Nov 2026): the loan's sources (loan_fundings), each gets its share back -->
+                <div x-show="behind.length" class="mt-4 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
+                    <p class="text-sm font-semibold text-gray-800 dark:text-white">Who it goes back to</p>
+                    <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">Split by what each put in, as set on the disbursement<span x-show="brokerName" x-text="'; ' + brokerName + ' brought the client and earns their broker share'"></span>.</p>
+                    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 text-left text-xs font-medium text-gray-500 dark:bg-white/[0.03] dark:text-gray-400">
+                                <tr><th class="px-3 py-2">Whose money</th><th class="px-3 py-2 text-right">Put in</th><th class="px-3 py-2 text-right">Share</th><th class="px-3 py-2 text-right">Of this payment</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                <template x-for="(b, i) in behind" :key="i">
+                                    <tr>
+                                        <td class="px-3 py-2"><span x-text="b.name"></span>
+                                            <span x-show="b.broker" class="ml-1 inline-flex rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-500/15 dark:text-purple-300">Brought the client</span></td>
+                                        <td class="px-3 py-2 text-right tabular-nums" x-text="money(b.amount)"></td>
+                                        <td class="px-3 py-2 text-right tabular-nums" x-text="b.share + '%'"></td>
+                                        <td class="px-3 py-2 text-right tabular-nums" x-text="money((Number(form.amount) || 0) * b.share / 100)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">A guide by share; after saving, the loan shows the exact principal, interest and penalty each one got.</p>
+                </div>
+
                 <div x-show="errors.length" class="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
                     <template x-for="e in errors" :key="e"><p x-text="e"></p></template>
                 </div>
@@ -187,6 +213,20 @@ function repaymentModal() {
     return {
         open: false,
         title: 'Add Repayment',
+        behind: [], brokerName: null,
+        money(v) { return 'KES ' + (Number(v) || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+        async loadBehind() {
+            this.behind = []; this.brokerName = null;
+            if (!this.loanId) return;
+            try {
+                const res = await fetch(`/staff/loans/${this.loanId}/partner-options`, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                if (!res.ok) return;
+                const o = await res.json();
+                // one source that is our money: nothing to show
+                this.behind = (o.behind || []).length > 1 || (o.behind || []).some(b => b.name !== 'Our money (house)') ? o.behind : [];
+                this.brokerName = o.broker_name || null;
+            } catch (e) { /* the modal still records the payment */ }
+        },
         submitText: 'Create Repayment',
         method: 'POST',
         editId: null,
@@ -336,6 +376,7 @@ function repaymentModal() {
             this.open = true;
             document.body.style.overflow = 'hidden';
             this.loanId = loanId || (data ? data.loan_id : null);
+            this.loadBehind();
 
             if (data) {
                 this.title = 'Edit Repayment';

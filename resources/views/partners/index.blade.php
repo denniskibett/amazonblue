@@ -33,7 +33,9 @@
       <x-staff.tab :name="$key">
         <x-staff.table :caption="$label . ' partners'" :headers="['Partner', 'Type', ['Put in now', 'num'], ['Lent now', 'num'], ['Free', 'num'], ['Earned', 'num'], ['Available', 'num'], 'Status', '']">
           @forelse ($set as $p)
-            @php $in = (float) $p['principal_balance'] + (float) $p['tracker_balance']; @endphp
+            {{-- put in now = the principal wallet (lending does not move it); lent now = capital out on loans (Partner::lentOut; the
+                 investment_tracker wallet it read was never filled); free = the rest (owner, 17 Nov 2026) --}}
+            @php $in = (float) $p['principal_balance']; $free = max(0, round($in - (float) $p['lent_out'], 2)); @endphp
             <tr data-partner="{{ $p['id'] }}">
               <td data-sort-value="{{ $p['name'] }}"><a href="{{ route('partners.show', $p['id']) }}" class="block hover:opacity-80"><x-staff.person :name="$p['name']" :sub="$p['phone'] ?: $p['email']" /></a></td>
               <td data-filter-value="{{ $p['long'] && $p['short'] ? 'Both' : ($p['long'] ? 'Long-term' : ($p['short'] ? 'Short-term' : ucfirst($p['type'] ?? ''))) }}">
@@ -44,8 +46,8 @@
                 @else<x-staff.pill tone="gray">{{ ucfirst($p['type'] ?? '—') }}</x-staff.pill>@endif
               </td>
               <td class="num" data-sort-value="{{ $in }}">{{ $in ? number_format($in, 2) : '—' }}</td>
-              <td class="num" data-sort-value="{{ $p['tracker_balance'] }}">{{ number_format((float) $p['tracker_balance'], 2) }}</td>
-              <td class="num" data-sort-value="{{ $p['principal_balance'] }}">{{ number_format((float) $p['principal_balance'], 2) }}</td>
+              <td class="num" data-sort-value="{{ $p['lent_out'] }}">{{ number_format((float) $p['lent_out'], 2) }}</td>
+              <td class="num" data-sort-value="{{ $free }}">{{ number_format($free, 2) }}</td>
               <td class="num" data-sort-value="{{ $p['earned'] }}">{{ number_format((float) $p['earned'], 2) }}</td>
               <td class="num font-medium text-gray-800 dark:text-white/90" data-sort-value="{{ $p['available'] }}">{{ number_format((float) $p['available'], 2) }}</td>
               <td data-filter-value="{{ ucfirst($p['status'] ?? '') }}"><x-staff.pill :tone="['active' => 'green', 'suspended' => 'red'][$p['status']] ?? 'gray'" dot>{{ ucfirst($p['status'] ?? '—') }}</x-staff.pill></td>
@@ -65,7 +67,7 @@
     @endforeach
   </x-staff.tabs>
 
-  <p class="mt-3 text-theme-xs text-gray-500">Put in now = capital not lent (free) plus capital lent out on loans. Available = the partner's wallets (capital, interest, introducer fees) minus capital still lent out; partners can ask for up to this. Payouts they ask for, and line payouts, wait on <a class="underline" href="{{ route('staff.requests', ['tab' => 'partners']) }}">Requests</a>: one person prepares{{ config('lending.approvals.enabled') ? ', a second approves on Second sign-offs' : '' }}, and payouts already made post on the day they were paid.</p>
+  <p class="mt-3 text-theme-xs text-gray-500">Put in now = the capital they sent, less what was paid back to them; Lent now = the part out on loans; Free = the rest. Available = the partner's wallets (capital, interest, introducer fees) minus capital still lent out; partners can ask for up to this. Payouts they ask for, and line payouts, wait on <a class="underline" href="{{ route('staff.requests', ['tab' => 'partners']) }}">Requests</a>: one person prepares{{ config('lending.approvals.enabled') ? ', a second approves on Second sign-offs' : '' }}, and payouts already made post on the day they were paid.</p>
 
   @include('partials.modal.partners-create-modal', ['users' => $users ?? []])
   @include('partials.modal.delete')

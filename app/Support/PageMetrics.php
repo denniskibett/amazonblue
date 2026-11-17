@@ -328,6 +328,13 @@ class PageMetrics
             $this->card('Short-term partners', self::n(DB::table('partners as p')->join('brokers as b', 'b.user_id', '=', 'p.user_id')->distinct()->count('p.id')), 'users', 'introduce borrowers'),
             $this->card('Earned by partners', self::kes($earned), 'coins', 'interest and penalty shares'),
             $this->card('Withdrawals waiting', self::n(Schema::hasTable('partner_requests') ? DB::table('partner_requests')->where('type', 'withdrawal')->whereIn('status', ['pending', 'prepared'])->count() : 0), 'send', 'asked by partners'),
+            // partners' money out on loans, and what they can take now (owner, 17 Nov 2026): the house is not a partner here
+            ...(function () {
+                $sums = \App\Models\Partner::where('is_house_account', 0)->get()->map(fn ($p) => app(\App\Services\PartnerPortfolio::class)->summary($p));
+
+                return [$this->card('Out on loans', self::kes($sums->sum('lent_out')), 'layers', 'partners\' capital lent out'),
+                        $this->card('Owed to partners', self::kes($sums->sum('available')), 'wallet', 'what they can take now')];
+            })(),
         ];
     }
 

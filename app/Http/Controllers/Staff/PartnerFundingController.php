@@ -59,15 +59,32 @@ class PartnerFundingController extends Controller
         $house = Investment::where('status', 'active')->get()->first(fn ($i) => $i->isHouseLine());
         $label = fn (Investment $line, $partner, float $room) => ($partner?->name ?? 'Partner') . ' · ' . (PartnerLines::TERMS[$line->facility_type] ?? 'Line')
             . ' #' . $line->id . ' · KES ' . number_format($room, 2) . ' free' . ($line->maturity_date ? ' · back by ' . $line->maturity_date->format('j M Y') : '');
-        $list = $lines->openLines()->map(fn ($o) => ['id' => $o->line->id, 'label' => $label($o->line, $o->partner, $o->room)])->values();
+        // partner_id / name / room (owner, 17 Nov 2026): the modal shows whose money each source is and marks the broker's row
+        $list = $lines->openLines()->map(fn ($o) => ['id' => $o->line->id, 'label' => $label($o->line, $o->partner, $o->room),
+            'partner_id' => $o->partner?->id, 'name' => $o->partner?->name ?? 'Partner', 'room' => round((float) $o->room, 2)])->values();
         // editing: the line the loan is on now is always offered, even when it has no money free
         $current = (int) \App\Models\Disbursement::where('loan_id', $loan->id)->where('kind', 'cash')->whereNotNull('investment_id')->orderBy('id')->value('investment_id');
         if ($current && $current !== (int) $house?->id && ! $list->contains('id', $current) && ($line = Investment::find($current))) {
             $p = $line->fundings()->whereHas('partner', fn ($q) => $q->where('is_house_account', false))->first()?->partner;
-            $list->prepend(['id' => $line->id, 'label' => $label($line, $p, $line->remainingCommitted()) . ' (now)']);
+            $list->prepend(['id' => $line->id, 'label' => $label($line, $p, $line->remainingCommitted()) . ' (now)', 'partner_id' => $p?->id, 'name' => $p?->name ?? 'Partner', 'room' => round((float) $line->remainingCommitted(), 2)]);
         }
 
+        // who is behind the loan now (owner, 17 Nov 2026): one row per loan_fundings slice, or the one source a cash
+        // disbursement names; the repayment modal shows these as "who it goes back to"
+        $brokerId = $loan->broker_status && $loan->partner_id ? (int) $loan->partner_id : 0;
+        $names = Partner::pluck('name', 'id');
+        $slices = app(\App\Services\Loans\LoanFundings::class)->rows($loan->id);
+        $total = (float) $slices->sum('amount') ?: (float) \App\Models\Disbursement::where('loan_id', $loan->id)->where('kind', 'cash')->sum('amount');
+        $behind = $slices->isNotEmpty()
+            ? $slices->map(fn ($r) => ['name' => $r->is_house || ! $r->partner_id ? 'Our money (house)' : ($names[$r->partner_id] ?? 'Partner'), 'amount' => round((float) $r->amount, 2),
+                'share' => $total > 0 ? round((float) $r->amount / $total * 100, 2) : 0, 'broker' => $brokerId && (int) $r->partner_id === $brokerId])->values()
+            : collect($current && $current !== (int) $house?->id && ($line = Investment::find($current))
+                ? [['name' => $names[\App\Services\Loans\LoanFundings::partnerOf($line)] ?? 'Partner', 'amount' => round($total, 2), 'share' => 100, 'broker' => $brokerId && (int) \App\Services\Loans\LoanFundings::partnerOf($line) === $brokerId]]
+                : [['name' => 'Our money (house)', 'amount' => round($total, 2), 'share' => 100, 'broker' => false]]);
+
         return response()->json([
+            'behind' => $behind,
+            'broker_name' => $brokerId ? ($names[$brokerId] ?? null) : null,
             'partners' => Partner::where('is_house_account', false)->orderBy('name')->get(['id', 'name']),
             'lines' => $list->values(),
             'current_broker' => $loan->broker_status && $loan->partner_id ? (int) $loan->partner_id : 0,

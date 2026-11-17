@@ -155,6 +155,28 @@ class PartnerSlicesTest extends TestCase
         $this->assertSame(1, Investment::where('name', 'like', '%QISIRO917%')->count(), 'saved twice, booked once');
     }
 
+    /** The loan page modals (owner, 17 Nov 2026): transaction details first, then who is behind the loan; the options say whose money each source is. */
+    public function test_the_loan_modals_show_who_is_behind_the_loan(): void
+    {
+        $this->houseLoan(918);
+        $line = $this->line();
+        $d = DB::table('disbursements')->where('loan_id', 918)->value('id');
+        $this->actingAs($this->admin)->post(route('staff.partners.slices.fund', $this->buosti), ['line' => $line->id, 'loan' => 918, 'disbursement' => $d, 'amount' => 20000, 'mode' => 'save'])
+            ->assertSessionHas('success');
+
+        $o = $this->actingAs($this->admin)->getJson(route('staff.loans.partner-options', 918))->assertOk()->json();
+        $this->assertCount(2, $o['behind'], 'house and the partner line');
+        $this->assertSame(100.0, round(array_sum(array_column($o['behind'], 'share')), 2));
+        $this->assertContains($this->buosti->name, array_column($o['behind'], 'name'));
+        $this->assertTrue($o['lines'] === [] || array_key_exists('partner_id', $o['lines'][0]), 'each line says whose it is');
+
+        $this->actingAs($this->admin);
+        $html = view('partials.modal.disbursement-create-modal')->render() . view('partials.modal.repayment-create-modal')->render();
+        $this->assertStringContainsString('Who it goes back to', $html);
+        $this->assertStringContainsString('+ New money from a partner', $html);
+        $this->assertLessThan(strpos($html, 'WHO IS BEHIND THIS LOAN'), strpos($html, 'TRANSACTION DETAILS'), 'transaction details come first');
+    }
+
     /** A partner's own share of a loan with no line (ISIRO's 44,000 on facility 458) shows on the Investments tab (owner, 17 Nov 2026). */
     public function test_money_in_a_loan_without_a_line_shows_on_the_investments_tab(): void
     {
@@ -181,6 +203,10 @@ class PartnerSlicesTest extends TestCase
         $this->actingAs($this->admin)->get(route('partners.show', $this->buosti))->assertOk()
             ->assertSee('#913')->assertSee('QD913')->assertSee('15,000.00')->assertSee('Out on the loan')
             ->assertDontSee('This line has not funded a loan yet.');
+
+        // the index reads the same money out on loans (was the never-filled investment_tracker wallet), and the two cards add it up
+        $this->actingAs($this->admin)->get(route('partners.index'))->assertOk()
+            ->assertSee('Out on loans')->assertSee('Owed to partners')->assertSee('data-sort-value="15000"', false);
     }
 
     /** The partner page (owner, 16 Nov 2026): every form sits in a right-side sheet, and a line lists the loans it funded. */
