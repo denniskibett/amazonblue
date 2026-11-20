@@ -68,6 +68,7 @@ deploy log below after every deploy.
 
 | Date | Commit | What | Runbook |
 |---|---|---|---|
+| 2026-11-20 | `68e6633` | Funding CRM and finance journey, SMS sender IDs (SHARETENT) and display currency, Claude (key card, Read with Claude on business KYC, test SMS). SQL twins `2026_11_20_funding_crm_and_finance_applications.sql` and `2026_11_20_claude_document_reading.sql` run first; backup `~/backups/db_presql_20261120_133845.sql.gz`. From now on `main` = live, `staging` = working branch. | [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) |
 | 2026-10-21 | `32b7c7f` | Stage 4 Phases 4–7 (deployed off) | [stage4/DEPLOY-PHASES-4-7.md](stage4/DEPLOY-PHASES-4-7.md) |
 | 2026-10-21 | `4136aee` | Phase 3 split; switched on 02:16 | [stage4/DEPLOY-PHASE3.md](stage4/DEPLOY-PHASE3.md) |
 | 2026-10-21 | | Phase 2 engine v2; switched on 01:33 | [stage4/DEPLOY-PHASE2.md](stage4/DEPLOY-PHASE2.md) |
