@@ -46,7 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Safaricom's Daraja callbacks carry no session or CSRF token; they are protected by a secret path
         // segment and an IP allowlist instead (MpesaCallbackController)
-        $middleware->validateCsrfTokens(except: ['mpesa/*', 'webhooks/sharet']);
+        $middleware->validateCsrfTokens(except: ['mpesa/*', 'webhooks/sharet', 'f/u/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // 419 on the sign-in pages (owner, 1 Nov 2026): a phone keeps the sign-in tab open for hours, so its form

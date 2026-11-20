@@ -777,6 +777,6 @@ Route::prefix('mpesa/{secret}')->middleware('throttle:120,1')->name('mpesa.')->g
 });
 
 // Features that stand on their own (owner, 23 Oct 2026): each has its own routes file, controller folder and switch.
-foreach (['aml', 'partner-subscriptions', 'business-lending', 'mpesa-b2c', 'sharet'] as $feature) {
+foreach (['aml', 'partner-subscriptions', 'business-lending', 'mpesa-b2c', 'sharet', 'funding', 'finance-journey'] as $feature) {
     require __DIR__ . '/features/' . $feature . '.php';
 }

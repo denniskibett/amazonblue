@@ -42,6 +42,8 @@ class NavMenu
             ['Disbursements', 'staff.disbursements.queue', 'send', $u->can('view disbursements'), ['staff.disbursements.*', 'disbursements.create', 'disbursements.show', 'disbursements.edit'], $count(fn () => \App\Models\Loan::where('status', 'approved')->count())],
             ['Borrowers', 'staff.borrowers', 'user', $u->can('view users'), ['staff.borrowers'], null],
             ['Sanctions & Compliance', 'aml.lists', 'shield', $u->can('view kyc documents'), ['aml.*'], null],
+            ['Funding Prospects', 'staff.funding.index', 'trending-up', $u->can('manage funding prospects'), ['staff.funding.*'], null],
+            ['Finance Applications', 'staff.finance.index', 'file', $u->can('review finance applications'), ['staff.finance.*'], $count(fn () => \Illuminate\Support\Facades\Schema::hasTable('finance_applications') ? \App\Models\FinanceApplication::where('status', 'submitted')->count() : 0)],
             ['Testimonials', 'staff.testimonials', 'star', $u->can('edit users'), ['staff.testimonials*'], $count(fn () => \Illuminate\Support\Facades\Schema::hasTable('testimonials') ? \App\Models\Testimonial::where('status', 'pending')->count() : 0)],
           ];
           // the owner's six groups (4 Nov 2026): related pages are one module, its pages are tabs on top (modules())

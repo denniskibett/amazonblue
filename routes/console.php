@@ -100,3 +100,6 @@ Schedule::command('sharet:sync')->everyFiveMinutes()->withoutOverlapping()->appe
 // approved disbursements and partner payouts set to go through Sharet, three times a day
 Schedule::command('payments:sweep')->cron('0 8,12,16 * * *')->timezone('Africa/Nairobi')->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/sharet.log'));
+
+// funding CRM: forget email opens and clicks after 12 months (20 Nov 2026)
+Schedule::call(fn () => \App\Services\Funding\EmailEngagement::prune())->dailyAt('03:10')->timezone('Africa/Nairobi')->name('funding:prune-email-events')->withoutOverlapping();

@@ -96,6 +96,9 @@ class RoleSeeder extends Seeder
         'manage collection agencies',
         // investment managers bring in investors and capital and report to the owner (4 Nov 2026)
         'manage investor pipeline',
+        // funding CRM and the business finance journey (owner, 20 Nov 2026)
+        'manage funding prospects',
+        'review finance applications',
         'impersonate users',
         'view system health',
         'manage feature flags',
@@ -108,6 +111,8 @@ class RoleSeeder extends Seeder
         'super-admin' => '*',
         'admin' => [
             'manage investor pipeline',
+            'manage funding prospects',
+            'review finance applications',
             'manage collection agencies',
             'view loans',
             'create loans',
@@ -214,6 +219,8 @@ class RoleSeeder extends Seeder
             'view investment fundings',
         ],
         'manager' => [
+            'manage funding prospects',
+            'review finance applications',
             'manage collection agencies',
             'view loans',
             'create loans',
@@ -281,6 +288,7 @@ class RoleSeeder extends Seeder
             'manage API tokens',
         ],
         'loan-officer' => [
+            'manage funding prospects',
             'view loans',
             'create loans',
             'edit loans',
