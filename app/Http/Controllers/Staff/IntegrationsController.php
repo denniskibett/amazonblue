@@ -24,7 +24,8 @@ class IntegrationsController extends Controller
     public function index(): View
     {
         $rows = Integration::all()->keyBy('slug');
-        $cards = collect(Integrations::CATALOGUE)->map(function ($def, $slug) use ($rows) {
+        $sysadmin = request()->user()?->hasRole('super-admin');
+        $cards = collect(Integrations::CATALOGUE)->reject(fn ($def) => ! empty($def['sysadmin']) && ! $sysadmin)->map(function ($def, $slug) use ($rows) {
             $row = $rows->get($slug);
             $saved = $row?->settings ?? [];
             $fields = collect($def['fields'])->map(function ($f, $env) use ($slug, $saved, $def) {
@@ -59,6 +60,7 @@ class IntegrationsController extends Controller
     public function update(Request $request, string $slug): RedirectResponse
     {
         $def = Integrations::CATALOGUE[$slug] ?? abort(404);
+        abort_if(! empty($def['sysadmin']) && ! $request->user()->hasRole('super-admin'), 403, $def['name'] . ' is set by the system administrator.');
         abort_if(! empty($def['managed']), 403, $def['name'] . ' is changed on its own page.');
         $rules = [];
         foreach ($def['fields'] as $env => $f) {
@@ -125,6 +127,7 @@ class IntegrationsController extends Controller
     public function toggle(Request $request, string $slug): RedirectResponse
     {
         $def = Integrations::CATALOGUE[$slug] ?? abort(404);
+        abort_if(! empty($def['sysadmin']) && ! $request->user()->hasRole('super-admin'), 403, $def['name'] . ' is set by the system administrator.');
         abort_if(! empty($def['managed']), 403, $def['name'] . ' is changed on its own page.');
         $row = Integration::firstOrNew(['slug' => $slug]);
         $settings = $row->settings ?? [];
@@ -143,6 +146,7 @@ class IntegrationsController extends Controller
     public function destroy(Request $request, string $slug): RedirectResponse
     {
         $def = Integrations::CATALOGUE[$slug] ?? abort(404);
+        abort_if(! empty($def['sysadmin']) && ! $request->user()->hasRole('super-admin'), 403, $def['name'] . ' is set by the system administrator.');
         abort_unless(! empty($def['removable']), 404);
         $row = Integration::where('slug', $slug)->first();
         if (! $row) {

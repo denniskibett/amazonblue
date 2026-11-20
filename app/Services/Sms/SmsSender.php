@@ -12,10 +12,43 @@ use Illuminate\Support\Facades\Log;
  *   africastalking Africa's Talking bulk SMS (username "sandbox" = their sandbox)
  *   kenyasms       KenyaSMS (owner, 24 Oct 2026); its URL, key placement and field names are settings
  * Returns true when the provider accepted it. Phone numbers are normalised to +2547XXXXXXXX.
+ *
+ * Sender IDs (owner, 20 Nov 2026), as in scharge's Integrations::smsSender():
+ *   the platform sender, Sharet Ent (SHARETENT): Integrations › Sharet Ent SMS (sysadmin), else .env
+ *   the lender's own sender: the KenyaSMS card's sender ID (and, optionally, its own key). It is used only for the
+ *     lender's own messages; under the white-label edition each lender's saved card is applied in that lender's
+ *     context only (TenantContextBootstrapper), scheduled jobs included, so one client's name never reaches another's.
+ *   one-time codes (sign-in, verification, password reset) always go out under the platform sender: otp().
+ * KenyaSMS's Cloudflare blocks 185.113.249.146 until they whitelist it; sends fail and are logged meanwhile.
  */
 class SmsSender
 {
-    public function send(string $phone, string $message): bool
+    /**
+     * Who a message goes out as. $purpose 'otp' = always the platform; anything else = the lender's own sender ID
+     * when it has one, else the platform.
+     *
+     * @return array{sender_id: string, api_key: ?string, platform: bool}
+     */
+    public static function sender(string $purpose = 'notice'): array
+    {
+        $c = (array) config('lending.notifications.sms');
+        $platform = ['sender_id' => (string) (($c['platform']['sender_id'] ?? null) ?: 'SHARETENT'),
+            'api_key' => ($c['platform']['api_key'] ?? null) ?: ($c['kenyasms']['api_key'] ?? null), 'platform' => true];
+        $own = trim((string) ($c['kenyasms']['sender_id'] ?? ''));
+        if ($purpose === 'otp' || $own === '' || strcasecmp($own, $platform['sender_id']) === 0) {
+            return $platform;
+        }
+
+        return ['sender_id' => $own, 'api_key' => ($c['kenyasms']['api_key'] ?? null) ?: $platform['api_key'], 'platform' => false];
+    }
+
+    /** A one-time code: always under the platform sender (SHARETENT), never a lender's sender ID. */
+    public function otp(string $phone, string $message): bool
+    {
+        return $this->send($phone, $message, 'otp');
+    }
+
+    public function send(string $phone, string $message, string $purpose = 'notice'): bool
     {
         $to = Daraja::msisdn($phone);
         if (! $to) {
@@ -27,7 +60,7 @@ class SmsSender
         $driver = (string) config('lending.notifications.sms.driver', 'log');
 
         if ($driver === 'kenyasms') {
-            return $this->kenyaSms(substr($to, 1), $message);
+            return $this->kenyaSms(substr($to, 1), $message, $purpose);
         }
 
         if ($driver === 'africastalking') {
@@ -43,15 +76,19 @@ class SmsSender
             return $ok;
         }
 
-        Log::info('SMS (log driver)', ['to' => substr($to, 0, 6) . '•••' . substr($to, -3), 'message' => $message]);
+        Log::info('SMS (log driver)', ['to' => substr($to, 0, 6) . '•••' . substr($to, -3), 'from' => self::sender($purpose)['sender_id'],
+            'message' => $purpose === 'otp' ? '(one-time code hidden)' : $message]);
 
         return true;
     }
 
     /** KenyaSMS: one message to one number. $msisdn is 2547XXXXXXXX. */
-    private function kenyaSms(string $msisdn, string $message): bool
+    private function kenyaSms(string $msisdn, string $message, string $purpose = 'notice'): bool
     {
         $c = (array) config('lending.notifications.sms.kenyasms');
+        $from = self::sender($purpose);
+        $c['sender_id'] = $from['sender_id'];
+        $c['api_key'] = $from['api_key'];
         if (empty($c['url']) || empty($c['api_key'])) {
             Log::warning('SMS not sent: KENYASMS_URL and KENYASMS_API_KEY are not set');
 

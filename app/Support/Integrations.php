@@ -99,6 +99,24 @@ class Integrations
                 'KENYASMS_PHONE_FORMAT' => ['Phone format', 'lending.notifications.sms.kenyasms.phone_format', 'text'],
             ],
         ],
+        // Sharet Ent's own SMS sender (owner, 20 Nov 2026): the platform default, sysadmin only. One-time codes always
+        // go out under it; the lender's own messages use the KenyaSMS card's sender ID when it has one.
+        'sms_platform' => [
+            'name' => 'Sharet Ent SMS (platform)', 'category' => 'SMS', 'logo' => 'images/integrations/kenyasms.png', 'switch' => null, 'sysadmin' => true,
+            'description' => 'The platform sender (SHARETENT) for sign-in and verification codes, and for any lender without its own sender ID.',
+            'fields' => [
+                'SMS_PLATFORM_SENDER_ID' => ['Platform sender ID', 'lending.notifications.sms.platform.sender_id', 'text'],
+                'KENYASMS_PLATFORM_API_KEY' => ['Platform KenyaSMS API key (blank: the KenyaSMS card\'s key)', 'lending.notifications.sms.platform.api_key', 'secret'],
+            ],
+        ],
+        // system display currency (owner, 20 Nov 2026), sysadmin only: staff totals shown at Sharet's FX rate; stored amounts never change
+        'currency' => [
+            'name' => 'Currency', 'category' => 'System', 'logo' => 'images/integrations/mail.svg', 'switch' => null, 'sysadmin' => true,
+            'description' => 'The currency staff summary figures are shown in, converted at Sharet\'s FX rate of the day. Loans, receipts and what anyone is charged stay in KES.',
+            'fields' => [
+                'DISPLAY_CURRENCY' => ['Display currency', 'currency.display', 'select', ['KES', 'UGX', 'TZS', 'RWF', 'USD', 'EUR', 'GBP', 'CNY', 'AED', 'INR', 'ZAR']],
+            ],
+        ],
         'mail' => [
             'name' => 'Email (SMTP)', 'category' => 'Email', 'logo' => 'images/integrations/mail.svg', 'switch' => null,
             'description' => 'Outgoing email: sign-in codes, KYC, receipts, money sent, reminders and staff alerts.',

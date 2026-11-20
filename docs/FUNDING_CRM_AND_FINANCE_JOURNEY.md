@@ -90,6 +90,83 @@ the last visit. "Lost your link?" emails a fresh one and the old one stops worki
 
 Run with `php artisan test --filter='FinanceJourneyTest|FundingCrmTest'`.
 
+## 3. SMS sender IDs (KenyaSMS)
+
+`App\Services\Sms\SmsSender::sender($purpose)` works like scharge's `Integrations::smsSender()`.
+
+- **Platform sender:** Sharet Ent, `SHARETENT`. It comes from Integrations › **Sharet Ent SMS (platform)**, a card only
+  super-admin can see or change, else from `.env` (`SMS_PLATFORM_SENDER_ID`, `KENYASMS_PLATFORM_API_KEY`).
+- **The lender's own sender** ("the client"): the KenyaSMS card's sender ID, plus its own key if one is saved. It is
+  used for the lender's own messages: reminders, notices and director links. Without one, messages go as SHARETENT.
+  - Under the white-label edition (`claude/white-label`, not merged), each lender's saved card is applied only in that
+    lender's own context, scheduled jobs included. The sender therefore follows the client the message is for, never
+    the signed-in user.
+- **One-time codes:** `SmsSender::otp()` always sends as SHARETENT.
+  - Nothing in amazonblue sends SMS codes today: sign-in uses a password, and email verification and password resets
+    use links. When phone codes are added, use `otp()`.
+- **KenyaSMS blocks this server.** Their Cloudflare blocks 185.113.249.146, so live SMS fails, and is logged, until
+  KenyaSMS whitelists the IP.
+- **Tests:** `tests/Feature/SmsSenderIdsTest.php`, with KenyaSMS faked.
+
+## 4. Display currency
+
+Ported from scharge (`App\Support\Currency`, `FxRates` and `Money`, plus `<x-fx-note>`), with `config/currency.php`.
+
+- **Stored amounts never change.** Every amount stays in the currency it was made in: loans and the ledger in KES, and a
+  trade finance application in its own KES or USD.
+- **The setting:** Integrations › **Currency**, super-admin only, else `DISPLAY_CURRENCY`.
+- **What converts:** only the staff summary cards (`PageMetrics`), at Sharet's FX rate for the day. The rate and its
+  date show under the cards.
+- **Rates:** `fx:rates` runs hourly and caches them. When Sharet is down, the last known set on disk is used and
+  flagged; with no rate at all, figures stay in KES.
+- **What stays in KES:** loan pages, receipts, statements, agreements, the end-of-day cash-up and what anyone is charged.
+- **Per-client display currency:** that is the lender's own setting under white-label. A per-partner currency for the
+  partner portal is a possible next step.
+- **Sharet's rates endpoint.** `SHARET_FX_URL` defaults to `<SHARET_BASE_URL>/fx/rates`, which Sharet must publish
+  (scharge reads the same URL). Until then, figures stay in KES.
+- **Tests:** `tests/Feature/DisplayCurrencyTest.php`.
+
+## 5. Email for sign-in links and codes on live (checked 20 Nov 2026, without SSH)
+
+- **Mail transport:** live sends through Postfix on 185.113.249.146 (`MAIL_URL=smtp://127.0.0.1:25`, per docs/DEPLOY.md).
+- **From address:** in the local `.env` it is `noreply@loans.sharet.africa`. Live's value can only be read on the server.
+- **Ports:** 25, 587 and 465 answer.
+- **Gaps:**
+  - `loans.sharet.africa` has **no SPF record**. `sharet.africa`'s DMARC (`sp=quarantine`) covers subdomains, so mail
+    from that address passes only if Postfix DKIM-signs it for sharet.africa (relaxed alignment). Add
+    `v=spf1 ip4:185.113.249.146 ~all` for `loans.sharet.africa`, or send from an `@sharet.africa` address.
+  - Postfix announces itself as `menschtech.co.ke`, while reverse DNS says `mail.sharet.africa`. Set `myhostname` to
+    `mail.sharet.africa`.
+  - Port 25 offers `AUTH PLAIN` before STARTTLS. Set `smtpd_tls_auth_only = yes`.
+  - `sharet.africa` itself has SPF (the server's IP), a DKIM `default` key and DMARC quarantine, so `sales@sharet.africa`
+    is in order.
+- **Not done (needs SSH, which this session was refused):** a login-only SMTP check, reading `/var/log/mail.log`, and
+  confirming that OpenDKIM signs loans.sharet.africa.
+
+## 6. Email set
+
+Preview, desktop and mobile on separate pages: https://claude.ai/artifact/7qd51hA5GzdQrktTQid7v8 (private until shared).
+
+- **Already designed** (resources/design/emails, rendered by `emails.branded` from `App\Support\Emails`):
+  - sign-in code (03)
+  - offer ready (12)
+  - repayment due (14)
+  - payment received (15)
+  - overdue (16)
+  - and the rest of the original 21
+- **Added for the business finance journey,** in the same table-based layout with a plain-text part:
+  - your application link (F1)
+  - received (F2)
+  - documents needed (F3)
+  - approved in principle, saying plainly it is not yet an offer (F4)
+  - not approved, always with the reason (F5)
+
+  `FinanceApplicationMail` now uses them.
+- **Sharet Pay:** the repayment due and overdue emails add an "Or with Sharet Pay" line when Sharet Pay is switched on.
+- **Funding outreach** stays plain on purpose: from sales@sharet.africa, `[AIM-E-…]` in the subject, a source line, a
+  privacy notice link (DPA 2019) and one-click opt-out.
+- **Preview them all** at `/system/emails` (super-admin). Test: `tests/Feature/EmailSetTest.php`.
+
 ## What still needs you
 
 1. **A lender or credit partner, and licences.**

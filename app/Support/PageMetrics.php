@@ -61,12 +61,12 @@ class PageMetrics
         [$in, $inLast] = [$this->cashIn(now()->startOfMonth(), now()), $this->cashIn(now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow())];
 
         return [
-            $this->card('Owed to us today', self::kes($p['owed']), 'wallet', $p['open_loans'] . ' open loans', null, 'neutral', $this->route('staff.portfolio', 'view reports')),
+            $this->card('Owed to us today', self::shown($p['owed']), 'wallet', $p['open_loans'] . ' open loans', null, 'neutral', $this->route('staff.portfolio', 'view reports')),
             // lifetime cash on the card, this month underneath (owner, 22 Oct 2026: closer to the earlier dashboard)
-            $this->card('Total disbursements', self::kes($this->cashOut(Carbon::create(2000), now())), 'send', self::kes0($month) . ' this month'),
-            $this->card('Total repayments', self::kes($this->cashIn(Carbon::create(2000), now())), 'hand-coins', self::kes0($in) . ' this month'),
+            $this->card('Total disbursements', self::shown($this->cashOut(Carbon::create(2000), now())), 'send', self::shown($month) . ' this month'),
+            $this->card('Total repayments', self::shown($this->cashIn(Carbon::create(2000), now())), 'hand-coins', self::shown($in) . ' this month'),
             $this->card('Portfolio at risk', $p['par30'] . '%', 'trending-down', '30+ days late · PAR90 ' . $p['par90'] . '%', null, 'neutral', $this->route('staff.collections', 'view recovery cases')),
-            $this->card('Non-performing', self::kes($p['npl_owed']), 'alert', $p['npl_loans'] . ' loans past their default day', null, 'neutral', $this->route('staff.collections', 'view recovery cases')),
+            $this->card('Non-performing', self::shown($p['npl_owed']), 'alert', $p['npl_loans'] . ' loans past their default day', null, 'neutral', $this->route('staff.collections', 'view recovery cases')),
             $this->card('Active borrowers', self::n(Loan::whereIn('status', self::OPEN)->distinct('user_id')->count('user_id')), 'users', User::role('borrower')->where('created_at', '>=', now()->startOfMonth())->count() . ' new this month'),
         ];
     }
@@ -76,12 +76,12 @@ class PageMetrics
         $p = $this->portfolio();
 
         return [
-            $this->card('Owed to us today', self::kes($p['owed']), 'wallet', $p['open_loans'] . ' open loans · principal ' . number_format($p['principal'])),
+            $this->card('Owed to us today', self::shown($p['owed']), 'wallet', $p['open_loans'] . ' open loans · principal ' . number_format($p['principal'])),
             $this->card('Portfolio at risk', $p['par30'] . '%', 'trending-down', 'PAR1 ' . $p['par1'] . '% · PAR90 ' . $p['par90'] . '%'),
-            $this->card('Non-performing', self::kes($p['npl_owed']), 'alert', $p['npl_loans'] . ' loans past their default day'),
-            $this->card('Cash lent', self::kes($p['cash_lent']), 'send', 'all money sent to borrowers'),
-            $this->card('Cash repaid', self::kes($p['cash_repaid']), 'hand-coins', 'all money received'),
-            $this->card('Interest and penalty booked', self::kes($p['interest_income'] + $p['penalty_income']), 'coins', 'charged to loans (ledger)'),
+            $this->card('Non-performing', self::shown($p['npl_owed']), 'alert', $p['npl_loans'] . ' loans past their default day'),
+            $this->card('Cash lent', self::shown($p['cash_lent']), 'send', 'all money sent to borrowers'),
+            $this->card('Cash repaid', self::shown($p['cash_repaid']), 'hand-coins', 'all money received'),
+            $this->card('Interest and penalty booked', self::shown($p['interest_income'] + $p['penalty_income']), 'coins', 'charged to loans (ledger)'),
         ];
     }
 
@@ -93,7 +93,7 @@ class PageMetrics
         return [
             $this->card('Loans', self::n((clone $q)->count()), 'briefcase', (clone $q)->where('created_at', '>=', now()->startOfMonth())->count() . ' this month'),
             $this->card('Open', self::n((clone $open)->count()), 'clock', 'disbursed and not repaid'),
-            $this->card('Owed today', self::kes($this->owedFor((clone $open)->pluck('id')->all())), 'wallet', 'principal + interest + penalty'),
+            $this->card('Owed today', self::shown($this->owedFor((clone $open)->pluck('id')->all())), 'wallet', 'principal + interest + penalty'),
             $this->card('Overdue or defaulted', self::n((clone $q)->whereIn('status', [Loan::STATUS_OVERDUE, Loan::STATUS_DEFAULTED, Loan::STATUS_RECOVERY])->count()), 'alert', 'past their due date', null, 'warn'),
             $this->card('Waiting', self::n((clone $q)->whereIn('status', [Loan::STATUS_PENDING, Loan::STATUS_APPROVED])->count()), 'inbox', 'pending approval'),
             $this->card('Repaid', self::n((clone $q)->where('status', Loan::STATUS_REPAID)->count()), 'check-circle', 'closed in full'),
@@ -146,7 +146,7 @@ class PageMetrics
 
         return [
             $this->card('Open cases', self::n((clone $open)->count()), 'briefcase', (clone $open)->whereNull('assigned_to')->count() . ' without an officer', null, 'neutral'),
-            $this->card('Debt in recovery', self::kes((float) (clone $open)->sum('total_debt_amount')), 'wallet', 'recorded when the case opened'),
+            $this->card('Debt in recovery', self::shown((float) (clone $open)->sum('total_debt_amount')), 'wallet', 'recorded when the case opened'),
             $this->card('Recovered', self::n($closed('recovered')), 'check-circle', 'cases closed as paid'),
             $this->card('Written off', self::n($closed('written_off')), 'x-circle', 'cases closed as lost'),
             $this->card('Promised this week', self::n(DB::table('recovery_actions')->whereNull('deleted_at')->whereBetween('promised_date', [now()->startOfWeek(), now()->endOfWeek()])->count()), 'calendar', 'payments borrowers promised'),
@@ -159,7 +159,7 @@ class PageMetrics
         $u = $this->user;
 
         return [
-            $u->can('view loans') ? $this->card('Loans to approve', self::n(Loan::where('status', Loan::STATUS_PENDING)->count()), 'inbox', self::kes0((float) Loan::where('status', Loan::STATUS_PENDING)->sum('amount')) . ' asked', null, 'neutral', $this->route('staff.approvals')) : null,
+            $u->can('view loans') ? $this->card('Loans to approve', self::n(Loan::where('status', Loan::STATUS_PENDING)->count()), 'inbox', self::shown((float) Loan::where('status', Loan::STATUS_PENDING)->sum('amount')) . ' asked', null, 'neutral', $this->route('staff.approvals')) : null,
             $u->can('view disbursements') ? $this->card('Waiting to be sent', self::n(Loan::where('status', Loan::STATUS_APPROVED)->count()), 'send', 'approved, not disbursed', null, 'neutral', $this->route('staff.disbursements.queue')) : null,
             $u->can('view users') ? $this->card('KYC to review', self::n(User::where('kyc_status', 'submitted')->count()), 'user-check', 'borrower verifications', null, 'neutral', $this->route('kyc-reviews.index')) : null,
             $u->canAny(['rollover loans', 'edit partners']) && Schema::hasTable('borrower_requests') ? $this->card('Requests', self::n(DB::table('borrower_requests')->where('status', 'open')->count() + DB::table('partner_requests')->whereIn('status', ['pending', 'prepared'])->count()), 'mail', 'borrowers and partners', null, 'neutral', $this->route('staff.requests')) : null,
@@ -188,10 +188,10 @@ class PageMetrics
         }
 
         return [
-            $this->card('Waiting for a decision', self::n($waiting), 'inbox', self::kes0((float) (clone $pending)->sum('amount')) . ' asked', null, $waiting ? 'warn' : 'neutral'),
+            $this->card('Waiting for a decision', self::n($waiting), 'inbox', self::shown((float) (clone $pending)->sum('amount')) . ' asked', null, $waiting ? 'warn' : 'neutral'),
             $this->card('Oldest application', $oldest ? Carbon::parse($oldest)->diffForHumans(short: true, syntax: \Carbon\CarbonInterface::DIFF_ABSOLUTE) : '—', 'clock', $oldest ? 'since ' . Carbon::parse($oldest)->format('j M') : 'queue is clear'),
             $this->card('Above the assessed limit', self::n($over), 'alert', $unassessed ? $unassessed . ' not assessed yet' : 'all assessed'),
-            $this->card('Approved, not sent', self::n((clone $approved)->count()), 'send', self::kes0((float) (clone $approved)->sum('amount')) . ' to disburse', null, 'neutral', $this->route('staff.disbursements.queue')),
+            $this->card('Approved, not sent', self::n((clone $approved)->count()), 'send', self::shown((float) (clone $approved)->sum('amount')) . ' to disburse', null, 'neutral', $this->route('staff.disbursements.queue')),
             $this->card('Approved this month', self::n($decided('approved')), 'check-circle', 'since ' . now()->startOfMonth()->format('j M')),
             $this->card('Rejected this month', self::n($decided('rejected')), 'x-circle', 'with the reason saved'),
         ];
@@ -203,19 +203,19 @@ class PageMetrics
 
         return [
             $this->card('Waiting to be sent', self::n((clone $approved)->count()), 'inbox', 'approved loans'),
-            $this->card('Amount waiting', self::kes((float) (clone $approved)->sum('amount')), 'wallet', 'to send'),
-            $this->card('Sent today', self::kes($this->cashOut(now()->startOfDay(), now())), 'send', $this->cashOutCount(now()->startOfDay(), now()) . ' disbursements'),
-            $this->card('Sent this month', self::kes($this->cashOut(now()->startOfMonth(), now())), 'calendar', $this->cashOutCount(now()->startOfMonth(), now()) . ' disbursements'),
+            $this->card('Amount waiting', self::shown((float) (clone $approved)->sum('amount')), 'wallet', 'to send'),
+            $this->card('Sent today', self::shown($this->cashOut(now()->startOfDay(), now())), 'send', $this->cashOutCount(now()->startOfDay(), now()) . ' disbursements'),
+            $this->card('Sent this month', self::shown($this->cashOut(now()->startOfMonth(), now())), 'calendar', $this->cashOutCount(now()->startOfMonth(), now()) . ' disbursements'),
         ];
     }
 
     public function pageReceivePayment(): array
     {
         return [
-            $this->card('Collected today', self::kes($this->cashIn(now()->startOfDay(), now())), 'hand-coins', $this->cashInCount(now()->startOfDay(), now()) . ' payments'),
-            $this->card('Collected this month', self::kes($this->cashIn(now()->startOfMonth(), now())), 'calendar', $this->cashInCount(now()->startOfMonth(), now()) . ' payments'),
+            $this->card('Collected today', self::shown($this->cashIn(now()->startOfDay(), now())), 'hand-coins', $this->cashInCount(now()->startOfDay(), now()) . ' payments'),
+            $this->card('Collected this month', self::shown($this->cashIn(now()->startOfMonth(), now())), 'calendar', $this->cashInCount(now()->startOfMonth(), now()) . ' payments'),
             $this->card('Due today', self::n(Loan::whereIn('status', self::OPEN)->whereDate('due_date', now()->toDateString())->count()), 'clock', 'loans whose cycle ends today'),
-            $this->card('Sent today', self::kes($this->cashOut(now()->startOfDay(), now())), 'send', 'disbursed by the desk'),
+            $this->card('Sent today', self::shown($this->cashOut(now()->startOfDay(), now())), 'send', 'disbursed by the desk'),
         ];
     }
 
@@ -230,7 +230,7 @@ class PageMetrics
             $this->card('1 to 7 days late', self::n($days(1, 7)), 'clock', 'call today'),
             $this->card('8 to 30 days', self::n($days(8, 30)), 'clock', 'visit or plan'),
             $this->card('Over 30 days', self::n((clone $late)->where('due_date', '<', now()->subDays(30))->count()), 'trending-down', 'recovery cases'),
-            $this->card('Owed on late loans', self::kes($this->owedFor((clone $late)->pluck('id')->all())), 'wallet', 'today, no penalty days'),
+            $this->card('Owed on late loans', self::shown($this->owedFor((clone $late)->pluck('id')->all())), 'wallet', 'today, no penalty days'),
             $this->card('Cases on you', self::n($mine), 'user', 'assigned to you'),
         ];
     }
@@ -273,10 +273,10 @@ class PageMetrics
         $t = DB::table('mpesa_transactions');
 
         return [
-            $this->card('Received today', self::kes((float) (clone $t)->whereIn('status', ['matched', 'received'])->where('created_at', '>=', now()->startOfDay())->sum('amount')), 'phone', 'M-Pesa'),
+            $this->card('Received today', self::shown((float) (clone $t)->whereIn('status', ['matched', 'received'])->where('created_at', '>=', now()->startOfDay())->sum('amount')), 'phone', 'M-Pesa'),
             $this->card('To assign', self::n((clone $t)->whereIn('status', ['unmatched', 'received'])->whereNull('repayment_id')->count()), 'inbox', 'not matched to a loan', null, 'warn'),
             $this->card('Codes to check', self::n(Schema::hasTable('payment_claims') ? DB::table('payment_claims')->where('status', 'checking')->count() : 0), 'search', 'entered by borrowers'),
-            $this->card('Received this month', self::kes((float) (clone $t)->whereIn('status', ['matched', 'received'])->where('created_at', '>=', now()->startOfMonth())->sum('amount')), 'calendar', config('mpesa.enabled') ? 'paybill on' : 'M-Pesa is off'),
+            $this->card('Received this month', self::shown((float) (clone $t)->whereIn('status', ['matched', 'received'])->where('created_at', '>=', now()->startOfMonth())->sum('amount')), 'calendar', config('mpesa.enabled') ? 'paybill on' : 'M-Pesa is off'),
         ];
     }
 
@@ -288,10 +288,10 @@ class PageMetrics
         $t = DB::table('teller_day_closes');
 
         return [
-            $this->card('Cash in today', self::kes($this->cashIn(now()->startOfDay(), now())), 'hand-coins', 'repayments recorded'),
-            $this->card('Cash out today', self::kes($this->cashOut(now()->startOfDay(), now())), 'send', 'disbursements recorded'),
+            $this->card('Cash in today', self::shown($this->cashIn(now()->startOfDay(), now())), 'hand-coins', 'repayments recorded'),
+            $this->card('Cash out today', self::shown($this->cashOut(now()->startOfDay(), now())), 'send', 'disbursements recorded'),
             $this->card('Closes to approve', self::n((clone $t)->where('status', 'closed')->count()), 'inbox', 'tellers waiting'),
-            $this->card('Variance this month', self::kes((float) (clone $t)->where('day', '>=', now()->startOfMonth()->toDateString())->sum('variance')), 'scale', 'counted minus expected'),
+            $this->card('Variance this month', self::shown((float) (clone $t)->where('day', '>=', now()->startOfMonth()->toDateString())->sum('variance')), 'scale', 'counted minus expected'),
         ];
     }
 
@@ -326,14 +326,14 @@ class PageMetrics
             $this->card('Partners', self::n(DB::table('partners')->where('is_house_account', 0)->count()), 'briefcase', 'long-term and short-term'),
             // short-term partners (was "brokers", 3 Nov 2026): partners with introducer terms
             $this->card('Short-term partners', self::n(DB::table('partners as p')->join('brokers as b', 'b.user_id', '=', 'p.user_id')->distinct()->count('p.id')), 'users', 'introduce borrowers'),
-            $this->card('Earned by partners', self::kes($earned), 'coins', 'interest and penalty shares'),
+            $this->card('Earned by partners', self::shown($earned), 'coins', 'interest and penalty shares'),
             $this->card('Withdrawals waiting', self::n(Schema::hasTable('partner_requests') ? DB::table('partner_requests')->where('type', 'withdrawal')->whereIn('status', ['pending', 'prepared'])->count() : 0), 'send', 'asked by partners'),
             // partners' money out on loans, and what they can take now (owner, 17 Nov 2026): the house is not a partner here
             ...(function () {
                 $sums = \App\Models\Partner::where('is_house_account', 0)->get()->map(fn ($p) => app(\App\Services\PartnerPortfolio::class)->summary($p));
 
-                return [$this->card('Out on loans', self::kes($sums->sum('lent_out')), 'layers', 'partners\' capital lent out'),
-                        $this->card('Owed to partners', self::kes($sums->sum('available')), 'wallet', 'what they can take now')];
+                return [$this->card('Out on loans', self::shown($sums->sum('lent_out')), 'layers', 'partners\' capital lent out'),
+                        $this->card('Owed to partners', self::shown($sums->sum('available')), 'wallet', 'what they can take now')];
             })(),
         ];
     }
@@ -344,9 +344,9 @@ class PageMetrics
 
         return [
             $this->card('Investments', self::n((clone $i)->count()), 'layers', (clone $i)->where('status', 'active')->count() . ' active'),
-            $this->card('Invested', self::kes((float) (clone $i)->sum('initial_amount')), 'wallet', 'initial amounts'),
-            $this->card('Current value', self::kes((float) (clone $i)->sum('current_value')), 'trending-up', 'as last valued'),
-            $this->card('Expected return', self::kes((float) (clone $i)->sum('expected_return')), 'percent', 'over the term'),
+            $this->card('Invested', self::shown((float) (clone $i)->sum('initial_amount')), 'wallet', 'initial amounts'),
+            $this->card('Current value', self::shown((float) (clone $i)->sum('current_value')), 'trending-up', 'as last valued'),
+            $this->card('Expected return', self::shown((float) (clone $i)->sum('expected_return')), 'percent', 'over the term'),
         ];
     }
 
@@ -383,9 +383,9 @@ class PageMetrics
         $pt = DB::table('partner_transactions');
 
         return [
-            $this->card('Earned', self::kes((float) (clone $pt)->whereIn('type', ['broker_fee_earned', 'penalty_share', 'profit_distribution', 'interest'])->sum('amount')), 'coins', 'all partners, all time'),
-            $this->card('Paid out', self::kes(abs((float) (clone $pt)->whereIn('type', ['withdrawal', 'payout', 'broker_fee_paid'])->sum('amount'))), 'send', 'withdrawals and fee payouts'),
-            $this->card('This month', self::kes((float) (clone $pt)->whereIn('type', ['broker_fee_earned', 'penalty_share', 'profit_distribution', 'interest'])->where('transaction_date', '>=', now()->startOfMonth())->sum('amount')), 'calendar', 'earned'),
+            $this->card('Earned', self::shown((float) (clone $pt)->whereIn('type', ['broker_fee_earned', 'penalty_share', 'profit_distribution', 'interest'])->sum('amount')), 'coins', 'all partners, all time'),
+            $this->card('Paid out', self::shown(abs((float) (clone $pt)->whereIn('type', ['withdrawal', 'payout', 'broker_fee_paid'])->sum('amount'))), 'send', 'withdrawals and fee payouts'),
+            $this->card('This month', self::shown((float) (clone $pt)->whereIn('type', ['broker_fee_earned', 'penalty_share', 'profit_distribution', 'interest'])->where('transaction_date', '>=', now()->startOfMonth())->sum('amount')), 'calendar', 'earned'),
             $this->card('Withdrawals waiting', self::n(Schema::hasTable('partner_requests') ? DB::table('partner_requests')->where('type', 'withdrawal')->whereIn('status', ['pending', 'prepared'])->count() : 0), 'inbox', 'to prepare or sign off'),
         ];
     }
@@ -396,9 +396,9 @@ class PageMetrics
 
         return [
             $this->card('Loans this month', self::n(Loan::where('created_at', '>=', now()->startOfMonth())->count()), 'briefcase', 'applications'),
-            $this->card('Disbursed this month', self::kes($this->cashOut(now()->startOfMonth(), now())), 'send', 'cash sent'),
-            $this->card('Collected this month', self::kes($this->cashIn(now()->startOfMonth(), now())), 'hand-coins', 'cash received'),
-            $this->card('Owed today', self::kes($p['owed']), 'wallet', 'PAR30 ' . $p['par30'] . '%'),
+            $this->card('Disbursed this month', self::shown($this->cashOut(now()->startOfMonth(), now())), 'send', 'cash sent'),
+            $this->card('Collected this month', self::shown($this->cashIn(now()->startOfMonth(), now())), 'hand-coins', 'cash received'),
+            $this->card('Owed today', self::shown($p['owed']), 'wallet', 'PAR30 ' . $p['par30'] . '%'),
         ];
     }
 
@@ -412,6 +412,12 @@ class PageMetrics
     private function route(string $name, ?string $permission = null): ?string
     {
         return (! $permission || $this->user->can($permission)) && \Illuminate\Support\Facades\Route::has($name) ? route($name) : null;
+    }
+
+    /** A book (KES) total shown in the system display currency at Sharet's rate (staff summary cards only). */
+    public static function shown(float $v): string
+    {
+        return \App\Support\Money::show($v);
     }
 
     public static function kes(float $v): string

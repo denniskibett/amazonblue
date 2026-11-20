@@ -174,6 +174,12 @@ return [
                 'api_key' => env('AT_API_KEY'),
                 'sender_id' => env('AT_SENDER_ID'),
             ],
+            // the platform sender, Sharet Ent (owner, 20 Nov 2026): one-time codes always, and the lender's messages when
+            // the lender has no sender ID of its own. Integrations › Sharet Ent SMS (sysadmin), else .env.
+            'platform' => [
+                'sender_id' => env('SMS_PLATFORM_SENDER_ID', 'SHARETENT'),
+                'api_key' => env('KENYASMS_PLATFORM_API_KEY'),
+            ],
             // KenyaSMS (owner, 24 Oct 2026). How their API takes a message is set here, so matching their
             // documentation is a settings change: the URL, where the key goes, the field names, JSON or form.
             'kenyasms' => [

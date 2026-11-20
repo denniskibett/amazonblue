@@ -248,6 +248,7 @@ class Emails
 
         return array_values(array_filter([
             $paybill ? ['Pay by M-Pesa:', "Paybill {$paybill}, account {$reference}"] : ['Pay by M-Pesa:', 'see the Repay page in your account'],
+            \App\Services\Sharet\SharetCollections::available() ? ['Or with Sharet Pay:', 'tap Pay now and choose Sharet Pay (M-Pesa or Sharet wallet).'] : null,
         ]));
     }
 
@@ -386,6 +387,84 @@ class Emails
         ];
     }
 
+    // ---------------------------------------------------------------- business finance journey (20 Nov 2026)
+    // Regulated credit: these never promise approval, an amount or a rate. Figures before review are estimates.
+
+    /** Business finance: the application was started; its private link. */
+    public static function financeLink(string $firstName, string $product, string $business, string $reference, string $url, int $days): array
+    {
+        return [
+            'subject' => "Your application link: {$reference}",
+            'preheader' => 'Every step is saved. Carry on whenever it suits you.',
+            'badge' => ['Saved', 'info'],
+            'heading' => "Carry on when it suits you, {$firstName}",
+            'paragraphs' => ["You started a {$product} application for {$business}. Every step is saved as you go, so you can stop and come back with this private link."],
+            'panel' => ['label' => 'Application', 'amount' => $reference, 'rows' => [['Business', $business], ['Product', ucfirst($product)], ['Link works for', "{$days} days after your last visit"]]],
+            'info' => [['Have ready:', 'KRA PIN certificate, CR12, 6 months of bank or M-Pesa statements, directors\' IDs, and the supplier quote or LPO.']],
+            'note' => 'This link is private to you; please do not forward it.',
+            'buttons' => [['Open my application', $url, true]],
+        ];
+    }
+
+    /** Business finance: submitted. */
+    public static function financeReceived(string $firstName, string $business, string $reference, string $amount, string $url): array
+    {
+        return [
+            'subject' => "We have your application: {$reference}",
+            'preheader' => 'Our credit team reviews it next.',
+            'badge' => ['Submitted', 'review'],
+            'heading' => "Thank you, {$firstName}. We have it.",
+            'paragraphs' => ["{$business}'s application is with our credit team. We may call you or the directors with questions."],
+            'steps' => [['done', 'Submitted', 'Today'], ['now', 'Credit review', 'We check the business, the documents and the credit bureaus'], ['todo', 'Decision', 'Approval in principle, a request for more, or a reasoned no'],
+                ['todo', 'Final terms and agreement', 'Security, price and a signed agreement'], ['todo', 'Repayments', 'Through Sharet Pay: M-Pesa or bank']],
+            'panel' => ['label' => 'Amount requested', 'amount' => $amount, 'rows' => [['Reference', $reference], ['Status', 'Submitted', true]]],
+            'note' => 'Submitting is a request, not a commitment by you or by us.',
+            'buttons' => [['Follow my application', $url, false]],
+        ];
+    }
+
+    /** Business finance: we need documents or details. */
+    public static function financeMoreInfo(string $firstName, string $reference, string $note, string $url): array
+    {
+        return [
+            'subject' => "We need something more for {$reference}",
+            'preheader' => 'Add it and we carry on with the review.',
+            'badge' => ['Action needed', 'warn'],
+            'heading' => "One more thing, {$firstName}",
+            'paragraphs' => ['We are reviewing your application and need the following before we can carry on:', $note],
+            'buttons' => [['Add it now', $url, true]],
+            'note' => 'Your other answers and documents are saved; only this is needed.',
+        ];
+    }
+
+    /** Business finance: approved in principle (not an offer). */
+    public static function financeApproved(string $firstName, string $reference, string $amount, string $note, string $url): array
+    {
+        return [
+            'subject' => "{$reference} is approved in principle",
+            'preheader' => 'Final terms and an agreement come next.',
+            'badge' => ['Approved in principle', 'ok'],
+            'heading' => "Good news, {$firstName}",
+            'paragraphs' => ['Your application is approved in principle. This is not yet an offer: the final amount, price and security depend on the checks still to do and on a signed agreement. We will call you about next steps.'],
+            'panel' => ['label' => 'Requested', 'amount' => $amount, 'rows' => array_values(array_filter([['Reference', $reference], $note !== '' ? ['From our team', $note] : null]))],
+            'buttons' => [['View my application', $url, false]],
+        ];
+    }
+
+    /** Business finance: declined, with the reason. */
+    public static function financeDeclined(string $firstName, string $reference, string $note, string $url): array
+    {
+        return [
+            'subject' => "An update on {$reference}",
+            'preheader' => 'We cannot offer finance for this application.',
+            'badge' => ['Not approved', 'danger'],
+            'heading' => "Thank you for applying, {$firstName}",
+            'paragraphs' => ['We have reviewed your application and cannot offer finance for it at this time.', $note,
+                'You can apply again when things change. If you would like to talk it through, call us on +254 701 607 959.'],
+            'buttons' => [['View my application', $url, false]],
+        ];
+    }
+
     /** Every template with sample values, for the preview page and tests. */
     public static function samples(): array
     {
@@ -415,6 +494,11 @@ class Emails
             '19 Supplier paid' => self::supplierPaid('USD 12,500.00', 'Shenzhen Tools Co.', '20 Oct 2026', '20 Oct 2026', url('/account')),
             '20 Investment confirmed' => self::investmentConfirmed('James', 'KES 400,000.00', 'AZP-0009', '12 months', '20 Oct 2027', 'KES 64,000.00'),
             '21 Payout sent' => self::payoutSent('KES 15,200.00', 'AZP-0009', 'KES 16,000.00', 'KES 800.00', 'I&M Bank •••• 6350'),
+            'F1 Finance: your link' => self::financeLink('Grace', 'asset finance', 'Rift Logistics Ltd', 'AIM-AF-26-0001', url('/finance/a/sample'), 30),
+            'F2 Finance: received' => self::financeReceived('Grace', 'Rift Logistics Ltd', 'AIM-AF-26-0001', 'KES 5,200,000', url('/finance/a/sample')),
+            'F3 Finance: documents needed' => self::financeMoreInfo('Grace', 'AIM-AF-26-0001', 'The logbook of your current truck, and bank statements for August and September.', url('/finance/a/sample')),
+            'F4 Finance: approved in principle' => self::financeApproved('Grace', 'AIM-AF-26-0001', 'KES 5,200,000', 'Subject to a valuation of the truck.', url('/finance/a/sample')),
+            'F5 Finance: not approved' => self::financeDeclined('Grace', 'AIM-TF-26-0003', 'The buyer on the LPO has paid its suppliers late for the past year, so we cannot finance against it.', url('/finance/a/sample')),
             'Staff alert' => self::staffAlert('Loan integrity check: 3 finding(s)', 'The nightly read-only check found loans whose status and money disagree.', 'Open loans', url('/loans')),
         ];
     }
