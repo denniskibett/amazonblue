@@ -22,7 +22,7 @@ class BrandedEmailsTest extends TestCase
     public function test_every_template_renders_as_html_and_text(): void
     {
         $samples = Emails::samples();
-        $this->assertCount(24, $samples);
+        $this->assertCount(29, $samples);
 
         foreach ($samples as $name => $m) {
             $html = (string) Emails::mail($m)->render();
@@ -71,7 +71,7 @@ class BrandedEmailsTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole('admin');
 
-        $this->actingAs($super)->get('/system/emails')->assertOk()->assertSee('Email templates (24)');
+        $this->actingAs($super)->get('/system/emails')->assertOk()->assertSee('Email templates (29)');
         $this->actingAs($super)->get('/system/emails/0')->assertOk()->assertSee('Welcome, Mary');
         $this->actingAs($admin)->get('/system/emails')->assertForbidden();
     }
