@@ -93,14 +93,23 @@
                 </span>
               </li>
             @endforeach
-            @if ($c['switch_on'])
+            @if ($c['switch_on'] || $c['test_url'])
               <li class="flex justify-between gap-4 border-b border-gray-100 py-2.5 dark:border-gray-800">
                 <span class="w-1/2 text-sm text-gray-500 dark:text-gray-400">Last test</span>
                 <span class="w-1/2 break-words text-sm text-gray-700 dark:text-gray-300">{{ $c['test'] ? ($c['test']['ok'] ? 'Passed ' : 'Failed ') . $c['test']['when'] : 'Not tested' }}</span>
               </li>
             @endif
           </ul>
-          <div class="mt-8 flex justify-end"><button type="button" @click="details = null" class="{{ $btn }}">Close</button></div>
+          <div class="mt-8 flex justify-end gap-3">
+            @if ($c['test_url'] && ! $c['switch_on'])
+              {{-- the platform SMS card: one real SMS to the owner's phone (Staff\IntegrationTestController::TEST_PHONE) --}}
+              <form method="POST" action="{{ $c['test_url'] }}" x-data="{ busy: false }" @submit="busy = true">@csrf
+                <button type="submit" :disabled="busy" class="{{ $btn }} disabled:cursor-wait disabled:opacity-50"
+                  x-text="busy ? 'Sending…' : 'Send test SMS to {{ \App\Http\Controllers\Staff\IntegrationTestController::TEST_PHONE }}'">Send test SMS to {{ \App\Http\Controllers\Staff\IntegrationTestController::TEST_PHONE }}</button>
+              </form>
+            @endif
+            <button type="button" @click="details = null" class="{{ $btn }}">Close</button>
+          </div>
         </div>
       </div>
 

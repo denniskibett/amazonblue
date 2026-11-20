@@ -246,6 +246,7 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             Route::post('/{business}/approve', 'approve')->name('approve')->middleware('permission:edit users');
             Route::post('/{business}/reject', 'reject')->name('reject')->middleware('permission:edit users');
             Route::post('/{business}/documents/{document}/crop', 'crop')->name('crop')->middleware('permission:edit users');
+            Route::post('/{business}/documents/{document}/read', 'read')->name('read')->middleware(['permission:edit users', 'throttle:20,1']);
         });
 
     // ============ USER LOAN ROUTES ============
@@ -588,6 +589,11 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             // staff mail (16 Nov 2026): reaches IMAP and SMTP with the saved settings; logs in to nothing
             Route::post('integrations/staff-mail/test', [\App\Http\Controllers\Staff\StaffMailIntegrationController::class, 'test'])
                 ->middleware('throttle:10,1')->name('integrations.staff-mail.test');
+            // sysadmin cards: Claude and the platform SMS sender (owner, 20 Nov 2026); each test makes one real call
+            Route::post('integrations/claude/test', [\App\Http\Controllers\Staff\IntegrationTestController::class, 'claude'])
+                ->middleware('throttle:10,1')->name('integrations.claude.test');
+            Route::post('integrations/sms/test', [\App\Http\Controllers\Staff\IntegrationTestController::class, 'sms'])
+                ->middleware('throttle:3,1')->name('integrations.sms.test');
         });
         Route::middleware('permission:manage API tokens')->group(function () {
             // the test APK behind /app (owner, 14 Nov 2026)

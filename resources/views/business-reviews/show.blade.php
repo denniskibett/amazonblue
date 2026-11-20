@@ -75,6 +75,9 @@
                                     @foreach ($m->documents as $doc)
                                         <a href="{{ $doc->url() }}" target="_blank" rel="noopener" class="ml-1 text-xs text-brand-500 hover:underline">{{ str_replace(' (director)', '', $doc->label()) }}</a>
                                     @endforeach
+                                    @foreach ($m->documents->where('type', 'director_id_front') as $doc)
+                                        @include('business-reviews._claude-read', ['doc' => $doc])
+                                    @endforeach
                                 @else
                                     <x-staff.status-badge status="pending" label="Not verified" />
                                     @if ($directors->required($business)->contains('id', $m->id))
@@ -131,6 +134,7 @@
                                     <x-ui.icon name="edit" class="size-3.5" /> Crop
                                 </button>
                             @endif
+                            @include('business-reviews._claude-read', ['doc' => $doc])
                         </div>
                     @empty
                         <p class="col-span-full text-sm text-gray-500">No documents uploaded.</p>

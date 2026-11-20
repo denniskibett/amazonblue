@@ -30,7 +30,7 @@ class BusinessDocument extends Model
 
     protected function casts(): array
     {
-        return ['size' => 'integer'];
+        return ['size' => 'integer', 'extracted' => 'array', 'read_at' => 'datetime'];
     }
 
     public function business(): BelongsTo

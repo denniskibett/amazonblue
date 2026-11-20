@@ -103,11 +103,33 @@ class Integrations
         // go out under it; the lender's own messages use the KenyaSMS card's sender ID when it has one.
         'sms_platform' => [
             'name' => 'Sharet Ent SMS (platform)', 'category' => 'SMS', 'logo' => 'images/integrations/kenyasms.png', 'switch' => null, 'sysadmin' => true,
+            'test' => 'staff.integrations.sms.test',
             'description' => 'The platform sender (SHARETENT) for sign-in and verification codes, and for any lender without its own sender ID.',
             'fields' => [
                 'SMS_PLATFORM_SENDER_ID' => ['Platform sender ID', 'lending.notifications.sms.platform.sender_id', 'text'],
                 'KENYASMS_PLATFORM_API_KEY' => ['Platform KenyaSMS API key (blank: the KenyaSMS card\'s key)', 'lending.notifications.sms.platform.api_key', 'secret'],
             ],
+        ],
+        // Claude (Anthropic), the platform's one key (owner, 20 Nov 2026; ported from scharge): sysadmin only, encrypted,
+        // wins over .env. Off until a key is saved and the card is switched on; Test connection makes one real call.
+        // Used by Services\Kyc\DocumentReader ("Read with Claude" on a business review).
+        'claude' => [
+            'name' => 'Claude (Anthropic)', 'category' => 'AI', 'logo' => 'images/integrations/claude.svg', 'switch' => 'services.anthropic.enabled',
+            'sysadmin' => true, 'switch_on' => true, 'removable' => true, 'test' => 'staff.integrations.claude.test',
+            'connection' => ['ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL'],
+            'intro' => 'One Anthropic key for the whole platform. Staff can then have Claude read business KYC documents (certificate, CR12, KRA PIN, permit, director IDs) and compare them with what the applicant typed. A document goes to Anthropic only when a staff member presses Read with Claude.',
+            'description' => 'Claude reads business KYC documents on the business review and checks them against the application.',
+            'fields' => [
+                'ANTHROPIC_API_KEY' => ['Anthropic API key', 'services.anthropic.key', 'secret'],
+                'ANTHROPIC_MODEL' => ['Model', 'services.anthropic.model', 'text'],
+                'CLAUDE_READ_DOCUMENTS' => ['Read business KYC documents', 'services.anthropic.read_documents', 'bool'],
+            ],
+            'help' => [
+                'ANTHROPIC_API_KEY' => 'From console.anthropic.com › API keys (sk-ant-…). Encrypted when saved and never shown again; leave blank to keep the saved key.',
+                'ANTHROPIC_MODEL' => 'Blank uses claude-sonnet-5-5.',
+                'CLAUDE_READ_DOCUMENTS' => 'Off hides Read with Claude on business reviews.',
+            ],
+            'placeholders' => ['ANTHROPIC_API_KEY' => 'sk-ant-…', 'ANTHROPIC_MODEL' => 'claude-sonnet-5-5'],
         ],
         // system display currency (owner, 20 Nov 2026), sysadmin only: staff totals shown at Sharet's FX rate; stored amounts never change
         'currency' => [

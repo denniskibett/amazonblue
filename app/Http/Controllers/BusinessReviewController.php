@@ -47,6 +47,18 @@ class BusinessReviewController extends Controller
         return back()->with('success', "Document cropped to {$w} x {$h} px.");
     }
 
+    /** Read with Claude (owner, 20 Nov 2026): fields off a company or director document, compared with the application. */
+    public function read(Business $business, \App\Models\BusinessDocument $document, \App\Services\Kyc\DocumentReader $reader): RedirectResponse
+    {
+        abort_unless($document->business_id === $business->id, 404);
+        $document = $reader->read($document);
+        \App\Services\AuditTrail::record('business_documents', $document->id, 'update', null, ['event' => 'read_with_claude', 'status' => $document->read_status]);
+
+        return $document->read_status === 'read'
+            ? back()->with('success', $document->label() . ': read by Claude. Check the fields against the document.')
+            : back()->with('error', $document->label() . ': ' . $document->read_error);
+    }
+
     public const STATUSES = [
         Business::STATUS_SUBMITTED => 'Waiting for review',
         Business::STATUS_APPROVED => 'Approved',

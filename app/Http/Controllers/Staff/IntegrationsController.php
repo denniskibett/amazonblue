@@ -75,6 +75,10 @@ class IntegrationsController extends Controller
             $rules['fields.SHARET_BASE_URL'] = ['nullable', 'url:https', 'max:255'];
             $rules['fields.SHARET_PAY_LINK_MINUTES'] = ['nullable', 'integer', 'min:15', 'max:43200'];
         }
+        if ($slug === 'claude') {
+            $rules['fields.ANTHROPIC_API_KEY'][] = 'regex:/^sk-ant-[A-Za-z0-9_-]+$/';
+            $rules['fields.ANTHROPIC_MODEL'][] = 'regex:/^claude-[a-z0-9.-]+$/';
+        }
         if ($slug === 'staff-mail') {
             $host = ['nullable', 'string', 'max:253', 'regex:/^[A-Za-z0-9.-]+$|^\[?[0-9a-fA-F:]+\]?$/'];
             $rules['fields.STAFF_MAIL_DOMAIN'] = ['nullable', 'string', 'max:253', 'regex:/^(?=.{3,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i'];
@@ -85,7 +89,8 @@ class IntegrationsController extends Controller
             $rules['fields.STAFF_MAIL_IDLE_MINUTES'] = ['nullable', 'integer', 'min:5', 'max:1440'];
             $request->merge(['fields' => array_merge((array) $request->input('fields'), ['STAFF_MAIL_DOMAIN' => strtolower(ltrim(trim((string) $request->input('fields.STAFF_MAIL_DOMAIN')), '@'))])]);
         }
-        $data = $request->validate($rules, ['fields.SHARET_API_KEY.regex' => 'A Sharet API key starts with sk_test_ or sk_live_.'])['fields'] ?? [];
+        $data = $request->validate($rules, ['fields.SHARET_API_KEY.regex' => 'A Sharet API key starts with sk_test_ or sk_live_.',
+            'fields.ANTHROPIC_API_KEY.regex' => 'An Anthropic API key starts with sk-ant-.', 'fields.ANTHROPIC_MODEL.regex' => 'A Claude model id starts with claude-, e.g. claude-sonnet-5-5.'])['fields'] ?? [];
 
         $row = Integration::firstOrNew(['slug' => $slug]);
         $settings = $row->settings ?? [];
@@ -114,6 +119,11 @@ class IntegrationsController extends Controller
             unset($settings[Integrations::TEST]);
             $message = 'Sharet Pay: key saved' . ($enabled ? ' and Sharet Pay switched off' : '') . '. Press Test connection, then switch it on.';
             $enabled = false;
+        }
+        // a new Anthropic key has not been tried yet: its last test no longer applies
+        if ($slug === 'claude' && in_array('ANTHROPIC_API_KEY', $changed, true)) {
+            unset($settings[Integrations::TEST]);
+            $message = 'Claude: key saved. Press Test connection' . ($enabled ? '.' : ', then switch it on.');
         }
         unset($settings[Integrations::SHARET_LEGACY_SWITCH]);
         $this->save($row, $def, $request, $settings, $enabled);

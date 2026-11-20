@@ -39,5 +39,13 @@ return [
         'analytics_id' => env('GOOGLE_ANALYTICS_ID'),
     ],
 
+    // Claude (Anthropic), platform-wide (owner, 20 Nov 2026): Integrations › Claude (sysadmin) wins over these.
+    'anthropic' => [
+        'enabled' => env('ANTHROPIC_ENABLED', false),
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-5-5'),
+        'read_documents' => env('CLAUDE_READ_DOCUMENTS', true),
+    ],
+
 
 ];
