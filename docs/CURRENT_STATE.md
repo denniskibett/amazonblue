@@ -119,7 +119,7 @@ only, once per event. Not sent for book entries, console entries or money dated 
 | Ledger, wallets, reconciliation | On; `wallets:check` reconciles | `Ledger`, `PartnerLedger`, `CustomerWallets` |
 | Requests (top-up, extension, plan, partner) | On live since 23 Oct | `Services/Requests` |
 | Second sign-offs (maker-checker), approval limits | Built, off | `Approvals`, `ApprovalActions` |
-| Notifications and SMS (KenyaSMS / Africa's Talking) | Built, off; SMS goes to the log | `Notifications/*`, `notifications:reminders` |
+| Notifications and SMS (KenyaSMS only, Sharet Ent account; 20 Nov 2026) | Built, off; KenyaSMS once its key is on the server | `Notifications/*`, `notifications:reminders` |
 | Late-payment emails | Built, off (`NOTIFICATIONS_OVERDUE_EMAILS`) | `notifications:reminders` |
 | AML / sanctions screening | Built, off (`LENDING_AML_SCREENING`) | `routes/features/aml.php` |
 | Debt recovery, NPL | On | `CaseController`, `NplDetectionService` |
@@ -155,7 +155,7 @@ change it, then `php artisan config:cache`. Switch order and checks: [stage4/SWI
 | `NOTIFICATIONS_ENABLED` | false | off (23 Oct) | Notifications and SMS |
 | `NOTIFICATIONS_MONEY_EMAILS` | **true** | on by default (3 Nov) | Money sent / payment / paid-in-full emails |
 | `NOTIFICATIONS_OVERDUE_EMAILS` | false | not recorded | Late-payment emails on `NOTIFICATIONS_OVERDUE_DAYS` |
-| `SMS_DRIVER` | `log` | `log` (23 Oct) | `kenyasms`, `africastalking` or `log` |
+| `SMS_DRIVER` | `kenyasms` | `log` (23 Oct) | `kenyasms` (the only provider); `log` works only outside production |
 | `MPESA_ENABLED`, `MPESA_STK_ENABLED` | false | off, sandbox (23 Oct) | C2B and STK repayments |
 | `MPESA_B2C_ENABLED` | false | not recorded | M-Pesa payouts |
 | `SHARET_REPAYMENT_RAIL` | `paybill` | not deployed | Which rail borrowers see first: `paybill` or `sharet` |

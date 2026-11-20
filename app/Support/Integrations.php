@@ -74,20 +74,11 @@ class Integrations
             ],
             'placeholders' => ['SHARET_API_KEY' => 'sk_live_…', 'SHARET_WEBHOOK_SECRET' => 'whsec_…', 'SHARET_BASE_URL' => 'https://sharet.africa/api/v1'],
         ],
-        'africastalking' => [
-            'name' => "Africa's Talking", 'category' => 'SMS', 'logo' => 'images/integrations/africastalking.svg', 'switch' => null,
-            'description' => 'Bulk SMS for reminders, receipts and alerts (used when the SMS driver is africastalking).',
-            'fields' => [
-                'SMS_DRIVER' => ['SMS driver (log, africastalking, kenyasms)', 'lending.notifications.sms.driver', 'select', ['log', 'africastalking', 'kenyasms']],
-                'AT_USERNAME' => ['Username', 'lending.notifications.sms.africastalking.username', 'text'],
-                'AT_API_KEY' => ['API key', 'lending.notifications.sms.africastalking.api_key', 'secret'],
-                'AT_SENDER_ID' => ['Sender ID', 'lending.notifications.sms.africastalking.sender_id', 'text'],
-            ],
-        ],
         'kenyasms' => [
             'name' => 'KenyaSMS', 'category' => 'SMS', 'logo' => 'images/integrations/kenyasms.png', 'switch' => null,
-            'description' => 'Kenyan bulk SMS gateway (used when the SMS driver is kenyasms). How their API takes a message is set here.',
+            'description' => 'Every SMS goes through KenyaSMS on the Sharet Ent account (SHARETENT). A lender\'s own approved sender ID applies to its messages only; one-time codes always go as SHARETENT.',
             'fields' => [
+                'SMS_DRIVER' => ['SMS driver (log = write to the log only; ignored on production)', 'lending.notifications.sms.driver', 'select', ['kenyasms', 'log']],
                 'KENYASMS_URL' => ['API URL', 'lending.notifications.sms.kenyasms.url', 'text'],
                 'KENYASMS_API_KEY' => ['API key', 'lending.notifications.sms.kenyasms.api_key', 'secret'],
                 'KENYASMS_SENDER_ID' => ['Sender ID', 'lending.notifications.sms.kenyasms.sender_id', 'text'],

@@ -185,7 +185,7 @@ class ClaudeIntegrationTest extends TestCase
         Http::assertSentCount(1);
         $sent = Http::recorded()->first()[0];
         $this->assertSame('SHARETENT', $sent->data()['sender_id']);
-        $this->assertStringEndsWith('717492048', (string) $sent->data()['phone']);
+        $this->assertStringEndsWith('717492048', (string) $sent->data()['recipient']);
         $this->assertSame('0717492048', IntegrationTestController::TEST_PHONE);
         $this->assertTrue(Integration::where('slug', 'sms_platform')->first()->settings[Integrations::TEST]['ok']);
     }

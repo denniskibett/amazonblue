@@ -8,9 +8,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Sends one SMS (Stage 4 Phase 6). Drivers (lending.notifications.sms.driver):
- *   log            writes the message to the log only (default until the owner picks a provider)
- *   africastalking Africa's Talking bulk SMS (username "sandbox" = their sandbox)
- *   kenyasms       KenyaSMS (owner, 24 Oct 2026); its URL, key placement and field names are settings
+ *   kenyasms       KenyaSMS on the Sharet Ent account (default; the only provider, owner 20 Nov 2026)
+ *   log            writes the message to the log only: local work and tests, never on production
  * Returns true when the provider accepted it. Phone numbers are normalised to +2547XXXXXXXX.
  *
  * Sender IDs (owner, 20 Nov 2026), as in scharge's Integrations::smsSender():
@@ -57,23 +56,11 @@ class SmsSender
             return false;
         }
         $to = '+' . $to;
-        $driver = (string) config('lending.notifications.sms.driver', 'log');
+        // KenyaSMS only (owner, 20 Nov 2026); 'log' is honoured only outside production
+        $driver = app()->environment('production') ? 'kenyasms' : (string) config('lending.notifications.sms.driver', 'kenyasms');
 
-        if ($driver === 'kenyasms') {
+        if ($driver !== 'log') {
             return $this->kenyaSms(substr($to, 1), $message, $purpose);
-        }
-
-        if ($driver === 'africastalking') {
-            $c = config('lending.notifications.sms.africastalking');
-            $base = ($c['username'] ?? '') === 'sandbox' ? 'https://api.sandbox.africastalking.com' : 'https://api.africastalking.com';
-            $r = Http::asForm()->acceptJson()->withHeaders(['apiKey' => (string) ($c['api_key'] ?? '')])->timeout(20)
-                ->post($base . '/version1/messaging', array_filter(['username' => $c['username'] ?? null, 'to' => $to, 'message' => $message, 'from' => $c['sender_id'] ?? null]));
-            $ok = $r->successful() && collect($r->json('SMSMessageData.Recipients', []))->contains(fn ($x) => in_array((int) ($x['statusCode'] ?? 0), [100, 101, 102], true));
-            if (! $ok) {
-                Log::warning('SMS rejected by Africa\'s Talking', ['status' => $r->status(), 'body' => mb_substr($r->body(), 0, 300)]);
-            }
-
-            return $ok;
         }
 
         Log::info('SMS (log driver)', ['to' => substr($to, 0, 6) . '•••' . substr($to, -3), 'from' => self::sender($purpose)['sender_id'],
@@ -100,12 +87,13 @@ class SmsSender
             default => $msisdn,
         };
         $body = array_filter([
-            $c['field_to'] ?? 'phone' => $phone,
+            $c['field_to'] ?? 'recipient' => $phone,
             $c['field_message'] ?? 'message' => $message,
             $c['field_sender'] ?? 'sender_id' => $c['sender_id'] ?? null,
+            'message_type' => $c['message_type'] ?? 'transactional',
         ], fn ($v) => $v !== null && $v !== '');
 
-        $request = Http::acceptJson()->timeout(20);
+        $request = Http::acceptJson()->timeout(20)->withHeaders(! empty($c['sandbox']) ? ['X-Sandbox-Mode' => 'true'] : []);
         $auth = (string) ($c['auth'] ?? 'bearer');
         if (str_starts_with($auth, 'header:')) {
             $request = $request->withHeaders([substr($auth, 7) => (string) $c['api_key']]);

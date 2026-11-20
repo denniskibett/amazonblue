@@ -101,12 +101,15 @@ class CustomerEventsTest extends TestCase
         Notification::assertSentTimes(\App\Notifications\CollectionNotice::class, 1);
     }
 
-    public function test_the_sms_goes_to_africas_talking_when_chosen(): void
+    public function test_any_other_driver_name_still_goes_through_kenyasms(): void
     {
-        config(['lending.notifications.sms.driver' => 'africastalking', 'lending.notifications.sms.africastalking.api_key' => 'k']);
-        Http::fake(['*africastalking.com/*' => Http::response(['SMSMessageData' => ['Recipients' => [['statusCode' => 101, 'number' => '+254712345678']]]])]);
+        // every SMS runs on KenyaSMS (owner, 20 Nov 2026): an old Africa's Talking setting sends nothing elsewhere
+        config(['lending.notifications.sms.driver' => 'africastalking', 'lending.notifications.sms.kenyasms.url' => 'https://api.kenyasms.test/v1/sms/send',
+            'lending.notifications.sms.kenyasms.api_key' => 'k']);
+        Http::fake(['api.kenyasms.test/*' => Http::response(['status' => 'success', 'message_id' => 'm1'])]);
         $this->assertTrue(app(\App\Services\Sms\SmsSender::class)->send('0712 345 678', 'Hello'));
-        Http::assertSent(fn ($r) => str_contains($r->url(), 'api.sandbox.africastalking.com/version1/messaging') && $r['to'] === '+254712345678');
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'api.kenyasms.test') && $r['recipient'] === '254712345678' && $r['sender_id'] === 'SHARETENT');
+        Http::assertNotSent(fn ($r) => str_contains($r->url(), 'africastalking'));
     }
 
     public function test_the_sms_goes_to_kenyasms_with_the_configured_shape(): void

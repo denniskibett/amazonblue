@@ -92,6 +92,12 @@ Run with `php artisan test --filter='FinanceJourneyTest|FundingCrmTest'`.
 
 ## 3. SMS sender IDs (KenyaSMS)
 
+- **KenyaSMS only.** Every SMS goes through KenyaSMS on the Sharet Ent account (SHARETENT), the same account and key
+  scharge uses. There is no other provider and no fallback: Africa's Talking is removed, and any old driver setting
+  sends through KenyaSMS. The `log` driver is for local work and tests only and is ignored on production.
+- **The call:** the same one scharge makes. `POST https://kenyasms.com/api/v1/sms/send` with a Bearer key and JSON
+  fields `sender_id`, `recipient` (2547…), `message` and `message_type: transactional`.
+
 `App\Services\Sms\SmsSender::sender($purpose)` works like scharge's `Integrations::smsSender()`.
 
 - **Platform sender:** Sharet Ent, `SHARETENT`. It comes from Integrations › **Sharet Ent SMS (platform)**, a card only
@@ -188,6 +194,14 @@ Preview, desktop and mobile on separate pages: https://claude.ai/artifact/7qd51h
 6. **Sharet Pay** is still switched off on live (`SHARET_PAYOUTS_ENABLED`, Integrations › Sharet Pay).
 
 ## How to go live (only when the owner says "go live")
+
+**Before the deploy, on the server: SMS.**
+- Copy scharge's KenyaSMS key into amazonblue's `.env` as `KENYASMS_API_KEY`, without printing it. Read it from
+  scharge's server `.env` (`KENYASMS_KEY`) with a one-line edit; never `cat`, `echo` or paste it.
+- Set `SMS_DRIVER=kenyasms`, `KENYASMS_SENDER_ID=SHARETENT` and `SMS_PLATFORM_SENDER_ID=SHARETENT`, then run
+  `php artisan config:clear`.
+- Send a test from Integrations › Sharet Ent SMS. It only succeeds once KenyaSMS whitelists 185.113.249.146.
+
 
 1. Bring `main` level with what is live. It is behind: live was deployed from `stage-2-ui`. Read the live commit with
    `git -C /home/loans.sharet.africa/laravel log -1`, then fast-forward `main` to it.

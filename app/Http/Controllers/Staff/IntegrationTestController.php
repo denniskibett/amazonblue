@@ -37,7 +37,7 @@ class IntegrationTestController extends Controller
         $ok = $sms->otp(self::TEST_PHONE, 'Aimzone test SMS: the platform sender ' . $from . ' works. Sent from Integrations at ' . now()->format('H:i') . '.');
         $result = match (true) {
             ! $ok => ['ok' => false, 'message' => 'The test SMS to ' . self::TEST_PHONE . ' was not accepted (driver ' . $driver . '). See the log.'],
-            $driver === 'log' => ['ok' => false, 'message' => 'The SMS driver is "log", so nothing was sent. Choose kenyasms or africastalking on the SMS cards.'],
+            $driver === 'log' => ['ok' => false, 'message' => 'The SMS driver is "log", so nothing was sent. Choose kenyasms on the KenyaSMS card.'],
             default => ['ok' => true, 'message' => 'Test SMS sent to ' . self::TEST_PHONE . ' as ' . $from . ' (' . $driver . ').'],
         };
 
