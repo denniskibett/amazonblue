@@ -17,7 +17,7 @@
     @foreach ([['Trust score', $row?->score !== null ? $row->score . ' / 100' : '—', 'behaviour profile'], ['On time', $row?->on_time_rate !== null ? round($row->on_time_rate) . '%' : '—', (int) ($row->loans ?? 0) . ' loans'],
       ['Digital literacy', $row->literacy ?? '—', ($row->signals ?? 0) . ' of 4 done themselves'], ['Education', $row->education_band ?? '—', 'they told us'],
       ['Loan ÷ income', $row?->loan_to_income !== null ? $row->loan_to_income . '×' : '—', $row && $row->income > 0 ? 'income ' . $kes($row->income) . ' a month' : 'no income on file']] as [$l, $v, $s])
-      <div class="{{ $card }}"><p class="text-theme-sm text-gray-500">{{ $l }}</p><p class="mt-2 font-outfit text-title-sm font-bold text-gray-800 dark:text-white/90">{{ $v }}</p><p class="mt-1 text-theme-xs text-gray-500">{{ $s }}</p></div>
+      <div class="{{ $card }}"><p class="text-theme-sm text-gray-500">{{ $l }}</p><p class="stat-num mt-2">{{ $v }}</p><p class="mt-1 text-theme-xs text-gray-500">{{ $s }}</p></div>
     @endforeach
   </div>
 

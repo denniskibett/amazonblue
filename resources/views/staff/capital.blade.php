@@ -27,7 +27,7 @@
     @foreach ([['Raised this quarter', $short($raisedQ), $target > 0 ? 'target ' . $short($target) . ' · ' . $pct . '%' : 'set CAPITAL_TARGET_QUARTER'], ['Pipeline (weighted)', $short($weighted), $short($pipelineFull) . ' if all close'],
       ['Investors', $partners->count(), $partners->whereIn('type', ['corporate', 'company', 'business', 'sacco'])->count() . ' institutions'], ['Capital in, all time', $short($raisedAll), 'from these investors'],
       ['Paid back to them', $short($paidOut), 'principal and returns']] as [$l, $v, $s])
-      <div class="{{ $card }}"><p class="text-theme-sm text-gray-500">{{ $l }}</p><p class="mt-2 whitespace-nowrap font-outfit text-2xl font-bold text-gray-800 dark:text-white/90">{{ $v }}</p><p class="mt-1 text-theme-xs text-gray-500">{{ $s }}</p></div>
+      <div class="{{ $card }}"><p class="text-theme-sm text-gray-500">{{ $l }}</p><p class="stat-num mt-2 whitespace-nowrap">{{ $v }}</p><p class="mt-1 text-theme-xs text-gray-500">{{ $s }}</p></div>
     @endforeach
   </div>
 

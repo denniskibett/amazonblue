@@ -3,7 +3,7 @@
     @case('admin')
       <!-- Total Loans -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           {{ $totalLoans }}
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -28,7 +28,7 @@
 
       <!-- Total Disbursements -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($totalDisbursements, 2) }}
         </h4>
         @isset($cashDisbursed)
@@ -58,7 +58,7 @@
 
       <!-- Total Repayments -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($totalRepayments, 2) }}
         </h4>
         @isset($cashRepaid)
@@ -88,7 +88,7 @@
 
       <!-- Total Borrowers -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           {{ $borrowerCount }}
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -115,7 +115,7 @@
     @case('borrower')
       <!-- Total Loans -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           {{ $totalLoans }}
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -140,7 +140,7 @@
 
       <!-- Total Borrowed -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($totalBorrowed, 2) }}
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -165,7 +165,7 @@
 
       <!-- Total Disbursements -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($totalDisbursements, 2) }}
         </h4>
         @isset($cashDisbursed)
@@ -195,7 +195,7 @@
 
       <!-- Total Repaid -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($totalRepayments, 2) }}
         </h4>
         @isset($cashRepaid)
@@ -228,7 +228,7 @@
       <!-- Broker Cards -->
       <!-- Total Clients -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           {{ $clients }}
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -253,7 +253,7 @@
 
       <!-- Active Loans -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           {{ $activeLoans }}
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -278,7 +278,7 @@
 
       <!-- Total Interest -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($totalInterest, 2) }}
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -295,7 +295,7 @@
 
       <!-- Total Penalty -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($totalPenalty, 2) }}
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -315,7 +315,7 @@
       <!-- Teller Cards -->
       <!-- Today's Disbursements -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($todaysDisbursements, 2) }}
         </h4>
         @isset($cashDisbursedToday)
@@ -337,7 +337,7 @@
 
       <!-- Month Disbursements -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($monthDisbursements, 2) }}
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -362,7 +362,7 @@
 
       <!-- Collected Repayments -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($collectedRepayments, 2) }}
         </h4>
         @isset($cashRepaid)
@@ -392,7 +392,7 @@
 
       <!-- Month Repayments -->
       <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+        <h4 class="stat-num">
           KES {{ number_format($monthRepayments, 2) }}
         </h4>
         <div class="mt-4 flex items-end justify-between sm:mt-5">

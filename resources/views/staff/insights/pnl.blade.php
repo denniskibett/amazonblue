@@ -34,7 +34,7 @@
       ['PAR 30', $pct($ra['par30']), 'of KES ' . number_format($r['book'], 0) . ' owed', $ra['par30'] > 5 ? 'text-error-600' : 'text-success-600'],
       ['LTV : CAC', $u['ltv_cac'] !== null ? $u['ltv_cac'] . '×' : '—', $u['cac'] ? 'CAC KES ' . number_format($u['cac']) : 'set ANALYTICS_CAC to see it', null],
     ] as [$l, $v, $s, $c])
-      <div class="{{ $card }}"><p class="text-theme-sm text-gray-500 dark:text-gray-400">{{ $l }}</p><p class="mt-2 whitespace-nowrap font-outfit text-2xl font-bold text-gray-800 dark:text-white/90">{{ $v }}</p><p class="mt-1 text-theme-xs {{ $c ?? 'text-gray-500' }}">{{ $s }}</p></div>
+      <div class="{{ $card }}"><p class="text-theme-sm text-gray-500 dark:text-gray-400">{{ $l }}</p><p class="stat-num mt-2 whitespace-nowrap">{{ $v }}</p><p class="mt-1 text-theme-xs {{ $c ?? 'text-gray-500' }}">{{ $s }}</p></div>
     @endforeach
   </div>
 

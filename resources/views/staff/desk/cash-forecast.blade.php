@@ -36,7 +36,7 @@
     ] as [$label, $value, $sub])
       <div class="{{ $card }} p-5">
         <p class="text-sm text-gray-500 dark:text-gray-400">{{ $label }}</p>
-        <p class="mt-3 text-title-sm font-semibold text-gray-800 dark:text-white/90">{{ $value }}</p>
+        <p class="stat-num mt-3">{{ $value }}</p>
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $sub }}</p>
       </div>
     @endforeach

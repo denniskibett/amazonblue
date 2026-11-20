@@ -12,7 +12,7 @@
   <div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 2xl:grid-cols-6">
     @foreach ([['Prospects', $total, ($stages['new'] ?? 0) . ' not contacted'], ['Emails sent', $sent, 'from ' . config('funding_crm.from.address')], ['Opened', $opened, $pct($opened, $sent) . ' of sent'],
       ['Clicked', $clicked, $pct($clicked, $sent) . ' of sent'], ['Applications', $applications, 'started from the CRM'], ['Follow-ups due', $due, 'yours, today or late']] as [$l, $v, $s])
-      <div class="{{ $card }}"><p class="text-theme-sm text-gray-500">{{ $l }}</p><p class="mt-2 font-outfit text-2xl font-bold text-gray-800 dark:text-white/90">{{ number_format($v) }}</p><p class="mt-1 text-theme-xs text-gray-500">{{ $s }}</p></div>
+      <div class="{{ $card }}"><p class="text-theme-sm text-gray-500">{{ $l }}</p><p class="stat-num mt-2">{{ number_format($v) }}</p><p class="mt-1 text-theme-xs text-gray-500">{{ $s }}</p></div>
     @endforeach
   </div>
 

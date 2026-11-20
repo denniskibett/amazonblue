@@ -4,7 +4,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Partners</p>
-                <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1" x-text="stats.total || 0"></p>
+                <p class="stat-num mt-1" x-text="stats.total || 0"></p>
             </div>
             <div class="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -17,7 +17,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Active Partners</p>
-                <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1" x-text="stats.active || 0"></p>
+                <p class="stat-num mt-1" x-text="stats.active || 0"></p>
             </div>
             <div class="p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -30,7 +30,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Contributions</p>
-                <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1" x-text="formatCurrency(stats.total_contributions || 0)"></p>
+                <p class="stat-num mt-1" x-text="formatCurrency(stats.total_contributions || 0)"></p>
             </div>
             <div class="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -43,7 +43,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net Position</p>
-                <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1" x-text="formatCurrency((stats.total_invested || 0) - (stats.total_returned || 0))"></p>
+                <p class="stat-num mt-1" x-text="formatCurrency((stats.total_invested || 0) - (stats.total_returned || 0))"></p>
             </div>
             <div class="p-3 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

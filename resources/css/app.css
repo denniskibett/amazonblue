@@ -11,6 +11,19 @@
 }
 
 @layer components {
+  /* every stat and KPI figure (counts, amounts, percentages), the same across Sharet's products (owner, 20 Nov 2026) */
+  .stat-num {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+    color: #000;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+  .dark .stat-num {
+    color: #fff;
+  }
+
   .menu-item {
     @apply relative flex items-center gap-3 rounded-lg px-3 py-2 text-theme-sm font-medium;
   }

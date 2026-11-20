@@ -72,7 +72,7 @@
       <div class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-3">
         @foreach ([['Loans bigger than a month\'s income', $gaps['big']->count(), 'average loan above the income they told us'], ['Salaried, paying far from payday', $gaps['payday']->count(), 'repayments 7+ days from their payday on average'],
           ['Borrowing with no income on file', $gaps['no_income'], 'of ' . $gaps['total'] . ' borrowers']] as [$l, $n, $s])
-          <div class="rounded-xl border border-gray-100 p-4 dark:border-gray-800"><p class="text-theme-sm text-gray-500">{{ $l }}</p><p class="mt-1 font-outfit text-title-sm font-bold text-gray-800 dark:text-white/90">{{ $n }}</p><p class="text-theme-xs text-gray-500">{{ $s }}</p></div>
+          <div class="rounded-xl border border-gray-100 p-4 dark:border-gray-800"><p class="text-theme-sm text-gray-500">{{ $l }}</p><p class="stat-num mt-1">{{ $n }}</p><p class="text-theme-xs text-gray-500">{{ $s }}</p></div>
         @endforeach
       </div>
       <div class="overflow-x-auto"><table class="w-full min-w-[820px]">

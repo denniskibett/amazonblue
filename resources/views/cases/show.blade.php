@@ -91,7 +91,7 @@
             ['Days late', $daysLate, $caseData->default_date ? 'defaulted ' . \Illuminate\Support\Carbon::parse($caseData->default_date)->format('j M Y') : 'not defaulted', $daysLate > 30 ? 'text-error-600' : null],
             ['Next step', $caseData->next_action_date ? \Illuminate\Support\Carbon::parse($caseData->next_action_date)->format('j M Y') : 'Not set', 'last contact ' . ($caseData->last_contact_date ? \Illuminate\Support\Carbon::parse($caseData->last_contact_date)->format('j M Y') : 'never'), $caseData->next_action_date ? null : 'text-orange-600'],
         ] as [$l, $v, $s, $c])
-            <div class="{{ $card }}"><p class="{{ $dt }}">{{ $l }}</p><p class="mt-2 whitespace-nowrap font-outfit text-2xl font-bold text-gray-800 dark:text-white/90">{{ $v }}</p><p class="mt-1 text-theme-xs {{ $c ?? 'text-gray-500' }}">{{ $s }}</p></div>
+            <div class="{{ $card }}"><p class="{{ $dt }}">{{ $l }}</p><p class="stat-num mt-2 whitespace-nowrap">{{ $v }}</p><p class="mt-1 text-theme-xs {{ $c ?? 'text-gray-500' }}">{{ $s }}</p></div>
         @endforeach
     </div>
 

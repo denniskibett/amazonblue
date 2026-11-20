@@ -555,25 +555,25 @@
                 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center">
-                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        <p class="stat-num">
                             {{ $user->getBiodataCompletionPercentage() }}%
                         </p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Profile Complete</p>
                     </div>
                     <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 text-center">
-                        <p class="text-2xl font-bold text-green-600 dark:text-green-400">
+                        <p class="stat-num">
                             {{ $user->loans()->count() }}
                         </p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Total Loans</p>
                     </div>
                     <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 text-center">
-                        <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                        <p class="stat-num">
                             {{ $user->loans()->where('status', 'active')->count() }}
                         </p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Active Loans</p>
                     </div>
                     <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 text-center">
-                        <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                        <p class="stat-num">
                             {{ $user->loans()->where('status', 'completed')->count() }}
                         </p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Completed Loans</p>

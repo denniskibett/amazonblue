@@ -32,7 +32,7 @@
       <aside class="w-full rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03] xl:w-[280px] xl:shrink-0">
         <div class="mb-4 flex items-center justify-between rounded-lg bg-brand-500 px-4 py-3 text-white">
           <span class="flex items-center gap-2 text-theme-sm font-medium"><x-ui.icon name="inbox" class="size-5" /> Waiting for you</span>
-          <span class="font-outfit text-lg font-semibold">{{ number_format($total) }}</span>
+          <span class="stat-num">{{ number_format($total) }}</span>
         </div>
         <p class="mb-2 px-3 text-theme-xs uppercase tracking-wide text-gray-400">Queues</p>
         <nav class="flex flex-col gap-1">

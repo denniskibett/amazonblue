@@ -98,7 +98,7 @@
       @if ($recon)
         <div class="grid grid-cols-2 gap-px border-y border-gray-100 bg-gray-100 dark:border-gray-800 dark:bg-gray-800 sm:grid-cols-4">
           @foreach ([['On the statement', $recon['statement_rows'], 'gray'], ['Recorded exactly', $recon['ok'], 'green'], ['Not recorded', count($recon['on_statement_not_recorded']), 'red'], ['Differ or missing', count($recon['amount_differs']) + count($recon['recorded_not_on_statement']), 'amber']] as [$l, $n, $tone])
-            <div class="bg-white px-4 py-3 dark:bg-gray-900 sm:px-6"><p class="text-theme-xs text-gray-500 dark:text-gray-400">{{ $l }}</p><p class="font-outfit text-xl font-semibold text-gray-800 dark:text-white/90">{{ $n }}</p></div>
+            <div class="bg-white px-4 py-3 dark:bg-gray-900 sm:px-6"><p class="text-theme-xs text-gray-500 dark:text-gray-400">{{ $l }}</p><p class="stat-num">{{ $n }}</p></div>
           @endforeach
         </div>
         <div class="px-4 pb-3 sm:px-6">

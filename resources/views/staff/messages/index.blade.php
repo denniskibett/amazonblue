@@ -19,7 +19,7 @@
           <p class="flex items-center gap-1.5 text-theme-xs font-medium text-gray-500 dark:text-gray-400"><x-ui.icon :name="$icon" class="size-3.5" /> {{ $label }}</p>
           <x-staff.pill :tone="$h['ok'] ? 'green' : 'amber'" dot>{{ $h['ok'] ? 'Ready' : 'Not set up' }}</x-staff.pill>
         </div>
-        <p class="mt-2 font-outfit text-lg font-semibold text-gray-800 dark:text-white/90">{{ $h['value'] }}@if ($key === 'queue' && ($h['pending'] || $h['failed']))<span class="ml-2 text-theme-xs font-normal text-gray-500">{{ $h['pending'] }} waiting · {{ $h['failed'] }} failed</span>@endif</p>
+        <p class="stat-num mt-2">{{ $h['value'] }}@if ($key === 'queue' && ($h['pending'] || $h['failed']))<span class="ml-2 text-theme-xs font-normal text-gray-500">{{ $h['pending'] }} waiting · {{ $h['failed'] }} failed</span>@endif</p>
         <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">{{ $h['note'] }}@if ($key === 'mail' && $h['from']) From {{ $h['from'] }}.@endif</p>
       </div>
     @endforeach
@@ -31,7 +31,7 @@
       <div class="{{ $card }} flex flex-col">
         <div class="flex items-center justify-between gap-2">
           <x-staff.pill :tone="$k['tone']" dot>{{ $k['label'] }}</x-staff.pill>
-          <span class="font-outfit text-2xl font-bold text-gray-800 dark:text-white/90">{{ $counts[$kind] ?? 0 }}</span>
+          <span class="stat-num">{{ $counts[$kind] ?? 0 }}</span>
         </div>
         <p class="mt-3 flex-1 text-theme-sm text-gray-600 dark:text-gray-400">{{ $k['about'] }}</p>
         <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">{{ $counts[$kind] ?? 0 }} {{ \Illuminate\Support\Str::plural('borrower', $counts[$kind] ?? 0) }} would get it now (not sent one in the last 3 days, with an email).</p>

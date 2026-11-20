@@ -3,7 +3,7 @@
     <!-- Admin Cards -->
     <!-- Total Loans -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ $stats['totalLoans'] ?? 0 }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -17,7 +17,7 @@
 
     <!-- Loans Requested -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['total_requested'] ?? 0, 2) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -31,7 +31,7 @@
 
     <!-- Total Disbursed -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['total_disbursed'] ?? 0, 2) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -45,7 +45,7 @@
 
     <!-- Total Repayments -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['total_repayments'] ?? 0, 2) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -59,7 +59,7 @@
 
     <!-- Broker Fees -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['total_broker_fees'] ?? 0, 2) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -73,7 +73,7 @@
 
     <!-- Net Earnings -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['net_earnings'] ?? 0, 2) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -87,7 +87,7 @@
 
     <!-- Total Penalties -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['total_penalties'] ?? 0, 2) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -101,7 +101,7 @@
 
     <!-- Average Days Late -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['average_days_late'] ?? 0, 1) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -118,7 +118,7 @@
 
     <!-- Average Repayment Days -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['average_repayment_days'] ?? 0, 1) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -141,7 +141,7 @@
     <!-- Broker Cards -->
     <!-- Active Loans -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ $stats['activeLoans'] ?? 0 }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -155,7 +155,7 @@
 
     <!-- Repaid Loans -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ $stats['repaidLoans'] ?? 0 }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -169,7 +169,7 @@
 
     <!-- Total Earnings -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['brokerFees'] ?? 0, 2) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -183,7 +183,7 @@
 
     <!-- Clients -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ $stats['total_clients'] ?? 0 }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -199,7 +199,7 @@
     <!-- Borrower Cards -->
     <!-- Active Loans -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ $stats['activeLoans'] ?? 0 }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -213,7 +213,7 @@
 
     <!-- Total Borrowed -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['total_disbursed'] ?? 0, 2) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -227,7 +227,7 @@
 
     <!-- Total Repaid -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ number_format($stats['total_repaid'] ?? 0, 2) }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
@@ -241,7 +241,7 @@
 
     <!-- Repaid Loans -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">
+      <h4 class="stat-num">
         {{ $stats['repaidLoans'] ?? 0 }}
       </h4>
       <div class="mt-4 flex items-end justify-between sm:mt-5">
