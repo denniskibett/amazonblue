@@ -88,6 +88,7 @@ class KycReviewController extends Controller
             'mpesa' => $user->paymentMethods->whereNotNull('mobile_number')->sortByDesc('id')->first(),
             'bank' => $user->paymentMethods->whereNotNull('account_number')->sortByDesc('id')->first(),
             'reviewer' => $user->kyc_reviewed_by ? User::find($user->kyc_reviewed_by) : null,
+            'kin' => app(\App\Services\Kyc\KinConfirmations::class)->latest($user),
             // existing clients re-verifying: their track record helps the decision
             'loanHistory' => \App\Models\Loan::where('user_id', $user->id)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
         ]);
@@ -100,11 +101,13 @@ class KycReviewController extends Controller
         // a partner (owner, 24 Oct 2026): no next of kin or guarantor; their ID and selfies are checked and, with AML
         // screening on, the screening must be clear (App\Services\Aml\Screening)
         $partnerOnly = $user->hasRole('partner') && ! $user->hasRole('borrower');
+        // the next of kin confirmed online with their ID: that is the next-of-kin check (owner, 21 Nov 2026)
+        $kinConfirmed = app(\App\Services\Kyc\KinConfirmations::class)->latest($user)?->status === \App\Models\KinConfirmation::CONFIRMED;
         $data = $request->validate($partnerOnly ? [
             'checked_identity' => ['accepted'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ] : [
-            'called_next_of_kin' => ['accepted'],
+            'called_next_of_kin' => $kinConfirmed ? ['nullable'] : ['accepted'],
             'called_guarantor' => ['accepted'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ], [

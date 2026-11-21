@@ -258,6 +258,14 @@ class DisbursementController extends Controller
             if (in_array($loan->status, [...Loan::STATUS_FINAL_LIST, Loan::STATUS_PENDING], true)) {
                 throw \Illuminate\Validation\ValidationException::withMessages(['loan_id' => 'Loan #' . $loan->id . ' is ' . $loan->status . ': money can\'t be sent on it.']);
             }
+            // the guarantor signs before the money goes (owner, 21 Nov 2026); top-ups on a paid-out loan are not asked again
+            if (! Disbursement::where('loan_id', $loan->id)->exists()) {
+                try {
+                    app(\App\Services\Loans\Guarantees::class)->assertReleased($loan);
+                } catch (\DomainException $e) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['loan_id' => $e->getMessage()]);
+                }
+            }
             if (Disbursement::where('loan_id', $loan->id)->where('transaction', $validated['transaction'])->exists()) {
                 throw \Illuminate\Validation\ValidationException::withMessages(['transaction' => 'This loan already has a disbursement with reference ' . $validated['transaction'] . '.']);
             }

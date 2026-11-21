@@ -46,7 +46,7 @@
     </div>
     <div class="kyc-card">
       <h3 class="card-h">Guarantor</h3>
-      <p class="muted text-sm" style="margin-top:-6px">Someone who knows you well and agrees to vouch for your loans. Not your next of kin.</p>
+      <p class="muted text-sm" style="margin-top:-6px">Someone who knows you well and agrees to vouch for your loans. Not your next of kin. Each time you borrow, we text them a link to sign and add their ID before we send the money.</p>
       <div class="form-row">
         @if (in_array('guarantor_name', $locked, true))
           @include('home.kyc.partials.saved', ['label' => 'Full name', 'value' => $guarantor?->name])
@@ -81,6 +81,13 @@
         /><span class="error">{{ $errors->first('guarantor_phone') ?: 'Enter their phone number.' }}</span>
       </div>
       @endif
+      {{-- the signing link goes to their phone and, when given, their email too (owner, 21 Nov 2026) --}}
+      <div class="field @error('guarantor_email') invalid @enderror">
+        <label for="k-g-email">Email (optional)</label
+        ><input class="input" id="k-g-email" name="guarantor_email" type="email" autocomplete="off" placeholder="name@example.com"
+          value="{{ old('guarantor_email', $guarantor?->email) }}"
+        /><span class="error">{{ $errors->first('guarantor_email') ?: 'Enter a valid email, or leave it empty.' }}</span>
+      </div>
     </div>
     <div class="kyc-nav">
       <a href="{{ route('kyc.income') }}">Back</a><button class="btn btn-primary" type="submit">Continue</button>

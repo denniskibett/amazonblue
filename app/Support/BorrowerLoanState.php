@@ -78,12 +78,21 @@ class BorrowerLoanState
                 'title' => 'We\'re reviewing your application',
                 'message' => 'You asked for KES ' . number_format((float) $loan->amount, 2) . ' on ' . $date($loan->created_at) . '. Our team checks every application by hand, usually within a working day.',
                 'next' => [
-                    'We may call you or your guarantor to confirm a few details.',
+                    'We may call you or your guarantor to confirm a few details. Your guarantor also signs from a link we text them.',
                     'Once approved, the money is sent to your M-Pesa and you get the M-Pesa message.',
                     'Your due date is set from the date we send the money.', // G4: decision 12 (cycle 1 starts at disbursement; engine in Phase 2)
                 ],
             ],
-            'approved' => [
+            // the guarantor still has to sign before the money goes (owner, 21 Nov 2026)
+            'approved' => ($waitingGuarantor = (bool) (app(\App\Services\Loans\Guarantees::class)->summary($loan)['waiting'] ?? false)) ? [
+                'tone' => 'ok',
+                'title' => 'Approved: waiting for your guarantor to sign',
+                'message' => 'Your loan of KES ' . number_format((float) $loan->amount, 2) . ' is approved. We send it to your M-Pesa as soon as your guarantor signs.',
+                'next' => [
+                    'Your guarantor signs from the link we texted them; it takes them about three minutes.',
+                    'You get an M-Pesa message from us when the money is sent.',
+                ],
+            ] : [
                 'tone' => 'ok',
                 'title' => 'Approved: sending to your M-Pesa soon',
                 'message' => 'Your loan of KES ' . number_format((float) $loan->amount, 2) . ' is approved. Our team sends approved loans to your M-Pesa during working hours.',

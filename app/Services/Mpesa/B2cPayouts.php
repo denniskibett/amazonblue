@@ -37,6 +37,8 @@ class B2cPayouts
         if ($loan->status !== Loan::STATUS_APPROVED) {
             throw new \DomainException('Only an approved loan can be paid out.');
         }
+        // the guarantor signs before the money goes (owner, 21 Nov 2026)
+        app(\App\Services\Loans\Guarantees::class)->assertReleased($loan);
         $msisdn = Daraja::msisdn($phone);
         if (! $msisdn) {
             throw new \DomainException('Enter a Kenyan M-Pesa number, e.g. 0712 345 678.');
@@ -82,6 +84,8 @@ class B2cPayouts
         if ($loan->status !== Loan::STATUS_APPROVED) {
             throw new \DomainException('Loan #' . $loan->id . ' is ' . $loan->status . ', no longer waiting for its money.');
         }
+        // the guarantor signs before the money goes (owner, 21 Nov 2026)
+        app(\App\Services\Loans\Guarantees::class)->assertReleased($loan);
         if ($problem = app(Daraja::class)->b2cProblem()) {
             throw new \DomainException('M-Pesa is not set up: ' . $problem);
         }

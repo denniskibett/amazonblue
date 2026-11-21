@@ -128,6 +128,8 @@ class LoanController extends Controller
         }
 
         \App\Support\CustomerNotifier::applicationReceived($loan);
+        // their guarantor is texted a link to sign before the money goes (owner, 21 Nov 2026)
+        app(\App\Services\Loans\Guarantees::class)->open($loan, $user);
 
         $quote = $eligibility->quote((float) $loan->amount, \Illuminate\Support\Carbon::parse($loan->borrow_date));
 
@@ -337,6 +339,9 @@ class LoanController extends Controller
                 }
             }
             
+            // the borrower's guarantor signs before the money goes (owner, 21 Nov 2026)
+            app(\App\Services\Loans\Guarantees::class)->open($loan, $request->user());
+
             // Return JSON response for AJAX
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([

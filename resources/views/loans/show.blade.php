@@ -361,6 +361,9 @@
             </div>
             @endif
 
+            {{-- guarantor sign-off before the money goes (owner, 21 Nov 2026) --}}
+            @include('loans._guarantee', ['loan' => $loan])
+
             <!-- Disbursements and Repayments - Current Cycle Only -->
             <div class="no-print grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <!-- Disbursements -->

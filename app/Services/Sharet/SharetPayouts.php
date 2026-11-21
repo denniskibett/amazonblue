@@ -51,6 +51,8 @@ class SharetPayouts
         if ($loan->status !== Loan::STATUS_APPROVED) {
             throw new \DomainException('Only an approved loan can be paid out.');
         }
+        // the guarantor signs before the money goes (owner, 21 Nov 2026)
+        app(\App\Services\Loans\Guarantees::class)->assertReleased($loan);
         $msisdn = Daraja::msisdn($phone) ?? throw new \DomainException('Enter a Kenyan M-Pesa number, e.g. 0712 345 678.');
         $amount = floor($amount);
         if ($amount < 10 || $amount > (float) $loan->amount) {
@@ -82,6 +84,10 @@ class SharetPayouts
         $row = SharetPayout::whereKey($id)->lockForUpdate()->first();
         if (! $row || $row->status !== 'awaiting_approval' || $row->kind !== 'disbursement') {
             throw new \DomainException('This payout is not waiting for approval.');
+        }
+        if ($row->loan_id && ($loan = Loan::find($row->loan_id))) {
+            // the guarantor signs before the money goes (owner, 21 Nov 2026)
+            app(\App\Services\Loans\Guarantees::class)->assertReleased($loan);
         }
         $row->update(['status' => 'queued', 'approved_by' => $checker->id]);
 

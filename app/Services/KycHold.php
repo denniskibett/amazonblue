@@ -106,8 +106,10 @@ class KycHold
             ],
             'Next of kin & guarantor' => [
                 'Next of kin: name, relationship and phone',
-                'A guarantor: name and phone',
+                'A guarantor: name and phone (email optional)',
                 'Neither can be your own number: we call both to confirm',
+                'We text your next of kin a link to confirm they know you, with their ID',
+                'When you borrow, we text (and email) your guarantor a link to sign and add their ID before we send the money',
             ],
             'Identity documents' => [
                 'Photo of your ID, front and back (or your passport bio page)',

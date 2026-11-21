@@ -225,6 +225,13 @@ return [
         'statement_months' => 3,
     ],
 
+    // Guarantor sign-off (owner, 21 Nov 2026): the borrower's guarantor signs a guarantee and release, with their ID,
+    // from a link texted to them before the loan's money goes out. App\Services\Loans\Guarantees.
+    'guarantors' => [
+        // how long the signing link works; staff or the borrower can send a fresh one
+        'link_days' => 14,
+    ],
+
     // AML screening (owner, 23 Oct 2026): staff checklist + the sanctions list staff upload. Required before a
     // business or a partner is approved when on.
     // outside debt collection agencies (owner, 3 Nov 2026): an agency may contact a placed borrower this many days

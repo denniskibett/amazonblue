@@ -7,7 +7,7 @@
     ></span>
     <h1>Thank you, {{ $firstName }}. You're almost verified.</h1>
     <p class="muted">
-      Our team is checking your documents and will call your next of kin and guarantor to confirm your details.
+      Our team is checking your documents. We've texted your next of kin a link to confirm they know you; ask them to open it. We may also call them and your guarantor.
       Once you're approved, you can borrow straight from your dashboard.
     </p>
     <div class="kyc-ref">

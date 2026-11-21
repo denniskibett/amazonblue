@@ -124,6 +124,38 @@
                         @if ($user->kin_phone)
                             <a href="tel:{{ $user->kin_phone }}" class="mt-1 inline-block text-sm font-medium text-brand-500 hover:underline">{{ $user->kin_phone }}</a>
                         @endif
+                        {{-- the next of kin's own answer from their texted link (owner, 21 Nov 2026) --}}
+                        @if (\App\Services\Kyc\KinConfirmations::available() && $user->kin_phone)
+                            <div class="mt-3 border-t border-gray-200 pt-3 text-sm dark:border-gray-700">
+                                @if ($kin?->status === 'confirmed')
+                                    <p class="font-medium text-green-700 dark:text-green-400">Confirmed online {{ $kin->answered_at->format('j M Y, H:i') }}</p>
+                                    <p class="text-gray-600 dark:text-gray-400">Says they are {{ strtolower($kin->stated_relation) }} · ID {{ $kin->id_number }}
+                                        @if ($kin->stated_relation && $user->kin_relation && strcasecmp($kin->stated_relation, $user->kin_relation) !== 0)
+                                            <span class="font-medium text-amber-700 dark:text-amber-400">(client said {{ strtolower($user->kin_relation) }})</span>
+                                        @endif
+                                    </p>
+                                    <div class="mt-2 flex gap-2">
+                                        @foreach (['id-front' => [$kin->id_front_path, 'ID front'], 'id-back' => [$kin->id_back_path, 'ID back']] as $kind => [$path, $text])
+                                            @if ($path)
+                                                <a href="{{ route('kyc-reviews.kin.file', [$user, $kind]) }}" target="_blank" class="block w-28 overflow-hidden rounded-lg border border-gray-200 text-center text-xs text-gray-600 dark:border-gray-700 dark:text-gray-400">
+                                                    @if (str_ends_with(strtolower($path), '.pdf'))<div class="flex h-16 items-center justify-center bg-white dark:bg-gray-900">PDF</div>
+                                                    @else<img src="{{ route('kyc-reviews.kin.file', [$user, $kind]) }}" alt="{{ $text }}" class="h-16 w-full bg-white object-contain" loading="lazy">@endif
+                                                    <span class="block py-0.5">{{ $text }}</span>
+                                                </a>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                @elseif ($kin?->status === 'denied')
+                                    <p class="font-medium text-red-700 dark:text-red-400">Said they do NOT know {{ strtok($user->name, ' ') }} ({{ $kin->answered_at->format('j M Y') }})</p>
+                                    <p class="text-gray-600 dark:text-gray-400">Call them before approving.</p>
+                                @else
+                                    <p class="text-gray-600 dark:text-gray-400">{{ $kin?->link_sent_at ? 'Link texted ' . $kin->link_sent_at->diffForHumans() . '; not answered yet.' : 'Not asked online yet.' }}</p>
+                                    <form method="POST" action="{{ route('kyc-reviews.kin.send', $user) }}" class="mt-2">@csrf
+                                        <button type="submit" class="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300">{{ $kin?->link_sent_at ? 'Text the link again' : 'Text them the link' }}</button>
+                                    </form>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                     <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
                         <p class="{{ $label }}">Guarantor</p>
@@ -155,10 +187,14 @@
                             The ID, photo and selfies are the same person, and the name matches the partner record
                         </label>
                         @else
+                        @if ($kin?->status === 'confirmed')
+                            <p class="flex items-start gap-3 text-sm text-green-700 dark:text-green-400"><x-ui.icon name="check" class="mt-0.5 size-4" /> The next of kin confirmed online with their ID</p>
+                        @else
                         <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
                             <input type="checkbox" name="called_next_of_kin" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300" @checked(old('called_next_of_kin'))>
                             I called the next of kin and they confirmed
                         </label>
+                        @endif
                         <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
                             <input type="checkbox" name="called_guarantor" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300" @checked(old('called_guarantor'))>
                             I called the guarantor and they agreed to vouch

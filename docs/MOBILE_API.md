@@ -42,7 +42,7 @@ Errors are JSON `{message}`; validation errors also carry `errors`. 401 means si
 | `POST devices/sighting` | `event` (signed_in, applied, paid), `area` (town or estate, kept only with `area` on) |
 | `POST quotes` | `amount` → interest, total, due date |
 | `POST loans` | apply: `amount`, `consent` (same rules as the website's Borrow page) |
-| `GET loans`, `GET loans/{id}` | own loans; balance, timeline, payments and how to pay |
+| `GET loans`, `GET loans/{id}` | own loans; balance, timeline, payments and how to pay. `loans/{id}` also has `guarantor` (`status` waiting/signed/waived, `name`, masked `phone`, `waiting`): while `waiting` is true the money is held until the guarantor signs from the link we texted them; `null` for older loans |
 | `POST loans/{id}/repay/stk`, `GET .../stk/{requestId}` | M-Pesa prompt (needs `MPESA_STK_ENABLED`) and its status |
 | `POST loans/{id}/repay/sharet` | Sharet Pay link (`pay_url`) |
 | `POST loans/{id}/repay/claim` | "I already paid": `code`, `amount` |

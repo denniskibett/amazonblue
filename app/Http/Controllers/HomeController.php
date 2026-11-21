@@ -709,7 +709,7 @@ class HomeController extends Controller
     // ============ KYC: NEXT OF KIN & GUARANTOR ============
 
     // relationship options (contact_types slugs) for the next of kin and guarantor
-    private const RELATIONSHIPS = [
+    public const RELATIONSHIPS = [
         'spouse' => 'Spouse', 'parent' => 'Parent', 'sibling' => 'Sibling', 'child' => 'Child',
         'relative' => 'Relative', 'friend' => 'Friend', 'colleague' => 'Colleague', 'employer' => 'Employer',
         'business_partner' => 'Business Partner', 'neighbor' => 'Neighbor', 'other' => 'Other',
@@ -757,7 +757,10 @@ class HomeController extends Controller
             'guarantor_name' => ['required', 'string', 'max:255'],
             'guarantor_type' => ['required', Rule::in(array_keys(self::RELATIONSHIPS))],
             'guarantor_phone' => ['required', $kenyan, 'different:kin_phone', Rule::notIn([$normalise($user->phone)])],
+            // the signing link also goes here (owner, 21 Nov 2026)
+            'guarantor_email' => ['nullable', 'email', 'max:255', Rule::notIn(array_filter([strtolower((string) $user->email)]))],
         ], [
+            'guarantor_email.not_in' => 'Use your guarantor\'s email, not your own.',
             'kin_phone.regex' => 'Enter a Kenyan mobile number like 0712 345 678.',
             'guarantor_phone.regex' => 'Enter a Kenyan mobile number like 0712 345 678.',
             'kin_phone.not_in' => 'Use your next of kin\'s number, not your own.',
@@ -778,6 +781,7 @@ class HomeController extends Controller
                 'contact_type_id' => $this->lookupId('contact_types', $data['guarantor_type']),
                 'name' => $data['guarantor_name'],
                 'phone' => $data['guarantor_phone'],
+                'email' => isset($data['guarantor_email']) ? strtolower(trim($data['guarantor_email'])) : null,
                 'created_by' => $guarantor->exists ? $guarantor->created_by : $user->id,
                 'updated_by' => $user->id,
             ])->save();
@@ -824,6 +828,8 @@ class HomeController extends Controller
         // waits for staff, who approve it after calling the next of kin and guarantor
         $user->update(['kyc_submitted_at' => now(), 'kyc_status' => 'submitted']);
         \App\Support\CustomerNotifier::kycSubmitted($user);
+        // the next of kin confirms they know them, with their ID (owner, 21 Nov 2026)
+        app(\App\Services\Kyc\KinConfirmations::class)->open($user);
 
         return redirect()->route('kyc.submitted');
     }

@@ -20,6 +20,7 @@
 
   {{-- what this state means and what to do next (borrower journeys, App\Support\BorrowerLoanState) --}}
   @include('home.account.partials.loan-state', ['loan' => $loan, 'progress' => $progress])
+  @include('home.account.partials.guarantor', ['loan' => $loan])
 
   <div class="a-grid two">
     <div class="a-grid">

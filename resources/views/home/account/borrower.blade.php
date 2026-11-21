@@ -112,6 +112,7 @@
   {{-- what the current (or just-ended) loan's state means: under review, approved, rejected, overdue, recovery... (App\Support\BorrowerLoanState) --}}
   @if ($stateLoan = \App\Support\BorrowerLoanState::homeLoan($user, $loan))
     @include('home.account.partials.loan-state', ['loan' => $stateLoan, 'progress' => $loan && $stateLoan->is($loan) ? $progress : app(\App\Services\LoanProgress::class)->for($stateLoan), 'onHome' => true])
+    @include('home.account.partials.guarantor', ['loan' => $stateLoan])
   @endif
 
   {{-- borrowing limit --}}

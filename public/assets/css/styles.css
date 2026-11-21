@@ -6963,3 +6963,64 @@ a.a-row:hover .t b {
   gap: 10px;
   margin-top: 14px;
 }
+
+/* Guarantor sign-off (owner, 21 Nov 2026): the guarantee page and the borrower's "waiting for your guarantor" card */
+.guar-doc h2,
+.guar-h {
+  font-size: 17px;
+  margin: 4px 0 0;
+  color: var(--ink-blue);
+}
+.guar-loan {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+.guar-loan span {
+  display: block;
+  font-size: 12.5px;
+  color: var(--slate);
+}
+.guar-loan b {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.guar-terms {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+@media (max-width: 480px) {
+  .guar-loan {
+    grid-template-columns: 1fr 1fr;
+  }
+  .guar-loan div:last-child {
+    grid-column: 1 / -1;
+  }
+}
+.guar-card .guar-who {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 6px 0 4px;
+  font-size: 14.5px;
+}
+.guar-card form {
+  display: inline;
+}
+.kin-answer {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.kin-answer legend {
+  margin-bottom: 8px;
+}

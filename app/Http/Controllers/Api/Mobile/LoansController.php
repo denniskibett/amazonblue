@@ -38,6 +38,8 @@ class LoansController extends Controller
             'timeline' => collect($p['timeline'])->map(fn ($s) => ['label' => $s['label'], 'done' => (bool) $s['done'],
                 'date' => $s['date'] ? \Illuminate\Support\Carbon::parse($s['date'])->toDateString() : null, 'detail' => $s['detail'] ?? null, 'tone' => $s['tone'] ?? null])->values(),
             'repayments' => collect($p['repayments'])->map(fn ($r) => self::repayment($r))->values(),
+            // waiting for the guarantor to sign before the money goes (owner, 21 Nov 2026); null for older loans
+            'guarantor' => app(\App\Services\Loans\Guarantees::class)->summary($loan),
             'pay' => [
                 'can_pay' => in_array($loan->status, self::PAYABLE, true),
                 'recovery' => in_array($loan->status, self::RECOVERY, true),

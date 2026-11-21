@@ -72,6 +72,8 @@ class BorrowController extends Controller
             throw ValidationException::withMessages(['amount' => 'Your earlier application is still open.']);
         }
         CustomerNotifier::applicationReceived($loan);
+        // their guarantor is texted a link to sign before the money goes (owner, 21 Nov 2026)
+        app(\App\Services\Loans\Guarantees::class)->open($loan, $user);
         DeviceController::sighting($request, 'applied');
 
         return response()->json(['loan' => LoansController::card($loan->fresh('loanType'))], 201);
