@@ -69,6 +69,13 @@ to be clear of the KYC hold (`kyc.clear`): on hold it answers 403 with `on_hold`
 The per-route throttles have their own counters (`throttle:5,1,mobile-apply` and so on), so ordinary browsing never
 uses up the five tries for applying or paying.
 
+## App code and versions (owner, 21 Nov 2026)
+
+The Flutter app is the `mobile` branch of this repo (its own history, never merged into `staging` or `main`; local
+checkout `~/projects/aimzone_app`). `pubspec.yaml` holds the one version `X.Y.Z+N`; every build that leaves the Mac
+gets a `CHANGELOG.md` section and a tag `mobile-vX.Y.Z+N` (`scripts/release.sh` there checks both). The download
+page's `storage/app/mobile-apk.json` carries the same version.
+
 ## Building the APK
 
 ```bash
