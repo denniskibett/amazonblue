@@ -29,6 +29,13 @@ fi
 flutter analyze --no-fatal-infos
 flutter build apk --release --split-per-abi ${DEFINES[@]+"${DEFINES[@]}"}
 
+# signed with the release key, never the debug key (Android only updates an app signed with the same key)
+SIGNER_CN="${SIGNER_CN:-CN=Aimzone Ventures}"
+export JAVA_HOME="${JAVA_HOME:-$(flutter doctor -v 2>/dev/null | sed -n "s/.*Java binary at: \(.*\)\/bin\/java/\1/p" | head -1)}"
+APKSIGNER=$(ls -d "${ANDROID_HOME:-$HOME/Library/Android/sdk}"/build-tools/*/apksigner | sort -V | tail -1)
+PATH="$JAVA_HOME/bin:$PATH" "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-arm64-v8a-release.apk | grep -q "$SIGNER_CN" \
+  || fail "the APK is not signed with the release key ($SIGNER_CN): link android/key.properties to ~/projects/mobile/aimzone-keys/key.properties"
+
 NOTES=$(awk -v v="## $VERSION " 'index($0, v) == 1 {on=1; next} /^## / {on=0} on' CHANGELOG.md | sed '/^\s*$/d')
 git tag -a "$TAG" -m "$TAG" -m "$NOTES"
 echo "Tagged $TAG on $(git rev-parse --short HEAD)."
