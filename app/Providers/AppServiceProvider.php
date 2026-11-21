@@ -29,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
 
         // staff mail talks to the VPS mail server; tests bind a fake
         $this->app->bind(\App\Services\StaffMail\MailServer::class, \App\Services\StaffMail\ImapMailServer::class);
+
+        // one KYC check per request, shared by the hold middleware, the account home and the KYC stepper
+        $this->app->scoped(\App\Services\KycHold::class);
     }
 
     /**

@@ -18,6 +18,13 @@ use Tests\TestCase;
 class TestimonialsTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\ClearsKycHold;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->clearKycHold();
+    }
 
     public function test_the_section_is_hidden_when_there_are_none(): void
     {

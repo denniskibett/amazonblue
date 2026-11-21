@@ -14,6 +14,7 @@ use Tests\TestCase;
 class MobileApiTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\ClearsKycHold;
 
     private string $key;
     private User $user;
@@ -21,6 +22,7 @@ class MobileApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->clearKycHold();
         config(['mobile.enabled' => true]);
         [, $this->key] = ApiKey::issue('Test APK', null, 'mobile');
         Role::findOrCreate('borrower', 'web');

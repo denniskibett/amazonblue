@@ -16,6 +16,13 @@ use Tests\TestCase;
 class WrittenOffBorrowerTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\ClearsKycHold;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->clearKycHold();
+    }
 
     public function test_a_written_off_loan_blocks_a_new_application(): void
     {

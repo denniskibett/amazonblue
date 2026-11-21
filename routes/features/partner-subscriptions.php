@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'role:partner'])->prefix('account/partner')->name('partner.')->controller(SubscriptionController::class)->group(function () {
     Route::get('/verify', 'verify')->name('verify');
     Route::post('/verify', 'saveVerify')->middleware('throttle:10,10')->name('verify.save');
-    Route::get('/subscribe', 'create')->name('subscribe');
-    Route::post('/subscribe', 'store')->middleware('throttle:5,10')->name('subscribe.store');
+    Route::get('/subscribe', 'create')->middleware('kyc.clear')->name('subscribe');
+    Route::post('/subscribe', 'store')->middleware(['kyc.clear', 'throttle:5,10'])->name('subscribe.store');
     Route::get('/subscriptions/{id}', 'show')->whereNumber('id')->name('subscriptions.show');
     Route::post('/subscriptions/{id}/sent', 'sent')->whereNumber('id')->middleware('throttle:5,10')->name('subscriptions.sent');
     Route::post('/subscriptions/{id}/cancel', 'cancel')->whereNumber('id')->name('subscriptions.cancel');

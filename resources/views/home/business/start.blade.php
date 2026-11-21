@@ -52,7 +52,7 @@
   <div class="kyc-nav">
     <a href="{{ route('account.home') }}">Back to my account</a>
     @if (! $eligible)
-      <a class="btn btn-primary" href="{{ $user->kyc_status === 'submitted' ? route('account.home') : route('kyc.personal') }}">{{ $user->kyc_status === 'submitted' ? 'Go to my account' : ($user->kyc_status === 'rejected' ? 'Fix my verification' : 'Verify myself') }}</a>
+      <a class="btn btn-primary" href="{{ $user->kyc_status === 'submitted' ? route('account.home') : route('kyc.start') }}">{{ $user->kyc_status === 'submitted' ? 'Go to my account' : ($user->kyc_status === 'rejected' ? 'Fix my verification' : 'Verify myself') }}</a>
     @elseif ($draft)
       <a class="btn btn-primary" href="{{ route('account.business.review', $draft) }}">Continue {{ \Illuminate\Support\Str::limit($draft->legal_name, 24) }}</a>
     @else

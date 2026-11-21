@@ -37,7 +37,7 @@ Errors are JSON `{message}`; validation errors also carry `errors`. 401 means si
 | `GET ping`, `GET app` | key check; latest APK version and download link |
 | `POST auth/login` | `login` (phone or email), `password`, `install_id`, `device_name` → `token` (30 days, one per install) |
 | `POST auth/logout` | ends this phone's token |
-| `GET me` | user, verified, limit, blockers, product, open loan |
+| `GET me` | user (with `can`, see below), verified, `kyc` (on hold, state, sections, requirements, `finish_url`), limit, blockers, product, open loan |
 | `POST devices` | registers the phone and the consents `{device, area, push}`; model and OS are kept only with `device` on |
 | `POST devices/sighting` | `event` (signed_in, applied, paid), `area` (town or estate, kept only with `area` on) |
 | `POST quotes` | `amount` → interest, total, due date |
@@ -47,9 +47,27 @@ Errors are JSON `{message}`; validation errors also carry `errors`. 401 means si
 | `POST loans/{id}/repay/sharet` | Sharet Pay link (`pay_url`) |
 | `POST loans/{id}/repay/claim` | "I already paid": `code`, `amount` |
 | `GET statement` | all payments on the borrower's loans |
+| `GET partner` | partners: their own portfolio (available, lent out, earned, recent entries), read only |
+| `GET desk` | loan staff: the desk queues their permissions allow, as counts with a website link |
 
 Phone and area data are staff only and never shown to collection agencies. The app never reads contacts, photos,
 call logs, SMS or precise location.
+
+## Roles (owner, 21 Nov 2026)
+
+`App\Support\MobileAccess` decides what each account may do; every signed-in route carries `mobile.can:<capability>`
+and answers 403 otherwise. The app builds its tabs from `user.can`.
+
+| Capability | Who | Routes |
+|---|---|---|
+| `loans`, `borrow`, `repay`, `statement` | borrowers | `loans`, `quotes`, `loans/{id}/repay/*`, `statement` (own loans only) |
+| `portfolio` | partners | `partner` |
+| `desk` | staff with `view loans` | `desk` |
+
+Accounts with none (collectors, staff without loan access) are refused at sign-in. `POST loans` also needs the client
+to be clear of the KYC hold (`kyc.clear`): on hold it answers 403 with `on_hold`, `kyc_state` and `kyc_missing`.
+The per-route throttles have their own counters (`throttle:5,1,mobile-apply` and so on), so ordinary browsing never
+uses up the five tries for applying or paying.
 
 ## Building the APK
 

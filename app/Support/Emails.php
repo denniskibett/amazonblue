@@ -37,7 +37,7 @@ class Emails
             'heading' => 'Welcome, ' . $firstName,
             'paragraphs' => ['Your account is ready. One short step left: verify your identity so you can borrow. It takes about 5 minutes.'],
             'steps' => [['done', 'Create your account', 'Done'], ['now', 'Verify your identity', 'Your details, ID or passport, photo, selfies and signature'], ['todo', 'Borrow', 'We review every application by hand']],
-            'buttons' => [['Verify my identity', route('kyc.personal'), true]],
+            'buttons' => [['Verify my identity', route('kyc.start'), true]],
         ];
     }
 

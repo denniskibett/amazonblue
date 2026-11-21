@@ -35,7 +35,7 @@
         <div>
           <b>{{ $blockers[0][0] }}</b>{{ $blockers[0][1] }}
           @unless ($isVerified)
-            <div><a class="btn btn-primary" href="{{ route('kyc.personal') }}">{{ $user->kyc_status === 'rejected' ? 'Update and resubmit' : ($user->kyc_status === 'submitted' ? 'View my details' : 'Verify now') }}</a></div>
+            <div><a class="btn btn-primary" href="{{ route('kyc.start') }}">{{ $user->kyc_status === 'rejected' ? 'Update and resubmit' : ($user->kyc_status === 'submitted' ? 'View my details' : 'Verify now') }}</a></div>
           @endunless
         </div>
       </div>

@@ -29,6 +29,10 @@ return Application::configure(basePath: dirname(__DIR__))
             // /api/v1 keys from /staff/api-keys (owner, 3 Nov 2026)
             'api.key' => \App\Http\Middleware\AuthenticateApiKey::class,
             'mobile.enabled' => \App\Http\Middleware\MobileApiEnabled::class,
+            // clients on hold until KYC is finished: new business only, never repayments (owner, 21 Nov 2026)
+            'kyc.clear' => \App\Http\Middleware\EnsureKycClear::class,
+            // what each role may do in the mobile app (owner, 21 Nov 2026): App\Support\MobileAccess
+            'mobile.can' => \App\Http\Middleware\MobileCan::class,
         ]);
         
         // ============ ADD GLOBAL MIDDLEWARE ============

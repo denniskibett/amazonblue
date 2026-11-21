@@ -17,6 +17,13 @@ use Tests\TestCase;
 class PartnerWithdrawCapTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\ClearsKycHold;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->clearKycHold();
+    }
 
     public function test_capital_lent_out_cannot_be_withdrawn(): void
     {

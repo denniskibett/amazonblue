@@ -11,6 +11,10 @@
   if (auth()->user()?->hasRole('partner') && ! auth()->user()->hasRole('borrower')) {
     unset($steps[3], $steps[4]);
   }
+  // ticks show what is really complete, not just which steps come earlier (owner, 21 Nov 2026)
+  $titles = [2 => 'Personal details', 3 => 'Income & payout', 4 => 'Next of kin & guarantor', 5 => 'Identity documents'];
+  $complete = auth()->check() ? collect(app(\App\Services\KycHold::class)->status(auth()->user())['sections'])->pluck('complete', 'title') : collect();
+  $isDone = fn ($n) => $n >= 7 || (isset($titles[$n]) ? (bool) $complete->get($titles[$n]) : $n < $step);
   $last = array_key_last($steps);
   $tick = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg>';
   $arrow = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>';
@@ -54,7 +58,7 @@
             @endif
             <div class="segs">
               <span class="seg2 done"><span>{!! $tick !!}</span><em>Register</em></span
-              >@foreach ($steps as $n => [$label, $href])@if ($n < $step)<a class="seg2 done" href="{{ $href }}"><span>{!! $tick !!}</span><em>{{ $label }}</em></a
+              >@foreach ($steps as $n => [$label, $href])@if ($n !== $step && $isDone($n))<a class="seg2 done" href="{{ $href }}"><span>{!! $tick !!}</span><em>{{ $label }}</em></a
               >@elseif ($n === $step)<a class="seg2 now" href="{{ $href }}" aria-current="step"><span>{{ $n }}</span><em>{{ $label }}</em></a
               >@else<a class="seg2" href="{{ $href }}"><span>{{ $n }}</span><em>{{ $label }}</em></a
               >@endif @endforeach

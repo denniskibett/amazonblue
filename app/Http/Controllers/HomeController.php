@@ -122,6 +122,14 @@ class HomeController extends Controller
             return redirect()->route('collect.index');
         }
 
+        // on hold until KYC is finished (owner, 21 Nov 2026): what KYC asks for, what's done, and paying stays open
+        $hold = app(\App\Services\KycHold::class);
+        if ($hold->onHold($user)) {
+            return view('home.account.on-hold', $this->holdContext($user, $hold) + [
+                'openLoan' => $user->hasRole('borrower') ? $eligibility->openLoan($user) : null,
+            ]);
+        }
+
         if ($user->hasRole('borrower')) {
             $openLoan = $eligibility->openLoan($user);
 
@@ -369,6 +377,31 @@ class HomeController extends Controller
             'name' => strtok($enquiry->name, ' '),
             'date' => $enquiry->created_at->format('j M Y'),
             'desk' => $enquiry->route_to,
+        ];
+    }
+
+    // ============ KYC: START (what you'll need, and where you left off) ============
+
+    public function kycStart(Request $request): View|RedirectResponse
+    {
+        $user = $request->user();
+        $hold = app(\App\Services\KycHold::class);
+        if ($user->kyc_status === 'submitted') {
+            return redirect()->route('kyc.submitted');
+        }
+
+        return view('home.kyc.start', $this->holdContext($user, $hold));
+    }
+
+    private function holdContext(User $user, \App\Services\KycHold $hold): array
+    {
+        return [
+            'user' => $user,
+            'status' => $hold->status($user),
+            'requirements' => $hold->requirements($user),
+            'finalStep' => $hold->finalStep($user),
+            'stillOpen' => $hold->stillOpen($user),
+            'partnerOnly' => $hold->partnerOnly($user),
         ];
     }
 
@@ -811,6 +844,12 @@ class HomeController extends Controller
     }
 
     // ============ HELPERS ============
+
+    /** The KYC sections and whether each is complete; read by App\Services\KycHold. */
+    public function kycSections(User $user): array
+    {
+        return $this->sections($user);
+    }
 
     /**
      * Review summaries, and whether each step has everything the loan team needs.

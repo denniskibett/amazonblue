@@ -35,7 +35,8 @@ Route::post('/contact', [HomeController::class, 'storeEnquiry'])
 
 // ============ BORROWER KYC (individual onboarding) ============
 Route::middleware(['auth', 'role:borrower|partner'])->prefix('kyc')->name('kyc.')->controller(HomeController::class)->group(function () {
-    Route::get('/', fn () => redirect()->route('kyc.personal'))->name('start');
+    // what KYC asks for, and where they left off (owner, 21 Nov 2026)
+    Route::get('/', 'kycStart')->name('start');
     Route::get('/personal', 'kycPersonal')->name('personal');
     Route::post('/personal', 'storeKycPersonal')->name('personal.store');
     Route::get('/documents', 'kycDocuments')->name('documents');
@@ -91,8 +92,8 @@ Route::middleware(['auth', 'role:borrower'])->prefix('account')->name('account.'
 
 // ============ TOP-UP (owner, 23 Oct 2026): a borrower asks for more on a loan repaid on time ============
 Route::middleware(['auth', 'role:borrower'])->prefix('account')->name('account.')->group(function () {
-    Route::get('/loans/{loan}/top-up', [\App\Http\Controllers\AccountTopUpController::class, 'show'])->name('topup');
-    Route::post('/loans/{loan}/top-up', [\App\Http\Controllers\AccountTopUpController::class, 'store'])->middleware('throttle:3,10')->name('topup.request');
+    Route::get('/loans/{loan}/top-up', [\App\Http\Controllers\AccountTopUpController::class, 'show'])->middleware('kyc.clear')->name('topup');
+    Route::post('/loans/{loan}/top-up', [\App\Http\Controllers\AccountTopUpController::class, 'store'])->middleware(['kyc.clear', 'throttle:3,10'])->name('topup.request');
 });
 
 // ============ SYSADMIN "VIEW AS" (owner, 23 Oct 2026): preview a role or account; nothing is saved ============
@@ -120,7 +121,7 @@ Route::middleware('auth')->prefix('account')->name('account.')->group(function (
         Route::get('/profile', 'accountProfile')->name('profile');
 
         Route::middleware('role:borrower')->group(function () {
-            Route::get('/borrow', 'accountBorrow')->name('borrow');
+            Route::get('/borrow', 'accountBorrow')->middleware('kyc.clear')->name('borrow');
             Route::get('/loans', 'accountLoans')->name('loans');
             Route::get('/loans/{loan}', 'accountLoan')->name('loan');
             Route::get('/loans/{loan}/agreement', 'accountAgreement')->name('agreement');
@@ -162,17 +163,18 @@ Route::middleware('auth')->prefix('account')->name('account.')->group(function (
                 Route::get('/loans/{loan}', 'partnerLoan')->name('loan');
                 Route::get('/earnings', 'partnerEarnings')->name('earnings');
                 Route::get('/payouts', 'partnerPayouts')->name('payouts');
-                Route::get('/add-funds', 'partnerFunds')->name('funds');
-                Route::post('/add-funds', 'partnerFundsStore')->middleware('throttle:5,10')->name('funds.store');
-                Route::get('/withdraw', 'partnerWithdraw')->name('withdraw');
-                Route::post('/withdraw', 'partnerWithdrawStore')->middleware('throttle:5,10')->name('withdraw.store');
+                // money in and out waits for KYC (owner, 21 Nov 2026)
+                Route::get('/add-funds', 'partnerFunds')->middleware('kyc.clear')->name('funds');
+                Route::post('/add-funds', 'partnerFundsStore')->middleware(['kyc.clear', 'throttle:5,10'])->name('funds.store');
+                Route::get('/withdraw', 'partnerWithdraw')->middleware('kyc.clear')->name('withdraw');
+                Route::post('/withdraw', 'partnerWithdrawStore')->middleware(['kyc.clear', 'throttle:5,10'])->name('withdraw.store');
             });
         });
     });
 
     // the application itself (fixed product, limits, verification) lives with the other loan logic
     Route::post('/borrow', [LoanController::class, 'apply'])
-        ->middleware(['role:borrower', 'throttle:6,1'])
+        ->middleware(['role:borrower', 'kyc.clear', 'throttle:6,1'])
         ->name('borrow.store');
 });
 

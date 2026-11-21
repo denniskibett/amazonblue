@@ -20,6 +20,7 @@ use Tests\TestCase;
 class PartnerSubscriptionTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\ClearsKycHold;
 
     private User $staff;
 
@@ -30,6 +31,7 @@ class PartnerSubscriptionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->clearKycHold();
         Carbon::setTestNow('2026-10-24 10:00');
         Storage::fake('local');
         config(['lending.partner_subscriptions.enabled' => true, 'lending.requests.enabled' => true, 'lending.approvals.enabled' => false,

@@ -20,12 +20,14 @@ use Tests\TestCase;
 class TopUpTest extends TestCase
 {
     use RefreshDatabase, AuditLoanFixtures;
+    use \Tests\Concerns\ClearsKycHold;
 
     private Ledger $ledger;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->clearKycHold();
         config(['lending.engine' => 'v2', 'lending.ledger.enabled' => true, 'lending.penalty.cap' => 'in_duplum',
             'lending.first_time_limit' => 5000, 'lending.good_standing_limit' => 50000, 'lending.min_amount' => 1000, 'lending.risk_limit_caps' => []]);
         Partner::create(['name' => 'House Account', 'email' => 'house@example.test', 'type' => 'company', 'account_type' => 'principal', 'is_house_account' => true]);

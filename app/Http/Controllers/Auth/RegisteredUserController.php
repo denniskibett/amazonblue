@@ -68,6 +68,6 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
         Auth::login($user);
 
-        return redirect()->route('kyc.personal');
+        return redirect()->route('kyc.start');
     }
 }

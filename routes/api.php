@@ -17,7 +17,7 @@ Route::prefix('mobile/v1')->middleware(['api.key:mobile', 'throttle:120,1'])->gr
         'download' => url('/app')]));
 
     Route::middleware('mobile.enabled')->group(function () {
-        Route::post('auth/login', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'login'])->middleware('throttle:10,1');
+        Route::post('auth/login', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'login'])->middleware('throttle:10,1,mobile-login');
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('auth/logout', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'logout']);
@@ -25,15 +25,18 @@ Route::prefix('mobile/v1')->middleware(['api.key:mobile', 'throttle:120,1'])->gr
             Route::get('me/photo', [\App\Http\Controllers\Api\Mobile\MeController::class, 'photo'])->name('mobile.me.photo');
             Route::post('devices', [\App\Http\Controllers\Api\Mobile\DeviceController::class, 'register']);
             Route::post('devices/sighting', [\App\Http\Controllers\Api\Mobile\DeviceController::class, 'sightingEndpoint']);
-            Route::post('quotes', [\App\Http\Controllers\Api\Mobile\BorrowController::class, 'quote']);
-            Route::post('loans', [\App\Http\Controllers\Api\Mobile\BorrowController::class, 'apply'])->middleware('throttle:5,1');
-            Route::get('loans', [\App\Http\Controllers\Api\Mobile\LoansController::class, 'index']);
-            Route::get('loans/{loan}', [\App\Http\Controllers\Api\Mobile\LoansController::class, 'show']);
-            Route::post('loans/{loan}/repay/stk', [\App\Http\Controllers\Api\Mobile\RepayController::class, 'stk'])->middleware('throttle:5,1');
-            Route::get('loans/{loan}/repay/stk/{requestId}', [\App\Http\Controllers\Api\Mobile\RepayController::class, 'stkStatus'])->whereNumber('requestId');
-            Route::post('loans/{loan}/repay/sharet', [\App\Http\Controllers\Api\Mobile\RepayController::class, 'sharet'])->middleware('throttle:5,1');
-            Route::post('loans/{loan}/repay/claim', [\App\Http\Controllers\Api\Mobile\RepayController::class, 'claim']);
-            Route::get('statement', [\App\Http\Controllers\Api\Mobile\LoansController::class, 'statement']);
+            Route::post('quotes', [\App\Http\Controllers\Api\Mobile\BorrowController::class, 'quote'])->middleware('mobile.can:borrow');
+            Route::post('loans', [\App\Http\Controllers\Api\Mobile\BorrowController::class, 'apply'])->middleware(['mobile.can:borrow', 'kyc.clear', 'throttle:5,1,mobile-apply']);
+            Route::get('loans', [\App\Http\Controllers\Api\Mobile\LoansController::class, 'index'])->middleware('mobile.can:loans');
+            Route::get('loans/{loan}', [\App\Http\Controllers\Api\Mobile\LoansController::class, 'show'])->middleware('mobile.can:loans');
+            Route::post('loans/{loan}/repay/stk', [\App\Http\Controllers\Api\Mobile\RepayController::class, 'stk'])->middleware(['mobile.can:repay', 'throttle:5,1,mobile-stk']);
+            Route::get('loans/{loan}/repay/stk/{requestId}', [\App\Http\Controllers\Api\Mobile\RepayController::class, 'stkStatus'])->whereNumber('requestId')->middleware('mobile.can:repay');
+            Route::post('loans/{loan}/repay/sharet', [\App\Http\Controllers\Api\Mobile\RepayController::class, 'sharet'])->middleware(['mobile.can:repay', 'throttle:5,1,mobile-sharet']);
+            Route::post('loans/{loan}/repay/claim', [\App\Http\Controllers\Api\Mobile\RepayController::class, 'claim'])->middleware('mobile.can:repay');
+            Route::get('statement', [\App\Http\Controllers\Api\Mobile\LoansController::class, 'statement'])->middleware('mobile.can:statement');
+            // role-based areas (owner, 21 Nov 2026): App\Support\MobileAccess
+            Route::get('partner', [\App\Http\Controllers\Api\Mobile\PartnerController::class, 'show'])->middleware('mobile.can:portfolio');
+            Route::get('desk', [\App\Http\Controllers\Api\Mobile\DeskController::class, 'show'])->middleware('mobile.can:desk');
         });
     });
 });

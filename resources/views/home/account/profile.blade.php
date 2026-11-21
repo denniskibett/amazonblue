@@ -34,7 +34,7 @@
             @endforeach
           </dl>
           @if (in_array($user->kyc_status, [null, 'rejected'], true))
-            <a class="btn btn-primary btn-block" href="{{ route('kyc.personal') }}" style="margin-top:14px">{{ $user->kyc_status === 'rejected' ? 'Update and resubmit' : 'Complete verification' }}</a>
+            <a class="btn btn-primary btn-block" href="{{ route('kyc.start') }}" style="margin-top:14px">{{ $user->kyc_status === 'rejected' ? 'Update and resubmit' : 'Complete verification' }}</a>
           @endif
         </section>
 

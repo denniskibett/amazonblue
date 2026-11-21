@@ -34,6 +34,11 @@ class AuthController extends Controller
         }
         RateLimiter::clear($key);
 
+        // only accounts the app has something for (owner, 21 Nov 2026: RBAC); the rest use the website
+        if (! \App\Support\MobileAccess::for($user)) {
+            throw ValidationException::withMessages(['login' => 'This app is for Aimzone clients, partners and loan staff. Please use the website.']);
+        }
+
         // one token per install: signing in again on the same phone replaces it
         $name = 'mobile:' . $data['install_id'];
         $user->tokens()->where('name', $name)->delete();

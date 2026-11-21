@@ -34,7 +34,7 @@
         <div>
           <b>Your verification needs attention</b>
           {{ $user->kyc_review_notes ?: 'Please check your details and submit again.' }}
-          <div><a class="btn btn-primary" href="{{ route('kyc.personal') }}">Update and resubmit</a></div>
+          <div><a class="btn btn-primary" href="{{ route('kyc.start') }}">Update and resubmit</a></div>
         </div>
       </div>
     @else
@@ -47,7 +47,7 @@
           <div class="a-steps" aria-label="{{ $stepsDone }} of {{ count($kycSteps) }} steps done">
             @foreach ($kycSteps as $step)<i class="{{ $step['complete'] ? 'on' : '' }}"></i>@endforeach
           </div>
-          <div><a class="btn btn-primary" href="{{ route('kyc.personal') }}">{{ $stepsDone ? 'Continue' : ($isExistingClient ? 'Confirm my details' : 'Start verification') }}</a></div>
+          <div><a class="btn btn-primary" href="{{ route('kyc.start') }}">{{ $stepsDone ? 'Continue' : ($isExistingClient ? 'Confirm my details' : 'Start verification') }}</a></div>
         </div>
       </div>
     @endif
@@ -102,7 +102,7 @@
         @if (empty($blockers))
           <a class="btn btn-light" href="{{ route('account.borrow') }}">Borrow now</a>
         @else
-          <a class="btn btn-light" href="{{ $isVerified ? route('account.borrow') : route('kyc.personal') }}">{{ $isVerified ? 'See why' : 'Verify to borrow' }}</a>
+          <a class="btn btn-light" href="{{ $isVerified ? route('account.borrow') : route('kyc.start') }}">{{ $isVerified ? 'See why' : 'Verify to borrow' }}</a>
         @endif
         <a class="btn btn-glass" href="{{ route('account.loans') }}">My loans</a>
       </div>
@@ -136,7 +136,7 @@
   <div class="a-actions">
     <a class="a-action" href="{{ route('account.borrow') }}"><span class="chip"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></span>Borrow</a>
     <a class="a-action" href="{{ route('account.loans') }}"><span class="chip sage"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" /></svg></span>My loans</a>
-    <a class="a-action" href="{{ $isVerified ? route('account.profile') : route('kyc.personal') }}"><span class="chip sand"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z" /></svg></span>{{ $isVerified ? 'Verified' : 'Verify' }}</a>
+    <a class="a-action" href="{{ $isVerified ? route('account.profile') : route('kyc.start') }}"><span class="chip sand"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z" /></svg></span>{{ $isVerified ? 'Verified' : 'Verify' }}</a>
     <a class="a-action" href="{{ route('account.help') }}"><span class="chip apricot"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1.1-4.9A8 8 0 1 1 21 12z" /></svg></span>Help</a>
   </div>
 

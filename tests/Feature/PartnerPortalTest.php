@@ -20,10 +20,12 @@ use Tests\TestCase;
 class PartnerPortalTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\ClearsKycHold;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->clearKycHold();
         $this->seed(RoleSeeder::class);
     }
 

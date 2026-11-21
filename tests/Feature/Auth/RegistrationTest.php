@@ -31,7 +31,7 @@ class RegistrationTest extends TestCase
 
         $this->assertAuthenticated();
         $this->assertTrue(auth()->user()->hasRole('borrower'));
-        $response->assertRedirect(route('kyc.personal', absolute: false));
+        $response->assertRedirect(route('kyc.start', absolute: false));
     }
 
     public function test_business_registration_is_not_open_yet(): void
