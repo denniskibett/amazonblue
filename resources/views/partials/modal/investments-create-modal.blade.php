@@ -132,6 +132,7 @@
                                         <option value="house">House: AC's own money</option>
                                         <option value="loan_share">Loan share: a share of the interest on the loans it funds (a broker: 100 − their broker rate)</option>
                                         <option value="fixed_rate">Fixed rate: the interest rate below is % a month on the committed amount (whole calendar months)</option>
+                                        <option value="fixed_return">Fixed return: set on the partner's line (what they earn)</option>
                                     </select>
                                 </div>
 
@@ -1601,7 +1602,7 @@ document.addEventListener('alpine:init', function() {
                     status: investment.status || 'pipeline',
                     stage: investment.stage || '',
                     milestones: investment.milestones || '',
-                    notes: typeof investment.notes === 'object' ? JSON.stringify(investment.notes) : (investment.notes || ''),
+                    notes: '', // a new note only; saved notes are kept on the investment (audit, 20 Nov 2026)
                     funding_partner_id: '',
                     funding_amount: '',
                     fundings: this.fundings

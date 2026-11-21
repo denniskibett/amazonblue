@@ -150,7 +150,8 @@ class KycReviewController extends Controller
             'kyc_reviewed_by' => $request->user()->id,
             'kyc_reviewed_at' => now(),
             'kyc_review_notes' => $data['notes'],
-            'kyc_checks' => [
+            // keep the AML screening: without it the resubmitted KYC cannot be approved (audit, 20 Nov 2026)
+            'kyc_checks' => (is_array($user->kyc_checks) ? array_intersect_key($user->kyc_checks, ['aml' => true]) : []) + [
                 'next_of_kin' => $request->boolean('called_next_of_kin'),
                 'guarantor' => $request->boolean('called_guarantor'),
             ],

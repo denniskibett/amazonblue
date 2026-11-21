@@ -710,7 +710,8 @@ class HomeController extends Controller
         }
 
         $this->keepSaved($request, $user, $this->contactsSaved($user));
-        $normalise = fn ($phone) => preg_replace('/[\s-]/', '', (string) $phone);
+        // one stored format (+2547…) so "not your own number" compares like with like (audit, 20 Nov 2026)
+        $normalise = fn ($phone) => (string) \App\Support\Phone::normal(preg_replace('/[\s-]/', '', (string) $phone));
         $request->merge([
             'kin_phone' => $normalise($request->input('kin_phone')),
             'guarantor_phone' => $normalise($request->input('guarantor_phone')),

@@ -476,9 +476,12 @@ class LoanController extends Controller
         if ($request->has('consent') && $request->consent === '1' && !$loan->consent) {
             $validated['consent'] = true;
             $validated['consent_date'] = now();
-        } elseif (!$request->has('consent') || $request->consent !== '1') {
+        } elseif ($request->has('consent') && $request->consent !== '1') {
             $validated['consent'] = false;
             $validated['consent_date'] = null;
+        } else {
+            // a form that does not carry the consent leaves it as signed (audit, 20 Nov 2026)
+            unset($validated['consent']);
         }
 
         // Handle signature update if provided
@@ -1459,7 +1462,8 @@ class LoanController extends Controller
     }
 
     /**
-     * Show rollover statement
+     * The old rollover statement (its view never existed, so it was a 500): every period, rollover and payment is on
+     * the loan statement, so this address now opens that (20 Nov 2026).
      */
     public function rolloverStatement(Loan $loan)
     {
@@ -1468,9 +1472,7 @@ class LoanController extends Controller
         }
         $this->authorizeLoanView(auth()->user(), $loan);
 
-        $statement = $loan->getRolloverStatement();
-        
-        return view('loans.rollover-statement', compact('loan', 'statement'));
+        return redirect()->route('users.loans.statement', [$loan->user_id, $loan->id]);
     }
 
     /**

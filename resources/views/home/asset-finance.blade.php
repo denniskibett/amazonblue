@@ -27,7 +27,7 @@
           <div class="fact"><b>3 months</b><span>Term</span></div>
         </div>
         <div class="actions">
-          <a class="btn btn-primary" href="{{ route('register') }}">Apply now</a
+          <a class="btn btn-primary" href="{{ Route::has('finance.start') ? route('finance.start', 'asset') : route('register') }}">Apply now</a
           ><a class="btn btn-ghost" href="{{ route('site.page', 'contact') }}">Talk to us</a>
         </div>
       </div>
@@ -212,7 +212,7 @@
         <h2>Ready when you need us.</h2>
         <p>Apply in minutes, or talk to a relationship officer first.</p>
         <div class="actions actions-center">
-          <a class="btn btn-light" href="{{ route('register') }}">Get started</a
+          <a class="btn btn-light" href="{{ Route::has('finance.start') ? route('finance.start', 'asset') : route('register') }}">Get started</a
           ><a class="btn btn-outline-light" href="{{ route('site.page', 'contact') }}">Talk to us</a>
         </div>
         <span class="small-lock"

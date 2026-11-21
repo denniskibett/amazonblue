@@ -25,7 +25,7 @@
           <div class="fact"><b>LC, PO, commodity</b><span>Instruments</span></div>
         </div>
         <div class="actions">
-          <a class="btn btn-primary" href="{{ route('register') }}">Make an enquiry</a
+          <a class="btn btn-primary" href="{{ Route::has('finance.start') ? route('finance.start', 'trade') : route('register') }}">Apply for trade finance</a
           ><a class="btn btn-ghost" href="{{ route('site.page', 'contact') }}">Talk to us</a>
         </div>
       </div>
@@ -197,7 +197,7 @@
         <h2>Ready when you need us.</h2>
         <p>Apply in minutes, or talk to a relationship officer first.</p>
         <div class="actions actions-center">
-          <a class="btn btn-light" href="{{ route('register') }}">Get started</a
+          <a class="btn btn-light" href="{{ Route::has('finance.start') ? route('finance.start', 'trade') : route('register') }}">Get started</a
           ><a class="btn btn-outline-light" href="{{ route('site.page', 'contact') }}">Talk to us</a>
         </div>
         <span class="small-lock"

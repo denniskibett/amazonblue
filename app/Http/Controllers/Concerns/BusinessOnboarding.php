@@ -152,6 +152,10 @@ trait BusinessOnboarding
         $member = $request->filled('member_id') ? $business->members()->whereKey($request->integer('member_id'))->firstOrFail() : null;
         $isApplicant = $member && $member->user_id === $business->owner_user_id;
 
+        // "0712 345 678" (the form's own example) is accepted and stored as +2547… (audit, 20 Nov 2026)
+        if ($request->filled('phone')) {
+            $request->merge(['phone' => \App\Support\Phone::normal($request->input('phone'))]);
+        }
         $data = $request->validate([
             'full_name' => [Rule::requiredIf(! $isApplicant), 'nullable', 'string', 'max:191'],
             'role' => ['required', Rule::in(array_keys(BusinessMember::ROLES))],
@@ -449,6 +453,10 @@ trait BusinessOnboarding
             'website' => $request->filled('website') && ! preg_match('#^https?://#i', $request->input('website')) ? 'https://' . trim($request->input('website')) : $request->input('website'),
         ]);
 
+        // "0712 345 678" (the form's own example) is accepted and stored as +2547… (audit, 20 Nov 2026)
+        if ($request->filled('phone')) {
+            $request->merge(['phone' => \App\Support\Phone::normal($request->input('phone'))]);
+        }
         $data = $request->validate([
             'registration_type' => ['required', Rule::in(array_keys(Business::REGISTRATION_TYPES))],
             'legal_name' => ['required', 'string', 'max:191'],

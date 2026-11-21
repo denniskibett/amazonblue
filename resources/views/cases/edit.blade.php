@@ -31,7 +31,7 @@
                 <select name="status_id" class="{{ $input }}">
                     @foreach($statuses as $status)
                         {{-- write-off has its own action on the case page --}}
-                        @continue($status->slug === 'written_off' && $case->status_id !== $status->id)
+                        @continue(in_array($status->slug, ['written_off', 'recovered'], true) && $case->status_id !== $status->id)
                         <option value="{{ $status->id }}" @selected(old('status_id', $case->status_id) == $status->id)>{{ $status->name }}</option>
                     @endforeach
                 </select>

@@ -142,6 +142,14 @@ class RepaymentController extends Controller
             'notes' => 'nullable|string',
             'kind' => ['nullable', \Illuminate\Validation\Rule::in(\App\Services\CustomerWallets::KINDS)],
         ]);
+        // a form that does not send the mode or references keeps what is saved instead of clearing them (audit, 20 Nov 2026)
+        if (! $request->has('mode')) {
+            $request->merge(array_filter([
+                'mode' => $repayment->mode, 'bank_ref' => $repayment->bank_ref ?? null, 'mpesa_ref' => $repayment->mpesa_ref ?? null,
+                'bank_code' => $repayment->bank_code ?? null, 'bank_other' => $repayment->bank_name ?? null,
+                'client_bank_code' => $repayment->client_bank_code ?? null, 'client_bank_other' => $repayment->client_bank_name ?? null, 'kind' => $request->input('kind', $repayment->kind ?? null),
+            ], fn ($v) => $v !== null && $v !== ''));
+        }
         $validated = array_merge($validated, \App\Support\PaymentModes::fromRequest($request, 'in', 'repayments', $repayment->loan_id, $repayment->id));
 
         // Recalculate processing fee

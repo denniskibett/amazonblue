@@ -123,19 +123,25 @@
                                 </select>
                             </div>
 
-                            @if(auth()->user()->hasRole('admin'))
+                            @if(auth()->user()->hasAnyRole(['super-admin', 'admin']))
                             <div class="col-span-1">
                                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                                     Role *
                                 </label>
                                 <select name="role" required class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
-                                    <option value="borrower" {{ old('role', $user->role) == 'borrower' ? 'selected' : '' }}>Borrower</option>
-                                    <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Admin</option>
-                                    <option value="teller" {{ old('role', $user->role) == 'teller' ? 'selected' : '' }}>Teller</option>
+                                    @php
+                                    // every role, the user's current one selected: a partner or manager is never turned into a borrower by a save (audit, 20 Nov 2026)
+                                    $roleNow = old('role', $user->primaryRole() ?? $user->role);
+                                    $roleNames = \Spatie\Permission\Models\Role::where('guard_name', 'web')->orderBy('name')->pluck('name')
+                                        ->reject(fn ($n) => ($n === 'super-admin' && ! auth()->user()->hasRole('super-admin')) || $n === 'collector');
+                                  @endphp
+                                  @foreach ($roleNames as $rn)
+                                    <option value="{{ $rn }}" @selected($roleNow === $rn)>{{ ucwords(str_replace('-', ' ', $rn)) }}</option>
+                                  @endforeach
                                 </select>
                             </div>
                             @else
-                            <input type="hidden" name="role" value="{{ $user->role }}">
+                            <input type="hidden" name="role" value="{{ $user->primaryRole() ?? $user->role }}">
                             @endif
 
                             <div class="col-span-1">
@@ -329,6 +335,11 @@
                                     <option value="casual" {{ old('income_type', $user->borrower->income_type ?? '') == 'casual' ? 'selected' : '' }}>Casual Worker</option>
                                     <option value="student" {{ old('income_type', $user->borrower->income_type ?? '') == 'student' ? 'selected' : '' }}>Student</option>
                                     <option value="unemployed" {{ old('income_type', $user->borrower->income_type ?? '') == 'unemployed' ? 'selected' : '' }}>Unemployed</option>
+                                    @php $savedIncome = $user->borrower->income_type ?? null; @endphp
+                                    @if ($savedIncome && ! in_array($savedIncome, ['employed', 'self_employed', 'business', 'contract', 'freelance', 'casual', 'student', 'unemployed'], true))
+                                    {{-- an income type saved elsewhere (e.g. "other" from KYC) stays as it is (audit, 20 Nov 2026) --}}
+                                    <option value="{{ $savedIncome }}" @selected(old('income_type', $savedIncome) === $savedIncome)>{{ ucfirst(str_replace('_', ' ', $savedIncome)) }}</option>
+                                    @endif
                                 </select>
                             </div>
 

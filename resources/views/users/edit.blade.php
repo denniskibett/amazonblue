@@ -270,8 +270,9 @@
                                     :class="isOptionSelected && 'text-gray-800 dark:text-white/90'"
                                     @change="isOptionSelected = true"
                                 >
-                                    <option value="0" {{ optional($user->borrower)->client_type == 0 ? 'selected' : '' }}>Our Client</option>
-                                    <option value="1" {{ optional($user->borrower)->client_type == 1 ? 'selected' : '' }}>Broker Client</option>
+                                    @php $ct = old('client_type', in_array(optional($user->borrower)->client_type, ['1', 'non_individual'], true) ? 'non_individual' : 'individual'); @endphp
+                                    <option value="individual" @selected($ct === 'individual')>Individual</option>
+                                    <option value="non_individual" @selected($ct === 'non_individual')>Business or organisation</option>
                                 </select>
                                 <span class="pointer-events-none absolute top-1/2 right-4 z-30 -translate-y-1/2 text-gray-500 dark:text-gray-400">
                                     <svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

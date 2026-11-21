@@ -273,7 +273,8 @@ Route::middleware(['auth', 'verified', 'staff'])->group(function () {
             ->name('loans.statement')
             ->middleware('permission:view loans');
 
-        Route::get('/loans/{loan}/edit', [LoanController::class, 'edit'])
+        // the user is in the path but LoanController@edit takes only the loan: open the one edit page (20 Nov 2026)
+        Route::get('/loans/{loan}/edit', fn ($user, \App\Models\Loan $loan) => redirect()->route('loans.edit', $loan))
             ->name('loans.edit')
             ->middleware('permission:edit loans');
         

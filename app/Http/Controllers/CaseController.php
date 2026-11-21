@@ -613,10 +613,13 @@ public function show(string $id)
                 ->withInput();
         }
 
-        // Writing off has its own action (reason, amount, loan status), so the edit form cannot do it.
-        if ($request->filled('status_id') && (int) $request->status_id !== (int) $case->status_id
-            && RecoveryStatus::whereKey($request->status_id)->value('slug') === 'written_off') {
-            $msg = 'Use "Write off" on the case page to write a case off.';
+        // Writing off and marking recovered have their own actions (the write-off records the loss; "recovered"
+        // checks the loan owes nothing), so the edit form can do neither: it would mark a loan repaid while it
+        // still owes (audit, 20 Nov 2026).
+        $target = $request->filled('status_id') && (int) $request->status_id !== (int) $case->status_id
+            ? RecoveryStatus::whereKey($request->status_id)->value('slug') : null;
+        if (in_array($target, ['written_off', 'recovered'], true)) {
+            $msg = $target === 'written_off' ? 'Use "Write off" on the case page to write a case off.' : 'Use "Mark as recovered" on the case page: it checks the loan owes nothing first.';
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $msg, 'errors' => ['status_id' => [$msg]]], 422);
             }

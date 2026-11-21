@@ -203,6 +203,11 @@ class ProfileController extends Controller
             }
         }
         
+        // the uploaded photo was stored but never linked to the user (audit, 20 Nov 2026)
+        if (! empty($validatedData['profile_photo_path'])) {
+            $userData['profile_photo_path'] = $validatedData['profile_photo_path'];
+        }
+
         if (!empty($userData)) {
             $user->fill($userData);
             $user->save();

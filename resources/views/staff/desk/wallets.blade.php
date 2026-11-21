@@ -7,7 +7,7 @@
   @include('staff.desk._header', ['title' => 'Wallets & reconciliation', 'sub' => 'Customer wallets checked against the loan tables and the partner journal, run now. Same checks as php artisan wallets:check.'])
 
   @if ($problems === 0)
-    <x-staff.alert type="ok" class="mb-6" title="All customer wallets reconcile">{{ $borrowers['checked'] }} borrower wallet(s) and {{ $partners['checked'] }} partner wallet(s) checked. Wallets match the journal@if (config('lending.split.enabled', false)), and repayments are split to partners as they come in@endif.</x-staff.alert>
+    <x-staff.alert type="ok" class="mb-6" title="All customer wallets reconcile">{{ $borrowers['checked'] }} borrower wallet(s) and {{ $partners['checked'] }} partner wallet(s) checked. Wallets match the journal{{ config('lending.split.enabled', false) ? ', and repayments are split to partners as they come in' : '' }}.</x-staff.alert>
   @else
     <x-staff.alert type="warn" class="mb-6" title="{{ $problems }} item(s) need attention">Repairs are run by a developer from the command line after review (wallets:check --repair-partners); there is no repair button here.</x-staff.alert>
   @endif

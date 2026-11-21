@@ -26,6 +26,16 @@
         </div>
 
         <div class="mb-4">
+            <label for="transaction" class="block text-sm font-medium text-gray-700">Reference (M-Pesa code or bank reference)</label>
+            <input type="text" id="transaction" name="transaction" maxlength="255"
+                   value="{{ old('transaction', $disbursement->transaction) }}"
+                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500" required>
+            @error('transaction')
+                <span class="text-red-500 text-sm">{{ $message }}</span>
+            @enderror
+        </div>
+
+        <div class="mb-4">
             <label for="disburse_date" class="block text-sm font-medium text-gray-700">Disburse Date</label>
             <input type="date" id="disburse_date" name="disburse_date" 
                    value="{{ old('disburse_date', $disbursement->disburse_date) }}" 

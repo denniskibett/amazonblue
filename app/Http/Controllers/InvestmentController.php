@@ -85,7 +85,7 @@ class InvestmentController extends Controller
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:commodity,equity,bond,real_estate,startup,infrastructure,technology,agriculture,energy,other',
             'facility_type' => 'nullable|in:short_term,long_term',
-            'return_type' => 'nullable|in:house,loan_share,fixed_rate',
+            'return_type' => 'nullable|in:house,loan_share,fixed_rate,fixed_return',
             'duration_days' => 'nullable|integer|min:1',
             'interest_rate' => 'nullable|numeric|min:0|max:100',
             'sector' => 'nullable|string|max:100',
@@ -426,7 +426,7 @@ class InvestmentController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'type' => 'sometimes|required|string|in:commodity,equity,bond,real_estate,startup,infrastructure,technology,agriculture,energy,other',
             'facility_type' => 'nullable|in:short_term,long_term',
-            'return_type' => 'nullable|in:house,loan_share,fixed_rate',
+            'return_type' => 'nullable|in:house,loan_share,fixed_rate,fixed_return',
             'duration_days' => 'nullable|integer|min:1',
             'interest_rate' => 'nullable|numeric|min:0|max:100',
             'country' => 'sometimes|required|string|max:100',
@@ -455,8 +455,10 @@ class InvestmentController extends Controller
         try {
             DB::beginTransaction();
 
+            // only fields the form actually filled: the list's edit modal does not carry every field (maturity
+            // date, exit date, risk rating...), and an empty one must not wipe what is saved (audit, 20 Nov 2026)
             $investment->update(array_merge(
-                $request->only([
+                array_filter($request->only([
                     'name', 'type', 'facility_type', 'return_type', 'duration_days', 'interest_rate',
                     'sector', 'sub_sector', 'country', 'region', 'city',
                     'company_name', 'registration_number', 'incorporation_date', 'legal_structure',
@@ -465,7 +467,7 @@ class InvestmentController extends Controller
                     'initial_amount', 'current_value', 'expected_return',
                     'purchase_date', 'maturity_date', 'exit_date',
                     'risk_rating', 'status', 'stage'
-                ]),
+                ]), fn ($v) => $v !== null && $v !== ''),
                 ['updated_by' => auth()->id()]
             ));
 

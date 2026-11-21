@@ -17,6 +17,11 @@
       $tranches = $svc->tranches($portfolio['partner']);
       $treasury = $returns['corporate'] ? $svc->treasury($portfolio['partner'], app(\App\Services\PartnerAccount::class)) : null;
   }
+  // a partner login not yet linked to a partner record has no portfolio: empty figures, not an error (20 Nov 2026)
+  $returns ??= null;
+  $navChart ??= [];
+  $tranches ??= [];
+  $treasury ??= null;
   $kes = fn ($v) => 'KES ' . number_format((float) $v, 0);
   $tile = fn ($d) => '<span class="chip"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="' . $d . '" /></svg></span>';
   // NAV chart points (0..100 across, 0..100 down)

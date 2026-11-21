@@ -74,8 +74,8 @@
             <div class="mb-4">
                 <label for="client_type" class="block text-gray-700">Client Type</label>
                 <select name="client_type" id="client_type" class="w-full px-4 py-2 border rounded-lg">
-                    <option value="0">Our Client</option>
-                    <option value="1">Introduced client</option>
+                    <option value="individual" @selected(old('client_type', 'individual') === 'individual')>Individual</option>
+                    <option value="non_individual" @selected(old('client_type') === 'non_individual')>Business or organisation</option>
                 </select>
             </div>
             <div class="mb-4">

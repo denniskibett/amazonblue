@@ -93,6 +93,13 @@
                 @endif
             </div>
 
+            <!-- Reason (required by the update; prefilled so a save never loses it) -->
+            <div>
+                <label for="reason" class="block mb-1 font-semibold">What the loan is for</label>
+                <textarea name="reason" id="reason" rows="2" minlength="10" required class="w-full p-2 border rounded-md">{{ old('reason', $loan->reason) }}</textarea>
+                @error('reason')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
+            </div>
+
             <!-- Broker Status -->
             <div>
                 <label for="broker_status" class="block mb-1 font-semibold">Broker Status</label>
@@ -168,7 +175,7 @@
                             <td class="px-6 py-4">{{ $repayment->repayment_date->format('M d, Y') }}</td>
                             <td class="px-6 py-4">KES {{ number_format($repayment->amount, 2) }}</td>
                             <td class="px-6 py-4 font-mono">{{ $repayment->transaction }}</td>
-                            <td class="px-6 py-4"><a href="{{ route('repayments.edit', $loan->id) }}">Edit</a>
+                            <td class="px-6 py-4"><a href="{{ route('repayments.edit', $repayment->id) }}">Edit</a>
                         </tr>
                     @endforeach
                 </tbody>

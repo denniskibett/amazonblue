@@ -108,6 +108,31 @@ class SystemController extends Controller
             'meta_keywords', 'pagination_limit',
         ]); // custom_css / custom_js no longer accepted: stored, never rendered, and custom JS is a stored-XSS risk (D S5)
 
+        // The other sections (company, security, notifications, integrations, backup) read from the `settings` JSON,
+        // but nothing wrote them, so every save was lost (audit, 20 Nov 2026). Store each where the page reads it.
+        $map = [
+            'company_about' => ['company', 'about'], 'company_address' => ['company', 'address'], 'company_email' => ['company', 'email'],
+            'company_mission' => ['company', 'mission'], 'company_phone' => ['company', 'phone'], 'company_values' => ['company', 'values'],
+            'company_vision' => ['company', 'vision'], 'company_website' => ['company', 'website'], 'currency_position' => ['currency_position'],
+            'email_notifications' => ['notifications', 'email_notifications'], 'sms_notifications' => ['notifications', 'sms_notifications'],
+            'push_notifications' => ['notifications', 'push_notifications'], 'notification_sound' => ['notifications', 'notification_sound'],
+            'google_analytics' => ['integrations', 'google_analytics'], 'google_maps_key' => ['integrations', 'google_maps_key'],
+            'two_factor_auth' => ['security', 'two_factor_auth'], 'login_attempts' => ['security', 'login_attempts'],
+            'session_timeout' => ['security', 'session_timeout'], 'password_expiry' => ['security', 'password_expiry'],
+            'auto_backup' => ['backup', 'auto_backup'], 'backup_frequency' => ['backup', 'backup_frequency'],
+            'backup_retention' => ['backup', 'backup_retention'], 'backup_to_cloud' => ['backup', 'backup_to_cloud'],
+        ];
+        $flags = ['email_notifications', 'sms_notifications', 'push_notifications', 'notification_sound', 'two_factor_auth', 'auto_backup', 'backup_to_cloud'];
+        $settings = (array) ($system->settings ?? []);
+        foreach ($map as $field => $path) {
+            if (! $request->has($field)) {
+                continue;
+            }
+            $value = in_array($field, $flags, true) ? $request->boolean($field) : mb_substr((string) $request->input($field), 0, 2000);
+            \Illuminate\Support\Arr::set($settings, implode('.', $path), $value);
+        }
+        $data['settings'] = $settings;
+
         // Handle location data
         if ($request->has('location_country') || $request->has('location_city')) {
             $location = [
@@ -117,7 +142,7 @@ class SystemController extends Controller
                 'latitude' => $request->input('location_latitude', ''),
                 'longitude' => $request->input('location_longitude', ''),
             ];
-            $data['location'] = json_encode($location);
+            $data['location'] = $location; // the model casts it to JSON; encoding it here stored it twice (audit, 20 Nov 2026)
         }
 
         // Handle image uploads - CORRECTED PATH

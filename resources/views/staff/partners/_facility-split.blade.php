@@ -114,7 +114,7 @@
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label class="text-theme-xs text-gray-600 dark:text-gray-400">Note<input name="note" maxlength="500" value="{{ old('note', $split?->notes) }}" placeholder="What was agreed, and with whom" class="{{ $input_ }} mt-1"></label>
         @if ($loan->broker_status)
-          <label class="flex items-center gap-2 self-end pb-3 text-theme-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="drop_broker" value="1" class="size-4 rounded border-gray-300"> It is a partner split: stop the broker fee and reverse the ones already taken</label>
+          <label class="flex items-center gap-2 self-end pb-3 text-theme-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="drop_broker" value="1" @checked(old('drop_broker')) class="size-4 rounded border-gray-300"> It is a partner split: stop the broker fee and reverse the ones already taken</label>
         @endif
       </div>
 

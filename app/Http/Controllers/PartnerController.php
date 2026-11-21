@@ -140,6 +140,7 @@ class PartnerController extends Controller
             'type' => 'required|in:individual,business,company,corporate,partner',
             'status' => 'required|in:active,inactive,suspended',
             'profit_share_rate' => 'nullable|numeric|min:0|max:100',
+            'broker_rate' => 'nullable|numeric|min:0|max:100',
             'max_loan_to_value' => 'nullable|numeric|min:0|max:100',
             'risk_tolerance' => 'required|in:conservative,moderate,aggressive',
             'bank_account_name' => 'nullable|string|max:255',
@@ -171,6 +172,8 @@ class PartnerController extends Controller
                 'type' => $request->type,
                 'status' => $request->status,
                 'profit_share_rate' => $request->profit_share_rate ?? 0,
+                // the introducer rate typed on the add-partner form was never saved (audit, 20 Nov 2026)
+                'broker_rate' => $request->filled('broker_rate') ? (float) $request->broker_rate : 40,
                 'max_loan_to_value' => $request->max_loan_to_value ?? 75,
                 'risk_tolerance' => $request->risk_tolerance,
                 'bank_account_name' => $request->bank_account_name,
