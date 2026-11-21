@@ -8,7 +8,7 @@
 #   1. raise it: X.Y.Z for what people notice, +N by one for every build that leaves this Mac;
 #   2. add a "## X.Y.Z+N (date)" section to CHANGELOG.md saying what changed;
 #   3. commit.
-# Building reads dart_defines.live.json (API address and key; never in git, see dart_defines.example.json).
+# Apps with a dart_defines.example.json build with dart_defines.live.json (API address and key; never in git).
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -20,10 +20,14 @@ TAG="mobile-v$VERSION"
 [ -z "$(git status --porcelain)" ] || fail "uncommitted changes: commit them first"
 git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && fail "$TAG already exists: raise the version in pubspec.yaml (at least +N)"
 grep -q "^## $VERSION " CHANGELOG.md || fail "CHANGELOG.md has no '## $VERSION (date)' section"
-[ -f dart_defines.live.json ] || fail "dart_defines.live.json missing (copy dart_defines.example.json and fill it in)"
+DEFINES=()
+if [ -f dart_defines.example.json ]; then
+  [ -f dart_defines.live.json ] || fail "dart_defines.live.json missing (copy dart_defines.example.json and fill it in)"
+  DEFINES=(--dart-define-from-file=dart_defines.live.json)
+fi
 
 flutter analyze --no-fatal-infos
-flutter build apk --release --split-per-abi --dart-define-from-file=dart_defines.live.json
+flutter build apk --release --split-per-abi ${DEFINES[@]+"${DEFINES[@]}"}
 
 NOTES=$(awk -v v="## $VERSION " 'index($0, v) == 1 {on=1; next} /^## / {on=0} on' CHANGELOG.md | sed '/^\s*$/d')
 git tag -a "$TAG" -m "$TAG" -m "$NOTES"
