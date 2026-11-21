@@ -7,6 +7,7 @@ Every build that leaves this Mac has a section here and a tag `mobile-v<version>
 - Signed with the Aimzone release key instead of the build Mac's debug key, so every future update installs over it.
 - One-time step: phones with 0.2.0 or older must uninstall the old app first (Android will not replace an app signed
   with a different key). Nothing is lost; sign in again.
+- Published on loans.sharet.africa/app (arm64, sha256 cfed6fbb…af8e).
 
 ## 0.2.0+3 (21 Nov 2026)
 
