@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api.dart';
 import 'device.dart';
 
-/// The signed-in borrower on this phone. The token sits in the phone's keystore; the server decides everything
+/// The signed-in client or staff member on this phone. The token sits in the phone's keystore; the server decides everything
 /// about money (limit, blockers, what is due), the app only shows it.
 class Session extends ChangeNotifier {
   static const _store = FlutterSecureStorage();
@@ -19,6 +19,15 @@ class Session extends ChangeNotifier {
   Map<String, dynamic>? get openLoan => me?['open_loan'] as Map<String, dynamic>?;
   List get blockers => me?['blockers'] as List? ?? [];
   int get limit => ((me?['limit'] as Map?)?['amount'] as num?)?.toInt() ?? 0;
+
+  /// What this account may do in the app (server: App\Support\MobileAccess). The server checks every call too;
+  /// the app only uses this to choose its tabs (owner, 21 Nov 2026: RBAC).
+  List<String> get can => ((user['can'] as List?) ?? const []).map((e) => '$e').toList();
+  bool may(String capability) => can.contains(capability);
+
+  /// On hold until KYC is finished (owner, 21 Nov 2026): state, what is missing, and the website link to finish.
+  Map<String, dynamic> get kyc => Map<String, dynamic>.from(me?['kyc'] as Map? ?? const {});
+  bool get onHold => kyc['on_hold'] == true;
 
   Future<void> start() async {
     await Device.load();

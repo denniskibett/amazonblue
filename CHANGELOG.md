@@ -2,6 +2,13 @@
 
 Every build that leaves this Mac has a section here and a tag `mobile-v<version>`.
 
+## 0.2.0+3 (21 Nov 2026)
+
+- Each account sees its own screens (roles decided by the server): borrowers Home, Loans, Statement; partners
+  Portfolio (read only); loan staff the Desk queue counts. Accounts the app has nothing for cannot sign in.
+- Account on hold until verification (KYC) is finished: what is done, what is still needed, and a link to finish.
+- Published on loans.sharet.africa/app (arm64, sha256 d40c6c28…2f08).
+
 ## 0.1.1+2 (15 Nov 2026)
 
 - TEST ribbon on test builds.

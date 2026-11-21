@@ -8,10 +8,13 @@ import '../ui/widgets.dart';
 import 'account.dart';
 import 'borrow.dart';
 import 'consent.dart';
+import 'desk.dart';
 import 'loan.dart';
+import 'partner.dart';
 import 'statement.dart';
 
-/// Signed in: Home, Loans, Statement, Account along the bottom.
+/// Signed in. The tabs follow what the account may do (owner, 21 Nov 2026: RBAC; server App\Support\MobileAccess):
+/// borrowers Home, Loans, Statement; partners Portfolio; loan staff Desk; everyone Account.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
   @override
@@ -28,17 +31,29 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    const tabs = [('home', 'Home'), ('banknotes', 'Loans'), ('document-text', 'Statement'), ('user-circle', 'Account')];
+  Widget build(BuildContext context) => ListenableBuilder(listenable: session, builder: (context, _) => _shell());
+
+  Widget _shell() {
+    final tabs = <(String, String, Widget)>[
+      if (session.may('loans')) ('home', 'Home', const HomeTab()),
+      if (session.may('portfolio')) ('wallet', 'Portfolio', const PartnerTab()),
+      if (session.may('desk')) ('check-circle', 'Desk', const DeskTab()),
+      if (session.may('loans')) ('banknotes', 'Loans', const LoansTab()),
+      if (session.may('statement')) ('document-text', 'Statement', const StatementTab()),
+      ('user-circle', 'Account', const AccountTab()),
+    ];
+    // never past the end when the tabs change (a role added or removed since the last refresh)
+    final index = _tab < tabs.length ? _tab : 0;
+    if (tabs.length == 1) return Scaffold(body: tabs.first.$3);
     return Scaffold(
-      body: IndexedStack(index: _tab, children: const [HomeTab(), LoansTab(), StatementTab(), AccountTab()]),
+      body: IndexedStack(index: index, children: [for (final t in tabs) t.$3]),
       bottomNavigationBar: NavigationBar(
         backgroundColor: Colors.white,
         indicatorColor: C.royalTint,
-        selectedIndex: _tab,
+        selectedIndex: index,
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: [
-          for (final (icon, label) in tabs)
+          for (final (icon, label, _) in tabs)
             NavigationDestination(icon: HIcon(icon, color: C.slate), selectedIcon: HIcon(icon, color: C.blue), label: label),
         ],
       ),
@@ -55,7 +70,8 @@ class HomeTab extends StatelessWidget {
         builder: (context, _) {
           final loan = session.openLoan;
           final verified = session.me?['verified'] == true;
-          final blockers = session.blockers.cast<Map>().where((b) => b['title'] != 'You already have a loan').toList();
+          // the hold card says it all while on hold; otherwise what stops them borrowing
+          final blockers = session.onHold ? const <Map>[] : session.blockers.cast<Map>().where((b) => b['title'] != 'You already have a loan').toList();
           var i = 0;
           Widget fx(Widget w) => FadeIn(index: i++, child: w);
           return RefreshIndicator(
@@ -74,22 +90,19 @@ class HomeTab extends StatelessWidget {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Hello, ${session.firstName}', style: sora(22), maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
-                  Text(verified ? 'Your account is verified' : 'Finish verifying to borrow', style: fig(13, c: C.slate)),
+                  Text(session.onHold ? 'Your account is on hold' : (verified ? 'Your account is verified' : 'Finish verifying to borrow'), style: fig(13, c: C.slate)),
                 ])),
               ])),
               const SizedBox(height: 18),
               // owner, 15 Nov 2026: with a loan out, home is that loan; the borrow card only when nothing is out
-              if (loan != null) fx(_CurrentLoan(loan: loan)) else fx(_LimitCard(limit: session.limit, canBorrow: session.blockers.isEmpty)),
+              if (session.onHold) ...[fx(const KycHoldCard()), const SizedBox(height: 14)],
+              if (loan != null) fx(_CurrentLoan(loan: loan)) else if (!session.onHold) fx(_LimitCard(limit: session.limit, canBorrow: session.blockers.isEmpty)),
               const SizedBox(height: 14),
               for (final b in blockers) ...[
                 fx(Notice(title: '${b['title']}', message: '${b['message']}')),
                 const SizedBox(height: 10),
               ],
-              if (!verified) ...[
-                fx(PillButton('Verify on the website', outline: true, icon: 'arrow-top-right-on-square',
-                    onPressed: () => launchUrl(Uri.parse('https://loans.sharet.africa/kyc'), mode: LaunchMode.externalApplication))),
-                const SizedBox(height: 14),
-              ],
+
               const SizedBox(height: 6),
               fx(Text('More from Aimzone', style: sora(16))),
               const SizedBox(height: 10),
@@ -265,4 +278,64 @@ class _LoansTabState extends State<LoansTab> {
           ),
         ),
       );
+}
+
+/// On hold until KYC is finished (owner, 21 Nov 2026): where they stand, what is still needed, and the link to finish.
+class KycHoldCard extends StatelessWidget {
+  const KycHoldCard({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final k = session.kyc;
+    final state = '${k['state']}';
+    final sections = ((k['sections'] as List?) ?? const []).cast<Map>();
+    final reqs = Map<String, dynamic>.from(k['requirements'] as Map? ?? const {});
+    final waiting = state == 'submitted';
+    final title = switch (state) {
+      'submitted' => 'We are checking your details',
+      'rejected' => 'Your details need changes',
+      'missing' => 'A few details are missing',
+      'ready' => 'Everything is in: submit it',
+      'in_progress' => 'Finish verifying your account',
+      _ => 'Verify your account to get started',
+    };
+    final body = switch (state) {
+      'submitted' => 'Nothing more is needed. We will text and email you once you are verified.',
+      'rejected' => '${k['notes'] ?? 'Correct your details and submit again.'}',
+      'missing' => 'Add what is missing and your account opens straight away.',
+      _ => 'Required by law (KYC). About 5 minutes, and your progress is saved.',
+    };
+    return Panel(
+      color: waiting ? C.amberBg : C.royalTint,
+      padding: const EdgeInsets.all(18),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          HIcon(waiting ? 'clock' : 'lock-closed', color: waiting ? C.amber : C.blue),
+          const SizedBox(width: 10),
+          Expanded(child: Text(title, style: fig(16, w: FontWeight.w600, c: waiting ? C.amber : C.blue))),
+        ]),
+        const SizedBox(height: 6),
+        Text(body, style: fig(13.5, c: C.ink)),
+        if (!waiting) ...[
+          const SizedBox(height: 12),
+          Text('${k['done'] ?? 0} of ${k['total'] ?? 0} sections done', style: fig(12, c: C.slate)),
+          const SizedBox(height: 8),
+          for (final s in sections) ...[
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              HIcon(s['complete'] == true ? 'check-circle' : 'exclamation-triangle', size: 18, color: s['complete'] == true ? C.sage : C.amber),
+              const SizedBox(width: 8),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${s['title']}', style: fig(14, w: FontWeight.w600)),
+                if (s['complete'] != true)
+                  for (final r in ((reqs['${s['title']}'] as List?) ?? const [])) Text('· $r', style: fig(12.5, c: C.slate)),
+              ])),
+            ]),
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 4),
+          PillButton('Finish on the website', icon: 'arrow-top-right-on-square',
+              onPressed: () => launchUrl(Uri.parse('${k['finish_url'] ?? 'https://loans.sharet.africa/kyc'}'), mode: LaunchMode.externalApplication)),
+        ],
+      ]),
+    );
+  }
 }
